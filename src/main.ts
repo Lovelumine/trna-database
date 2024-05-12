@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
-
+import PageNotFound from './views/404.vue'; // 引入404组件
 
 // // import 'fornac/app/scripts/fornac.js';
 // import './views/display/scripts/fornac.js'
@@ -29,8 +29,9 @@ import VXETable from 'vxe-table';
 const routes: RouteRecordRaw[] = [
     { path: '/', component: Home },
     { path: '/coding-variation-disease', component: CodingVariationDisease },
-    { path: '/display/:tRNAName', component: Display } // 动态路由
-];
+    { path: '/display/:tRNAName', component: Display }, // 动态路由
+    { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
+  ];
 
 // 创建路由器实例
 const router = createRouter({
