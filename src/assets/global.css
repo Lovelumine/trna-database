@@ -23,7 +23,7 @@
 
 body {
     margin: 0;
-    font-family: "Open Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", STHeiti, "WenQuanYi Micro Hei", Helvetica, Arial, sans-serif;
+    font-family: "Play","MArima Madurai",Microsoft JhengHei,Georgia,Times,serif,Microsoft Yahei,Open Sans,sans-serif;
     font-size: 16px;
     line-height: 1.8;
     color: var(--farallon-text-color);
@@ -75,3 +75,25 @@ body {
     height: 400px;
   }
   
+  @font-face {
+    font-family: 'HarmonyOS Sans';
+    src: url('/fonts/HarmonyOS_Sans_Regular.ttf') format('truetype');
+
+  
+}
+
+@font-face {
+  font-family: '字魂白鸽天行体';
+  src: url('/fonts/字魂白鸽天行体.ttf') format('truetype');}
+
+@font-face {
+  font-family: '台北黑体';
+  src: url('/fonts/台北黑体/TaipeiSansTCBeta-Regular.ttf') format('truetype');}
+
+  @font-face {
+    font-family: '三极新雅宋黑简体';
+    src: url('/fonts/思源字体/三极新雅宋黑简体.ttf') format('truetype');}
+
+  @font-face {
+      font-family: '花园明朝体';
+      src: url('/fonts/思源字体/花园明朝体.ttf') format('truetype');}
