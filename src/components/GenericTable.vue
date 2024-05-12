@@ -30,6 +30,7 @@
   <script lang="ts">
   import { defineComponent, PropType } from 'vue';
   import { STable, STableProvider } from '@shene/table'; 
+  import { useTableData } from 'public/js/useTableData';
   
   export default defineComponent({
     name: 'GenericTable',
