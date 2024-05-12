@@ -2,7 +2,7 @@
     <div class="page-404">
       <h1>404</h1>
       <p>Oops! The page you are looking for has been removed or relocated.</p>
-      <router-link to="/">Go back home</router-link>
+      <router-link to="/" class="tilt-hover">Go back home</router-link>
     </div>
   </template>
   
