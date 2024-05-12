@@ -67,25 +67,8 @@ import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../assets/js/useTableData.js';
 
 // 定义数据类型
-interface DataType {
-  key: string;
-  mutationType: string;
-  diseaseName: string;
-  Phenotype: string;
-  gene: string;
-  Locus: string;
-  mutationSite: string;
-  originalCodon: string;
-  mutatedCodon: string;
-  chromosome: string;
-  Genomeposition: string;
-  denovoinherited: string;
-  zygosity: string;
-  incidenceRate: string;
-  treatmentPlan: string;
-  References: string;
-  source: string;
-}
+type DataType = { [key: string]: string };
+
 
 export default defineComponent({
   name: 'CodingVariationDisease',
