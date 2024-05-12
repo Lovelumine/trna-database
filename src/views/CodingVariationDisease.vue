@@ -39,12 +39,19 @@
           <div>
             <p><b>突变类型:</b> {{ record.mutationType }}</p>
             <p><b>疾病名称:</b> {{ record.diseaseName }}</p>
+            <p><b>Phenotype MIM number:</b> {{ record.Phenotype }}</p>
             <p><b>致病基因:</b> {{ record.gene }}</p>
+            <p><b>Gene/Locus MIM number:</b> {{ record.Locus }}</p>
             <p><b>变异位点:</b> {{ record.mutationSite }}</p>
             <p><b>原有密码子及氨基酸:</b> {{ record.originalCodon }}</p>
             <p><b>突变后密码子及氨基酸:</b> {{ record.mutatedCodon }}</p>
+            <p><b>染色体:</b> {{ record.chromosome }}</p>
+            <p><b>Genome position:</b> {{ record.Genomeposition }}</p>
+            <p><b>de novo / inherited:</b> {{ record.denovoinherited }}</p>
             <p><b>发病率:</b> {{ record.incidenceRate }}</p>
+            <p><b>zygosity:</b> {{ record.zygosity }}</p>
             <p><b>诊断/治病方案:</b> {{ record.treatmentPlan }}</p>
+            <p><b>参考文献:</b> <a :href="record.References" target="_blank" class="tilt-hover">参考文献</a></p>
             <p><b>来源:</b> <a :href="record.source" target="_blank" class="tilt-hover">链接</a></p>
           </div>
         </template>
@@ -66,12 +73,19 @@ interface DataType {
   key: string;
   mutationType: string;
   diseaseName: string;
+  Phenotype:string;
   gene: string;
+  Locus: string;
   mutationSite: string;
   originalCodon: string;
   mutatedCodon: string;
+  chromosome: string;
+  Genomeposition: string;
+  denovoinherited: string;
+  zygosity: string;
   incidenceRate: string;
   treatmentPlan: string;
+  References: string;
   source: string;
 }
 
@@ -112,10 +126,35 @@ export default defineComponent({
         }
       },
       { title: '疾病名称', width: 420, dataIndex: 'diseaseName', key: 'diseaseName', resizable: true },
+      { title: 'Phenotype MIM number', width: 200, dataIndex: 'Phenotype', key: 'Phenotype', resizable: true },
       { title: '致病基因', width: 120, dataIndex: 'gene', key: 'gene', resizable: true },
+      { title: 'Gene/Locus MIM number', width: 200, dataIndex: 'Locus', key: 'Locus', resizable: true },
       { title: '变异位点', width: 120, dataIndex: 'mutationSite', key: 'mutationSite', resizable: true },
       { title: '原有密码子及氨基酸', width: 140, dataIndex: 'originalCodon', key: 'originalCodon', resizable: true },
       { title: '突变后密码子及氨基酸', width: 180, dataIndex: 'mutatedCodon', key: 'mutatedCodon', resizable: true },
+      { title: '染色体', width: 120, dataIndex: 'chromosome', key: 'chromosome', resizable: true },  
+      { title: 'Genome position', width: 220, dataIndex: 'Genomeposition', key: 'Genomeposition', resizable: true },        
+      {
+        title: 'de novo / inherited',
+        dataIndex: 'denovoinherited',
+        width: 180,
+        key: 'denovoinherited',
+        resizable: true,
+        filter: {
+          type: 'multiple',
+          list: [
+            {
+              text: 'de novo',
+              value: 'de novo'
+            },
+            {
+              text: 'inherited',
+              value: 'inherited'
+            }
+          ],
+          onFilter: (value, record) => value.includes(record.denovoinherited)
+        }
+      },
       {
         title: '发病率',
         width: 720,
@@ -124,7 +163,11 @@ export default defineComponent({
         resizable: true,
         sorter: (a, b) => parseFloat(a.incidenceRate) - parseFloat(b.incidenceRate)
       },
+      { title: 'zygosity', width: 140, dataIndex: 'zygosity', key: 'zygosity', resizable: true },
       { title: '诊断/治疗方案', width: 720, dataIndex: 'treatmentPlan', key: 'treatmentPlan', resizable: true },
+      {title: '参考文献',width: 120,key: 'References',dataIndex: 'References',customRender:({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">来源</a></div>
+		),resizable: true
+	},
       {title: '来源',width: 120,key: 'source',dataIndex: 'source',customRender:({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">来源</a></div>
 		),resizable: true
 	}
@@ -146,7 +189,7 @@ export default defineComponent({
     const expandIconColumnIndex = ref(0);
 
     onMounted(() => {
-      fetch('./data/3-coding-variation-Disease.csv')
+      fetch('/data/coding variation Disease v1.1.csv')
         .then(response => response.text())
         .then(csvData => {
           Papa.parse(csvData, {
