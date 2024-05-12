@@ -17,13 +17,13 @@
       </div>
     </div>
     <!-- 表格组件 -->
-    <s-table-provider :hover="true">
+    <s-table-provider :hover="true" :theme-color="'#00ACF5'">
       <s-table
-        :theme-color="themeColor"
         :columns="columns"
         :data-source="filteredDataSource"
         :row-key="record => record.key"
         :pagination="pagination"
+        :stripe="true"
         :show-sorter-tooltip="true"
         :size="tableSize"
         @sorter-change="onSorterChange"
@@ -110,7 +110,7 @@ export default defineComponent({
       {
         title: '突变类型',
         dataIndex: 'mutationType',
-        width: 120,
+        width: 120,ellipsis: true,
         key: 'mutationType',
         resizable: true,
         filter: {
@@ -128,19 +128,19 @@ export default defineComponent({
           onFilter: (value, record) => value.includes(record.mutationType)
         }
       },
-      { title: '疾病名称', width: 420, dataIndex: 'diseaseName', key: 'diseaseName', resizable: true },
-      { title: 'Phenotype MIM number', width: 200, dataIndex: 'Phenotype', key: 'Phenotype', resizable: true },
-      { title: '致病基因', width: 120, dataIndex: 'gene', key: 'gene', resizable: true },
-      { title: 'Gene/Locus MIM number', width: 200, dataIndex: 'Locus', key: 'Locus', resizable: true },
-      { title: '变异位点', width: 120, dataIndex: 'mutationSite', key: 'mutationSite', resizable: true },
-      { title: '原有密码子及氨基酸', width: 140, dataIndex: 'originalCodon', key: 'originalCodon', resizable: true },
-      { title: '突变后密码子及氨基酸', width: 180, dataIndex: 'mutatedCodon', key: 'mutatedCodon', resizable: true },
-      { title: '染色体', width: 120, dataIndex: 'chromosome', key: 'chromosome', resizable: true },  
-      { title: 'Genome position', width: 220, dataIndex: 'Genomeposition', key: 'Genomeposition', resizable: true },        
+      { title: '疾病名称', width: 320, ellipsis: true,dataIndex: 'diseaseName', key: 'diseaseName', resizable: true },
+      { title: 'Phenotype MIM number', ellipsis: true,width: 200, dataIndex: 'Phenotype', key: 'Phenotype', resizable: true },
+      { title: '致病基因', width: 120, ellipsis: true,dataIndex: 'gene', key: 'gene', resizable: true },
+      { title: 'Gene/Locus MIM number', width: 200, ellipsis: true,dataIndex: 'Locus', key: 'Locus', resizable: true },
+      { title: '变异位点', width: 120,ellipsis: true, dataIndex: 'mutationSite', key: 'mutationSite', resizable: true },
+      { title: '原有密码子及氨基酸', width: 140, ellipsis: true,dataIndex: 'originalCodon', key: 'originalCodon', resizable: true },
+      { title: '突变后密码子及氨基酸', width: 180, ellipsis: true,dataIndex: 'mutatedCodon', key: 'mutatedCodon', resizable: true },
+      { title: '染色体', width: 120, ellipsis: true,dataIndex: 'chromosome', key: 'chromosome', resizable: true },  
+      { title: 'Genome position', width: 220, ellipsis: true,dataIndex: 'Genomeposition', key: 'Genomeposition', resizable: true },        
       {
         title: 'de novo / inherited',
         dataIndex: 'denovoinherited',
-        width: 180,
+        width: 180,ellipsis: true,
         key: 'denovoinherited',
         resizable: true,
         filter: {
@@ -160,23 +160,23 @@ export default defineComponent({
       },
       {
         title: '发病率',
-        width: 720,
+        width: 320,ellipsis: true,
         dataIndex: 'incidenceRate',
         key: 'incidenceRate',
         resizable: true,
         sorter: (a, b) => parseFloat(a.incidenceRate) - parseFloat(b.incidenceRate)
       },
-      { title: 'zygosity', width: 140, dataIndex: 'zygosity', key: 'zygosity', resizable: true },
-      { title: '诊断/治疗方案', width: 720, dataIndex: 'treatmentPlan', key: 'treatmentPlan', resizable: true },
-      {title: '参考文献',width: 120,key: 'References',dataIndex: 'References',customRender:({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">来源</a></div>
+      { title: 'zygosity', width: 140, ellipsis: true,dataIndex: 'zygosity', key: 'zygosity', resizable: true },
+      { title: '诊断/治疗方案', width: 320, ellipsis: true,dataIndex: 'treatmentPlan', key: 'treatmentPlan', resizable: true },
+      {title: '参考文献',width: 120,ellipsis: true,key: 'References',dataIndex: 'References',customRender:({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">来源</a></div>
 		),resizable: true
 	},
-      {title: '来源',width: 120,key: 'source',dataIndex: 'source',customRender:({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">来源</a></div>
+      {title: '来源',width: 120,ellipsis: true,key: 'source',dataIndex: 'source',customRender:({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">来源</a></div>
 		),resizable: true
 	}
     ];
-    const hover = ref(true)
-    const themeColor = ref('#E80B0E');  // 主题颜色
+
+    const themeColor = ref('#DC1010');  // 主题颜色
     const pagination = ref({
       defaultCurrent: 1,
       defaultPageSize: 10,
