@@ -94,14 +94,17 @@ export default defineComponent({
   setup() {
     const searchText = ref('');
     const allData = ref<DataType[]>([]);
-    const filteredDataSource = computed(() => {
-      if (!searchText.value) return allData.value;
-      return allData.value.filter(item => 
-        Object.values(item).some(value => 
-          value.toString().toLowerCase().includes(searchText.value.toLowerCase())
-        )
-      );
-    });
+      const filteredDataSource = computed(() => {
+  if (!searchText.value) return allData.value;
+  return allData.value.filter(item => 
+    Object.keys(item).some(key => 
+      item[key] !== null && item[key] !== undefined &&
+      item[key].toString().toLowerCase().includes(searchText.value.toLowerCase())
+    )
+  );
+});
+
+
 
     const columns: STableColumnsType<DataType> = [
       {
@@ -208,9 +211,6 @@ export default defineComponent({
         });
     });
 
-    function filterData() {
-      // This function updates the filteredDataSource based on searchText
-    }
 
     return {
       columns,
@@ -220,7 +220,6 @@ export default defineComponent({
       expandIconColumnIndex,
       tableSize,
       searchText,
-      filterData
     };
   }
 });
