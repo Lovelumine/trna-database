@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN" >
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <!-- <link rel="stylesheet" href="/css/fornac.css"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tRNA疗法数据库</title> 
+  </head>
+  <body class="home page-template-default page page-id-2 logged-in admin-bar customize-support">
+    <div id="app" class="main">
+    <script type="module" src="/src/main.ts"></script>
+
+    <script>
+      // 检测设备是否是移动设备
+      function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      }
+    
+      if (!isMobileDevice()) {
+        // 如果不是移动设备，加载自定义鼠标样式脚本
+        var script = document.createElement('script');
+        script.src = "/js/mouse.js";
+        document.head.appendChild(script);
+    
+        // 应用自定义鼠标样式
+        document.documentElement.style.cursor = 'none';
+      } else {
+        // 如果是移动设备，恢复默认鼠标样式
+        document.documentElement.style.cursor = 'auto';
+      }
+    </script>
+  </body>
+</html>

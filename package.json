@@ -1,0 +1,35 @@
+{
+  "name": "trna-database",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@shene/table": "1.0.0-alpha.24",
+    "@vitejs/plugin-vue-jsx": "^3.1.0",
+    "axios": "^1.6.8",
+    "element-plus": "^2.7.2",
+    "papaparse": "^5.4.1",
+    "rnautils": "^0.8.2",
+    "typescript": "^5.4.5",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.2",
+    "vxe-table": "^4.6.12",
+    "vxe-table-plugin-element-plus": "^1.0.2",
+    "vxe-utils": "^2.0.1",
+    "xe-utils": "^3.5.26"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.5",
+    "@babel/preset-env": "^7.24.5",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@vue/babel-plugin-jsx": "^1.2.2",
+    "@vue/babel-preset-jsx": "^1.4.0",
+    "@vue/runtime-dom": "^3.4.27",
+    "vite": "^5.2.0"
+  }
+}

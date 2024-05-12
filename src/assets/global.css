@@ -1,0 +1,77 @@
+/* src/assets/global.css */
+* {
+    box-sizing: border-box; /* 应用到所有元素，确保宽度计算包含了padding和border */
+  }
+  
+
+:root {
+    --farallon-main-color: #4370f5;
+    --farallon-hover-color: #3a5f9a;
+    --farallon-text-color: rgba(0,0,0,.84);
+    --farallon-text-light: rgba(0,0,0,.68);
+    --farallon-text-gray: rgba(0,0,0,.6);
+    --farallon-text-gray-lightest: rgba(0,0,0,.5);
+    --farallon-background-white: #fff;
+    --farallon-background-gray: #fafafa;
+    --farallon-griedent-start: #007cf0;
+    --farallon-griedent-end: #00dfd8;
+    --farallon-border-color: rgba(0,0,0,.1);
+    --farallon-border-color-light: rgba(0,0,0,.05);
+    --block-separator-color: #244654;
+    --article-target-color: #283c50;
+}
+
+body {
+    margin: 0;
+    font-family: "Open Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", STHeiti, "WenQuanYi Micro Hei", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--farallon-text-color);
+    background-color: var(--farallon-background-gray);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+.main {
+    background-color: var(--farallon-background-white);
+    min-height: 100vh;
+    position: relative;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.main:after {
+    aspect-ratio: 1/3;
+    background-image: linear-gradient(90deg,var(--farallon-griedent-start),var(--farallon-griedent-end));
+    border: 0;
+    border-radius: 9999px;
+    bottom: calc(100% - 100px);
+    filter: blur(44px);
+    opacity: .2;
+    position: absolute;
+    right: 0;
+    left: 0;
+    content: "";
+}
+
+.site--main {
+    max-width: 1200px; 
+    margin: 0 auto; 
+    padding: 50px 80px; 
+  }
+  
+  /* 媒体查询针对移动设备 */
+@media (max-width: 768px) {
+    .site--main {
+      padding: 20px; /* 在小屏幕上减少填充 */
+      max-width: 100%; /* 允许容器宽度占满屏幕 */
+      margin: 0 auto; /* 保持居中，但可以调整为更小的上下边距 */
+    }
+  }
+
+  .forna-visualizer {
+    width: 300px;  
+    height: 300px;
+  }
+  
