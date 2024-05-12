@@ -1,40 +1,43 @@
-# tRNA治疗数据库
 
-## 文件结构
+# tRNA治疗数据库 🧬
+
+欢迎访问 [tRNA治疗数据库](https://trna.lumoxuan.com/)，一个致力于推动遗传疾病治疗研究的平台。
+
+## 文件结构 📁
 ```
 trna-database/
-├── package.json
-├── index.html
-├── README.md
-├── vite.config.js
-├── tsconfig.json
-├── .gitignore
-├── scan.py
-├── data/
-│   └── 3-coding-variation-Disease.csv
-├── public/
-│   ├── vite.svg
-│   ├── favicon.ico
-│   └── logo.webp
-├── src/
-│   ├── App.vue
-│   ├── main.ts
-│   └── views/
-│       ├── Home.vue
-│       └── CodingVariationDisease.vue
-└── assets/
-    ├── mouse.css
-    └── search.css
+├── 📄 package.json
+├── 📄 index.html
+├── 📄 README.md
+├── 📄 vite.config.js
+├── 📄 tsconfig.json
+├── 📄 .gitignore
+├── 🐍 scan.py
+├── 📂 data/
+│   └── 📊 3-coding-variation-Disease.csv
+├── 📂 public/
+│   ├── 🖼️ vite.svg
+│   ├── 🖼️ favicon.ico
+│   └── 🖼️ logo.webp
+├── 📂 src/
+│   ├── 🖥️ App.vue
+│   ├── 🖥️ main.ts
+│   └── 📂 views/
+│       ├── 🏠 Home.vue
+│       └── 🧬 CodingVariationDisease.vue
+└── 📂 assets/
+    ├── 📄 mouse.css
+    └── 📄 search.css
 ```
 
-## 安装与运行
+## 安装与运行 🛠️
 
-### 环境需求
+### 环境需求 🌍
 
 - Node.js
 - npm 或 pnpm
 
-### 安装依赖
+### 安装依赖 📦
 
 在项目根目录下运行以下命令安装依赖：
 
@@ -42,7 +45,7 @@ trna-database/
 pnpm install
 ```
 
-### 运行项目
+### 运行项目 🚀
 
 启动开发服务器：
 
