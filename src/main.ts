@@ -17,6 +17,7 @@ import 'element-plus/dist/index.css';
 // 引入组件
 import Home from './views/Home.vue';
 import CodingVariationDisease from './views/CodingVariationDisease.vue';
+import TrnaElements from './views/tRNA elements/tRNA elements.vue';
 import Display from './views/display/Display.vue';
 
 // 引入表格组件
@@ -29,6 +30,7 @@ import VXETable from 'vxe-table';
 const routes: RouteRecordRaw[] = [
     { path: '/', component: Home },
     { path: '/coding-variation-disease', component: CodingVariationDisease },
+    { path: '/TrnaElements', component: TrnaElements },
     { path: '/display/:tRNAName', component: Display }, // 动态路由
     { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
   ];
