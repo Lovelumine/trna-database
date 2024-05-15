@@ -8,7 +8,7 @@ import PageNotFound from './views/404.vue'; // 引入404组件
 // 引入样式
 import './assets/global.css';
 import './assets/herf.css';
-import './assets/mouse.css';
+// import './assets/mouse.css';
 import './assets/search.css';
 
 import ElementPlus from 'element-plus';
