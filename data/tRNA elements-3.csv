@@ -1,6 +1,4 @@
-﻿aaRS,,,,,
-,ldentity element location,,,,
-AARS,Acceptor stem,Anticodon arm,other location,Other domains (d-arm/T-arm/variable arm),reference
+﻿aaRS,AcceptorStem,AnticodonArm,OtherLocation,OtherDomains,Reference
 Alanine,"A73.G2:C71,G3:U70,G4:C69",,,G20,"Hou and Schimmel, 1988; McClain and Foss, 1988a; Franckhyn et al..1992"
 Arginine,AG73,"C35, U/G36",,A20,"McClain and Foss, 1988b; Schulman and Pelka, 1989; McClain et al.1990: Tamura et a.. 1992"
 Asparagine,G73,G34.,,,Shimizu et al.. 1992: li et al.. 1993

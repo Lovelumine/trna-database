@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>tRNA Elements</h2>
+    <h2>tRNA Elements 1</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -39,7 +39,7 @@
           <div>
             <p><b>功能:</b> {{ record.功能 }}</p>
             <p><b>功能发挥细胞:</b> {{ record.功能发挥细胞 }}</p>
-            <p><b>文献来源:</b> <a :href="record.文献来源" target="_blank" class="tilt-hover">参考文献</a></p>
+            <p><b>文献来源:</b>{{record.文献来源}}</p>
           </div>
         </template>
       </s-table>
@@ -71,8 +71,7 @@ export default defineComponent({
       { title: '功能', dataIndex: '功能', width: 320, ellipsis: true, key: '功能', resizable: true },
       { title: '功能发挥细胞', dataIndex: '功能发挥细胞', width: 200, ellipsis: true, key: '功能发挥细胞', resizable: true },
       {
-        title: '文献来源', width: 120, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
-        customRender: ({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">来源</a></div>),
+        title: '文献来源', width: 320, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
         resizable: true
       }
     ];
