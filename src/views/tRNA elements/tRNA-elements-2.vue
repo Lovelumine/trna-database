@@ -40,7 +40,7 @@
               <p><b>tRNA特征:</b> {{ record.tRNA特征 }}</p>
               <p><b>功能:</b> {{ record.功能 }}</p>
               <p><b>细胞:</b> {{ record.细胞 }}</p>
-              <p><b>参考文献:</b> <a :href="record.参考文献" target="_blank" class="tilt-hover">参考文献</a></p>
+              <p><b>参考文献:</b> {{ record.参考文献 }}</p>
             </div>
           </template>
         </s-table>
@@ -74,7 +74,6 @@
         { title: '细胞', dataIndex: '细胞', width: 200, ellipsis: true, key: '细胞', resizable: true },
         {
           title: '参考文献', width: 120, ellipsis: true, key: '参考文献', dataIndex: '参考文献',
-          customRender: ({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">来源</a></div>),
           resizable: true
         }
       ];
