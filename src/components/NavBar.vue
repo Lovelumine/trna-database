@@ -9,7 +9,7 @@
       <ul class="topNav-items">
         <li><router-link to="/" active-class="active-link">Home</router-link></li>
         <li><router-link to="/coding-variation-disease" active-class="active-link">Coding Variation Disease</router-link></li>
-        <li><router-link to="/TrnaElements" active-class="active-link">TrnaElements</router-link></li>
+        <li><router-link to="/TrnaElements" active-class="active-link">Trna Elements</router-link></li>
       </ul>
     </nav>
   </header>
@@ -29,8 +29,8 @@ export default {
   }
 
   header.site--header {
-        padding-top: 80px;
-    }
+    padding-top: 80px;
+  }
 
   .site--header__center {
     position: static; /* Remove absolute positioning */
@@ -43,13 +43,15 @@ export default {
   }
 
   .topNav-items {
-    justify-content: center; /* Center menu items on small screens */
+    justify-content: flex-start; /* Align items to the start */
     overflow-x: auto; /* Allows horizontal scrolling on smaller screens */
+    white-space: nowrap; /* Prevent line wrapping */
     padding-left: 20px;
     padding-right: 20px;
   }
 
   .topNav-items li {
+    display: inline-block; /* Display items inline */
     padding: 10px; /* Adjust padding around links */
   }
 }
@@ -124,4 +126,5 @@ export default {
 .topNav-items li .active-link {
   color: #3a5f9a; /* Selected color */
 }
+
 </style>
