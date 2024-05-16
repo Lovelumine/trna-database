@@ -16,7 +16,7 @@ import 'element-plus/dist/index.css';
 
 // 引入组件
 import Home from './views/Home.vue';
-import CodingVariationDisease from './views/CodingVariationDisease.vue';
+import CodingVariationDisease from './views/CodingVariationDisease/CodingVariationDisease.vue';
 import TrnaElements from './views/tRNA elements/tRNA elements.vue';
 import Display from './views/display/Display.vue';
 

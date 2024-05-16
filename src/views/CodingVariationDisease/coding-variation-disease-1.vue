@@ -64,7 +64,7 @@
 import { defineComponent, ref, onMounted } from 'vue';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table'; 
-import { useTableData } from '../assets/js/useTableData.js';
+import { useTableData } from '../../assets/js/useTableData.js';
 
 // 定义数据类型
 type DataType = { [key: string]: string };
