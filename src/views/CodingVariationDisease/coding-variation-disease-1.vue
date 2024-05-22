@@ -142,3 +142,8 @@ export default defineComponent({
   }
 });
 </script>
+
+<style scoped>
+.site--main {
+  padding: 20px;
+}</style>
