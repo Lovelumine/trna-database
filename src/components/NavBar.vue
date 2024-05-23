@@ -9,6 +9,7 @@
       <ul class="topNav-items">
         <li><router-link to="/" active-class="active-link">Home</router-link></li>
         <li><router-link to="/coding-variation-disease" active-class="active-link">Coding Variation Disease</router-link></li>
+        <li><router-link to="/tRNAtherapeutics" active-class="active-link">Trna therapeutics</router-link></li>
         <li><router-link to="/TrnaElements" active-class="active-link">Trna Elements</router-link></li>
       </ul>
     </nav>
