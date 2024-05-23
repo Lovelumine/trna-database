@@ -1,6 +1,5 @@
 <template>
     <div class="site--main">
-      <h2>tRNA Therapeutics Data</h2>
       <div class="top-controls">
         <div class="search-box" style="margin-bottom: 10px">
           <input v-model="searchText" placeholder="Enter search content" class="search-input">

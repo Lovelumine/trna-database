@@ -19,7 +19,7 @@
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :theme-color="'#00ACF5'">
       <s-table
-      :columns="columns"
+        :columns="columns"
         :data-source="filteredDataSource"
         :row-key="record => record.key"
         :stripe="true"
@@ -29,9 +29,9 @@
       >
         <template #expandedRowRender="{ record }">
           <div>
-            <p><b>功能:</b> {{ record.功能 }}</p>
-            <p><b>功能发挥细胞:</b> {{ record.功能发挥细胞 }}</p>
-            <p><b>文献来源:</b>{{record.文献来源}}</p>
+            <p><b>Function:</b> {{ record.功能 }}</p>
+            <p><b>Cells where function occurs:</b> {{ record.功能发挥细胞 }}</p>
+            <p><b>Literature Source:</b> {{ record.文献来源 }}</p>
           </div>
         </template>
       </s-table>
@@ -59,11 +59,11 @@ export default defineComponent({
     });
 
     const columns: STableColumnsType<DataType> = [
-      { title: '修饰', dataIndex: '修饰', width: 120, ellipsis: true, key: '修饰', resizable: true },
-      { title: '功能', dataIndex: '功能', width: 320, ellipsis: true, key: '功能', resizable: true },
-      { title: '功能发挥细胞', dataIndex: '功能发挥细胞', width: 200, ellipsis: true, key: '功能发挥细胞', resizable: true },
+      { title: 'Modification', dataIndex: '修饰', width: 120, ellipsis: true, key: '修饰', resizable: true },
+      { title: 'Function', dataIndex: '功能', width: 320, ellipsis: true, key: '功能', resizable: true },
+      { title: 'Cells where function occurs', dataIndex: '功能发挥细胞', width: 200, ellipsis: true, key: '功能发挥细胞', resizable: true },
       {
-        title: '文献来源', width: 320, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
+        title: 'Literature Source', width: 320, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
         resizable: true
       }
     ];
