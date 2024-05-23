@@ -8,7 +8,7 @@
         <a href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank">赣ICP备2024033025号</a>
       </div>
       <div class="hosted-by">
-        Hosted by Yongxin County Aiying Technology Co., Ltd.
+        Server provided by Yongxin County Aiying Technology Co., Ltd.
       </div>
       <div class="source-code">
         <a href="https://github.com/Lovelumine/trna-database" target="_blank">
