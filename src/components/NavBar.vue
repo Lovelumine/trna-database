@@ -10,8 +10,8 @@
         <li><router-link to="/" active-class="active-link">Home</router-link></li>
         <li><router-link to="/coding-variation-disease" active-class="active-link">Coding Variation Disease</router-link></li>
         <li><router-link to="/naturalsuptRNA" active-class="active-link">Natural Sup-tRNA</router-link></li>
-        <li><router-link to="/tRNAtherapeutics" active-class="active-link">Trna therapeutics</router-link></li>
-        <li><router-link to="/TrnaElements" active-class="active-link">Trna Elements</router-link></li>
+        <li><router-link to="/tRNAtherapeutics" active-class="active-link">tRNA Therapeutics</router-link></li>
+        <li><router-link to="/TrnaElements" active-class="active-link">tRNA Elements</router-link></li>
       </ul>
     </nav>
   </header>
@@ -26,8 +26,8 @@ export default {
 <style>
 @media (max-width: 980px) {
   .site--header {
-    padding: 15px 20px; /* Reduced padding for smaller screens */
-    flex-direction: column; /* Stack logo and menu vertically */
+    padding: 15px 20px; /* 为较小屏幕减少内边距 */
+    flex-direction: column; /* 将徽标和菜单垂直堆叠 */
   }
 
   header.site--header {
@@ -35,26 +35,27 @@ export default {
   }
 
   .site--header__center {
-    position: static; /* Remove absolute positioning */
+    position: static; /* 移除绝对定位 */
     transform: none;
-    width: 100%; /* Full width */
-    top: auto; /* Remove top positioning */
-    box-shadow: none; /* Simplify style on smaller screens */
-    border-radius: 0; /* Remove rounded corners */
-    padding: 0; /* Remove additional padding */
+    width: 100%; /* 全宽 */
+    top: auto; /* 移除顶部定位 */
+    box-shadow: none; /* 简化较小屏幕的样式 */
+    border-radius: 0; /* 移除圆角 */
+    padding: 0; /* 移除额外内边距 */
   }
 
   .topNav-items {
-    justify-content: flex-start; /* Align items to the start */
-    overflow-x: auto; /* Allows horizontal scrolling on smaller screens */
-    white-space: nowrap; /* Prevent line wrapping */
+    justify-content: flex-start; /* 将项目对齐到开始位置 */
+    overflow-x: auto; /* 允许较小屏幕上水平滚动 */
+    white-space: nowrap; /* 防止换行 */
+    overflow-y: hidden; /* 禁止垂直滚动 */
     padding-left: 20px;
     padding-right: 20px;
   }
 
   .topNav-items li {
-    display: inline-block; /* Display items inline */
-    padding: 10px; /* Adjust padding around links */
+    display: inline-block; /* 内联显示项目 */
+    padding: 10px; /* 调整链接周围的内边距 */
   }
 }
 
@@ -118,6 +119,7 @@ export default {
   list-style: none;
   overflow-x: auto; /* 允许水平滚动 */
   white-space: nowrap; /* 防止项目换行 */
+  overflow-y: hidden; /* 禁止垂直滚动 */
 }
 
 .topNav-items li {
@@ -126,12 +128,34 @@ export default {
 }
 
 .topNav-items li a {
-  color: rgba(0, 0, 0, 0.84); /* Default color, not selected */
-  text-decoration: none; /* Remove underline */
+  color: rgba(0, 0, 0, 0.84); /* 默认颜色，未选中 */
+  text-decoration: none; /* 移除下划线 */
 }
 
 .topNav-items li .active-link {
-  color: #3a5f9a; /* Selected color */
+  color: #3a5f9a; /* 选中颜色 */
 }
 
+.topNav-items li {
+  display: inline-block;
+  margin-right: 10px;
+  padding: 10px;
+}
+
+.topNav-items li a {
+  color: rgba(0, 0, 0, 0.84);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+
+.topNav-items li a:hover {
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+.topNav-items li .active-link {
+  color: #3a5f9a;
+  border-bottom: 2px solid #3a5f9a;
+}
 </style>
+
