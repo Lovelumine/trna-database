@@ -22,18 +22,10 @@
         :columns="columns"
         :data-source="filteredDataSource"
         :row-key="record => record.key"
-        :pagination="pagination"
         :stripe="true"
         :show-sorter-tooltip="true"
         :size="tableSize"
-        @sorter-change="onSorterChange"
-        @resize-column="onResizeColumn"
-        @pagination-change="onPaginationChange"
-        :row-expandable="rowExpandable"
-        :expand-icon-column-index="expandIconColumnIndex"
-        :expand-row-by-click="expandRowByClick"
-        @expand="onExpand"
-        @expandedRowsChange="onExpandedRowsChange"
+        :expand-row-by-click="true"
       >
         <template #expandedRowRender="{ record }">
           <div>
