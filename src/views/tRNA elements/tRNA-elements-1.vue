@@ -5,14 +5,14 @@
     <div class="top-controls">
       <!-- 搜索框 -->
       <div class="search-box" style="margin-bottom: 10px">
-        <input v-model="searchText" placeholder="输入搜索内容" class="search-input">
+        <input v-model="searchText" placeholder="Enter search content" class="search-input">
       </div>
       <!-- 调整尺寸 -->
       <div class="size-controls" style="margin-bottom: 10px">
         <el-radio-group v-model="tableSize">
-          <el-radio-button label="small">小尺寸</el-radio-button>
-          <el-radio-button label="default">默认尺寸</el-radio-button>
-          <el-radio-button label="large">大尺寸</el-radio-button>
+          <el-radio-button label="small">Small Size</el-radio-button>
+          <el-radio-button label="default">Default Size</el-radio-button>
+          <el-radio-button label="large">Large Size</el-radio-button>
         </el-radio-group>
       </div>
     </div>

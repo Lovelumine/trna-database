@@ -9,6 +9,7 @@
       <ul class="topNav-items">
         <li><router-link to="/" active-class="active-link">Home</router-link></li>
         <li><router-link to="/coding-variation-disease" active-class="active-link">Coding Variation Disease</router-link></li>
+        <li><router-link to="/naturalsuptRNA" active-class="active-link">Natural Sup-tRNA</router-link></li>
         <li><router-link to="/tRNAtherapeutics" active-class="active-link">Trna therapeutics</router-link></li>
         <li><router-link to="/TrnaElements" active-class="active-link">Trna Elements</router-link></li>
       </ul>
@@ -23,7 +24,7 @@ export default {
 </script>
 
 <style>
-@media (max-width: 768px) {
+@media (max-width: 980px) {
   .site--header {
     padding: 15px 20px; /* Reduced padding for smaller screens */
     flex-direction: column; /* Stack logo and menu vertically */
@@ -57,7 +58,7 @@ export default {
   }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 980px) {
   .topNav-items {
     padding-left: 40px;
     padding-right: 40px;
@@ -68,6 +69,8 @@ export default {
   padding: 20px 80px;
   position: relative;
   display: flex;
+  align-items: center;
+  justify-content: space-between; /* 确保空间分配 */
 }
 
 .site--url {
@@ -76,7 +79,7 @@ export default {
   font-size: 18px;
   font-weight: 700;
   text-decoration: none;
-  color: inherit; /* Inherit color, controlled by the parent element */
+  color: inherit;
 }
 
 .site--url .avatar {
@@ -113,9 +116,12 @@ export default {
   padding: 5px 30px;
   margin: 0;
   list-style: none;
+  overflow-x: auto; /* 允许水平滚动 */
+  white-space: nowrap; /* 防止项目换行 */
 }
 
 .topNav-items li {
+  display: inline-block; /* 项目内联显示 */
   margin-right: 10px;
 }
 
