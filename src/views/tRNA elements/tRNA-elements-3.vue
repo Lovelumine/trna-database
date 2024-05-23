@@ -72,30 +72,30 @@ export default defineComponent({
       {
         title: 'AARS',
         dataIndex: 'aaRS',
-        resizable: true ,
+        resizable: true,
         key: 'aaRS',
         width: 120,
         fixed: true,
         align: 'center'
       },
       {
-        title: 'ldentity element location',
-        key: 'ldentityElementLocation',
+        title: 'Identity Element Location',
+        key: 'IdentityElementLocation',
         align: 'center',
-        resizable: true ,
+        resizable: true,
         children: [
           {
             title: 'Acceptor stem',
             dataIndex: 'AcceptorStem',
             key: 'AcceptorStem',
-            resizable: true ,
+            resizable: true,
             width: 160,
             align: 'center'
           },
           {
             title: 'Anticodon arm',
             dataIndex: 'AnticodonArm',
-            resizable: true ,
+            resizable: true,
             key: 'AnticodonArm',
             width: 160,
             align: 'center'
@@ -103,7 +103,7 @@ export default defineComponent({
           {
             title: 'Other location',
             dataIndex: 'OtherLocation',
-            resizable: true ,
+            resizable: true,
             key: 'OtherLocation',
             width: 160,
             align: 'center'
@@ -112,7 +112,7 @@ export default defineComponent({
             title: 'Other domains (d-arm/T-arm/variable arm)',
             dataIndex: 'OtherDomains',
             key: 'OtherDomains',
-            resizable: true ,
+            resizable: true,
             width: 200,
             align: 'center'
           }
@@ -122,10 +122,10 @@ export default defineComponent({
         title: 'Reference',
         dataIndex: 'Reference',
         key: 'Reference',
-        resizable: true ,
+        resizable: true,
         width: 200,
         align: 'center',
-        ellipsis: true, 
+        ellipsis: true,
       }
     ];
 
