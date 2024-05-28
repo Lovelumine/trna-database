@@ -24,7 +24,7 @@ export default {
 </script>
 
 <style>
-@media (max-width: 980px) {
+@media (max-width: 1100px) {
   .site--header {
     padding: 15px 20px; /* 为较小屏幕减少内边距 */
     flex-direction: column; /* 将徽标和菜单垂直堆叠 */
@@ -59,7 +59,7 @@ export default {
   }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1100px) {
   .topNav-items {
     padding-left: 40px;
     padding-right: 40px;
