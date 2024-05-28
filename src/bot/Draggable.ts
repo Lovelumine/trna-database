@@ -9,6 +9,7 @@ export function useDraggable() {
 
   const startDrag = (event: MouseEvent) => {
     if (element.value) {
+      console.log('Drag started');
       isDragging.value = true;
       offsetX.value = event.clientX - element.value.getBoundingClientRect().left;
       offsetY.value = event.clientY - element.value.getBoundingClientRect().top;
