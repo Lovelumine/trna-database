@@ -1,73 +1,91 @@
 #bot-container {
-    position: fixed;
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  z-index: 1000;
+  cursor: move; /* 鼠标悬停时显示移动光标，允许用户拖动聊天框 */
+  user-select: none; /* 禁止用户选择文本，避免拖动时选中文本 */
+}
+
+#bot-icon {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+}
+
+#bot-icon img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  object-fit: contain; /* 保持图像比例，避免变形 */
+}
+
+#chat-box {
+  position: absolute; /* 绝对定位，确保聊天框位置随头像调整 */
+  bottom: 100%; /* 将对话框置于头像的上方 */
+  right: 100%; /* 将对话框置于头像的左方 */
+  transform: translate(-10px, -10px); /* 微调位置，确保对话框与头像位置吻合 */
+  width: 300px;
+  height: 400px;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+#chat-header {
+  background-color: #007bff;
+  color: white;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#chat-content {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+#chat-content .user {
+  text-align: right;
+  margin: 5px 0;
+}
+
+#chat-content .bot {
+  text-align: left;
+  margin: 5px 0;
+}
+
+#chat-input {
+  padding: 10px;
+  border: none;
+  border-top: 1px solid #ccc;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  #bot-container {
     bottom: 10px;
-    right: 10px;
-    z-index: 1000;
-    cursor: move; /* 鼠标悬停时显示移动光标 */
-    user-select: none; /* 禁止用户选择文本，避免拖动时选中文本 */
+    right: 5px;
   }
-  
+
   #bot-icon {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
   }
-  
-  #bot-icon img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-    object-fit: contain; /* 保持比例缩放 */
-  }
-  
+
   #chat-box {
-    position: absolute; /* 绝对定位，使其相对于父容器移动 */
-    bottom: 100%; /* 将对话框移到头像的上方 */
-    right: 100%; /* 将对话框移到头像的左方 */
-    transform: translate(-10px, -10px); /* 微调位置，使对话框完全在头像左上方 */
-    width: 300px;
-    height: 400px;
-    background-color: white;
-    border: 1px solid #ccc;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
+    width: 240px;  /* 在手机屏幕上使用更大的百分比 */
+    height: 300px;  /* 高度适当减小 */
+    right: 50%;  /* 调整对话框位置使其居中 */
+    transform: translate(10px, -20px);  /* 与right配合使其居中 */
   }
-  
-  #chat-header {
-    background-color: #007bff;
-    color: white;
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  #chat-content {
-    flex: 1;
-    padding: 10px;
-    overflow-y: auto;
-  }
-  
-  #chat-content .user {
-    text-align: right;
-    margin: 5px 0;
-  }
-  
-  #chat-content .bot {
-    text-align: left;
-    margin: 5px 0;
-  }
-  
-  #chat-input {
-    padding: 10px;
-    border: none;
-    border-top: 1px solid #ccc;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  
+}
