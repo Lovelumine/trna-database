@@ -24,7 +24,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 import { useDraggable } from './Draggable';
 import { useChat } from './useChat';
 
@@ -33,6 +33,17 @@ export default defineComponent({
   setup() {
     const { element, startDrag } = useDraggable();
     const { isChatOpen, messages, newMessage, toggleChat, sendMessage } = useChat();
+
+    // Debugging the state of the chat visibility
+    watch(isChatOpen, (newVal) => {
+      console.log("Chat Open State Changed:", newVal);
+    });
+
+    // Debugging message updates
+    watch(messages, (newVal) => {
+      console.log("Messages Updated:", newVal);
+    }, { deep: true });
+
     return { element, startDrag, isChatOpen, messages, newMessage, toggleChat, sendMessage };
   }
 });

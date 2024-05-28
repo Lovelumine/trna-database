@@ -7,21 +7,27 @@ export function useDraggable() {
   const offsetY = ref(0);
   const element = ref<HTMLElement | null>(null);
 
-  const startDrag = (event: MouseEvent) => {
+  const startDrag = (event: MouseEvent | TouchEvent) => {
     if (element.value) {
       console.log('Drag started');
       isDragging.value = true;
-      offsetX.value = event.clientX - element.value.getBoundingClientRect().left;
-      offsetY.value = event.clientY - element.value.getBoundingClientRect().top;
+      let clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX;
+      let clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY;
+      offsetX.value = clientX - element.value.getBoundingClientRect().left;
+      offsetY.value = clientY - element.value.getBoundingClientRect().top;
       document.addEventListener('mousemove', onDrag);
       document.addEventListener('mouseup', stopDrag);
+      document.addEventListener('touchmove', onDrag);
+      document.addEventListener('touchend', stopDrag);
     }
   };
 
-  const onDrag = (event: MouseEvent) => {
+  const onDrag = (event: MouseEvent | TouchEvent) => {
     if (isDragging.value && element.value) {
-      element.value.style.left = `${event.clientX - offsetX.value}px`;
-      element.value.style.top = `${event.clientY - offsetY.value}px`;
+      let clientX = event instanceof MouseEvent ? event.clientX : event.touches[0].clientX;
+      let clientY = event instanceof MouseEvent ? event.clientY : event.touches[0].clientY;
+      element.value.style.left = `${clientX - offsetX.value}px`;
+      element.value.style.top = `${clientY - offsetY.value}px`;
     }
   };
 
@@ -30,16 +36,21 @@ export function useDraggable() {
       isDragging.value = false;
       document.removeEventListener('mousemove', onDrag);
       document.removeEventListener('mouseup', stopDrag);
+      document.removeEventListener('touchmove', onDrag);
+      document.removeEventListener('touchend', stopDrag);
     }
   };
 
   onMounted(() => {
     document.addEventListener('mouseup', stopDrag);
+    document.addEventListener('touchend', stopDrag);
   });
 
   onBeforeUnmount(() => {
     document.removeEventListener('mouseup', stopDrag);
     document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('touchmove', onDrag);
+    document.removeEventListener('touchend', stopDrag);
   });
 
   return { element, startDrag };
