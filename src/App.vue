@@ -3,6 +3,7 @@
     <nav-bar />
     <router-view />
     <footer-comp />
+    <<bot-component />
   </div>
 </template>
 
@@ -10,11 +11,13 @@
 import { defineComponent } from 'vue';
 import NavBar from './components/NavBar.vue';
 import FooterComp from './components/Footer.vue';
+import BotComponent from './bot/BotComponent.vue';
 
 export default defineComponent({
   components: {
     NavBar,
-    FooterComp
+    FooterComp,
+    BotComponent
   }
 });
 </script>
