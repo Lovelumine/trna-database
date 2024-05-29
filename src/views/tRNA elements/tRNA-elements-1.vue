@@ -31,7 +31,7 @@
           <div>
             <p><b>Function:</b> {{ record.功能 }}</p>
             <p><b>Cells where function occurs:</b> {{ record.功能发挥细胞 }}</p>
-            <p><b>Literature Source:</b> {{ record.文献来源 }}</p>
+            <p><b>Literature Source(PMID):</b> {{ record.文献来源 }}</p>
           </div>
         </template>
       </s-table>
@@ -44,6 +44,7 @@ import { defineComponent, ref, onMounted } from 'vue';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
+import { autoResizerProps } from 'element-plus';
 
 // 定义数据类型
 type DataType = { [key: string]: string };
@@ -63,7 +64,7 @@ export default defineComponent({
       { title: 'Function', dataIndex: '功能', width: 320, ellipsis: true, key: '功能', resizable: true },
       { title: 'Cells where function occurs', dataIndex: '功能发挥细胞', width: 200, ellipsis: true, key: '功能发挥细胞', resizable: true },
       {
-        title: 'Literature Source', width: 320, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
+        title: 'Literature Source(PMID)', width: 185, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
         resizable: true
       }
     ];
