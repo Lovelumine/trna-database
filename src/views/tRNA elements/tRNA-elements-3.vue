@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>tRNA Elements 3</h2>
+    <h2>tRNA Recognition AARS</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->

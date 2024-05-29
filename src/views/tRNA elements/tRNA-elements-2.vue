@@ -1,6 +1,6 @@
 <template>
  <div class="site--main">
-    <h2>tRNA Elements 2</h2>
+    <h2>tRNA Characterastic</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -60,7 +60,6 @@ export default defineComponent({
     });
 
     const columns: STableColumnsType<DataType> = [
-      { title: 'AARS', dataIndex: 'AARS', width: 120, ellipsis: true, key: 'AARS', resizable: true },
       { title: 'tRNA Features', dataIndex: 'tRNA特征', width: 320, ellipsis: true, key: 'tRNA特征', resizable: true },
       { title: 'Function', dataIndex: '功能', width: 320, ellipsis: true, key: '功能', resizable: true },
       { title: 'Cells', dataIndex: '细胞', width: 200, ellipsis: true, key: '细胞', resizable: true },
