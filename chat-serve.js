@@ -21,7 +21,7 @@ app.post('/api/openai', async (req, res) => {
   console.log('Received request body:', req.body); // 增加控制台输出，查看请求体
   try {
     const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
+      'https://api.lqqq.ltd/v1/chat/completions',
       {
         model: 'gpt-3.5-turbo',
         messages: req.body.messages,

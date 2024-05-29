@@ -14,6 +14,9 @@ import './assets/search.css';
 
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
+import * as ElIcons from '@element-plus/icons-vue'; // 引入 Element Plus 图标
+
+
 
 // 引入组件
 import Home from './views/Home.vue';
@@ -48,8 +51,15 @@ const router = createRouter({
 
 // 创建 Vue 应用实例
 const app = createApp(App);
+
+// 注册所有图标组件
+for (const name in ElIcons) {
+  app.component(name, ElIcons[name]);
+}
+
 app.use(STable);
 app.use(VXETable);
 app.use(router);
 app.use(ElementPlus);
 app.mount('#app');
+
