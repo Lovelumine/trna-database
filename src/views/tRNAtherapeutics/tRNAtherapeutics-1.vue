@@ -39,7 +39,7 @@
             </template>
             <template v-else-if="column.key === 'Related_disease'">
               <ElSpace>
-                <ElTag v-for="item in record.Related_disease.split(';').map(str => str.trim())" :key="item" :type="item === 'cystic fibrosis' ? 'danger' : item === 'Model protein' ? '' : 'success'">
+                <ElTag v-for="item in record.Related_disease.split(';').map(str => str.trim())" :key="item" :type="item === 'cystic fibrosis' ? 'danger' : item === 'Model protein' ? 'info' : 'success'">
                   {{ item }}
                 </ElTag>
               </ElSpace>
