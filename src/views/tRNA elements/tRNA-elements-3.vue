@@ -15,11 +15,22 @@
           <el-radio-button label="large">Large Size</el-radio-button>
         </el-radio-group>
       </div>
+      <!-- 选择显示列 -->
+      <div class="column-controls" style="margin-bottom: 10px">
+        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
+          <el-option
+            v-for="column in allColumns"
+            :key="column.key"
+            :label="column.title as string"
+            :value="column.key"
+          />
+        </el-select>
+      </div>
     </div>
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
       <s-table
-        :columns="columns"
+        :columns="displayedColumns"
         :data-source="filteredDataSource"
         :row-key="record => record.key"
         :stripe="true"
@@ -43,8 +54,9 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { STableProvider } from '@shene/table';
+import { ElSelect, ElOption } from 'element-plus';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 
@@ -63,15 +75,27 @@ const locale = ref(en)
 
 export default defineComponent({
   name: 'TrnaElements3',
+  components: {
+    ElSelect,
+    ElOption
+  },
   setup() {
     const { searchText, filteredDataSource, loadData } = useTableData('/data/tRNA elements-3.csv');
     const tableSize = ref('default'); // 表格尺寸状态
+    const selectedColumns = ref<string[]>([
+      'aaRS',
+      'AcceptorStem',
+      'AnticodonArm',
+      'OtherLocation',
+      'OtherDomains',
+      'Reference'
+    ]);
 
     onMounted(() => {
       loadData();
     });
 
-    const columns: STableColumnsType<DataType> = [
+    const allColumns: STableColumnsType<DataType> = [
       {
         title: 'AARS',
         dataIndex: 'aaRS',
@@ -132,13 +156,56 @@ export default defineComponent({
       }
     ];
 
+    const displayedColumns = computed(() =>
+      allColumns.filter(column => selectedColumns.value.includes(column.key as string) || column.children?.some(child => selectedColumns.value.includes(child.key as string)))
+    );
+
     return {
-      columns,
+      columns: displayedColumns,
       filteredDataSource,
       tableSize,
       searchText,
       locale,
+      selectedColumns,
+      displayedColumns,
+      allColumns // 列选择控件
     };
   }
 });
 </script>
+
+<style scoped>
+.site--main {
+  padding: 20px;
+}
+
+.top-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-box {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.size-controls, .column-controls {
+  display: flex;
+  align-items: center;
+}
+
+.column-select {
+  margin-left: 10px;
+  width: 200px; /* 设置选择框的宽度 */
+}
+
+.bracket-links {
+  color: #00ACF5;
+  text-decoration: none;
+}
+
+.bracket-links:hover {
+  text-decoration: underline;
+}
+</style>

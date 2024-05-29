@@ -15,6 +15,17 @@
           <el-radio-button value="large">Large Size</el-radio-button>
         </el-radio-group>
       </div>
+            <!-- 选择显示列 -->
+            <div class="column-controls" style="margin-bottom: 10px">
+        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
+          <el-option
+            v-for="column in allColumns"
+            :key="column.key"
+            :label="column.title as string"
+            :value="column.key"
+          />
+        </el-select>
+      </div>
     </div>
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
@@ -53,7 +64,8 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
+import { ElTag, ElSpace, ElSelect, ElOption  } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
@@ -66,6 +78,12 @@ type DataType = { [key: string]: string };
 
 export default defineComponent({
   name: 'CodingVariationDisease',
+  components: {
+    ElTag,
+    ElSpace,
+    ElSelect,
+    ElOption
+  },
   setup() {
     const { searchText, filteredDataSource, loadData } = useTableData('/data/coding variation Disease v1.1.csv');
     const tableSize = ref('default'); // 表格尺寸状态
@@ -74,7 +92,14 @@ export default defineComponent({
       loadData();
     });
 
-    const columns: STableColumnsType<DataType> = [
+    const selectedColumns = ref<string[]>([
+      'mutationType',
+      'diseaseName',
+      'Phenotype',
+      'gene',
+      'Locus',
+  ])
+    const allColumns: STableColumnsType<DataType> = [
       {
         title: 'Mutation Type',
         dataIndex: 'mutationType',
@@ -136,12 +161,19 @@ export default defineComponent({
       }
     ];
 
+    const displayedColumns = computed(() =>
+      allColumns.filter(column => selectedColumns.value.includes(column.key as string))
+    );
+
     return {
-      columns,
+      columns: displayedColumns,
       filteredDataSource,
       tableSize,
       searchText,
       locale,
+      selectedColumns,
+      displayedColumns,
+      allColumns // 列选择控件
     };
   }
 });
@@ -150,4 +182,26 @@ export default defineComponent({
 <style scoped>
 .site--main {
   padding: 20px;
-}</style>
+}
+
+.top-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-box {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.size-controls, .column-controls {
+  display: flex;
+  align-items: center;
+}
+
+.column-select {
+  margin-left: 10px;
+  width: 200px; /* 设置选择框的宽度 */
+}
+</style>

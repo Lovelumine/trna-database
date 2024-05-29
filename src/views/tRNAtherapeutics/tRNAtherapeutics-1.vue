@@ -11,6 +11,17 @@
             <el-radio-button value="large">Large Size</el-radio-button>
           </el-radio-group>
         </div>
+      <!-- 选择显示列 -->
+      <div class="column-controls" style="margin-bottom: 10px">
+        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
+          <el-option
+            v-for="column in allColumns"
+            :key="column.key"
+            :label="column.title as string"
+            :value="column.key"
+          />
+        </el-select>
+      </div>
       </div>
       <s-table-provider :hover="true" :locale="locale">
         <s-table
@@ -63,51 +74,57 @@
   </template>
   
   <script lang="tsx">
-  import { defineComponent, ref, onMounted } from 'vue';
-  import { ElTag, ElSpace } from 'element-plus';
+  import { defineComponent, ref, onMounted, computed } from 'vue';
+  import { ElTag, ElSpace, ElSelect, ElOption  } from 'element-plus';
   import { STableProvider } from '@shene/table';
   import type { STableColumnsType } from '@shene/table';
   import { useTableData } from '../../assets/js/useTableData.js';
   
-  type DataType = {
-    [key: string]: string;
-    Related_disease: string;
-    Pathogenic_gene: string;
-    PTC_model: string;
-    Species_source_of_PTC_model: string;
-    Sequence_of_PTC_model: string;
-    PTC_site: string;
-    Origin_aa_and_codon_of_PTC_site: string;
-    PTC_codon: string;
-    Delivery_as_vector_or_IVT_tRNA: string;
-    Delivery_method: string;
-    Ref_length: string;
-    Engineered_aaRS: string;
-    Reading_through_efficiency: string;
-    Measuring_of_efficiency: string;
-    Supplenmentary_information_of_Measurement: string;
-    Reaction_system: string;
-    Safety: string;
-    Immunogenicity: string;
-    Investigation: string;
-    Citation: string;
-  };
+  type DataType = { [key: string]: string };
   
   import en from '@shene/table/dist/locale/en'
   const locale = ref(en)
 
   export default defineComponent({
     name: 'TRNATherapeutics-1',
+    components: {
+    ElTag,
+    ElSpace,
+    ElSelect,
+    ElOption
+  },
     setup() {
       const { searchText, filteredDataSource, loadData } = useTableData('/data/tRNAtherapeutics.csv');
   
       const tableSize = ref('default');
+      const selectedColumns = ref<string[]>([
+      'Related_disease',
+      'Pathogenic_gene',
+      'PTC_model',
+      'Species_source_of_PTC_model',
+      'Sequence_of_PTC_model',
+      'PTC_site',
+      'Origin_aa_and_codon_of_PTC_site',
+      'PTC_codon',
+      'Delivery_as_vector_or_IVT_tRNA',
+      'Delivery_method',
+      'Ref_length',
+      'Engineered_aaRS',
+      'Reading_through_efficiency',
+      'Measuring_of_efficiency',
+      'Supplenmentary_information_of_Measurement',
+      'Reaction_system',
+      'Safety',
+      'Immunogenicity',
+      'Investigation',
+      'Citation'
+    ]);
   
       onMounted(() => {
         loadData();
       });
   
-      const columns: STableColumnsType<DataType> = [
+      const allColumns: STableColumnsType<DataType> = [
         { title: 'Related Disease', dataIndex: 'Related_disease', width: 150, ellipsis: true, key: 'Related_disease', resizable: true },
         { title: 'Pathogenic Gene', dataIndex: 'Pathogenic_gene', width: 150, ellipsis: true, key: 'Pathogenic_gene', resizable: true },
         { title: 'PTC Model', dataIndex: 'PTC_model', width: 100, ellipsis: true, key: 'PTC_model', resizable: true },
@@ -130,12 +147,20 @@
         { title: 'Citation', dataIndex: 'Citation', width: 300, ellipsis: true, key: 'Citation', resizable: true }
       ];
   
-      return {
-        columns,
-        filteredDataSource,
-        tableSize,
+      const displayedColumns = computed(() =>
+      allColumns.filter(column => selectedColumns.value.includes(column.key as string))
+    );
+
+
+    return {
+      columns: displayedColumns,
+      filteredDataSource,
+      tableSize,
       searchText,
       locale,
+      selectedColumns,
+      displayedColumns,
+      allColumns // 添加这一行，用于列选择控件
     };
   }
 });
@@ -157,9 +182,14 @@
   margin-right: 10px;
 }
 
-.size-controls {
+.size-controls, .column-controls {
   display: flex;
   align-items: center;
+}
+
+.column-select {
+  margin-left: 10px;
+  width: 200px; /* 设置选择框的宽度 */
 }
 </style>
 
