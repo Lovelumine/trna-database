@@ -6,19 +6,28 @@
     <div id="chat-box" v-if="isChatOpen">
       <div id="chat-header">
         <span>Yingying</span>
-        <button @click="toggleChat">Close</button>
+        <button @click="toggleChat" class="close-button">
+          <el-icon><close /></el-icon>
+        </button>
       </div>
       <div id="chat-content">
         <div v-for="message in messages" :key="message.id" :class="message.sender">
-          {{ message.text }}
+          <img v-if="message.sender === 'bot'" src="/bot-image.png" alt="Bot Avatar" class="avatar"/>
+          <img v-if="message.sender === 'user'" src="https://cdn-icons-png.flaticon.com/512/1946/1946429.png" alt="User Avatar" class="avatar"/>
+          <div class="message">
+            {{ message.text }}
+          </div>
         </div>
       </div>
-      <input
-        id="chat-input"
-        v-model="newMessage"
-        @keypress.enter="sendMessage"
-        placeholder="Type a message..."
-      />
+      <div id="chat-input-container">
+        <input
+          id="chat-input"
+          v-model="newMessage"
+          @keypress.enter="sendMessage"
+          placeholder="Type a message..."
+        />
+        <button @click="sendMessage" id="send-button">Send</button>
+      </div>
     </div>
   </div>
 </template>
@@ -27,9 +36,15 @@
 import { defineComponent, ref, watch } from 'vue';
 import { useDraggable } from './Draggable';
 import { useChat } from './useChat';
+import { ElIcon } from 'element-plus';
+import { Close } from '@element-plus/icons-vue';
 
 export default defineComponent({
   name: 'BotComponent',
+  components: {
+    ElIcon,
+    Close
+  },
   setup() {
     const { element, startDrag } = useDraggable();
     const { isChatOpen, messages, newMessage, toggleChat, sendMessage } = useChat();
@@ -48,3 +63,5 @@ export default defineComponent({
   }
 });
 </script>
+
+
