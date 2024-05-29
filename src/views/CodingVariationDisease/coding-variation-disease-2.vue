@@ -28,7 +28,7 @@
       </div>
     </div>
     <!-- 表格组件 -->
-    <s-table-provider :hover="true" :locale="locale" >
+    <s-table-provider :hover="true" :locale="locale">
       <s-table
         :columns="displayedColumns"
         :data-source="filteredDataSource"
@@ -102,6 +102,9 @@ type DataType = {
   tags: string[];
 };
 
+// 定义允许的标签类型
+type TagType = 'success' | 'warning' | 'info' | 'primary' | 'danger';
+
 import en from '@shene/table/dist/locale/en'
   const locale = ref(en)
 
@@ -129,8 +132,9 @@ export default defineComponent({
     const tableSize = ref('default'); // 表格尺寸状态
     const selectedColumns = ref<string[]>([
       'GENE_NAME',
-      'GENOMIC_REF_ALLELE',
-      'GENOMIC_MUT_ALLELE',
+      'MUTATION_LOCUS_IN_GRCh37',
+      'MUTATION_LOCUS_IN_GRCh38',
+      'MUTATION_TYPE',
       'DISEASE'
     ]);
 
@@ -163,10 +167,10 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
-    const tagTypeMap = ref<{ [key: string]: string }>({}); // 用于存储标签类型与颜色的映射
-    const tagColors = ['danger', 'success', 'warning']; // 可用的颜色
+    const tagTypeMap = ref<{ [key: string]: TagType }>({}); // 用于存储标签类型与颜色的映射
+    const tagColors: TagType[] = ['danger', 'success', 'warning', 'primary', 'info']; // 可用的颜色
 
-    const getTagType = (tag: string) => {
+    const getTagType = (tag: string): TagType => {
       if (!tagTypeMap.value[tag]) {
         const randomColor = tagColors[Math.floor(Math.random() * tagColors.length)];
         tagTypeMap.value[tag] = randomColor;
@@ -180,8 +184,8 @@ export default defineComponent({
       tableSize,
       searchText,
       renderDiseaseTooltip,
-      locale,
       displayedColumns,
+      locale,
       selectedColumns,
       allColumns, // 列选择控件
       getTagType // 获取标签类型
