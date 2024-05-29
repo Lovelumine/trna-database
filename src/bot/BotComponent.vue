@@ -5,7 +5,7 @@
     </div>
     <div id="chat-box" v-if="isChatOpen">
       <div id="chat-header">
-        <span>Yingying</span>
+        <span>Smart Web Navigator</span>
         <button @click="toggleChat" class="close-button">
           <el-icon><close /></el-icon>
         </button>
