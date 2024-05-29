@@ -44,7 +44,7 @@
           </template>
           <template v-else-if="column.key === 'DISEASE'">
             <ElSpace>
-              <ElTag v-for="items in (Array.isArray(record.DISEASE) ? record.DISEASE : record.DISEASE.split(';').map(str => str.trim()))" :key="items">
+              <ElTag v-for="items in (Array.isArray(record.DISEASE) ? record.DISEASE : record.DISEASE.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace>
@@ -65,7 +65,7 @@
             <p><b>Genomic Mut Allele:</b> {{ record.GENOMIC_MUT_ALLELE }}</p>
             <p><b>Disease:</b>
               <ElSpace>
-                <ElTag v-for="items in (Array.isArray(record.DISEASE) ? record.DISEASE : record.DISEASE.split(';').map(str => str.trim()))" :key="items">
+                <ElTag v-for="items in (Array.isArray(record.DISEASE) ? record.DISEASE : record.DISEASE.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                   {{ items }}
                 </ElTag>
               </ElSpace>
@@ -99,6 +99,7 @@ type DataType = {
   GENOMIC_REF_ALLELE: string;
   GENOMIC_MUT_ALLELE: string;
   DISEASE: string[]; // 修改为数组类型
+  tags: string[];
 };
 
 import en from '@shene/table/dist/locale/en'
@@ -128,14 +129,6 @@ export default defineComponent({
     const tableSize = ref('default'); // 表格尺寸状态
     const selectedColumns = ref<string[]>([
       'GENE_NAME',
-      'ENSEMBL_ID',
-      'MUTATION_URL',
-      'LEGACY_MUTATION_ID',
-      'GENOMIC_MUTATION_ID',
-      'MUTATION_LOCUS_IN_GRCh37',
-      'MUTATION_LOCUS_IN_GRCh38',
-      'MUTATION_TYPE',
-      'MUTATION_CDS',
       'GENOMIC_REF_ALLELE',
       'GENOMIC_MUT_ALLELE',
       'DISEASE'
@@ -170,6 +163,17 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
+    const tagTypeMap = ref<{ [key: string]: string }>({}); // 用于存储标签类型与颜色的映射
+    const tagColors = ['danger', 'success', 'warning']; // 可用的颜色
+
+    const getTagType = (tag: string) => {
+      if (!tagTypeMap.value[tag]) {
+        const randomColor = tagColors[Math.floor(Math.random() * tagColors.length)];
+        tagTypeMap.value[tag] = randomColor;
+      }
+      return tagTypeMap.value[tag];
+    };
+
     return {
       columns: displayedColumns,
       filteredDataSource,
@@ -179,7 +183,8 @@ export default defineComponent({
       locale,
       displayedColumns,
       selectedColumns,
-      allColumns // 列选择控件
+      allColumns, // 列选择控件
+      getTagType // 获取标签类型
     };
   }
 });
