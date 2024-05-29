@@ -39,7 +39,7 @@
             </template>
             <template v-else-if="column.key === 'Related_disease'">
               <ElSpace>
-                <ElTag v-for="item in record.Related_disease.split(';').map(str => str.trim())" :key="item">
+                <ElTag v-for="item in record.Related_disease.split(';').map(str => str.trim())" :key="item" :type="item === 'cystic fibrosis' ? 'danger' : item === 'Model protein' ? '' : 'success'">
                   {{ item }}
                 </ElTag>
               </ElSpace>
@@ -99,25 +99,10 @@
       const tableSize = ref('default');
       const selectedColumns = ref<string[]>([
       'Related_disease',
-      'Pathogenic_gene',
       'PTC_model',
       'Species_source_of_PTC_model',
       'Sequence_of_PTC_model',
-      'PTC_site',
-      'Origin_aa_and_codon_of_PTC_site',
-      'PTC_codon',
-      'Delivery_as_vector_or_IVT_tRNA',
-      'Delivery_method',
-      'Ref_length',
-      'Engineered_aaRS',
-      'Reading_through_efficiency',
-      'Measuring_of_efficiency',
-      'Supplenmentary_information_of_Measurement',
       'Reaction_system',
-      'Safety',
-      'Immunogenicity',
-      'Investigation',
-      'Citation'
     ]);
   
       onMounted(() => {
@@ -125,11 +110,22 @@
       });
   
       const allColumns: STableColumnsType<DataType> = [
-        { title: 'Related Disease', dataIndex: 'Related_disease', width: 150, ellipsis: true, key: 'Related_disease', resizable: true },
+        { title: 'Related Disease', dataIndex: 'Related_disease', width: 200, ellipsis: true, key: 'Related_disease', 
+        filter: {
+          type: 'multiple',
+          list: [
+            { text: 'cystic fibrosis', value: 'cystic fibrosis' },
+            { text: 'Model protein', value: 'Model protein' },
+            { text: 'primary ciliary dyskinesia (PCD)', value: 'primary ciliary dyskinesia (PCD)'},
+            { text: 'Xeroderma pigmentosum', value: 'Xeroderma pigmentosum'},         
+          ],
+          onFilter: (value, record) => value.includes(record.Related_disease)
+        },
+        resizable: true },
         { title: 'Pathogenic Gene', dataIndex: 'Pathogenic_gene', width: 150, ellipsis: true, key: 'Pathogenic_gene', resizable: true },
         { title: 'PTC Model', dataIndex: 'PTC_model', width: 100, ellipsis: true, key: 'PTC_model', resizable: true },
-        { title: 'Species Source of PTC Model', dataIndex: 'Species_source_of_PTC_model', width: 200, ellipsis: true, key: 'Species_source_of_PTC_model', resizable: true },
-        { title: 'Sequence of PTC Model', dataIndex: 'Sequence_of_PTC_model', width: 200, ellipsis: true, key: 'Sequence_of_PTC_model', resizable: true },
+        { title: 'Species Source of PTC Model', dataIndex: 'Species_source_of_PTC_model', width: 220, ellipsis: true, key: 'Species_source_of_PTC_model', resizable: true },
+        { title: 'Sequence of PTC Model', dataIndex: 'Sequence_of_PTC_model', width: 280, ellipsis: true, key: 'Sequence_of_PTC_model', resizable: true },
         { title: 'PTC Site', dataIndex: 'PTC_site', width: 150, ellipsis: true, key: 'PTC_site', resizable: true },
         { title: 'Origin AA and Codon of PTC Site', dataIndex: 'Origin_aa_and_codon_of_PTC_site', width: 200, ellipsis: true, key: 'Origin_aa_and_codon_of_PTC_site', resizable: true },
         { title: 'PTC Codon', dataIndex: 'PTC_codon', width: 100, ellipsis: true, key: 'PTC_codon', resizable: true },
@@ -160,7 +156,7 @@
       locale,
       selectedColumns,
       displayedColumns,
-      allColumns // 添加这一行，用于列选择控件
+      allColumns // 列选择控件
     };
   }
 });
