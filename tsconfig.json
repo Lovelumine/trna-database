@@ -1,22 +1,22 @@
 {
-    "compilerOptions": {
-      "target": "esnext",
-      "module": "esnext",
-      "moduleResolution": "node",
-      "strict": false,
-      "jsx": "preserve",
-      "esModuleInterop": true,
-      "allowSyntheticDefaultImports": true,
-      "sourceMap": true,
-      "baseUrl": ".",
-      "paths": {
-        "@/*": ["src/*"]
-      },
-      "lib": ["esnext", "dom"],
-      "experimentalDecorators": true,
-      "skipLibCheck": true
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "strict": false,
+    "jsx": "preserve",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@element-plus/icons-vue": ["node_modules/@element-plus/icons-vue/dist/index.d.ts"] // 添加路径配置
     },
-    "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/vue-shims.d.ts"],
-    "exclude": ["node_modules"]
-  }
-  
+    "lib": ["esnext", "dom"],
+    "experimentalDecorators": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/vue-shims.d.ts"],
+  "exclude": ["node_modules"]
+}
