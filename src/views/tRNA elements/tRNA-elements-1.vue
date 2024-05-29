@@ -31,8 +31,7 @@
           <div>
             <p><b>Function:</b> {{ record.功能 }}</p>
             <p><b>Cells where function occurs:</b> {{ record.功能发挥细胞 }}</p>
-            <p><b>Literature Source(PMID):</b> {{ record.文献来源 }}</p>
-            <p><a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.文献来源" target="_blank" class="tilt-hover">Link</a></p>
+            <p><b>Literature Source(PMID):</b><a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.文献来源" target="_blank" class="tilt-hover">{{record.文献来源}}</a></p>
           </div>
         </template>
       </s-table>
@@ -45,7 +44,7 @@ import { defineComponent, ref, onMounted } from 'vue';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
-import { autoResizerProps } from 'element-plus';
+
 
 // 定义数据类型
 type DataType = { [key: string]: string };
@@ -61,11 +60,12 @@ export default defineComponent({
     });
 
     const columns: STableColumnsType<DataType> = [
-      { title: 'Modification', dataIndex: '修饰', width: 120, ellipsis: true, key: '修饰', resizable: true },
-      { title: 'Function', dataIndex: '功能', width: 320, ellipsis: true, key: '功能', resizable: true },
+      { title: 'Modification', dataIndex: '修饰', width: 140, ellipsis: true, key: '修饰', resizable: true },
+      { title: 'Function', dataIndex: '功能', width: 380, ellipsis: true, key: '功能', resizable: true },
       { title: 'Cells where function occurs', dataIndex: '功能发挥细胞', width: 200, ellipsis: true, key: '功能发挥细胞', resizable: true },
       {
-        title: 'Literature Source(PMID)', width: 185, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
+        title: 'PMID', width: 112, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
+        customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.文献来源 || '#'} target="_blank" class="bracket-links">{record.文献来源}</a></div>),
         resizable: true
       }
     ];
