@@ -32,6 +32,7 @@
             <p><b>Function:</b> {{ record.功能 }}</p>
             <p><b>Cells where function occurs:</b> {{ record.功能发挥细胞 }}</p>
             <p><b>Literature Source(PMID):</b> {{ record.文献来源 }}</p>
+            <p><a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.文献来源" target="_blank" class="tilt-hover">Link</a></p>
           </div>
         </template>
       </s-table>
