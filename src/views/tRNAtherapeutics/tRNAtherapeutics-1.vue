@@ -12,7 +12,7 @@
           </el-radio-group>
         </div>
       </div>
-      <s-table-provider :hover="true">
+      <s-table-provider :hover="true" :locale="locale">
         <s-table
           :columns="columns"
           :data-source="filteredDataSource"
@@ -93,6 +93,9 @@
     Citation: string;
   };
   
+  import en from '@shene/table/dist/locale/en'
+  const locale = ref(en)
+
   export default defineComponent({
     name: 'TRNATherapeutics-1',
     setup() {
@@ -131,7 +134,8 @@
         columns,
         filteredDataSource,
         tableSize,
-      searchText
+      searchText,
+      locale,
     };
   }
 });

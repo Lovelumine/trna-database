@@ -17,7 +17,7 @@
       </div>
     </div>
     <!-- 表格组件 -->
-    <s-table-provider :hover="true">
+    <s-table-provider :hover="true" :locale="locale" >
       <s-table
         :columns="columns"
         :data-source="filteredDataSource"
@@ -89,6 +89,9 @@ type DataType = {
   GENOMIC_MUT_ALLELE: string;
   DISEASE: string[]; // 修改为数组类型
 };
+
+import en from '@shene/table/dist/locale/en'
+  const locale = ref(en)
 
 export default defineComponent({
   name: 'CodingVariationDisease2',
@@ -286,7 +289,8 @@ export default defineComponent({
       filteredDataSource,
       tableSize,
       searchText,
-      renderDiseaseTooltip
+      renderDiseaseTooltip,
+      locale,
     };
   }
 });

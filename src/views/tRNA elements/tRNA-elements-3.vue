@@ -17,7 +17,7 @@
       </div>
     </div>
     <!-- 表格组件 -->
-    <s-table-provider :hover="true" :theme-color="'#00ACF5'">
+    <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
       <s-table
         :columns="columns"
         :data-source="filteredDataSource"
@@ -57,6 +57,9 @@ type DataType = {
   OtherDomains: string;
   Reference: string;
 };
+
+import en from '@shene/table/dist/locale/en'
+const locale = ref(en)
 
 export default defineComponent({
   name: 'TrnaElements3',
@@ -134,6 +137,7 @@ export default defineComponent({
       filteredDataSource,
       tableSize,
       searchText,
+      locale,
     };
   }
 });

@@ -16,7 +16,7 @@
         </div>
       </div>
       <!-- 表格组件 -->
-      <s-table-provider :hover="true">
+      <s-table-provider :hover="true" :locale="locale">
         <s-table
           :columns="columns"
           :data-source="filteredDataSource"
@@ -79,6 +79,9 @@
     'Mutational position of sup-tRNA': string;
     'PMID of references': string;
   };
+
+  import en from '@shene/table/dist/locale/en'
+  const locale = ref(en)
   
   export default defineComponent({
     name: 'NaturalSupTRNA',
@@ -113,7 +116,8 @@
         columns,
         filteredDataSource,
         tableSize,
-        searchText
+        searchText,
+        locale,
       };
     }
   });
