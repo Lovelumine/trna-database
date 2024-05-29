@@ -151,7 +151,7 @@
   }
 
   #chat-box {
-    width: 240px;  /* 在手机屏幕上使用更大的百分比 */
+    width: 280px;  /* 在手机屏幕上使用更大的百分比 */
     height: 300px;  /* 高度适当减小 */
     right: 50%;  /* 调整对话框位置使其居中 */
     transform: translate(10px, -20px);  /* 与right配合使其居中 */
