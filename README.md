@@ -1,7 +1,7 @@
 
 # tRNA治疗数据库 🧬
 
-欢迎访问 [tRNA治疗数据库](https://trna.lumoxuan.com/)，一个致力于推动遗传疾病治疗研究的平台。
+欢迎访问 [tRNA治疗数据库](https://trna.lumoxuan.cn/)，一个致力于推动遗传疾病治疗研究的平台。
 
 ## 文件结构 📁
 ```
