@@ -15,11 +15,22 @@
           <el-radio-button value="large">Large Size</el-radio-button>
         </el-radio-group>
       </div>
+      <!-- 选择显示列 -->
+      <div class="column-controls" style="margin-bottom: 10px">
+        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
+          <el-option
+            v-for="column in allColumns"
+            :key="column.key"
+            :label="column.title as string"
+            :value="column.key"
+          />
+        </el-select>
+      </div>
     </div>
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :locale="locale" >
       <s-table
-        :columns="columns"
+        :columns="displayedColumns"
         :data-source="filteredDataSource"
         :row-key="record => record.key"
         :stripe="true"
@@ -67,8 +78,8 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted } from 'vue';
-import { ElTooltip, ElTag, ElSpace } from 'element-plus';
+import { defineComponent, ref, onMounted, computed } from 'vue';
+import { ElTooltip, ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
@@ -96,7 +107,11 @@ import en from '@shene/table/dist/locale/en'
 export default defineComponent({
   name: 'CodingVariationDisease2',
   components: {
-    ElTooltip
+    ElTooltip,
+    ElTag,
+    ElSpace,
+    ElSelect,
+    ElOption
   },
   setup() {
     const { searchText, filteredDataSource, loadData } = useTableData('/data/coding variation in Caner.csv', (data) => {
@@ -111,6 +126,20 @@ export default defineComponent({
     });
 
     const tableSize = ref('default'); // 表格尺寸状态
+    const selectedColumns = ref<string[]>([
+      'GENE_NAME',
+      'ENSEMBL_ID',
+      'MUTATION_URL',
+      'LEGACY_MUTATION_ID',
+      'GENOMIC_MUTATION_ID',
+      'MUTATION_LOCUS_IN_GRCh37',
+      'MUTATION_LOCUS_IN_GRCh38',
+      'MUTATION_TYPE',
+      'MUTATION_CDS',
+      'GENOMIC_REF_ALLELE',
+      'GENOMIC_MUT_ALLELE',
+      'DISEASE'
+    ]);
 
     onMounted(() => {
       loadData();
@@ -122,175 +151,35 @@ export default defineComponent({
       return diseaseArray.map(item => item.split('/').join(' / ')).join('<br />');
     };
 
-    const columns: STableColumnsType<DataType> = [
-      { 
-        title: 'Gene Name', 
-        dataIndex: 'GENE_NAME', 
-        width: 150, 
-        ellipsis: true, 
-        key: 'GENE_NAME', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="The gene name for which the data has been curated in COSMIC. In most cases this is the accepted HGNC symbol">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-        title: 'Ensembl ID', 
-        dataIndex: 'ENSEMBL_ID', 
-        width: 180, 
-        ellipsis: true, 
-        key: 'ENSEMBL_ID', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="The transcript identifier of the gene">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-  title: 'Mutation URL', 
-  dataIndex: 'MUTATION_URL', 
-  width: 120, 
-  ellipsis: true, 
-  key: 'MUTATION_URL', 
-  resizable: true,
-  customRender: ({ text }) => (
-    <ElTooltip content="URL of mutation page on the main COSMIC site">
-      <div>
-        <a href={text || '#'} target="_blank" class="bracket-links">Link</a>
-      </div>
-    </ElTooltip>
-  )
-},
-
-      { 
-        title: 'Legacy Mutation ID', 
-        dataIndex: 'LEGACY_MUTATION_ID', 
-        width: 150, 
-        ellipsis: true, 
-        key: 'LEGACY_MUTATION_ID', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="Legacy mutation identifier (COSM) that represents existing COSM mutation identifiers">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-        title: 'Genomic Mutation ID', 
-        dataIndex: 'GENOMIC_MUTATION_ID', 
-        width: 170, 
-        ellipsis: true, 
-        key: 'GENOMIC_MUTATION_ID', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="Genomic mutation identifier (COSV) to indicate the definitive position of the variant on the genome. This identifier is trackable and stable between different versions of the release">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-        title: 'Mutation Locus in GRCh37', 
-        dataIndex: 'MUTATION_LOCUS_IN_GRCh37', 
-        width: 200, 
-        ellipsis: true, 
-        key: 'MUTATION_LOCUS_IN_GRCh37', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="The genomic coordinates of the mutation on the GRCh37 assembly">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-        title: 'Mutation Locus in GRCh38', 
-        dataIndex: 'MUTATION_LOCUS_IN_GRCh38', 
-        width: 200, 
-        ellipsis: true, 
-        key: 'MUTATION_LOCUS_IN_GRCh38', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="The genomic coordinates of the mutation on the GRCh38 assembly">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-        title: 'Mutation Type', 
-        dataIndex: 'MUTATION_TYPE', 
-        width: 150, 
-        ellipsis: true, 
-        key: 'MUTATION_TYPE', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="Type of mutation at the amino acid level (Only collected Nonsense mutations)">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-        title: 'Mutation CDS', 
-        dataIndex: 'MUTATION_CDS', 
-        width: 150, 
-        ellipsis: true, 
-        key: 'MUTATION_CDS', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="The change that has occurred in the nucleotide sequence. Formatting is based on the recommendations made by the Human Genome Variation Society (HGVS)">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-        title: 'Genomic Ref Allele', 
-        dataIndex: 'GENOMIC_REF_ALLELE', 
-        width: 150, 
-        ellipsis: true, 
-        key: 'GENOMIC_REF_ALLELE', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="Reference allele in the genomic change (on the forward strand)">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-        title: 'Genomic Mut Allele', 
-        dataIndex: 'GENOMIC_MUT_ALLELE', 
-        width: 150, 
-        ellipsis: true, 
-        key: 'GENOMIC_MUT_ALLELE', 
-        resizable: true, 
-        customRender: ({ text }) => (
-          <ElTooltip content="Mutant allele in the genomic change (on the forward strand)">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      },
-      { 
-        title: 'Disease', 
-        dataIndex: 'DISEASE', 
-        width: 1200, 
-        ellipsis: true, 
-        key: 'DISEASE', 
-        resizable: true,
-        customRender: ({ text }) => (
-          <ElTooltip content="Diseases with > 1% samples in COSMIC mutated (or frequency > 0.01), where disease = Primary site(tissue) / Primary histology / Sub-histology">
-            <span>{text}</span>
-          </ElTooltip>
-        )
-      }
+    const allColumns: STableColumnsType<DataType> = [
+      { title: 'Gene Name', dataIndex: 'GENE_NAME', width: 150, ellipsis: true, key: 'GENE_NAME', resizable: true },
+      { title: 'Ensembl ID', dataIndex: 'ENSEMBL_ID', width: 180, ellipsis: true, key: 'ENSEMBL_ID', resizable: true },
+      { title: 'Mutation URL', dataIndex: 'MUTATION_URL', width: 120, ellipsis: true, key: 'MUTATION_URL', resizable: true },
+      { title: 'Legacy Mutation ID', dataIndex: 'LEGACY_MUTATION_ID', width: 150, ellipsis: true, key: 'LEGACY_MUTATION_ID', resizable: true },
+      { title: 'Genomic Mutation ID', dataIndex: 'GENOMIC_MUTATION_ID', width: 170, ellipsis: true, key: 'GENOMIC_MUTATION_ID', resizable: true },
+      { title: 'Mutation Locus in GRCh37', dataIndex: 'MUTATION_LOCUS_IN_GRCh37', width: 200, ellipsis: true, key: 'MUTATION_LOCUS_IN_GRCh37', resizable: true },
+      { title: 'Mutation Locus in GRCh38', dataIndex: 'MUTATION_LOCUS_IN_GRCh38', width: 200, ellipsis: true, key: 'MUTATION_LOCUS_IN_GRCh38', resizable: true },
+      { title: 'Mutation Type', dataIndex: 'MUTATION_TYPE', width: 150, ellipsis: true, key: 'MUTATION_TYPE', resizable: true },
+      { title: 'Mutation CDS', dataIndex: 'MUTATION_CDS', width: 150, ellipsis: true, key: 'MUTATION_CDS', resizable: true },
+      { title: 'Genomic Ref Allele', dataIndex: 'GENOMIC_REF_ALLELE', width: 150, ellipsis: true, key: 'GENOMIC_REF_ALLELE', resizable: true },
+      { title: 'Genomic Mut Allele', dataIndex: 'GENOMIC_MUT_ALLELE', width: 150, ellipsis: true, key: 'GENOMIC_MUT_ALLELE', resizable: true },
+      { title: 'Disease', dataIndex: 'DISEASE', width: 1200, ellipsis: true, key: 'DISEASE', resizable: true }
     ];
 
+    const displayedColumns = computed(() =>
+      allColumns.filter(column => selectedColumns.value.includes(column.key as string))
+    );
+
     return {
-      columns,
+      columns: displayedColumns,
       filteredDataSource,
       tableSize,
       searchText,
       renderDiseaseTooltip,
       locale,
+      displayedColumns,
+      selectedColumns,
+      allColumns // 列选择控件
     };
   }
 });
@@ -312,17 +201,13 @@ export default defineComponent({
   margin-right: 10px;
 }
 
-.size-controls {
+.size-controls, .column-controls {
   display: flex;
   align-items: center;
 }
 
-.bracket-links {
-  color: #409eff;
-  text-decoration: none;
-}
-
-.bracket-links:hover {
-  text-decoration: underline;
+.column-select {
+  margin-left: 10px;
+  width: 200px; /* 设置选择框的宽度 */
 }
 </style>
