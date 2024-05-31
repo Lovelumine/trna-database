@@ -2,13 +2,18 @@ import { ref } from 'vue';
 import axios from 'axios';
 import { systemInformation, projectBackground, projectObjectives, projectContent } from './presetInformation';
 
+
 export function useChat() {
+
+
   const isChatOpen = ref(false);
-  const messages = ref([
-    { id: 1, text: 'Hello, I am your virtual assistant Yingying. How can I assist you today?', sender: 'bot' }
-  ]);
+const messages = ref<Array<{ id: number; text: string; sender: string; image?: string }>>([
+  { id: 1, text: 'Hello, I am your virtual assistant Yingying. How can I assist you today?', sender: 'bot' }
+]);
+
   const newMessage = ref('');
   const newImage = ref(null); // 新增，存储上传的图片
+  const imagePreview = ref(''); // 新增，存储图片预览的 URL
 
   const presetInformation = `
     ${systemInformation}
@@ -36,6 +41,7 @@ export function useChat() {
       });
       newMessage.value = '';
       newImage.value = null; // 发送后清空图片
+      imagePreview.value = ''; // 清空预览
 
       // 准备对话上下文
       const conversation = messages.value.map(msg => ({
@@ -86,13 +92,21 @@ export function useChat() {
     }
   };
 
-  // 将图片转换为 Base64 编码
-  const toBase64 = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = error => reject(error);
-  });
+// 将图片转换为 Base64 编码
+const toBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = () => {
+    const result = reader.result;
+    if (typeof result === 'string') {
+      resolve(result.split(',')[1]);
+    } else {
+      reject(new Error('FileReader result is not a string'));
+    }
+  };
+  reader.onerror = error => reject(error);
+});
+
 
   // 触发图片上传
   const triggerImageUpload = () => {
@@ -100,12 +114,20 @@ export function useChat() {
   };
 
   // 预览图片
-  const previewImage = (event) => {
-    const file = event.target.files[0];
+  const previewImage = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
     if (file) {
       newImage.value = file;
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          imagePreview.value = reader.result;
+        }
+      };
     }
   };
 
-  return { isChatOpen, messages, newMessage, newImage, toggleChat, sendMessage, triggerImageUpload, previewImage };
+  return { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage };
 }

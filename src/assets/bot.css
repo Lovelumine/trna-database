@@ -111,6 +111,7 @@
 
 #chat-input-container {
   display: flex;
+  align-items: center;
   padding: 10px;
   border-top: 1px solid #ccc;
 }
@@ -128,13 +129,50 @@
   background-color: #007bff;
   color: white;
   border: none;
-  padding: 10px;
-  border-radius: 50%;
+  padding: 10px 20px;
+  border-radius: 25px;
   cursor: pointer;
+  font-size: 16px; /* 增大字体大小 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s; /* 增加过渡效果 */
 }
 
 #send-button:hover {
   background-color: #0056b3;
+}
+
+#image-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 25px;
+  cursor: pointer;
+  margin-right: 10px;
+  font-size: 16px; /* 增大字体大小 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s; /* 增加过渡效果 */
+}
+
+#image-button:hover {
+  background-color: #0056b3;
+}
+
+.image-preview {
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.image-preview-thumbnail {
+  max-width: 50px;
+  max-height: 50px;
+  border-radius: 5px;
+  margin-left: 10px;
 }
 
 @media (max-width: 600px) {
@@ -149,8 +187,8 @@
   }
 
   #chat-box {
-    width: 280px;  /* 在手机屏幕上使用更大的百分比 */
-    height: 300px;  /* 高度适当减小 */
+    width: 320px;  /* 在手机屏幕上使用更大的百分比 */
+    height: 340px;  /* 高度适当减小 */
     right: 50%;  /* 调整对话框位置使其居中 */
     transform: translate(10px, -20px);  /* 与right配合使其居中 */
   }
@@ -161,18 +199,4 @@
   max-width: 100%;
   border-radius: 8px;
   margin-top: 5px;
-}
-
-#image-button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 50%;
-  cursor: pointer;
-  margin-right: 10px;
-}
-
-#image-button:hover {
-  background-color: #0056b3;
 }
