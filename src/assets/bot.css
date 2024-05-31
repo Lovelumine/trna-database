@@ -157,3 +157,25 @@
     transform: translate(10px, -20px);  /* 与right配合使其居中 */
   }
 }
+
+
+/* 添加新的样式 */
+.message-image {
+  max-width: 100%;
+  border-radius: 8px;
+  margin-top: 5px;
+}
+
+#image-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+#image-button:hover {
+  background-color: #0056b3;
+}
