@@ -98,8 +98,6 @@
   font-size: 12px; /* 调整消息字体大小 */
 }
 
-
-
 #chat-content .avatar {
   width: 30px;
   height: 30px;
@@ -157,7 +155,6 @@
     transform: translate(10px, -20px);  /* 与right配合使其居中 */
   }
 }
-
 
 /* 添加新的样式 */
 .message-image {
