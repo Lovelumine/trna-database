@@ -2,10 +2,8 @@ import express from 'express';
 import axios from 'axios';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import multer from 'multer';
-import fs from 'fs';
-import FormData from 'form-data';
 import bodyParser from 'body-parser';
+import winston from 'winston';
 
 // 加载 .env 文件中的环境变量
 dotenv.config();
@@ -21,21 +19,35 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 const OPENAI_API_KEY = process.env.VITE_OPENAI_API_KEY;
 const API_BASE_URL = 'https://api.lqqq.ltd/v1'; // 统一使用这个URL
 
+// 创建日志记录器
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({
+      format: 'YYYY-MM-DD HH:mm:ss'
+    }),
+    winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'combined.log' }), // 保存所有日志
+    new winston.transports.File({ filename: 'error.log', level: 'error' }) // 仅保存错误日志
+  ],
+});
 
 // 打印 API 密钥以确认读取成功（仅用于调试）
-console.log('OpenAI API Key:', OPENAI_API_KEY);
-console.log('API Base URL:', API_BASE_URL);
+logger.info('OpenAI API Key: ' + OPENAI_API_KEY);
+logger.info('API Base URL: ' + API_BASE_URL);
 
 // 处理文本与图片请求
 app.post('/api/openai', async (req, res) => {
-  console.log('Received request body:', req.body); // 增加控制台输出，查看请求体
+  logger.info('Received request body: ' + JSON.stringify(req.body)); // 增加控制台输出，查看请求体
   try {
     const response = await axios.post(
       `${API_BASE_URL}/chat/completions`,
       {
         model: 'gpt-4o',
         messages: req.body.messages,
-        max_tokens: 150,
+        max_tokens: 1000,
       },
       {
         headers: {
@@ -46,12 +58,10 @@ app.post('/api/openai', async (req, res) => {
     );
     res.json(response.data);
   } catch (error) {
-    console.error('Error communicating with OpenAI API:', error.response ? error.response.data : error.message);
+    logger.error('Error communicating with OpenAI API: ' + (error.response ? JSON.stringify(error.response.data) : error.message));
     res.status(500).json({ error: 'Error communicating with OpenAI API' });
   }
 });
-
-
 
 // 处理图片生成请求
 app.post('/api/openai/image-generation', async (req, res) => {
@@ -77,11 +87,11 @@ app.post('/api/openai/image-generation', async (req, res) => {
     const response = await axios(config);
     res.json(response.data);
   } catch (error) {
-    console.error('Error communicating with OpenAI API:', error.response ? error.response.data : error.message);
+    logger.error('Error communicating with OpenAI API: ' + (error.response ? JSON.stringify(error.response.data) : error.message));
     res.status(500).json({ error: 'Error communicating with OpenAI API' });
   }
 });
 
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  logger.info(`Server running at http://localhost:${port}`);
 });
