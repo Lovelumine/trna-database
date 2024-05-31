@@ -11,7 +11,7 @@
         </button>
       </div>
       <div id="chat-content">
-        <div v-for="message in messages" :key="message.id" :class="message.sender">
+        <div v-for="message in messages" :key="message.id" :class="['message-container', message.sender]">
           <img v-if="message.sender === 'bot'" src="/bot-image.png" alt="Bot Avatar" class="avatar"/>
           <img v-if="message.sender === 'user'" src="https://cdn-icons-png.flaticon.com/512/1946/1946429.png" alt="User Avatar" class="avatar"/>
           <div class="message">

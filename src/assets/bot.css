@@ -74,7 +74,7 @@
 }
 
 #chat-content .user {
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 #chat-content .bot {
@@ -199,4 +199,52 @@
   max-width: 100%;
   border-radius: 8px;
   margin-top: 5px;
+}
+
+.message-container {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.user {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.bot {
+  justify-content: flex-start;
+}
+
+.message {
+  max-width: 60%;
+  padding: 8px;
+  border-radius: 15px;
+  font-size: 12px;
+}
+
+.user .message {
+  background-color: #007bff;
+  color: white;
+  margin-left: 10px;
+}
+
+.bot .message {
+  background-color: #f1f1f1;
+  margin-right: 10px;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user .avatar {
+  margin-left: 10px;
+}
+
+.bot .avatar {
+  margin-right: 10px;
 }
