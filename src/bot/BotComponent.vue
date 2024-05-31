@@ -31,10 +31,18 @@
         />
         <input type="file" id="image-input" @change="previewImage" style="display: none;" />
         <!-- 隐藏的文件输入，用于选择图片 -->
-        <button @click="triggerImageUpload" id="image-button">📷</button>
+        <button @click="triggerImageUpload" id="image-button">
+          <i class="fas fa-camera"></i>
+        </button>
         <!-- 图片上传按钮，点击时触发图片选择 -->
-        <button @click="sendMessage" id="send-button">Send</button>
+        <button @click="sendMessage" id="send-button">
+          <i class="fas fa-paper-plane"></i>
+        </button>
         <!-- 发送按钮，点击时发送消息，按钮文字为 "Send" -->
+        <div v-if="imagePreview" class="image-preview">
+          <img :src="imagePreview" alt="Image Preview" class="image-preview-thumbnail"/>
+          <!-- 图片选择成功后显示的缩略图 -->
+        </div>
       </div>
     </div>
   </div>
@@ -47,6 +55,7 @@ import { useChat } from './useChat';
 import { ElIcon } from 'element-plus';
 import { Close } from '@element-plus/icons-vue';
 
+
 export default defineComponent({
   name: 'BotComponent',
   components: {
@@ -55,7 +64,7 @@ export default defineComponent({
   },
   setup() {
     const { element, startDrag } = useDraggable();
-    const { isChatOpen, messages, newMessage, newImage, toggleChat, sendMessage, triggerImageUpload, previewImage  } = useChat();
+    const { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage  } = useChat();
 
     // 监听聊天框显示状态变化
     watch(isChatOpen, (newVal) => {
@@ -67,7 +76,7 @@ export default defineComponent({
       console.log("Messages Updated:", newVal);
     }, { deep: true });
 
-    return { element, startDrag, isChatOpen, messages, newMessage, newImage, toggleChat, sendMessage, triggerImageUpload, previewImage };
+    return { element, startDrag, isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage };
   }
 });
 </script>
