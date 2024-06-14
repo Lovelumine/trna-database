@@ -52,19 +52,23 @@
             </template>
           </template>
           <template #expandedRowRender="{ record }">
-            <div>
-              <p><b>Species:</b> {{ record.Species }}</p>
-              <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
-              <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
-              <p><b>Stop codon for readthrough:</b> {{ record['Stop codon for readthrough'] }}</p>
-              <p><b>Noncanonical charged amino acids:</b> {{ record['Noncanonical charged amino acids'] }}</p>
-              <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
-              <p><b>tRNA sequence after mutation:</b> {{ record['tRNA sequence after mutation'] }}</p>
-              <p><b>Readthrough mechanism:</b> {{ record['Readthrough mechanism'] }}</p>
-              <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
-              <p><b>PMID of references:</b> {{ record['PMID of references'] }}</p>
-            </div>
-          </template>
+  <div>
+    <p><b>Species:</b> {{ record.Species }}</p>
+    <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
+    <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
+    <p><b>Stop codon for readthrough:</b> {{ record['Stop codon for readthrough'] }}</p>
+    <p><b>Noncanonical charged amino acids:</b> {{ record['Noncanonical charged amino acids'] }}</p>
+    <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
+    <p><b>tRNA sequence after mutation:</b> <span v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
+    <p><b>Readthrough mechanism:</b> {{ record['Readthrough mechanism'] }}</p>
+    <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
+    <p><b>PMID of references:</b> {{ record['PMID of references'] }}</p>
+  </div>
+</template>
+
+
+
+
         </s-table>
       </s-table-provider>
     </div>
@@ -76,6 +80,8 @@
   import { STableProvider } from '@shene/table';
   import type { STableColumnsType } from '@shene/table';
   import { useTableData } from '../../assets/js/useTableData.js';
+  import { h } from 'vue';
+
   
   type DataType = {
     [key: string]: string | string[];
@@ -130,6 +136,37 @@
       const displayedColumns = computed(() =>
         allColumns.filter(column => selectedColumns.value.includes(column.key as string))
       );
+
+      const highlightMutation = (sequence) => {
+  if (!sequence) return sequence;
+
+  let highlightedSequence = sequence;
+
+  // 处理替换
+  highlightedSequence = highlightedSequence.replace(/\\([A-Z])/g, (match, p1) => {
+    return `<el-tooltip content="Replaced with ${p1}" effect="dark"><span style="color: red;">${p1}</span></el-tooltip>`;
+  });
+
+  // 处理增添
+  highlightedSequence = highlightedSequence.replace(/\\\\([A-Z])/g, (match, p1) => {
+    return `<el-tooltip content="Added ${p1}" effect="dark"><span style="color: green;">${p1}</span></el-tooltip>`;
+  });
+
+  // 处理删除
+  highlightedSequence = highlightedSequence.replace(/\\\\\\([A-Z])/g, (match, p1) => {
+    return `<el-tooltip content="Deleted ${p1}" effect="dark"><span style="text-decoration: line-through; color: black;">${p1}</span></el-tooltip>`;
+  });
+
+  // 移除转义字符
+  highlightedSequence = highlightedSequence.replace(/\\/g, '');
+
+  return highlightedSequence;
+};
+
+
+
+
+
   
       return {
         allColumns,
@@ -139,7 +176,8 @@
         searchText,
         locale,
         selectedColumns,
-        displayedColumns
+        displayedColumns,
+        highlightMutation // 返回highlightMutation方法
       };
     }
   });
