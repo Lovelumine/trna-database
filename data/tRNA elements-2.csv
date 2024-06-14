@@ -1,23 +1,43 @@
 ﻿tRNA特征,功能,细胞,参考文献
-G19-C56,remarkable part of the tertiary structure and important for interaction with other RNAs and proteins,,26771646,
- lacking both D- and T-arm,such a tRNAAsp in yeast can be aminoacylated, tRNAAsp from yeast,10508395,
-s2Um or m22Gm,only found in archaea,archaea,,
-"tRNAIle contained the anti-coden(C-A-U), which was generally the anti-codon of tRNAMet",highly conserved in cp tRNAs of Gossypium L,Gossypium L.,34071968,
- A(+)-C base-pair ,reduces the size of the normal 7 nucleotide anticodon loop to 5 nucleotides and induces a change in the loop backbone conformation,,9478205,
- long variable arm composed of over ten nucleotides,"stem-length-specifically, but not sequence-specifically, important for recognition",E.coli,8114091,
-introns,"All the intronless strains were viable, but the tRNAPheGAA and tRNATyrGUA intronless strains displayed slow growth and help with psi34 synthesis",Saccharomyces cerevisiae,30997502,
-m1I37 in tRNAAla and m1I57,m1I is found exclusively at position 37 (3' adjacent to the anticodon) of eukaryotic tRNA(Ala) and at position 57 (in the middle of the psi loop) of several tRNAs from halophilic and thermophilic archaebacteria.,eukaryotic,8915538,
- tRNAAsn and tRNAGln contained a conserved U1 nucleotide while others contain G 1st,,cyanobacterial ,29321793,
-C28:U42 in tRNACys (GCA) mismatch in the anticodon stem,,potato mt,11732609,
-D in D loop,使 C3'-内型核糖构象不稳定，增加了 tRNA 三级结构的灵活性,E.coli,23908023,
-U33 and nm5s2U34-U35 in tRNAGln,作为进一步甲基化酶MnmM的关键识别位点,Bacillus subtilis,36762482,
-57位去甲基化 in tRNAGlu(CTC),推动了相关5'tRFs的产生,airway epithelial cells,36680097,
-C31:G39 in tRNAArg(CCG),tRNA前体正确折叠，以及成熟tRNA产生的节点,酿酒细胞,16581807,
-G37 to A in tRNASep,增强了UGA的阻抑效应,E.Coli,26350500,
-GUUCAm1 AAUC (m1A is 1-methyladenosine) at position 53–61 of tRNA along with a stable acceptor stem in tRNALys3,人类细胞中，作为pus10酶形成ψ54的关键识别位点信息,SF9 cells,30530625,
-3'端 of pre-tRNAIle(UAU) and pre-tRNATyr,在应激条件下，会产生不同的末端，如单C，CC或者完整的CCA,酵母细胞,26729922,
-base32-base38,不应该作为互补碱基，不然会导致与密码子配对的发密码子构象不太理想，可能会被核糖体解码位点拒绝,E.Coli,27448410,
-U13 in tRNAGln,作为PUS7的特异性底物，结构上符合PUS7的修饰域,293,34718722,,
-G35 -U 36-t 6 A37 in tRNAThr,作为m3C32修饰酶Trm140的特异性识别序列,yeast Saccharomyces cerevisiae,28003514,,
-"V-loop, as well as by t6 A 37 and i 6 A37 in tRNASer",作为m3C32修饰酶Trm141的特异性识别序列,yeast Saccharomyces cerevisiae,28003514,,
-"m1A58 correlate with m1G37/m1I37 in tRNALeu(AAG, TAA, CAA,), tRNAPro(TGG), tRNAHis(GTG), tRNASer(TGA), tRNAArg(CCG, ACG, TCG)",修饰添加过程中的特征过程,HEK293T,36537222,,
+G19-C56,remarkable part of the tertiary structure and important for interaction with other RNAs and proteins,,26771646
+ lacking both D- and T-arm,such a tRNAAsp in yeast can be aminoacylated, tRNAAsp from yeast,10508395
+s2Um or m22Gm,only found in archaea,archaea,
+"tRNAIle contained the anti-coden(C-A-U), which was generally the anti-codon of tRNAMet",highly conserved in cp tRNAs of Gossypium L,Gossypium L.,34071968
+ A(+)-C base-pair ,reduces the size of the normal 7 nucleotide anticodon loop to 5 nucleotides and induces a change in the loop backbone conformation,,9478205
+ long variable arm composed of over ten nucleotides,"stem-length-specifically, but not sequence-specifically, important for recognition",E.coli,8114091
+introns,"All the intronless strains were viable, but the tRNAPheGAA and tRNATyrGUA intronless strains displayed slow growth and help with psi34 synthesis",Saccharomyces cerevisiae,30997502
+m1I37 in tRNAAla and m1I57,m1I is found exclusively at position 37 (3' adjacent to the anticodon) of eukaryotic tRNA(Ala) and at position 57 (in the middle of the psi loop) of several tRNAs from halophilic and thermophilic archaebacteria.,eukaryotic,8915538
+ tRNAAsn and tRNAGln contained a conserved U1 nucleotide while others contain G 1st,,cyanobacterial ,29321793
+C28:U42 in tRNACys (GCA) mismatch in the anticodon stem,,potato mt,11732609
+D in D loop,使 C3'-内型核糖构象不稳定，增加了 tRNA 三级结构的灵活性,E.coli,23908023
+U33 and nm5s2U34-U35 in tRNAGln,作为进一步甲基化酶MnmM的关键识别位点,Bacillus subtilis,36762482
+57位去甲基化 in tRNAGlu(CTC),推动了相关5'tRFs的产生,airway epithelial cells,36680097
+C31:G39 in tRNAArg(CCG),tRNA前体正确折叠，以及成熟tRNA产生的节点,酿酒细胞,16581807
+G37 to A in tRNASep,增强了UGA的阻抑效应,E.Coli,26350500
+GUUCAm1 AAUC (m1A is 1-methyladenosine) at position 53–61 of tRNA along with a stable acceptor stem in tRNALys3,人类细胞中，作为pus10酶形成ψ54的关键识别位点信息,SF9 cells,30530625
+3'端 of pre-tRNAIle(UAU) and pre-tRNATyr,在应激条件下，会产生不同的末端，如单C，CC或者完整的CCA,酵母细胞,26729922
+base32-base38,不应该作为互补碱基，不然会导致与密码子配对的发密码子构象不太理想，可能会被核糖体解码位点拒绝,E.Coli,27448410
+U13 in tRNAGln,作为PUS7的特异性底物，结构上符合PUS7的修饰域,293,34718722
+G35 -U 36-t 6 A37 in tRNAThr,作为m3C32修饰酶Trm140的特异性识别序列,yeast Saccharomyces cerevisiae,28003514
+"V-loop, as well as by t6 A 37 and i 6 A37 in tRNASer",作为m3C32修饰酶Trm141的特异性识别序列,yeast Saccharomyces cerevisiae,28003514
+"m1A58 correlate with m1G37/m1I37 in tRNALeu(AAG, TAA, CAA,), tRNAPro(TGG), tRNAHis(GTG), tRNASer(TGA), tRNAArg(CCG, ACG, TCG)",修饰添加过程中的特征过程,HEK293T,36537222
+i6A37 in tRNASer(UCN),作为m3C32修饰酶METTL8-Iso1的特异性识别特征,,38744809
+G35 in tRNAThr,作为m3C32修饰酶METTL8-Iso2的特异性识别特征,,38744809
+"G36G37 in tRNA Leu(GAG), Leu(CAG), Leu(UAG), Pro(GGG), Pro(UGG), Pro(CGG), and His(GUG)",作为m1G37修饰酶PaTrmD的特异识别特征,铜绿假单胞菌,31399541
+G31:C39 to A31:C39 in tRNAGln(CUG),突变之后可以对UAG进行编码,酵母细胞,28134782
+"m3C in tRNAArg(UCG,CCG,ACG)",可以帮助DALRD3蛋白识别并结合该tRNA,293T,32427860
+"CCA terminus, the target site C72, the discriminator base U73, and the second and third base pairs (2:71 and 3:70) of the acceptor stem in tRNAThr and tRNACys",作为nsun6甲基转移酶催化C72的关键识别元件,human cell,27703015
+m7G46 ,作为修饰酶Yfip引入acp3U47的重要标志,E.coli,31863583
+m1A58 in tRNATrp and tRNAAla,作为修饰酶TRUB2引入ψ55的关键识别信息,E.coli,33023933
+Q at wobble in tRNAAsp(GUC),可以刺激m5C38的甲基化反应,E. histolytica,33688012
+introns in pre-tRNAIle(UAU),"在34,36位点引入ψ修饰的关键因素",Eukaryotic,36292915
+D-arms,是TrmH引入Gm18的关键，可以深入修饰酶的催化中心,in vitro,15062082
+未修饰的tRNA,truB首选的分子进行ψ55修饰,E.coli,32385137
+ψ55,作为tRMA引入m5U54的偏好条件,E.coli,32385137
+C32 and two base pairs in the D-stem in tRNAMet,作为t6A修饰酶KEOPS引入t6A的识别关键元件,293T,35104889
+"U8, A14, G15, G18, G19, U55, Purine57, and A58 U8, A14, G18, and U55 in tRNALeu",作为m1A22修饰酶TrmK引入m1A22识别的关键位点,Geobacillus stearothermophilus,36462666
+"G30, R178 with G30 and U31, K12 with C32 and",作为CMOM酶结合的关键位点,in silico,37587716
+"U33, N16 with U33 and cmo5 U34, K22 with cmo5 U34,",,,
+"H158 and R246 with G35, and K176 with A36 and i6 A37",,,
+"A36-A37-A38 or  i 6 A37 in tRNALeu(CAA,UAA)",Trml引入Um/Cm34的tRNA识别位点,E.coli,26106808
+C/A>U>G) 32-N 33-(U/G>A) 34-N 35-U 36 A 37 A 38 in hmttRNAThr,作为t6A修饰引入酶OSGEPL1引入修饰的识别元件,人体线粒体,32047918
