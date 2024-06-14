@@ -85,12 +85,23 @@ export default {
 
 .site--url .avatar {
   margin-right: 10px;
-  height: 48px;
-  width: 48px;
+  height: 64px; /* 调整高度 */
+  width: 64px; /* 调整宽度 */
   border: 3px solid var(--farallon-background-white);
-  border-radius: 100%;
-  box-shadow: 0 2px 4px 0 var(--farillon-border-color);
+  border-radius: 50%; /* 完全圆形 */
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2); /* 增加阴影 */
   transition: .5s ease-in-out;
+  overflow: hidden; /* 确保内容适应圆形 */
+  background-color: var(--farallon-background-white); /* 背景色以防图像透明 */
+  display: flex; /* 用于居中对齐 */
+  align-items: center; /* 垂直居中对齐 */
+  justify-content: center; /* 水平居中对齐 */
+}
+
+.site--url .avatar img {
+  max-width: 100%; /* 最大宽度 */
+  max-height: 100%; /* 最大高度 */
+  object-fit: contain; /* 确保图像不变形 */
 }
 
 .site--header__center {

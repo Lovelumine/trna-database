@@ -1,5 +1,6 @@
 <template>
   <div class="site--main">
+    <h2>Natural Sup-tRNA</h2>
     <!-- 顶部行包含尺寸调整、搜索框和列选择 -->
     <div class="top-controls">
       <!-- 搜索框 -->
