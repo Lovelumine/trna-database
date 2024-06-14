@@ -56,6 +56,19 @@
               <p><b>PTC Codon:</b> {{ record.PTC_codon }}</p>
               <p><b>Delivery as Vector or IVT tRNA:</b> {{ record.Delivery_as_vector_or_IVT_tRNA }}</p>
               <p><b>Delivery Method:</b> {{ record.Delivery_method }}</p>
+              <p><b>Supplenmentary Information of Delivery:</b>{{ record.Supplenmentary_information_of_delivery }}</p>
+              <p><b>AA and Anticodon of Origin tRNA:</b> {{ record.aa_and_anticodon_of_origin_tRNA }}</p>
+              <p><b>AA and Anticodon of Sup-tRNA:</b> {{ record.aa_and_anticodon_of_sup_tRNA }}</p>
+              <p><b>Rnacentralc ID of Origin tRNA:</b>{{ record.rnacentral_ID_of_origin_tRNA }}</p>
+              <p><b>tRNAscan-SE ID of Origin tRNA:</b>{{ record.rnacentral_ID_of_origin_tRNA }}</p>
+              <p><b>Species Source of Origin tRNA:</b>{{ record.rnacentral_ID_of_origin_tRNA }}</p>
+              <p><b>Sequence of Origin tRNA:</b>{{ record.Sequence_of_origin_tRNA }}</p>
+              <p><b>Sequence of Sup-tRNA:</b>{{ record.Sequence_of_sup_tRNA}}</p>
+              <p><b>Alignment:</b><pre>{{ record.Alignment}}</pre></p>
+              <p><b>E-Value:</b>{{ record.E_Value }}</p>
+              <p><b>Score:</b>{{ record.Score }}</p>
+              <p><b>Identities:</b>{{ record.Identities }}</p>
+              <p><b>Gaps:</b>{{ record.Gaps }}</p>
               <p><b>Ref Length:</b> {{ record.Ref_length }}</p>
               <p><b>Engineered aaRS:</b> {{ record.Engineered_aaRS }}</p>
               <p><b>Reading Through Efficiency:</b> {{ record.Reading_through_efficiency }}</p>
@@ -66,6 +79,7 @@
               <p><b>Immunogenicity:</b> {{ record.Immunogenicity }}</p>
               <p><b>Investigation:</b> {{ record.Investigation }}</p>
               <p><b>Citation:</b> {{ record.Citation }}</p>
+              <p><b>notes:</b>{{ record.notes }}</p>
             </div>
           </template>
         </s-table>
@@ -131,6 +145,19 @@
         { title: 'PTC Codon', dataIndex: 'PTC_codon', width: 100, ellipsis: true, key: 'PTC_codon', resizable: true },
         { title: 'Delivery as Vector or IVT tRNA', dataIndex: 'Delivery_as_vector_or_IVT_tRNA', width: 200, ellipsis: true, key: 'Delivery_as_vector_or_IVT_tRNA', resizable: true },
         { title: 'Delivery Method', dataIndex: 'Delivery_method', width: 150, ellipsis: true, key: 'Delivery_method', resizable: true },
+        { title: 'Supplenmentary_information_of_delivery', dataIndex: 'Supplenmentary_information_of_delivery', width: 100, ellipsis: true, key: 'Supplenmentary_information_of_delivery', resizable: true },
+        { title: 'AA and Anticodon of Origin tRNA', dataIndex: 'aa_and_anticodon_of_origin_tRNA', width: 300, ellipsis: true, key: 'aa_and_anticodon_of_origin_tRNA', resizable: true },
+        { title: 'AA and Anticodon of Sup-tRNA', dataIndex: 'aa_and_anticodon_of_sup_tRNA', width: 300, ellipsis: true, key: 'aa_and_anticodon_of_sup_tRNA', resizable: true },
+        { title: 'Rnacentral ID of Origin tRNA', dataIndex: 'rnacentral_ID_of_origin_tRNA', width: 300, ellipsis: true, key: 'rnacentral_ID_of_origin_tRNA', resizable: true },
+        { title: 'tRNAscan-SE ID of origin tRNA', dataIndex: 'tRNAscan-SE_ID_of_origin_tRNA', width: 300, ellipsis: true, key: 'tRNAscan-SE_ID_of_origin_tRNA', resizable: true },
+        { title: 'Species Source of Origin tRNA', dataIndex: 'Species_source_of_origin_tRNA', width: 300, ellipsis: true, key: 'Species_source_of_origin_tRNA', resizable: true },
+        { title: 'Sequence of Origin tRNA', dataIndex: 'Sequence_of_origin_tRNA', width: 300, ellipsis: true, key: 'Sequence_of_origin_tRNA', resizable: true },
+        { title: 'Sequence of Sup-tRNA', dataIndex: 'Sequence_of_sup_tRNA', width: 300, ellipsis: true, key: 'Sequence_of_sup_tRNA', resizable: true },
+        { title: 'Alignment', dataIndex: 'Alignment', width: 300, ellipsis: true, key: 'Alignment', resizable: true },
+        { title: 'E-Value', dataIndex: 'E_Value', width: 300, ellipsis: true, key: 'E_Value', resizable: true },
+        { title: 'Score', dataIndex: 'Score', width: 300, ellipsis: true, key: 'Score', resizable: true },
+        { title: 'Identities', dataIndex: 'Identities', width: 300, ellipsis: true, key: 'Identities', resizable: true },
+        { title: 'Gaps', dataIndex: 'Gaps', width: 300, ellipsis: true, key: 'Gaps', resizable: true },
         { title: 'Ref Length', dataIndex: 'Ref_length', width: 100, ellipsis: true, key: 'Ref_length', resizable: true },
         { title: 'Engineered aaRS', dataIndex: 'Engineered_aaRS', width: 150, ellipsis: true, key: 'Engineered_aaRS', resizable: true },
         { title: 'Reading Through Efficiency', dataIndex: 'Reading_through_efficiency', width: 200, ellipsis: true, key: 'Reading_through_efficiency', resizable: true },
@@ -140,7 +167,9 @@
         { title: 'Safety', dataIndex: 'Safety', width: 100, ellipsis: true, key: 'Safety', resizable: true },
         { title: 'Immunogenicity', dataIndex: 'Immunogenicity', width: 150, ellipsis: true, key: 'Immunogenicity', resizable: true },
         { title: 'Investigation', dataIndex: 'Investigation', width: 300, ellipsis: true, key: 'Investigation', resizable: true },
-        { title: 'Citation', dataIndex: 'Citation', width: 300, ellipsis: true, key: 'Citation', resizable: true }
+        { title: 'Citation', dataIndex: 'Citation', width: 300, ellipsis: true, key: 'Citation', resizable: true },
+        { title: 'Notes', dataIndex: 'notes', width: 300, ellipsis: true, key: 'notes', resizable: true }
+  
       ];
   
       const displayedColumns = computed(() =>
