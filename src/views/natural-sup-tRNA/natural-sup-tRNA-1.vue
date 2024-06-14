@@ -17,35 +17,20 @@
       </div>
       <!-- 选择显示列 -->
       <div class="column-controls" style="margin-bottom: 10px">
-        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :label="column.title as string"
-            :value="column.key"
-          />
+        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags
+          class="column-select">
+          <el-option v-for="column in allColumns" :key="column.key" :label="column.title as string"
+            :value="column.key" />
         </el-select>
       </div>
     </div>
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :locale="locale">
-      <s-table
-        :columns="displayedColumns"
-        :data-source="filteredDataSource"
-        :row-key="record => record.key"
-        :stripe="true"
-        :show-sorter-tooltip="true"
-        :size="tableSize"
-        :expand-row-by-click="true"
-      >
+      <s-table :columns="displayedColumns" :data-source="filteredDataSource" :row-key="record => record.key"
+        :stripe="true" :show-sorter-tooltip="true" :size="tableSize" :expand-row-by-click="true">
         <template #bodyCell="{ text, column, record }">
           <template v-if="column.key === 'Structure of sup-tRNA'">
-            <el-image
-              style="width: 100px; height: 100px"
-              :src="text"
-              :preview-src-list="[text]"
-              fit="cover"
-            />
+            <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
           </template>
           <template v-else>
             <span>{{ text }}</span>
@@ -59,7 +44,8 @@
             <p><b>Stop codon for readthrough:</b> {{ record['Stop codon for readthrough'] }}</p>
             <p><b>Noncanonical charged amino acids:</b> {{ record['Noncanonical charged amino acids'] }}</p>
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
-            <p><b>tRNA sequence after mutation:</b> {{ record['tRNA sequence after mutation'] }}</p>
+            <p><b>tRNA sequence after mutation:</b> <span
+                v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
             <p><b>Readthrough mechanism:</b> {{ record['Readthrough mechanism'] }}</p>
             <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
             <p><b>PMID of references:</b> {{ record['PMID of references'] }}</p>
@@ -107,7 +93,7 @@ export default defineComponent({
     const { searchText, filteredDataSource, loadData } = useTableData('/data/natural-sup-tRNA.csv');
 
     const tableSize = ref('default');
-    const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stop codon for readthrough','Mutational position of sup-tRNA']);
+    const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stop codon for readthrough', 'Mutational position of sup-tRNA']);
 
     onMounted(() => {
       loadData();
@@ -131,6 +117,48 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
+    const highlightMutation = (sequence) => {
+      if (!sequence) return sequence;
+
+      let highlightedSequence = '';
+      let lastIndex = 0;
+
+      const regex = /(\\\\\\[A-Z])|(\\\\[A-Z])|(\\[A-Z])/g;
+      let match;
+
+      while ((match = regex.exec(sequence)) !== null) {
+        const [fullMatch] = match;
+        const index = match.index;
+
+        // 添加非突变部分
+        if (index > lastIndex) {
+          highlightedSequence += sequence.slice(lastIndex, index);
+        }
+
+        // 添加突变部分
+        if (fullMatch.startsWith("\\\\\\\\")) { // 删除
+          const base = fullMatch[4];
+          highlightedSequence += `<span style="text-decoration: line-through; color: black;" title="Deleted ${base}">${base}</span>`;
+        } else if (fullMatch.startsWith("\\\\")) { // 增添
+          const base = fullMatch[2];
+          highlightedSequence += `<span style="color: green;" title="Added ${base}">${base}</span>`;
+        } else if (fullMatch.startsWith("\\")) { // 替换
+          const base = fullMatch[1];
+          highlightedSequence += `<span style="color: red;" title="Replaced with ${base}">${base}</span>`;
+        }
+
+        lastIndex = index + fullMatch.length;
+      }
+
+      // 添加剩余部分
+      if (lastIndex < sequence.length) {
+        highlightedSequence += sequence.slice(lastIndex);
+      }
+
+      return highlightedSequence;
+    };
+
+
     return {
       allColumns,
       columns: displayedColumns,
@@ -139,7 +167,8 @@ export default defineComponent({
       searchText,
       locale,
       selectedColumns,
-      displayedColumns
+      displayedColumns,
+      highlightMutation // 返回highlightMutation方法
     };
   }
 });
@@ -161,7 +190,8 @@ export default defineComponent({
   margin-right: 10px;
 }
 
-.size-controls, .column-controls {
+.size-controls,
+.column-controls {
   display: flex;
   align-items: center;
 }
