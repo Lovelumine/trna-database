@@ -3,10 +3,19 @@
      <h2>tRNA Characteristic</h2>
      <!-- 顶部行包含尺寸调整和搜索框 -->
      <div class="top-controls">
-       <!-- 搜索框 -->
-       <div class="search-box" style="margin-bottom: 10px">
-         <input v-model="searchText" placeholder="Enter search content" class="search-input">
-       </div>
+      <!-- 搜索框 -->
+      <div class="search-box">
+        <input v-model="searchText" placeholder="Enter search content" class="search-input">
+        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
+          <el-option :key="'all'" :label="'All columns'" :value="''" />
+          <el-option
+            v-for="column in allColumns"
+            :key="column.key"
+            :label="column.title"
+            :value="column.dataIndex"
+          />
+        </el-select>
+      </div>
        <!-- 调整尺寸 -->
        <div class="size-controls" style="margin-bottom: 10px">
          <el-radio-group v-model="tableSize">
@@ -71,7 +80,7 @@
      ElOption
    },
    setup() {
-     const { searchText, filteredDataSource, loadData } = useTableData('/data/tRNA elements-2.csv');
+     const { searchText, filteredDataSource, searchColumn,loadData } = useTableData('/data/tRNA elements-2.csv');
      const tableSize = ref('default'); // 表格尺寸状态
      const selectedColumns = ref<string[]>([
        'tRNA特征',
@@ -107,6 +116,7 @@
        locale,
        selectedColumns,
        displayedColumns,
+       searchColumn,
        allColumns // 列选择控件
      };
    }
