@@ -40,8 +40,12 @@
       >
         <template #expandedRowRender="{ record }">
           <div>
+            <p><b>Modification:</b> {{ record.修饰 }}</p>
+            <p><b>Modified tRNA:</b> {{ record.修饰的tRNA }}</p>
             <p><b>Function:</b> {{ record.功能 }}</p>
-            <p><b>Cells where function occurs:</b> {{ record.功能发挥细胞 }}</p>
+            <p><b>Functioning Species:</b> {{ record.功能发挥物种 }}</p>
+            <p><b>Functioning Tissue or Cell Line:</b> {{ record.功能发挥细胞 }}</p>
+            <p><b>Other Functioning Sites:</b> {{ record.功能发挥其他场所 }}</p>
             <p><b>Literature Source(PMID):</b><a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.文献来源" target="_blank" class="tilt-hover">{{record.文献来源}}</a></p>
           </div>
         </template>
@@ -84,8 +88,11 @@ export default defineComponent({
 
     const allColumns: STableColumnsType<DataType> = [
       { title: 'Modification', dataIndex: '修饰', width: 140, ellipsis: true, key: '修饰', resizable: true },
+      { title: 'Modified tRNA', dataIndex: '修饰的tRNA', width: 140, ellipsis: true, key: '修饰的tRNA', resizable: true },
       { title: 'Function', dataIndex: '功能', width: 500, ellipsis: true, key: '功能', resizable: true },
-      { title: 'Cells where function occurs', dataIndex: '功能发挥细胞', width: 200, ellipsis: true, key: '功能发挥细胞', resizable: true },
+      { title: 'Functioning Species', dataIndex: '功能发挥物种', width: 500, ellipsis: true, key: '功能发挥物种', resizable: true },
+      { title: 'Functioning Tissue or Cell Line', dataIndex: '功能发挥细胞', width: 200, ellipsis: true, key: '功能发挥细胞', resizable: true },
+      { title: 'Other Functioning Sites', dataIndex: '功能发挥其他场所', width: 200, ellipsis: true, key: '功能发挥其他场所', resizable: true },
       {
         title: 'PMID', width: 112, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
         customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.文献来源 || '#'} target="_blank" class="bracket-links">{record.文献来源}</a></div>),
