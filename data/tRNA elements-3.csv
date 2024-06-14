@@ -1,9 +1,9 @@
 ﻿aaRS,AcceptorStem,AnticodonArm,OtherLocation,OtherDomains,Reference
-Alanine,"A73.G2:C71,G3:U70,G4:C69",,,G20,"Hou and Schimmel, 1988; McClain and Foss, 1988a; Franckhyn et al..1992"
-Arginine,AG73,"C35, U/G36",,A20,"McClain and Foss, 1988b; Schulman and Pelka, 1989; McClain et al.1990: Tamura et a.. 1992"
-Asparagine,G73,G34.,,,Shimizu et al.. 1992: li et al.. 1993
-Aspartic acid,"G73,G2:C71","G34.U35, C36,",C38,G10,"Hasegawa et al., 1989; Nameki et al., 1992"
-Cysteine,U73.G2:C71.C3:G70,"G34.C35, A36",,G15: G48.A13:A22,"Pallanck et al., 1992; Shimizu et al., 1992; Hou et al.. 1993; McClain1993; Komatsoulis and Abelson, 1993; Hamann and Hou, 1997"
+Alanine,"A73.G2:C71,G3:U70,G4:C69",,,G20,"3285220, 2459773, 1284550"
+Arginine,AG73,"C35, U/G36",,A20,"2193162, 2688091, 2251270, 2049085"
+Asparagine,G73,G34.,,,"1375736, 8232541"
+Aspartic acid,"G73,G2:C71","G34.U35, C36,",C38,G10,"2694679,  1472058"
+Cysteine,U73.G2:C71.C3:G70,"G34.C35, A36",,G15: G48.A13:A22,"1373131, 1375736, 3285220, 2452483, 8338841, 9222494"
 Glutamine,"G73,U1:A72,G2:C71,G3:C70","C/T34.U35, G36",A37.U38,G10,"Rogers and S'll, 1988; Jahn et al., 1991; Hayase et al., 1992; lbbaet al.. 1996"
 Glutamic acid,G1:C72.U2:A71,"U34, U35,",A37,"U11:A24, U13:G22-A46.47","Nomanly et al., 1990; Syivers et al., 1993; Gregory and Dahlberg.1995: Sekine et al.. 1996"
 Glycine,"U73.G1:C72,C2:G71,G3:C70","C35, C36",,,"Shimizu et al., 1992; Francklyn et al., 1992; McClain et al., 1991"
@@ -13,11 +13,12 @@ Leucine,A73,,,U8:A14,"Noranly et al., 1992; Asahara et al.. 1993"
 Lysine,A73,"U34.U35, U36",,,"Nomanly et al., 1990: McClain et al., 1990: Tamura et al.. 1992"
 Methionine,"A73,",C34,"C32,",,"Uemura et al., 1982; $chulman and Pelka, 1988; Meinnel et al., 1993;"
 fmet,"U4:A69,A5:U68G2:C71,C3:G70","A35, U36","U33, A37",,"Uemura et al., 1982; $chulman and Pelka, 1988; Meinnel et al., 1993;Lee et al., 1992"
-Phemyialanine,A73,"G34,A35,A36",G27:043.G28:C42,"U20, G44, U45, U59, U60","Pallanck and Schulman, 1991; McClain and Foss, 1988c; Petersonet al..1993: Peterson and Uhlenbeck, 1992"
+Phemyialanine,A73,"G34,A35,A36 ",G27:043.G28:C42,"U20, G44, U45, U59, U60","Pallanck and Schulman, 1991; McClain and Foss, 1988c; Petersonet al..1993: Peterson and Uhlenbeck, 1992"
 Proline,"A73, G72","G35, G36",,G15:C48,"Shimizu et al., 1992; McClain et al., 1994; Liu et al.. 1995"
 Serine,"G73,C72,G2:C71,A3:U70.C11:G24,G/A4:T/C69",,,C11:G24 (variable arm),"Nomanly et al., 1992; Himeno et al., 1990; Rogers and S'll, 1988:Nomanlyet al., 1986; Sampson and Saks, 1993: Asahara et al.. 1994Saks and Sampson, 1996"
 Threonine,"G1:C72,C2:G71","G34.G35, U36",,,"Schulman and Pelka, 1990; Hasegawa et al., 1992"
 Tryptophan,"G73,A1:U72.G2:C71,G3:C70","C34.C35,A36",,,"Himeno et al.,1991; Pak et al., 1992: Rogers et al.. 1992"
 Tyrosine,A73,U35,,,"Hou and Schimmel, 1989: Bedouelle,1990; Himeno et al.. 1990;Sherman et al..1992"
 Valine,"A73.G3:C70,U4:A69","A35, C36",,,"Chu and Horowitz, 1991;Tamura et al., 1991; Pallanck and Schulman,1991)"
-Leucine,C2:G71,,,,Escherichia coli seryl-tRNA synthetase recognizes tRNA(Ser) by its characteristic tertiary structure
+Leucine,C2:G71,,,,8114091
+lsoleucine,,UAU,,,35122395

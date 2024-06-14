@@ -45,7 +45,15 @@
             <p><b>Anticodon arm:</b> {{ record.AnticodonArm }}</p>
             <p><b>Other location:</b> {{ record.OtherLocation }}</p>
             <p><b>Other domains:</b> {{ record.OtherDomains }}</p>
-            <p><b>Reference:</b> {{ record.Reference }}</p>
+            <p><b>Reference/PMID:</b> 
+              <span v-if="isPMID(record.Reference)">
+                <span v-for="(pmid, index) in record.Reference.split(',')" :key="index">
+                  <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + pmid.trim()" target="_blank" class="tilt-hover">{{ pmid.trim() }}</a>
+                  <span v-if="index < record.Reference.split(',').length - 1">,</span>
+                </span>
+              </span>
+              <span v-else>{{ record.Reference }}</span>
+            </p>
           </div>
         </template>
       </s-table>
@@ -73,6 +81,11 @@ type DataType = {
 import en from '@shene/table/dist/locale/en'
 const locale = ref(en)
 
+// 判断是否为PMID格式
+function isPMID(reference) {
+  return /^\d+(,\s*\d+)*$/.test(reference);
+}
+
 export default defineComponent({
   name: 'TrnaElements3',
   components: {
@@ -88,7 +101,6 @@ export default defineComponent({
       'AnticodonArm',
       'OtherLocation',
       'OtherDomains',
-      'Reference'
     ]);
 
     onMounted(() => {
@@ -98,6 +110,7 @@ export default defineComponent({
     const allColumns: STableColumnsType<DataType> = [
       {
         title: 'AARS',
+        ellipsis: true,
         dataIndex: 'aaRS',
         resizable: true,
         key: 'aaRS',
@@ -109,6 +122,7 @@ export default defineComponent({
         title: 'Identity Element Location',
         key: 'IdentityElementLocation',
         align: 'center',
+        ellipsis: true,
         resizable: true,
         children: [
           {
@@ -116,23 +130,26 @@ export default defineComponent({
             dataIndex: 'AcceptorStem',
             key: 'AcceptorStem',
             resizable: true,
-            width: 160,
+            ellipsis: true,
+            width: 200,
             align: 'center'
           },
           {
             title: 'Anticodon arm',
             dataIndex: 'AnticodonArm',
+            ellipsis: true,
             resizable: true,
             key: 'AnticodonArm',
-            width: 160,
+            width: 200,
             align: 'center'
           },
           {
             title: 'Other location',
             dataIndex: 'OtherLocation',
             resizable: true,
+            ellipsis: true,
             key: 'OtherLocation',
-            width: 160,
+            width:160,
             align: 'center'
           },
           {
@@ -140,19 +157,36 @@ export default defineComponent({
             dataIndex: 'OtherDomains',
             key: 'OtherDomains',
             resizable: true,
-            width: 200,
+            ellipsis: true,
+            width: 300,
             align: 'center'
           }
         ]
       },
       {
-        title: 'Reference',
+        title: 'Reference/PMID',
         dataIndex: 'Reference',
         key: 'Reference',
         resizable: true,
         width: 200,
         align: 'center',
         ellipsis: true,
+        customRender: ({ text, record }) => {
+          if (isPMID(record.Reference)) {
+            return (
+              <div>
+                {record.Reference.split(',').map((pmid, index, array) => (
+                  <span key={pmid}>
+                    <a href={`https://pubmed.ncbi.nlm.nih.gov/${pmid.trim()}`} target="_blank" class="bracket-links">{pmid.trim()}</a>
+                    {index < array.length - 1 && ','}
+                  </span>
+                ))}
+              </div>
+            );
+          } else {
+            return <div>{record.Reference}</div>;
+          }
+        }
       }
     ];
 
@@ -168,7 +202,8 @@ export default defineComponent({
       locale,
       selectedColumns,
       displayedColumns,
-      allColumns // 列选择控件
+      allColumns, // 列选择控件
+      isPMID // 添加isPMID函数
     };
   }
 });
@@ -203,6 +238,7 @@ export default defineComponent({
 .bracket-links {
   color: #00ACF5;
   text-decoration: none;
+  margin-right: 5px;
 }
 
 .bracket-links:hover {
