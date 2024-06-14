@@ -4,6 +4,7 @@ import Papa from 'papaparse';
 export function useTableData(csvUrl) {
   const allData = ref([]);
   const searchText = ref('');
+  const searchColumn = ref(''); // 新增搜索列的引用
   const isLoading = ref(false);
   const error = ref(null);
 
@@ -34,16 +35,20 @@ export function useTableData(csvUrl) {
 
   const filteredDataSource = computed(() => {
     if (!searchText.value) return allData.value;
-    return allData.value.filter(item =>
-      Object.keys(item).some(key =>
+    return allData.value.filter(item => {
+      if (searchColumn.value && item[searchColumn.value] != null) {
+        return item[searchColumn.value].toString().toLowerCase().includes(searchText.value.toLowerCase());
+      }
+      return Object.keys(item).some(key =>
         item[key] != null &&
         item[key].toString().toLowerCase().includes(searchText.value.toLowerCase())
-      )
-    );
+      );
+    });
   });
 
   return {
     searchText,
+    searchColumn, // 返回搜索列引用
     filteredDataSource,
     loadData,
     isLoading,
