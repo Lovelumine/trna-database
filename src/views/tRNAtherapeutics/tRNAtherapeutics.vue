@@ -1,6 +1,6 @@
 <template>
     <div class="site--main">
-      <h2>Trna Therapeutics</h2>
+      <h2>tRNA Therapeutics</h2>
   
       <div class="table-section">
         <tRNAtherapeutics1 />
