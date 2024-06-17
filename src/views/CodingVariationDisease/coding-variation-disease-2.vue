@@ -54,9 +54,8 @@
           <div>
             <p><b>Gene Name:</b> {{ record.GENE_NAME }}</p>
             <p><b>Ensembl ID:</b> {{ record.ENSEMBL_ID }}</p>
-            <p><b>Mutation URL:</b> <a :href="record.MUTATION_URL" target="_blank">{{ record.MUTATION_URL }}</a></p>
-            <p><b>Legacy Mutation ID:</b> {{ record.LEGACY_MUTATION_ID }}</p>
-            <p><b>Genomic Mutation ID:</b> {{ record.GENOMIC_MUTATION_ID }}</p>
+            <p><b>Genomic Mutation ID:</b> <a :href="record.GENOMIC_MUTATION_URL" target="_blank" class="tilt-hover">{{ record.GENOMIC_MUTATION_ID }}</a></p>
+            <p><b>Legacy Mutation ID:</b><a :href="record.LEGACY_MUTATION_URL" target="_blank" class="tilt-hover">{{ record.LEGACY_MUTATION_ID }}</a></p>
             <p><b>Mutation Locus in GRCh37:</b> {{ record.MUTATION_LOCUS_IN_GRCh37 }}</p>
             <p><b>Mutation Locus in GRCh38:</b> {{ record.MUTATION_LOCUS_IN_GRCh38 }}</p>
             <p><b>Mutation Type:</b> {{ record.MUTATION_TYPE }}</p>
@@ -151,9 +150,10 @@ export default defineComponent({
     const allColumns: STableColumnsType<DataType> = [
       { title: 'Gene Name', dataIndex: 'GENE_NAME', width: 150, ellipsis: true, key: 'GENE_NAME', resizable: true },
       { title: 'Ensembl ID', dataIndex: 'ENSEMBL_ID', width: 180, ellipsis: true, key: 'ENSEMBL_ID', resizable: true },
-      { title: 'Mutation URL', dataIndex: 'MUTATION_URL', width: 120, ellipsis: true, key: 'MUTATION_URL', resizable: true },
+      { title: 'Genomic Mutation ID', dataIndex: 'GENOMIC_MUTATION_ID', width: 120, ellipsis: true, key: 'GENOMIC_MUTATION_ID', resizable: true },
+      { title: 'Genomic Mutation URL', dataIndex: 'GENOMIC_MUTATION_URL', width: 120, ellipsis: true, key: 'GENOMIC_MUTATION_URL', resizable: true },
       { title: 'Legacy Mutation ID', dataIndex: 'LEGACY_MUTATION_ID', width: 150, ellipsis: true, key: 'LEGACY_MUTATION_ID', resizable: true },
-      { title: 'Genomic Mutation ID', dataIndex: 'GENOMIC_MUTATION_ID', width: 170, ellipsis: true, key: 'GENOMIC_MUTATION_ID', resizable: true },
+      { title: 'Legacy Mutation URL', dataIndex: 'LEGACY_MUTATION_URL', width: 150, ellipsis: true, key: 'LEGACY_MUTATION_URL', resizable: true },
       { title: 'Mutation Locus in GRCh37', dataIndex: 'MUTATION_LOCUS_IN_GRCh37', width: 200, ellipsis: true, key: 'MUTATION_LOCUS_IN_GRCh37', resizable: true },
       { title: 'Mutation Locus in GRCh38', dataIndex: 'MUTATION_LOCUS_IN_GRCh38', width: 200, ellipsis: true, key: 'MUTATION_LOCUS_IN_GRCh38', resizable: true },
       { title: 'Mutation Type', dataIndex: 'MUTATION_TYPE', width: 150, ellipsis: true, key: 'MUTATION_TYPE', resizable: true },
