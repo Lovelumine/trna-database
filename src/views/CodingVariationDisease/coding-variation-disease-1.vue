@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Genetic Disease</h2>
+    <h2>Coding Variation in Genetic Disease</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -43,6 +43,7 @@
             <p><b>Mutation Type:</b> {{ record.mutationType }}</p>
             <p><b>Disease Name:</b> {{ record.diseaseName }}</p>
             <p><b>Phenotype MIM Number:</b> {{ record.Phenotype }}</p>
+            <p><b>GenBank Accession Number:</b> {{ record.GenBankaccessionnumber}}</p>
             <p><b>Gene:</b> {{ record.gene }}</p>
             <p><b>Gene/Locus MIM Number:</b> {{ record.Locus }}</p>
             <p><b>Mutation Site:</b> {{ record.mutationSite }}</p>
@@ -51,9 +52,9 @@
             <p><b>Chromosome:</b> {{ record.chromosome }}</p>
             <p><b>Genome Position:</b> {{ record.Genomeposition }}</p>
             <p><b>De Novo / Inherited:</b> {{ record.denovoinherited }}</p>
-            <p><b>Incidence Rate:</b> {{ record.incidenceRate }}</p>
             <p><b>Zygosity:</b> {{ record.zygosity }}</p>
-            <p><b>Treatment Plan:</b> {{ record.treatmentPlan }}</p>
+            <p><b>Incidence Rate:</b> {{ record.incidenceRate }}</p>
+            <p><b>Diagnostic Method:</b> {{ record.DiagnosticMethod }}</p>
             <p><b>References:</b> <a :href="record.References" target="_blank" class="tilt-hover">References</a></p>
             <p><b>Source:</b> <a :href="record.source" target="_blank" class="tilt-hover">Link</a></p>
           </div>
@@ -95,9 +96,10 @@ export default defineComponent({
     const selectedColumns = ref<string[]>([
       'mutationType',
       'diseaseName',
-      'Phenotype',
       'gene',
-      'Locus',
+      'originalCodon',
+      'mutatedCodon',
+
   ])
     const allColumns: STableColumnsType<DataType> = [
       {
@@ -117,6 +119,7 @@ export default defineComponent({
       },
       { title: 'Disease Name', dataIndex: 'diseaseName', width: 320, ellipsis: true, key: 'diseaseName', resizable: true },
       { title: 'Phenotype MIM Number', dataIndex: 'Phenotype', width: 200, ellipsis: true, key: 'Phenotype', resizable: true },
+      { title: 'GenBank Accession Number', dataIndex: 'GenBankaccessionnumber', width: 200, ellipsis: true, key: 'GenBankaccessionnumber', resizable: true },
       { title: 'Gene', dataIndex: 'gene', width: 120, ellipsis: true, key: 'gene', resizable: true },
       { title: 'Gene/Locus MIM Number', dataIndex: 'Locus', width: 200, ellipsis: true, key: 'Locus', resizable: true },
       { title: 'Mutation Site', dataIndex: 'mutationSite', width: 120, ellipsis: true, key: 'mutationSite', resizable: true },
@@ -134,11 +137,23 @@ export default defineComponent({
           type: 'multiple',
           list: [
             { text: 'de novo', value: 'de novo' },
-            { text: 'inherited', value: 'inherited' }
+            { text: 'inherited', value: 'inherited' },
+            { text: 'de novo / inherited', value: 'de novo / inherited' },
+            { text: 'uncertain', value: 'uncertain' },
           ],
           onFilter: (value, record) => value.includes(record.denovoinherited)
         }
       },
+      { title: 'Zygosity', dataIndex: 'zygosity', width: 140, ellipsis: true, key: 'zygosity', resizable: true,
+        filter: {
+          type: 'multiple',
+          list: [
+            { text: 'heterozygous', value: 'heterozygous' },
+            { text: 'hemizygous', value: 'hemizygous' },
+            { text: 'homozygous', value: 'homozygous' },
+          ],
+          onFilter: (value, record) => value.includes(record.zygosity)
+        } },
       {
         title: 'Incidence Rate',
         dataIndex: 'incidenceRate',
@@ -147,8 +162,7 @@ export default defineComponent({
         resizable: true,
         sorter: (a, b) => parseFloat(a.incidenceRate) - parseFloat(b.incidenceRate)
       },
-      { title: 'Zygosity', dataIndex: 'zygosity', width: 140, ellipsis: true, key: 'zygosity', resizable: true },
-      { title: 'Treatment Plan', dataIndex: 'treatmentPlan', width: 320, ellipsis: true, key: 'treatmentPlan', resizable: true },
+      { title: 'Diagnostic Method', dataIndex: 'DiagnosticMethod', width: 320, ellipsis: true, key: 'DiagnosticMethod', resizable: true },
       {
         title: 'References', width: 120, ellipsis: true, key: 'References', dataIndex: 'References',
         customRender: ({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">References</a></div>),
