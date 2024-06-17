@@ -46,9 +46,14 @@
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
             <p><b>tRNA sequence after mutation:</b> <span
                 v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
+            <div><b>Structure of sup-tRNA:</b> 
+              <img src="https://trna.lumoxuan.cn/data/picture/25918386.png" @click="showLightbox" style="width: 100px; cursor: pointer;" />
+              <vue-easy-lightbox :visible="visible" :imgs="['https://trna.lumoxuan.cn/data/picture/25918386.png']" @hide="hideLightbox" />
+            </div>
             <p><b>Readthrough mechanism:</b> {{ record['Readthrough mechanism'] }}</p>
             <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
             <p><b>PMID of references:</b> {{ record['PMID of references'] }}</p>
+            <p><b>Note:</b> {{ record['Note'] }}</p>
           </div>
         </template>
       </s-table>
@@ -62,6 +67,7 @@ import { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption } from 'element-
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
+import VueEasyLightbox from 'vue-easy-lightbox';
 
 type DataType = {
   [key: string]: string | string[];
@@ -78,8 +84,8 @@ type DataType = {
   'PMID of references': string;
 };
 
-import en from '@shene/table/dist/locale/en'
-const locale = ref(en)
+import en from '@shene/table/dist/locale/en';
+const locale = ref(en);
 
 export default defineComponent({
   name: 'NaturalSupTRNA',
@@ -87,7 +93,8 @@ export default defineComponent({
     ElTooltip,
     ElImage,
     ElSelect,
-    ElOption
+    ElOption,
+    VueEasyLightbox
   },
   setup() {
     const { searchText, filteredDataSource, loadData } = useTableData('/data/natural-sup-tRNA.csv');
@@ -98,6 +105,16 @@ export default defineComponent({
     onMounted(() => {
       loadData();
     });
+
+    const visible = ref(false);
+
+    const showLightbox = () => {
+      visible.value = true;
+    };
+
+    const hideLightbox = () => {
+      visible.value = false;
+    };
 
     const allColumns: STableColumnsType<DataType> = [
       { title: 'Species', dataIndex: 'Species', width: 150, ellipsis: true, key: 'Species', resizable: true },
@@ -110,7 +127,8 @@ export default defineComponent({
       { title: 'Structure of sup-tRNA', dataIndex: 'Structure of sup-tRNA', width: 150, ellipsis: true, key: 'Structure of sup-tRNA', resizable: true },
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 200, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
-      { title: 'PMID of references', dataIndex: 'PMID of references', width: 150, ellipsis: true, key: 'PMID of references', resizable: true }
+      { title: 'PMID of references', dataIndex: 'PMID of references', width: 150, ellipsis: true, key: 'PMID of references', resizable: true },
+      { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true }
     ];
 
     const displayedColumns = computed(() =>
@@ -158,17 +176,18 @@ export default defineComponent({
       return highlightedSequence;
     };
 
-
     return {
       allColumns,
-      columns: displayedColumns,
+      displayedColumns,
       filteredDataSource,
       tableSize,
       searchText,
       locale,
       selectedColumns,
-      displayedColumns,
-      highlightMutation // 返回highlightMutation方法
+      highlightMutation,
+      visible,
+      showLightbox,
+      hideLightbox
     };
   }
 });
