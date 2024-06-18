@@ -17,17 +17,14 @@
       </div>
       <!-- 选择显示列 -->
       <div class="column-controls" style="margin-bottom: 10px">
-        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags
-          class="column-select">
-          <el-option v-for="column in allColumns" :key="column.key" :label="column.title as string"
-            :value="column.key" />
+        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
+          <el-option v-for="column in allColumns" :key="column.key" :label="column.title as string" :value="column.key" />
         </el-select>
       </div>
     </div>
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :locale="locale">
-      <s-table :columns="displayedColumns" :data-source="filteredDataSource" :row-key="record => record.key"
-        :stripe="true" :show-sorter-tooltip="true" :size="tableSize" :expand-row-by-click="true">
+      <s-table :columns="displayedColumns" :data-source="filteredDataSource" :row-key="record => record.key" :stripe="true" :show-sorter-tooltip="true" :size="tableSize" :expand-row-by-click="true">
         <template #bodyCell="{ text, column, record }">
           <template v-if="column.key === 'Structure of sup-tRNA'">
             <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
@@ -44,11 +41,10 @@
             <p><b>Stop codon for readthrough:</b> {{ record['Stop codon for readthrough'] }}</p>
             <p><b>Noncanonical charged amino acids:</b> {{ record['Noncanonical charged amino acids'] }}</p>
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
-            <p><b>tRNA sequence after mutation:</b> <span
-                v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
-            <div><b>Structure of sup-tRNA:</b> 
-              <img src="https://trna.lumoxuan.cn/data/picture/25918386.png" @click="showLightbox" style="width: 100px; cursor: pointer;" />
-              <vue-easy-lightbox :visible="visible" :imgs="['https://trna.lumoxuan.cn/data/picture/25918386.png']" @hide="hideLightbox" />
+            <p><b>tRNA sequence after mutation:</b> <span v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
+            <div>
+              <b>Structure of sup-tRNA:</b>
+              <img :src="`https://trna.lumoxuan.cn/data/picture/${record.pictureid}.png`" @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
             </div>
             <p><b>Readthrough mechanism:</b> {{ record['Readthrough mechanism'] }}</p>
             <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
@@ -58,6 +54,7 @@
         </template>
       </s-table>
     </s-table-provider>
+    <vue-easy-lightbox :key="lightboxKey" :visible="visible" :imgs="lightboxImgs" :index="0" @hide="hideLightbox" />
   </div>
 </template>
 
@@ -82,6 +79,7 @@ type DataType = {
   'Readthrough mechanism': string;
   'Mutational position of sup-tRNA': string;
   'PMID of references': string;
+  pictureid: string;
 };
 
 import en from '@shene/table/dist/locale/en';
@@ -107,8 +105,14 @@ export default defineComponent({
     });
 
     const visible = ref(false);
+    const lightboxImgs = ref<string[]>([]);
+    const lightboxKey = ref(0);
 
-    const showLightbox = () => {
+
+    const showLightbox = (pictureid: string) => {
+      const imgUrl = `https://trna.lumoxuan.cn/data/picture/${pictureid}.png`;
+      lightboxImgs.value = [imgUrl];
+      lightboxKey.value += 1;  // 更新key以重新渲染组件
       visible.value = true;
     };
 
@@ -128,7 +132,8 @@ export default defineComponent({
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 200, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
       { title: 'PMID of references', dataIndex: 'PMID of references', width: 150, ellipsis: true, key: 'PMID of references', resizable: true },
-      { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true }
+      { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true },
+      { title: 'Picture ID', dataIndex: 'pictureid', width: 150, ellipsis: true, key: 'pictureid', resizable: true }
     ];
 
     const displayedColumns = computed(() =>
@@ -186,6 +191,8 @@ export default defineComponent({
       selectedColumns,
       highlightMutation,
       visible,
+      lightboxKey,
+      lightboxImgs,
       showLightbox,
       hideLightbox
     };

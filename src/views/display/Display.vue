@@ -3,7 +3,6 @@
       <h1>Display tRNA</h1>
       <p>Currently displaying tRNA: {{ tRNAName }}</p>
       <FornaVisualizer class="forna-visualizer" />
-
     </div>
   </template>
   
