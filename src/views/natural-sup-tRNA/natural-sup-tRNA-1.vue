@@ -38,10 +38,10 @@
             <p><b>Species:</b> {{ record.Species }}</p>
             <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
             <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
-            <p><b>Stop codon for readthrough:</b> {{ record['Stop codon for readthrough'] }}</p>
-            <p><b>Noncanonical charged amino acids:</b> {{ record['Noncanonical charged amino acids'] }}</p>
+            <p><b>Stop codon for readthrough:</b> {{ record['Stopcodonforreadthrough'] }}</p>
+            <p><b>Noncanonical charged amino acids:</b> {{ record['NoncanonicalChargedAminoAcids'] }}</p>
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
-            <p><b>tRNA sequence after &nbsp; &nbsp; mutation:</b> <span v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
+            <p><b>tRNA sequence after  mutation:</b> <span v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
             <div>
               <b>Structure of sup-tRNA:</b>
               <img :src="`https://trna.lumoxuan.cn/data/picture/${record.pictureid}.png`" @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
@@ -66,6 +66,7 @@ import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import VueEasyLightbox from 'vue-easy-lightbox';
 import {highlightMutation} from '../../utils/highlightMutation.js'
+import {getTagType} from '../../utils/tag.js'
 
 type DataType = {
   [key: string]: string | string[];
@@ -96,7 +97,20 @@ export default defineComponent({
     VueEasyLightbox
   },
   setup() {
-    const { searchText, filteredDataSource, loadData } = useTableData('/data/natural-sup-tRNA.csv');
+    const { searchText, filteredDataSource, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
+      // 在加载数据时将 Stop codon for readthrough、Noncanonical charged amino acids 列转换为数组
+      return data.map(item => {
+        // 处理Stop codon for readthrough、Noncanonical charged amino acids字段
+        if (typeof item.Stopcodonforreadthrough === 'string') {
+          item.Stopcodonforreadthrough = item.Stopcodonforreadthrough.split(',').map(str => str.trim());
+        }
+        if (typeof item.NoncanonicalChargedAminoAcids === 'string') {
+          item.NoncanonicalChargedAminoAcids = item.NoncanonicalChargedAminoAcids.split(',').map(str => str.trim());
+        }
+
+        return item;
+      });
+    });
 
     const tableSize = ref('default');
     const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stop codon for readthrough', 'Mutational position of sup-tRNA']);
@@ -104,7 +118,7 @@ export default defineComponent({
     onMounted(() => {
       loadData();
     });
-
+    
     const visible = ref(false);
     const lightboxImgs = ref<string[]>([]);
     const lightboxKey = ref(0);
@@ -125,7 +139,7 @@ export default defineComponent({
       { title: 'Species', dataIndex: 'Species', width: 150, ellipsis: true, key: 'Species', resizable: true },
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
-      { title: 'Stop codon for readthrough', dataIndex: 'Stop codon for readthrough', width: 180, ellipsis: true, key: 'Stop codon for readthrough', resizable: true ,
+      { title: 'Stop codon for readthrough', dataIndex: 'Stopcodonforreadthrough', width: 180, ellipsis: true, key: 'Stopcodonforreadthrough', resizable: true ,
       filter: {
           type: 'multiple',
           list: [
