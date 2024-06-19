@@ -128,12 +128,10 @@ export default defineComponent({
       { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical charged amino acids', width: 150, ellipsis: true, key: 'Noncanonical charged amino acids', resizable: true },
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence before mutation', width: 200, ellipsis: true, key: 'tRNA sequence before mutation', resizable: true },
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
-      { title: 'Structure of sup-tRNA', dataIndex: 'Structure of sup-tRNA', width: 150, ellipsis: true, key: 'Structure of sup-tRNA', resizable: true },
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 200, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
       { title: 'PMID of references', dataIndex: 'PMID of references', width: 150, ellipsis: true, key: 'PMID of references', resizable: true },
-      { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true },
-      { title: 'Picture ID', dataIndex: 'pictureid', width: 150, ellipsis: true, key: 'pictureid', resizable: true }
+      { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true }
     ];
 
     const displayedColumns = computed(() =>
