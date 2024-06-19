@@ -360,4 +360,4 @@ NKX2-8,ENST00000258829.5,COSV99352187,https://cancer.sanger.ac.uk/cosmic/search?
 C20orf96,ENST00000360321.2,COSV105281145,https://cancer.sanger.ac.uk/cosmic/search?q=COSV105281145,COSM9860672,https://cancer.sanger.ac.uk/cosmic/search?q=COSM9860672,20:256679-256679,20:276038-276038,Nonsense,c.961G>T,C,A,pancreas/other/dysplasia-in_situ_neoplasm
 CCND3,ENST00000372991.4,COSV57828583,https://cancer.sanger.ac.uk/cosmic/search?q=COSV57828583,COSM220538,https://cancer.sanger.ac.uk/cosmic/search?q=COSM220538,6:41903731-41903731,6:41935993-41935993,Nonsense,c.826C>T,G,A,haematopoietic_and_lymphoid_tissue/lymphoid_neoplasm/diffuse_large_B_cell_lymphoma
 CT45A1,ENST00000497301.2,COSV106111006,https://cancer.sanger.ac.uk/cosmic/search?q=COSV106111006,COSM10105844,https://cancer.sanger.ac.uk/cosmic/search?q=COSM10105844,X:134856748-134856748,X:135794945-135794945,Nonsense,c.523C>T,C,T,haematopoietic_and_lymphoid_tissue/lymphoid_neoplasm/T_cell_prolymphocytic_leukaemia
-,,,,,,,,,,,nan,,
+

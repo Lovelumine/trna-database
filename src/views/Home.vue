@@ -15,7 +15,7 @@
     </ol>
     <h2>Project Content</h2>
     <section>
-      <h3>Coding Variation Disease</h3>
+      <h3>PTC in Disease</h3>
       <p>Which diseases are suitable for tRNA therapy? What are their characteristics?</p>
     </section>
     <section>

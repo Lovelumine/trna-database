@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Coding Variation in Cancer</h2>
+    <h2>PTC in Cancer</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -117,7 +117,7 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource, loadData } = useTableData('/data/coding variation in Caner.csv', (data) => {
+    const { searchText, filteredDataSource, loadData } = useTableData('/data/PTC in Cancer.csv', (data) => {
       // 在加载数据时将 DISEASE 列转换为数组
       return data.map(item => {
         // 处理DISEASE字段
