@@ -39,10 +39,7 @@
         :expand-row-by-click="true"
       >
         <template #bodyCell="{ text, column, record }">
-          <template v-if="column.key === 'name'">
-            <a>{{ text }}</a>
-          </template>
-          <template v-else-if="column.key === 'DISEASE'">
+          <template v-if="column.key === 'DISEASE'">
             <ElSpace>
               <ElTag v-for="items in (Array.isArray(record.DISEASE) ? record.DISEASE : record.DISEASE.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}

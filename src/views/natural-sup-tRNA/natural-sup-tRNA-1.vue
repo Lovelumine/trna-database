@@ -29,17 +29,40 @@
           <template v-if="column.key === 'Structure of sup-tRNA'">
             <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
           </template>
+          <template v-else-if="column.key === 'Stopcodonforreadthrough'">
+            <ElSpace>
+              <ElTag v-for="items in (Array.isArray(record.Stopcodonforreadthrough) ? record.Stopcodonforreadthrough : record.Stopcodonforreadthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+                {{ items }}
+              </ElTag>
+            </ElSpace>
+          </template>
+          <template v-else-if="column.key === 'NoncanonicalChargedAminoAcids'">
+            <ElSpace>
+              <ElTag v-for="items in (Array.isArray(record.NoncanonicalChargedAminoAcids) ? record.NoncanonicalChargedAminoAcids : record.NoncanonicalChargedAminoAcids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+                {{ items }}
+              </ElTag>
+            </ElSpace>
+          </template>
           <template v-else>
             <span>{{ text }}</span>
           </template>
         </template>
+
         <template #expandedRowRender="{ record }">
           <div>
             <p><b>Species:</b> {{ record.Species }}</p>
             <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
             <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
-            <p><b>Stop codon for readthrough:</b> {{ record['Stopcodonforreadthrough'] }}</p>
-            <p><b>Noncanonical charged amino acids:</b> {{ record['NoncanonicalChargedAminoAcids'] }}</p>
+            <p><b>Stop codon for readthrough:</b>              <ElSpace>
+                <ElTag v-for="items in (Array.isArray(record.Stopcodonforreadthrough) ? record.Stopcodonforreadthrough : record.Stopcodonforreadthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+                  {{ items }}
+                </ElTag>
+              </ElSpace></p>
+            <p><b>Noncanonical charged amino acids:</b> <ElSpace>
+                <ElTag v-for="items in (Array.isArray(record.NoncanonicalChargedAminoAcids) ? record.NoncanonicalChargedAminoAcids : record.NoncanonicalChargedAminoAcids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+                  {{ items }}
+                </ElTag>
+              </ElSpace></p>
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
             <p><b>tRNA sequence after  mutation:</b> <span v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
             <div>
@@ -67,6 +90,7 @@ import { useTableData } from '../../assets/js/useTableData.js';
 import VueEasyLightbox from 'vue-easy-lightbox';
 import {highlightMutation} from '../../utils/highlightMutation.js'
 import {getTagType} from '../../utils/tag.js'
+import {processCSVData} from '../../utils/processCSVData.js'
 
 type DataType = {
   [key: string]: string | string[];
@@ -85,6 +109,7 @@ type DataType = {
 };
 
 import en from '@shene/table/dist/locale/en';
+import { dataType } from 'element-plus/es/components/table-v2/src/common.js';
 const locale = ref(en);
 
 export default defineComponent({
@@ -98,22 +123,14 @@ export default defineComponent({
   },
   setup() {
     const { searchText, filteredDataSource, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
-      // 在加载数据时将 Stop codon for readthrough、Noncanonical charged amino acids 列转换为数组
-      return data.map(item => {
-        // 处理Stop codon for readthrough、Noncanonical charged amino acids字段
-        if (typeof item.Stopcodonforreadthrough === 'string') {
-          item.Stopcodonforreadthrough = item.Stopcodonforreadthrough.split(',').map(str => str.trim());
-        }
-        if (typeof item.NoncanonicalChargedAminoAcids === 'string') {
-          item.NoncanonicalChargedAminoAcids = item.NoncanonicalChargedAminoAcids.split(',').map(str => str.trim());
-        }
-
-        return item;
-      });
+      return processCSVData(data, ['Stopcodonforreadthrough', 'NoncanonicalChargedAminoAcids']);
     });
 
+    console.log();
+
     const tableSize = ref('default');
-    const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stop codon for readthrough', 'Mutational position of sup-tRNA']);
+    const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stopcodonforreadthrough','Mutational position of sup-tRNA']);
+
 
     onMounted(() => {
       loadData();
@@ -139,28 +156,35 @@ export default defineComponent({
       { title: 'Species', dataIndex: 'Species', width: 150, ellipsis: true, key: 'Species', resizable: true },
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
-      { title: 'Stop codon for readthrough', dataIndex: 'Stopcodonforreadthrough', width: 180, ellipsis: true, key: 'Stopcodonforreadthrough', resizable: true ,
+      { title: 'Stop codon for readthrough', dataIndex: 'Stopcodonforreadthrough', width: 200, ellipsis: true, key: 'Stopcodonforreadthrough', resizable: true ,
       filter: {
           type: 'multiple',
           list: [
-            { text: 'cystic fibrosis', value: 'cystic fibrosis' },
-            { text: 'Model protein', value: 'Model protein' },
-            { text: 'primary ciliary dyskinesia (PCD)', value: 'primary ciliary dyskinesia (PCD)'},
-            { text: 'Xeroderma pigmentosum', value: 'Xeroderma pigmentosum'},         
+            { text: 'UAG(amber)', value: 'UAG(amber)' },
+            { text: 'UAA(ochre)', value: 'UAA(ochre)' },
+            { text: 'UGA(opal)', value: 'UGA(opal)'},        
           ],
-          onFilter: (value, record) => value.includes(record.Related_disease)
+          onFilter: (value, record) => record.Stopcodonforreadthrough.includes(value)
         },
       },
-      { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical charged amino acids', width: 150, ellipsis: true, key: 'Noncanonical charged amino acids', resizable: true,
+      { title: 'Noncanonical charged amino acids', dataIndex: 'NoncanonicalChargedAminoAcids', width: 150, ellipsis: true, key: 'NoncanonicalChargedAminoAcids', resizable: true,
       filter: {
           type: 'multiple',
           list: [
-            { text: 'cystic fibrosis', value: 'cystic fibrosis' },
-            { text: 'Model protein', value: 'Model protein' },
-            { text: 'primary ciliary dyskinesia (PCD)', value: 'primary ciliary dyskinesia (PCD)'},
-            { text: 'Xeroderma pigmentosum', value: 'Xeroderma pigmentosum'},         
+            { text: 'Ser', value: 'Ser' },
+            { text: 'Gln', value: 'Gln' },
+            { text: 'Trp', value: 'Trp' },
+            { text: 'Tyr', value: 'Tyr' },
+            { text: 'Leu', value: 'Leu' },
+            { text: 'Arg', value: 'Arg' },
+            { text: 'Gly', value: 'Gly' },
+            { text: 'Pro', value: 'Pro' },
+            { text: 'Glu', value: 'Glu' },
+            { text: 'Sec', value: 'Sec' },       
+            { text: 'Cys', value: 'Cys' },
+            { text: 'Pyl', value: 'Pyl' },
           ],
-          onFilter: (value, record) => value.includes(record.Related_disease)
+          onFilter: (value, record) => record.NoncanonicalChargedAminoAcids.includes(value)
         },
        },
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence before mutation', width: 200, ellipsis: true, key: 'tRNA sequence before mutation', resizable: true },
@@ -188,7 +212,8 @@ export default defineComponent({
       lightboxKey,
       lightboxImgs,
       showLightbox,
-      hideLightbox
+      hideLightbox,
+      getTagType // 获取标签类型
     };
   }
 });
