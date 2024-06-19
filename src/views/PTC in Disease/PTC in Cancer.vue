@@ -82,6 +82,7 @@ import { ElTooltip, ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
+import {getTagType} from '../../utils/tag.js'
 
 // 定义数据类型
 type DataType = {
@@ -141,12 +142,6 @@ export default defineComponent({
       loadData();
     });
 
-    const renderDiseaseTooltip = (disease) => {
-      // 确保 disease 是数组
-      const diseaseArray = Array.isArray(disease) ? disease : disease.split(';').map(str => str.trim());
-      return diseaseArray.map(item => item.split('/').join(' / ')).join('<br />');
-    };
-
     const allColumns: STableColumnsType<DataType> = [
       { title: 'Gene Name', dataIndex: 'GENE_NAME', width: 150, ellipsis: true, key: 'GENE_NAME', resizable: true },
       { title: 'Ensembl ID', dataIndex: 'ENSEMBL_ID', width: 180, ellipsis: true, key: 'ENSEMBL_ID', resizable: true },
@@ -167,23 +162,11 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
-    const tagTypeMap = ref<{ [key: string]: TagType }>({}); // 用于存储标签类型与颜色的映射
-    const tagColors: TagType[] = ['danger', 'success', 'warning', 'primary', 'info']; // 可用的颜色
-
-    const getTagType = (tag: string): TagType => {
-      if (!tagTypeMap.value[tag]) {
-        const randomColor = tagColors[Math.floor(Math.random() * tagColors.length)];
-        tagTypeMap.value[tag] = randomColor;
-      }
-      return tagTypeMap.value[tag];
-    };
-
     return {
       columns: displayedColumns,
       filteredDataSource,
       tableSize,
       searchText,
-      renderDiseaseTooltip,
       displayedColumns,
       locale,
       selectedColumns,
