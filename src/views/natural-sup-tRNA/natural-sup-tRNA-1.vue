@@ -41,7 +41,7 @@
             <p><b>Stop codon for readthrough:</b> {{ record['Stop codon for readthrough'] }}</p>
             <p><b>Noncanonical charged amino acids:</b> {{ record['Noncanonical charged amino acids'] }}</p>
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
-            <p><b>tRNA sequence after mutation:</b> <span v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
+            <p><b>tRNA sequence after &nbsp; &nbsp; mutation:</b> <span v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
             <div>
               <b>Structure of sup-tRNA:</b>
               <img :src="`https://trna.lumoxuan.cn/data/picture/${record.pictureid}.png`" @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
@@ -71,8 +71,8 @@ type DataType = {
   Species: string;
   'Anticodon before mutation': string;
   'Anticodon after mutation': string;
-  'Stop codon for readthrough': string;
-  'Noncanonical charged amino acids': string;
+  'Stop codon for readthrough': string[];
+  'Noncanonical charged amino acids': string[];
   'tRNA sequence before mutation': string;
   'tRNA sequence after mutation': string;
   'Structure of sup-tRNA': string;
@@ -124,8 +124,30 @@ export default defineComponent({
       { title: 'Species', dataIndex: 'Species', width: 150, ellipsis: true, key: 'Species', resizable: true },
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
-      { title: 'Stop codon for readthrough', dataIndex: 'Stop codon for readthrough', width: 180, ellipsis: true, key: 'Stop codon for readthrough', resizable: true },
-      { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical charged amino acids', width: 150, ellipsis: true, key: 'Noncanonical charged amino acids', resizable: true },
+      { title: 'Stop codon for readthrough', dataIndex: 'Stop codon for readthrough', width: 180, ellipsis: true, key: 'Stop codon for readthrough', resizable: true ,
+      filter: {
+          type: 'multiple',
+          list: [
+            { text: 'cystic fibrosis', value: 'cystic fibrosis' },
+            { text: 'Model protein', value: 'Model protein' },
+            { text: 'primary ciliary dyskinesia (PCD)', value: 'primary ciliary dyskinesia (PCD)'},
+            { text: 'Xeroderma pigmentosum', value: 'Xeroderma pigmentosum'},         
+          ],
+          onFilter: (value, record) => value.includes(record.Related_disease)
+        },
+      },
+      { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical charged amino acids', width: 150, ellipsis: true, key: 'Noncanonical charged amino acids', resizable: true,
+      filter: {
+          type: 'multiple',
+          list: [
+            { text: 'cystic fibrosis', value: 'cystic fibrosis' },
+            { text: 'Model protein', value: 'Model protein' },
+            { text: 'primary ciliary dyskinesia (PCD)', value: 'primary ciliary dyskinesia (PCD)'},
+            { text: 'Xeroderma pigmentosum', value: 'Xeroderma pigmentosum'},         
+          ],
+          onFilter: (value, record) => value.includes(record.Related_disease)
+        },
+       },
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence before mutation', width: 200, ellipsis: true, key: 'tRNA sequence before mutation', resizable: true },
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 200, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
@@ -157,8 +179,8 @@ export default defineComponent({
         }
 
         // 添加突变部分
-        if (fullMatch.startsWith("\\\\\\\\")) { // 删除
-          const base = fullMatch[4];
+        if (fullMatch.startsWith("\\\\\\")) { // 删除
+          const base = fullMatch[3];
           highlightedSequence += `<span style="text-decoration: line-through; color: black;" title="Deleted ${base}">${base}</span>`;
         } else if (fullMatch.startsWith("\\\\")) { // 增添
           const base = fullMatch[2];
