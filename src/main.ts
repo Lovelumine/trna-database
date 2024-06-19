@@ -20,7 +20,7 @@ import * as ElIcons from '@element-plus/icons-vue'; // 引入 Element Plus 图�
 
 // 引入组件
 import Home from './views/Home.vue';
-import CodingVariationDisease from './views/CodingVariationDisease/CodingVariationDisease.vue';
+import PTCinDisease from './views/PTC in Disease/PTC in Disease.vue';
 import tRNAtherapeutics from './views/tRNAtherapeutics/tRNAtherapeutics.vue';
 import naturalsuptRNA from './views/natural-sup-tRNA/natural-sup-tRNA.vue';
 import TrnaElements from './views/tRNA elements/tRNA elements.vue';
@@ -35,7 +35,7 @@ import VXETable from 'vxe-table';
 // 路由配置
 const routes: RouteRecordRaw[] = [
     { path: '/', component: Home },
-    { path: '/coding-variation-disease', component: CodingVariationDisease },
+    { path: '/PTC-in-Disease', component: PTCinDisease },
     { path: '/tRNAtherapeutics', component: tRNAtherapeutics },
     { path: '/naturalsuptRNA', component: naturalsuptRNA },
     { path: '/TrnaElements', component: TrnaElements },

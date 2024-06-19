@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Coding Variation in Genetic Disease</h2>
+    <h2>PTC in Genetic Disease</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -86,7 +86,7 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource, loadData } = useTableData('/data/coding variation Disease v1.1.csv');
+    const { searchText, filteredDataSource, loadData } = useTableData('/data/PTC in Genetic Disease.csv');
     const tableSize = ref('default'); // 表格尺寸状态
 
     onMounted(() => {
@@ -108,14 +108,14 @@ export default defineComponent({
         width: 140, ellipsis: true,
         key: 'mutationType',
         resizable: true,
-        filter: {
-          type: 'multiple',
-          list: [
-            { text: 'missense', value: 'missense' },
-            { text: 'nonsense', value: 'nonsense' }
-          ],
-          onFilter: (value, record) => value.includes(record.mutationType)
-        }
+        // filter: {
+        //   type: 'multiple',
+        //   list: [
+        //     { text: 'missense', value: 'missense' },
+        //     { text: 'nonsense', value: 'nonsense' }
+        //   ],
+        //   onFilter: (value, record) => value.includes(record.mutationType)
+        // }
       },
       { title: 'Disease Name', dataIndex: 'diseaseName', width: 320, ellipsis: true, key: 'diseaseName', resizable: true },
       { title: 'Phenotype MIM Number', dataIndex: 'Phenotype', width: 200, ellipsis: true, key: 'Phenotype', resizable: true },
