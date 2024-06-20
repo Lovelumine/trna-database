@@ -53,13 +53,13 @@
           </template>
         <template #expandedRowRender="{ record }">
           <div>
-            <p><b>Modification_Type:</b> {{ record.Modification_Type }}</p>
-            <p><b>Modomics_CODE:</b><span v-html="highlightModification(record['Modomics_CODE'])"></span></p>
-            <p><b>Modification_site:</b> {{ record.Modification_site }}</p>
-            <p><b>tRNA_TYPE:</b> {{ record.tRNA_TYPE }}</p>
-            <p><b>Function_of_Modification:</b> {{ record.Function_of_Modification }}</p>
+            <p><b>Modification Type:</b> {{ record.Modification_Type }}</p>
+            <p><b>Modomics CODE:</b><span v-html="highlightModification(record['Modomics_CODE'])"></span></p>
+            <p><b>Modification site:</b> {{ record.Modification_site }}</p>
+            <p><b>tRNA TYPE:</b> {{ record.tRNA_TYPE }}</p>
+            <p><b>Function of Modification:</b> {{ record.Function_of_Modification }}</p>
             <p><b>species:</b> <span class="latin-name">{{ record.species }}</span></p>
-            <p><b>tissue_or_cell_line:</b> {{ record.tissue_or_cell_line }}</p>
+            <p><b>tissue or cell line:</b> {{ record.tissue_or_cell_line }}</p>
             <p><b>condition:</b> {{ record.condition}}</p>
             <p><b>Literature Source(PMID):</b><a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID" target="_blank" class="tilt-hover">{{record.PMID}}</a></p>
           </div>
@@ -103,13 +103,13 @@ export default defineComponent({
     });
 
     const allColumns: STableColumnsType<DataType> = [
-      { title: 'Modification_Type', dataIndex: 'Modification_Type', width: 140, ellipsis: true, key: 'Modification_Type', resizable: true },
-      { title: 'Modomics_CODE', dataIndex: 'Modomics_CODE', width: 140, ellipsis: true, key: 'Modomics_CODE', resizable: true },
-      { title: 'Modification_site', dataIndex: 'Modification_site', width: 500, ellipsis: true, key: 'Modification_site', resizable: true },
-      { title: 'tRNA_TYPE', dataIndex: 'tRNA_TYPE', width: 500, ellipsis: true, key: 'tRNA_TYPE', resizable: true },
-      { title: 'Function_of_Modification', dataIndex: 'Function_of_Modification', width: 440, ellipsis: true, key: 'Function_of_Modification', resizable: true },
+      { title: 'Modification Type', dataIndex: 'Modification_Type', width: 140, ellipsis: true, key: 'Modification_Type', resizable: true },
+      { title: 'Modomics CODE', dataIndex: 'Modomics_CODE', width: 140, ellipsis: true, key: 'Modomics_CODE', resizable: true },
+      { title: 'Modification site', dataIndex: 'Modification_site', width: 500, ellipsis: true, key: 'Modification_site', resizable: true },
+      { title: 'tRNA TYPE', dataIndex: 'tRNA_TYPE', width: 500, ellipsis: true, key: 'tRNA_TYPE', resizable: true },
+      { title: 'Function of Modification', dataIndex: 'Function_of_Modification', width: 440, ellipsis: true, key: 'Function_of_Modification', resizable: true },
       { title: 'species', dataIndex: 'species', width: 200, ellipsis: true, key: 'species', resizable: true, customRender: ({ text, record }) => (<span className="latin-name">{record.species}</span>)},
-      { title: 'tissue_or_cell_line', dataIndex: 'tissue_or_cell_line', width: 240, ellipsis: true, key: 'tissue_or_cell_line', resizable: true },
+      { title: 'tissue or cell line', dataIndex: 'tissue_or_cell_line', width: 240, ellipsis: true, key: 'tissue_or_cell_line', resizable: true },
       { title: 'condition', dataIndex: 'condition', width: 200, ellipsis: true, key: 'condition', resizable: true },      {
         title: 'PMID', width: 112, ellipsis: true, key: 'PMID', dataIndex: 'PMID',
         customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>),
