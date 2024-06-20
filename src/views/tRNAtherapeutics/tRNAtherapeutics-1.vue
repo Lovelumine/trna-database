@@ -163,7 +163,7 @@
     <table>
     <tr>
         <td><b>Alignment:</b></td>
-        <td>{{ alignments[record.key]?.alignment }}</td>
+        <td>  <pre v-html="alignments[record.key]?.alignment"></pre></td>
       </tr>
       <tr>
         <td><b>E-Value:</b></td>
