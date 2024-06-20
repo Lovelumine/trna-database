@@ -129,10 +129,6 @@
           <td>{{ record.aa_and_anticodon_of_sup_tRNA }}</td>
         </tr>
         <tr>
-          <td><b>Delivery Method:</b></td>
-          <td>{{ record.Delivery_method }}</td>
-        </tr>
-        <tr>
           <td><b>Dose:</b></td>
           <td>{{ record.Dose }}</td>
         </tr>
@@ -147,10 +143,6 @@
         <tr>
           <td><b>Measuring of Efficiency:</b></td>
           <td>{{ record.Measuring_of_efficiency }}</td>
-        </tr>
-        <tr>
-          <td><b>Supplementary Information of Measurement:</b></td>
-          <td>{{ record.Supplenmentary_information_of_Measurement }}</td>
         </tr>
         <tr>
           <td><b>Safety:</b></td>
