@@ -22,7 +22,7 @@ export const highlightModification = (sequence) => {
       // 添加特殊修饰部分
       if (fullMatch.startsWith('/')) { // 替换
         const base = fullMatch[1];
-        highlightedSequence += `<span style="color: blue;">${base}</span>`;
+        highlightedSequence += `<span style="color: #5B9BD5;">${base}</span>`;
       }
   
       lastIndex = index + fullMatch.length;
