@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>tRNA Modification Functions</h2>
+    <h2>Function and Modification</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -11,7 +11,6 @@
           <el-option
             v-for="column in allColumns"
             :key="column.key"
-            :label="column.title"
             :value="column.dataIndex"
           />
         </el-select>
@@ -47,15 +46,22 @@
         :size="tableSize"
         :expand-row-by-click="true"
       >
+      <template #bodyCell="{ text, column, record }">
+          <template v-if="column.key === 'species'">
+            <span class="latin-name">{{ record.species }}</span>
+          </template>
+          </template>
         <template #expandedRowRender="{ record }">
           <div>
-            <p><b>Modification:</b> {{ record.修饰 }}</p>
-            <p><b>Modified tRNA:</b> {{ record.修饰的tRNA }}</p>
-            <p><b>Function:</b> {{ record.功能 }}</p>
-            <p><b>Functioning Species:</b> {{ record.功能发挥物种 }}</p>
-            <p><b>Functioning Tissue or Cell Line:</b> {{ record.功能发挥细胞 }}</p>
-            <p><b>Other Functioning Sites:</b> {{ record.功能发挥其他场所 }}</p>
-            <p><b>Literature Source(PMID):</b><a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.文献来源" target="_blank" class="tilt-hover">{{record.文献来源}}</a></p>
+            <p><b>Modification_Type:</b> {{ record.Modification_Type }}</p>
+            <p><b>Modomics_CODE:</b><span v-html="highlightModification(record['Modomics_CODE'])"></span></p>
+            <p><b>Modification_site:</b> {{ record.Modification_site }}</p>
+            <p><b>tRNA_TYPE:</b> {{ record.tRNA_TYPE }}</p>
+            <p><b>Function_of_Modification:</b> {{ record.Function_of_Modification }}</p>
+            <p><b>species:</b> <span class="latin-name">{{ record.species }}</span></p>
+            <p><b>tissue_or_cell_line:</b> {{ record.tissue_or_cell_line }}</p>
+            <p><b>condition:</b> {{ record.condition}}</p>
+            <p><b>Literature Source(PMID):</b><a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID" target="_blank" class="tilt-hover">{{record.PMID}}</a></p>
           </div>
         </template>
       </s-table>
@@ -69,6 +75,7 @@ import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
+import {highlightModification} from '../../utils/highlightModification.js'
 
 // 定义数据类型
 type DataType = { [key: string]: string };
@@ -85,10 +92,10 @@ export default defineComponent({
     const { searchText, filteredDataSource,  searchColumn,loadData } = useTableData('/data/tRNA elements-1.csv');
     const tableSize = ref('default'); // 表格尺寸状态
     const selectedColumns = ref<string[]>([
-      '修饰',
-      '功能',
-      '功能发挥细胞',
-      '文献来源'
+      'Modification_Type',
+      'Function_of_Modification',
+      'tissue_or_cell_line',
+      'PMID'
     ]);
 
     onMounted(() => {
@@ -96,15 +103,16 @@ export default defineComponent({
     });
 
     const allColumns: STableColumnsType<DataType> = [
-      { title: 'Modification', dataIndex: '修饰', width: 140, ellipsis: true, key: '修饰', resizable: true },
-      { title: 'Modified tRNA', dataIndex: '修饰的tRNA', width: 140, ellipsis: true, key: '修饰的tRNA', resizable: true },
-      { title: 'Function', dataIndex: '功能', width: 500, ellipsis: true, key: '功能', resizable: true },
-      { title: 'Functioning Species', dataIndex: '功能发挥物种', width: 500, ellipsis: true, key: '功能发挥物种', resizable: true },
-      { title: 'Functioning Tissue or Cell Line', dataIndex: '功能发挥细胞', width: 200, ellipsis: true, key: '功能发挥细胞', resizable: true },
-      { title: 'Other Functioning Sites', dataIndex: '功能发挥其他场所', width: 200, ellipsis: true, key: '功能发挥其他场所', resizable: true },
-      {
-        title: 'PMID', width: 112, ellipsis: true, key: '文献来源', dataIndex: '文献来源',
-        customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.文献来源 || '#'} target="_blank" class="bracket-links">{record.文献来源}</a></div>),
+      { title: 'Modification_Type', dataIndex: 'Modification_Type', width: 140, ellipsis: true, key: 'Modification_Type', resizable: true },
+      { title: 'Modomics_CODE', dataIndex: 'Modomics_CODE', width: 140, ellipsis: true, key: 'Modomics_CODE', resizable: true },
+      { title: 'Modification_site', dataIndex: 'Modification_site', width: 500, ellipsis: true, key: 'Modification_site', resizable: true },
+      { title: 'tRNA_TYPE', dataIndex: 'tRNA_TYPE', width: 500, ellipsis: true, key: 'tRNA_TYPE', resizable: true },
+      { title: 'Function_of_Modification', dataIndex: 'Function_of_Modification', width: 440, ellipsis: true, key: 'Function_of_Modification', resizable: true },
+      { title: 'species', dataIndex: 'species', width: 200, ellipsis: true, key: 'species', resizable: true, customRender: ({ text, record }) => (<span className="latin-name">{record.species}</span>)},
+      { title: 'tissue_or_cell_line', dataIndex: 'tissue_or_cell_line', width: 240, ellipsis: true, key: 'tissue_or_cell_line', resizable: true },
+      { title: 'condition', dataIndex: 'condition', width: 200, ellipsis: true, key: 'condition', resizable: true },      {
+        title: 'PMID', width: 112, ellipsis: true, key: 'PMID', dataIndex: 'PMID',
+        customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>),
         resizable: true
       }
     ];
@@ -122,7 +130,8 @@ export default defineComponent({
       selectedColumns,
       displayedColumns,
       searchColumn, // 添加搜索列
-      allColumns // 列选择控件
+      allColumns, // 列选择控件
+      highlightModification
     };
   }
 });
@@ -162,4 +171,11 @@ export default defineComponent({
 .bracket-links:hover {
   text-decoration: underline;
 }
+
+.latin-name {
+            font-style: italic;
+            font-family: 'Times New Roman', Times, serif; /* 替换为你想要的字体 */
+            font-size: 16px; /* 可选：调整字体大小 */
+            color: #333; /* 可选：设置字体颜色 */
+        }
 </style>

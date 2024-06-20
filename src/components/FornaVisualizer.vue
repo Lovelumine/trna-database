@@ -21,10 +21,10 @@ export default {
       modified: true,
       comment: '',
       options: {
-        // name: 'tRNA-Ala-AGC-8-1',
-        // structure: '(((((((....((.((.........)).))...((.............))))))))).',
-        // sequence: 'GAGAAAGCTCACAAGAACTGCTAACTCATGCCCCCATGTCTAACACATGGCTTTCTCA', 
-        // color: ''
+        name: 'tRNA-Ala-AGC-8-1',
+        structure: '(((((((....((.((.........)).))...((.............))))))))).',
+        sequence: 'GAGAAAGCTCACAAGAACTGCTAACTCATGCCCCCATGTCTAACACATGGCTTTCTCA', 
+        color: ''
       }
     }
   },

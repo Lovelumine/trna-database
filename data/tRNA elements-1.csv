@@ -1,219 +1,256 @@
-﻿修饰,修饰的tRNA,功能,功能发挥物种,功能发挥细胞,功能发挥其他场所,文献来源
- f5c at wobble , mt-tRNAMet,促进密码子的准确解码，防止误读，稳定 U-G 摆动配对，进行有利的堆叠相互作用，这对于高效的线粒体翻译和呼吸活动至关重要,, HEK294T、HeLa、-猫肝细胞和比目鱼的肌肉细胞,,29390138
- m1A58 ,N/A,enhance translation efficiency,,Naive T cells,,36138184
- m5U at wobble , tRNALeu (UUR) and mt-trRNATrp,促进密码子的准确解码，防止误读，稳定 U-G 摆动配对，进行有利的堆叠相互作用，这对于高效的线粒体翻译和呼吸活动至关重要,, HEK293T、HeLa、-猫肝细胞和比目鱼的肌肉细胞,,29390138
- mcm5U34 or s2U34,N/A,modification losses would result in severe synthetic growth defects and elevated levels of protein aggregation,Saccharomyces cerevisiae,,,32484543
- mcm5U34 or s2U34,N/A,"lack of the mcm5 or s2 modification at U34 of tRNALys, tRNAGlu, and tRNAGln causes ribosome pausing at the respective codons",yeast,,,28368583
- t6A37 not to ms2t6A37, tRNALysUUU,cause diabete,,human β cells,,31941883
-55Ψ,N/A,cell growth,E.Coli,,,11779468
-ac4C,N/A,增强 tRNA 稳定性，提高表皮生长因子 mRNA 的翻译效率，这有助于 ESCA 的发展 ,,Esophageal cancer,,37463108
-ac4C at wobble , tRNA-Ser(CGA),tRNA稳定性、折叠、识别、翻译率和保真度中的作用，以及生长、发育和压力反应等细胞过程都有作用,,HEK293T 和 HeLa ,,35196516
-ac4C12 ,tRNASer and tRNALeu,在微调tRNA中丝氨酸和亮氨酸等受体的丰度方面起着重要作用。Ac4C 对于维持 tRNA 的结构完整性，确保蛋白质合成过程中的正常功能至关重要 ,,酵母中缺乏RES的细胞,,23605039
-Acp3U47,N/A,Loss of acp3U47 in E. coli ΔtapT mutant also leads to genome instability under continuous heat shock stress.,E.coli,,,31804502
-Am and Um m5C,N/A,NaOCl刺激，Am and Um 及m5C和NaOCl浓度有一定关系,S. cerevisiae,,,21187895
-"Am, Im, hm 5 C, 3ʹ-Omel, M22 G, I, M2 G, ac 4 C, G, 3ʹ-OMeU, m3 U, Gm, U, m5 C, C, m5 U, m6 A, 3ʹ-OmeC",N/A,在非小细胞癌中显著下调，和相关蛋白FTJSJ1蛋白的下调相互作用，降低了癌症的预后,,非小细胞肺癌（NSCLC）,,32393790
-C/Um34,N/A,这对于大肠杆菌中的RPO和Hfq表达至关重要 。 研究了 tRNA 修饰 C/Um34 和 S2u 作为 rpoS 表达的调节剂,E.Coli,,,28471404
-Cm,N/A,upregulate tRNA fragments,,292T,,37792516
-Cm,N/A,修饰水平随着细胞24小时内生长而上升,yeast,,,28488916
-Cm32 ,tRNAPhe(GAA),可以防止RNase 在该位点的消化作用，降低tRF的产生,果蝇,,,31943105
-Cm34  ,tRNALeu(CmAA),提高了密码子摇摆碱的相互作用效率，并支持抑制剂 tRNA 在解码 UAG 琥珀色停止密码子中的功能作用,E.Coli,,,20855540
-cm5U and cm5s2U to mcm5U and mcm5s2U at wobble,RNAucu(Arg) and tRNACCU(Glu),enhance binding of the anticodon with specific codons in mixed codon boxes,S. cerevisiae,,,350282
-cmnm5Um34 , tRNALeu(cmnm5UmAA),提高了密码子摇摆碱的相互作用效率，并支持抑制剂 tRNA 在解码 UAG 琥珀色停止密码子中的功能作用,E.Coli,,,20855540
-cmo5U34,N/A,增加了解码过程中的摇摆型,E.coli,,,23695253
-cmo5U34 ," tRNAPro, tRNAAla. tRNAVal and tRNAThr","crucial for expanding the ability of wobble U to read G, A, U, and sometimes C", S. enterica,,,17942742
-cnm5s2U34,N/A,"reveal the  M. jannaschii, like H. volcanii, follows codon-decoding strategies similar to those used by bacteria, although position 37 appears to be modified to a greater extent than seen in H. volcanii.",M. jannaschii ,,,30745370
-cnm5U34 , tRNAIle,存在于 euryarchaea 的 tRNA 总量中，包括 haloarcheae 和 M. maripaludis，但在 solfataricus、酿酒酵母和大肠杆菌的 tRNA 中不存在。 在调节突变体 tRNA 的密码子结合特性方面发挥作用，影响其识别特定密码子（例如 AUA、AUU 和 AUG ）的能力, haloarcheae 和 M. maripaludis,,,24344322
-ct6A37 or Ψ38,N/A,modification losses would reduce ribosome A-site binding and enhance ribosome pausing at critical codens and ribosomal frameshifting,yeast,,,27496282
-f5C34,N/A,plays an essential role in translation of the dialectal AUA codon as Met,,human mitochondrial ,,19151083
-"G+, m1A/m1I, ac4C, andm2G/m2,2G",N/A,help with the heperthermotolerance,,hyperthermophilic archaeon,,30605516
-G+15,N/A,稳定 tRNA 的结构，G的流失导致嗜热性严重缺乏,,柯达卡伦西斯热球菌,,32041795
-ges2U,N/A,"ges2U-G pair is 10℃ higher than the native ges2U-A duplex,",E.coli,hela,,27307604
-Gm18,N/A,"antagonize tRNA-induced TLR7/8 activation, suggesting a potential role of Gm18 as an immune escape mechanism.",E.coli,,,31019095
-Gm18 ,"tRNAIle(k 2 CAU), tRNAMet(ac 4 CAU) and tRNAGln(UUG)",modificatio increases to response to mild bacteriostatic antibiotics stress ,E.Coli,,,33275131
-ht6A37,N/A,prevent mt-tRNALys from misreading AAA as lysine,echinoderm mitochondria,,,28783151
-I at wobble,N/A,"可以识别NNC, NNU, NNA密码子",human,,,26230688
-I at wobble,N/A,裂变酵母中G1/S和G2/M过渡的细胞周期进展至关重要。 影响这种修饰的突变导致 tRNA 肌苷含量降低，影响细胞周期进展。 与这种修饰相关的基因的过度表达有助于缓解突变体表型,裂变酵母,,,17875641
-I34,N/A,形成非Watson-Crick碱基配对的tRNA，肌苷修饰拓展了tRNA的解码能力，揭示了tRNA修饰和密码子使用模式的协同工作是体液免疫的重要机制。,,浆细胞（PC）,,38207021
-I34 ," tRNAAla(AGC), tRNAArg(ACG), tRNAIle(AAT), tRNAThr(AGT), tRNALeu(AAG), tRNAPro(AGG),tRNASer(AGA), tRNAVal(AAC)",加快免疫相关蛋白的快速翻译,,浆细胞（PC）,,38207021
-I34 ,N/A,"在密码子翻译率中的作用,被研究用于增强密码子结合",,胚胎干细胞,,31174582
-I34 ,tRNAOpt(AUG),影响密码子区分,,NEB 5-α,,27915288
-i6A,N/A,靶RNA中i6A的存在会显著影响DNA酶的催化活性，从而根据RNA的修饰状态产生不同的反应和裂解模式，并且i6A会强烈抑制其催化活性,,,in vitro,32681686
-i6A37 ,N/A,提高了 tRNA 在胞质抑制 UAA 无意义突变方面的效率,Saccharomyces cerevisiae,,,10618371
-i6A37 , tRNATyr and tRNACys,"increased the activity of tRNA Cys at a cognate codon and that of tRNA Tyr at a near-cognate codon, suggesting that i6A37 promotes decoding activity generally and increases fidelity at cognate codons while decreasing fidelity at noncognate codons.",Schizosaccharomyces pombe ,,,23716598
-i6a37 ,tRNATyr(GψA）,"缺少i6a37修饰可能会破坏反密码子回路的稳定，使tRNA对m2,2g等其他修饰的丧失敏感，这进一步促进了tRNA的结构和稳定性",酵母细胞,,,30143741
-i6A37 ,hmtRNASer,help METTL8 modified m3C32 in human mt,,human mt,,35357504
-imG,N/A,于 Archeae 和 Eukarya 的翻译保真度至关重要，可确保蛋白质合成过程中的准确性，线粒体中维持细胞器的阅读框架至关重要,Archeae 和 Eukarya ,,,25845597
-m1A,N/A,indicate rothelial carcinoma of the bladder,,,bladder,35444240
-m1A,N/A,通过参与三级相互作用来稳定其结构,human ,,,38471794
-m1A58,N/A,coordinators of tissue-specific gene expression,mice,,,36537222
-m1A58,N/A,as coordinators of tissue-specific gene expression,,,,36537222
-m1A58 ,tRNA3Lys,在HIV感染过程中，相关tRNA作为反转录引物，m1A58可以去除经典的配对，并且作为反转录引物结合末端，限制了持续的转录过程,Saccharomyces cerevisiae,,,26470919
-m1A58 , tRNAiMet,promotes translation initiation and cell pro-liferation,,hela,,27745969
-m1A58 ,tRNAiMet,"has major effects on the structural properties of initiator tRNAi Met , so that the tRNA elbow structure is only properly assembled when this modification is present",酵母细胞,,,38331425
-m1A9,N/A, induce a stable cloverleaf conformation,,human mitochondria,,15019776
-m1G37,N/A, is essential for translational fidelity and efficiency, archaea and eukaryotes,,,19749755
-m1G37,N/A, frameshift prevention,bacterial,,,2471265
-m1G37,N/A," tRNAPro, tRNAArg and tRNALeu increases the rate of ribosomal A-site entry20 and prevents the slippage of the ribosomal peptidyl-tRNA",,,,11532950
-m1G37,N/A,efficient and accurate aminoacylation,,,,18425141
-m1G37,N/A,enhances the aminoacylation rates of cysteinyl-tRNA synthetase,archaeal,,,18559341
-m1G37,N/A,enhances the aminoacylation rates of phosphoseryl-tRNA synthetase,archaeal,,,18559341
-m1G37,N/A,tRNAAspGUC prevents incorrect aminoacylation,yeast,,,2330033
-m1G37,N/A,prevents +1 errors in the reading frame during protein translation ,bacterial,,,32602532
-m1G37,N/A,,eukaryotes and archaea,,,28335556
-m1G37,N/A,RNA 成熟至关重要，在翻译中起着至关重要的作用,all domains,,,20452364
-m1G37 ,tRNA pro,help with aminoacylation compaired with unmodified and contain the precision of translation,E.coli,,,34761260
-m1G37 ," tRNALeu, tRNAPro, tRNAArg","作为所有生物体（包括测序基因组和细胞器最小的生物）的tRNA中的一个特征,可防止所有生物体（包括测序基因组和细胞器最小的生物）的 tRNA 的帧移动 ",all domains,,,11226173
-m1G37 ," tRNALeu, tRNAPro, tRNAArg",影响多肽链合成过程的延伸,鼠伤寒沙门氏菌,,,7592438
-m1G37 ,tRNAMet,线粒体tRNA缺乏m1g37甲基化的酵母细胞的耗氧率明显降低，这表明在线粒体蛋白合成过程中起着维持阅读框架的作用,yeast,,,17652090
-m1G37 ,tRNAPro(CGG),"causes +1 frameshifting on polynucleotide, slippery codons.",细菌,,,33016876
-m1G37 ,tRNAPro(CGG),"s important for the association step during binding to a cognate CCG codon. In contrast, m1 G37 prevented association with a slippery CCC-U or +1 codon",E.coli,,,30782843
-m1G37 , tRNAPhe,will dramatically increase the binding affinity of the tRNA(Phe)AC to the 30S E. coli ribosomal subunit when compared to unmodified tRNA(Phe)AC,E.coli,,,9478206
-m1G9,N/A,,yeast,,,
-m1G9  and ψ,tRNATrp,有助于 tRNA 折叠和稳定性，帮助 tRNA 通过质量控制途径逃避降解,酿酒酵母,,,38071471
-"m2,2G",N/A,修饰的缺失是人类智力障碍的一个表征,,患有 TRMT1 错义变体（R323C）的患者的细胞,,31898845
-m22G ,N/A,"Loss of m22G modification due to TRMT1 knockout leads to impaired cell proliferation, disrupted global protein translation, and redox homeostasis perturbations, which subsequently lead to increased endogenous ROS levels and confer hypersensitivity to oxidative stress",human ,,,28784718
-m22G10,N/A, induce a stable cloverleaf conformation, archaeal ,,,16434050
-m22G26,N/A, induce a stable cloverleaf conformation,,mitochondrial,,8548653
-m2A,N/A,resistance of ROS,E. faecalis ,,,37433804
-m2A37,N/A,resistance of antobiotics,E.Coli,,,27081063
-m2A37 ,"tRNAArg(ICG), tRNAAsp(QUC), tRNAGln(cmnm5s2UUG), tRNAGln(CUG), tRNAGlu(mnm5s2UUC), tRNAGlu(mnm5s2UUC) and tRNAHis(QUG)",优化了密码子-反密码子识别并维持了翻译读取框架 。 位点 34 和嘌呤 37 处的反密码子修饰丢失会损害基因表达并影响细菌表型特征,E.Coli,,,22891362
-M2g26,N/A, strongly downregulated in TRM1A/TRM1B mutants and  upregulated tRNAs did not contain m22G26,,,,37945696
-m3C32, tRNASer,该修饰的功能需要对某些 tRNA 进行 A37 的 n6-异戊烯基修饰。,S. pombe,,,27354703
-m3C32 ,mt-tRNAThr(UGU) and mt-tRNASer(UGA),影响tRNA的构型,,,in vitro gel,35247384
-m3C32 , tRNASer,"global changes in translation profile and ribosome occupancy, as well as loss of mouse stem cell pluripotency",,human cell and mouse stem cell,,32923617
-m5C,N/A,Loss of NSUN2-specific m5C modification does not reduce the abundance of specific tRNAs but causes an accumulation of 5′ tRNA-derived small RNA fragments (5′ tRF) by promoting angiogenin-mediated tRNA cleavage.,mice and human ,,,25063673
-m5C,N/A,修饰水平随着细胞25小时内生长而下降,yeast,,,28488916
-m5C at wobble , tRNACAA(Leu),加快UUG密码子的mRNA翻译速度,S. cerevisiae,,,22760636
-"m5C, Cm and m22G increase under H2O2 ",N/A,氧化刺激下的细胞表征,S. cerevisiae,,,21187895
-m5C34,N/A,翻译过程中保持正确的密码子-反密码子配对的重要性,human,,,22995836
-m5C38,N/A,influence the production of tRNA-derived fragments and intergenerational transmission of paternal metabolic disorders to offspring,human,,,34871455
-m5C38 ,tRNAAsp(GTC),维持稳定的蛋白质合成并且维持了tRNA的稳定性，缺失修饰会导致tRNA降解70%,疟原虫,,,34724812
-m5C38 ," tRNAAsp(GTC), tRNAGly(GCC), and tRNAVal(AAC)",增强结构稳定性，降低片段化风险,mouse,,,26271101
-m5C40,tRNAPhe,will dramatically increase the binding affinity of the tRNA(Phe)AC to the 32S E. coli ribosomal subunit when compared to unmodified tRNA(Phe)AC,E.coli,,,9478206
-"m5C48, m5C49, m5C50 ",tRNAGly(GCC),稳定tRNA结构并防止在应力条件下降解,human,,,22995836
-m5s2U,N/A,important for the capacity of the tRNA to synthesize protein at high temperature.,,Thermus thermophilus HB 8,,4369142
-m5U,N/A,gave rise to the “TΨC”-arm nomenclature.,,,,
-m5U54,N/A,have effects on the other modifications like Gm18 and m1A58 in tRNA through the network at 50 °C,Thermus thermophilus,,,27238446
-m5U54 ,tRNAPhe,影响肽基转移和随后的Aa-tRNA结合易位之间的伸长周期步骤,S. cerevisiae,,,37986750
-m5U54 ,tRNASer(CGA),对tRNA的成熟以及稳定性和功能性有重要作用,酿酒酵母,,,12003492
-m6G,N/A,m7 G修饰升高可增加RPTOR mRNA的翻译，进一步调节ESCC癌细胞的自噬活性,,食管鳞状细胞癌（ESCC）,,35574843
-m7G,N/A,indicate esophageal squamous cell carcinoma,,esophageal squamous cell,,35304469
-m7G,N/A,induced polymorphonuclear  myeloid-derived suppressor cells  accumulation in ICC tumours and that polymorphonuclear  myeloid-derived suppressor cells  suppressed T cell proliferation and the antitumoural activity,mouse,,,36418437
-m7G,N/A,enhances the translation of oncogenic transcripts and plays a cancer-promoting role,,intrahepatic cholangiocarcinoma,,34352206
-m7G,N/A,"reduced m7G modification results in decreased translation of tumor-relevant mRNAs, and impaired cell proliferation, colony formation, cell invasion, and tumorigenicity",,lung cancer,,34371184
-m7G,N/A,"increased m7G modification  promotes the growth and metastasis of NPC cells in vitro and in vivo and  up-regulated the WNT/β-catenin signaling pathway, and finally enhanced the epithelial-mesenchymal transition (EMT) and chemotherapy resistance of NPC cells",,breast cancer,,34936728
-m7G,N/A,"increased m7G modification  is clearly negatively correlated with patient prognosis. Silencing METTL1 inhibited the proliferation, migration, and invasion of breast cancer cells mediated by EGFR/EFEMP2 up-regulation",, nasopharyngeal carcinoma(NPC),,35217794
-m7G,N/A,reduced m7G modification results in  reduced translation of oncogenic transcripts enriched in the RPTOR/ULK1/autophagy pathway ,,esophageal squamous cell carcinoma (ESCC),,35304469
-m7G,N/A,"会影响肝细胞癌 (HCC) 细胞中特定类型的 tRNA，影响其促进乐伐替尼耐药性的功能 ,影响癌症细胞的凋亡过程",,肝细胞癌细胞,,36102722
-m7G,N/A,维持tRNA构象稳定，稳定全局翻译,,小鼠黑色素瘤细胞和急性髓系白血病（AML）细胞等,,34352207
-m7G,N/A,会影响细胞内的tRNA水平和蛋白质产生过程，影响白血病细胞的生长和存活方式,,急性髓系白血病（AML）,,38268051
-m7G ,N/A,suppressed T cell proliferation and the antitumoural activity,mouse,,,36418437
-"m7G, Am,m5C,Cm, mcm5s2U, i6A, and yW",N/A,"甲基磺酸甲酯刺激下,m7G增加而Am,m5C,Cm, mcm5s2U, i6A, and yW降低",S. cerevisiae,,,21187895
-m7G46,N/A,is required for cell viability at high temperatures, Thermus thermophilus,,,19934251
-m7G46,N/A,a conserved modification that modulates steady-state tRNA levels to affect cell growth,human,,,36599982
-m7G46,N/A,"modulated the expression of the catalase genes katA and katB, which are enriched with Phe/Asp codons at the translational level. In response to H2O2 exposure, the level of m7G modification increased, consistent with the increased translation efficiency of Phe- and Asp-enriched mRNAs",Pseudomonas aeruginosa,,,31428787
-m7G46,N/A,"forms a tertiary base pair with C13-G22, and stabilizes the tRNA structure","eubacteria, eukaryotes, and a few archaea",,,30562954
-m7G46,N/A,缺乏可能导致下包生长减缓，原始侏儒症疾病的诱发有关,yeast,,,26416026
-m7G46 ,tRNAArg(TCT),可稳定mRNA免受衰变，提高翻译效率，减少核糖体暂停，并与人类癌症和直接转化中的存活率低有关,,cancer cell,,34416137
-m7G46 , tRNAPhe,小脑原始侏儒症等人类疾病有关,human,,,34006170
-m7g46、m5c49、J13 and D47 , tRNAVal(AAC),在 tRNA 稳定性和细胞存活中起着至关重要的作用，会影响 tRNA Val (AAC) 等特定 tRNA 物种的降解和维持，其中m7g46和m5c，对tRNA稳定性至关重要，并且可以触发快速的tRNA降解途径,酵母细胞,,,16387656
-m7G47,N/A,"positively affects the formations of Gm18 and m1G37, besides is required for cell viability at high temperatures via a tRNA modification network",Thermus thermophilus,,,19934251
-mcm5s2U and t6A,N/A,independently contribute to reading frame maintenance,S. cerevisiae,,,32085421
-mcm5s2U and Ψ38 , tRNAGlnUUG,mediate efficient synthesis of the Q/N rich [PIN+] prion forming protein Rnq1,Saccharomyces cerevisiae,,,28281930
-mcm5s2U at wobble ,N/A,与肌萎缩性侧索硬化症的发病机制有关,,mouse and in NSC34 cells,,29415125
-mcm⁵s²U at wobble and Ψ38 , tRNAGlnUUG,"修改对于有效翻译同源密码子和防止解码期间核糖体暂停至关重要,这些 tRNA 修饰的流失，无论是单独使用还是联合使用，都会导致严重的蛋白质稳态缺陷和酵母细胞中蛋白质聚集体的积累",yeast,,,30360492
-mcm5s2U、（S）-mchm5U、（R）-mchm5U、mcm5U and mcm5um at wobble position,,对于翻译效率和保真度至关重要，且如果摇摆尿苷修饰严重受损，影响大脑功能,,淋巴母细胞系（LCL）,,31079898
-mcm5s2U34,N/A,translational defects including ribosome pause and accumulation of ribosomes on XAA codons-enriched transcripts,, breast cancer cell lines (MCF7 and MDA-MB231),,33859181
-mcm5s2U34,N/A,"修饰的丢失会导致与特定的密码子例如AAA, GAA, CAA的解码能力降低",,MDA-MB231 cells,,33859181
-mcm5s2U34 , tRNAGln(UUG) and tRNAGlu(UUC),rescues the defects of the Δelp3 mutant of Aspergillus fumigatus,,Aspergillus fumigatus,,36374932
-mcm5S2U34 ,"tRNALys(UUU), tRNAGlu(UUC), tRNAGln(UUG)",影响翻译效率,S. pomb,,,23874237
-mcm5S2U34 , tRNALys(UUU),enhance translation efficiency,yeast,,,28368583
-mcm5S2U34 ,"tRNAPhe(UUU,UUC), tRNALeu(UUG)",调整了相关蛋白LEF1的翻译进程以及乳腺癌的发展情况,,Elp3-deficient PyMT tumors,,27811057
-mcm5s2U34  ,"tRNAGlu(UUC) , Lys(UUU) , and tRNAGln(UUG)",较高的温度下水平会降低,酵母,,,25505025
-mcm5U and mcm5s2U at wobble ,tRNAArg and tRNAGlu,key determinants of translational fidelity to down regulate the protein fidelity,Saccharomyces cerevisiae,,,22832247
-mcm5U and mcm5s2U34 , tRNAArg(UCU) and tRNAGlu(UUC),在AGA和GAA密码子中增强翻译效率,yeast,,,26670883
-mcm5U at wobble ," tRNAArg(UCU,ICG) and tRNAAsn(GTT) and tRNAAsp(GTC) and tRNAGlu(UUC) and tRNALeu(CAA) and tRNALys(CTT)",n linked to DNA damage survival,人类细胞,,,20308323
-mcm5U at wobble in, tRNAGlu,"可以调节特定密码子的翻译速率,且对于蛋白质组的完整性至关重要",裂变酵母,,,31223645
-"mcm5U, m3C, m7G, mcm5s2U, i6A, yW, m5C, and Cm",N/A,"NaAsO2刺激下，mcm5U, m3C, m7G, mcm5s2U, i6A, yW, m5C, and Cm修饰上升",S. cerevisiae,,,21187895
-mcm5U/S2U at wobble ,tRNALys(UUU),"two distinct chemical modifications of the same wobble base independently contribute to reading frame maintenance, loss of which may cause or contribute to observed growth defects",Saccharomyces cerevisiae,,,27937809
-mcm5um34, sec-tRNA [Ser] Sec ,增加了谷胱甘肽过氧化物酶1的翻译速度,,兔网织红细胞,,28702279
-mcn5U at wobble,N/A,"increases in HU-induced S-phase, relative to G1 and G 2 , to promote the codon-dependent translation of RNR1 and boost RNR activity",S. cerevisiae,,,22935709
-mnm5s2u34, tRNAGlu(CUC),导致密码子-反密码子相互作用减弱，转化帧移动,E.coli,,,11544186
-mnm5s2U34 ,tRNALys(UUU),加快翻译速度2-4倍,E.coli,,,35595100
-ms2i6A37,N/A,"promote efficient A:U codon–anticodon base-pairing and to prevent unintended base pairing by near cognates, thus enhancing translational fidelity",,,,34526715
-ms2i6A37,N/A,acts as a physiological switch that modulates spontaneous mutation frequency and other metabolic functions.,,E.coli K-12,,1999389
-ms2i6A37,N/A,有助于细胞分裂,E.coli,,,1938930
-ms2i6A37 and i6A37 ,tRNALeu(UUX),在RPO和iRAP翻译期间正确解码UUX-亮氨酸密码子至关重要 ,E.Coli,,,26979278
-ms2t6A37 , tRNALys(UUU),crucial for maintaining the translation fidelity of AAA and AAG codons.,,mouse pancreatic β cell,,21841312
-ms2t6A37 ,tRNALys3,建立充分的密码子.反密码子相互作用，以解码摇摆密码子AAG,,NIT-1 cell line,,33634165
-ncm5U34, tRNAIle(UAU),reduce decoding fidelity, Saccharomyces cerevisiae,,,30997502
-psi in middle of anticoden , tRNA(G psi ATyr),help with readthrough UAG in tobocco,tobocco,,,2539781
-psi35+i6A37 ,tRNATyr,对提前终止密码子的识别以及阻抑有重大作用,yeast,,,29507244
-psi39, tRNAPhe,will dramatically increase the binding affinity of the tRNA(Phe)AC to the 31S E. coli ribosomal subunit when compared to unmodified tRNA(Phe)AC,E.coli,,,9478206
-psi39 ,tRNALys,significantly change the structure of anticoden loop,,,,9478205
-Q,N/A,"changes correlate with genome-wide alteration of Tyr/His/Asn/Asp codons, which is consistent with the coordination of codon-mediated expression and translational fidelity",D. melanogaster,,,25489848
-Q,N/A,提高机体对于二价金属离子的耐受性,E.coli,,,36066904
-Q,N/A,过调整密码子与反密码子相互作用的强度来影响特定密码子的蛋白质合成速度,人体和小鼠,,,30093495
-Q,N/A,有助于保护细胞免受炎症影响而失去其完整性,,inflammatory bowel disease cell,,36801450
-Q ,N/A,通过诱导参与氧化应激反应的基因（例如热休克蛋白70和抗氧化酶 ）的表达来保护寄生虫免受氧化应激的侵害。 此外，还研究了通过下调与毒力相关的基因（包括半胱氨酸蛋白酶和细胞骨架蛋白）的表达来影响溶组织大肠杆菌的毒力,E. histolytica,,,33688012
-Q at wobble in, tRNAAsp(QUC),提高翻译的精度，降低密码子读取的错误率,E.coli,,,26704976
-Q at wobble in, tRNATyr,影响整个动物属的翻译保真度和蛋白质编码，且修饰水平随发育阶段而异,黑腹果蝇,,,25489848
-Q at wobble in ,tRNATyr(QUA),降低翻译的精度，升高密码子读取的错误率,E.coli,,,26704976
-Q34,N/A,Q modification is lacked in a variety of tumors,,tumor,,6420054
-Q34,N/A, be associated the occurrence and development of human colon adenocarcinoma,,human colon adenocarcinoma,,1378304
-Q34,N/A,promotes antioxidant defense system by increasing antioxidant enzyme activities and inhibits oxidative stress and tumorigenesis,,cancer,,18290765
-Q34,N/A,"loss of Q modification can promote Warburg type metabolism, which is beneficial to the energy metabolism of tumors",,Hela cells,,32213952
-Q34,N/A,help with stalling of ribosomes on Q-decoded codens and hold the global balance in translation elongation speed between codons that engage in weakand  strong  interactions  with  their  cognate  anticodons.,mice,,,37609797
-Q34,N/A,有利于密码子的编码过程，可以用于密码子的重排过程,E.coli,,,36120552
-Q34,tRNAAsn and tRNATyr,decreases the translation speed at cognate U-ending codons,S. pombe.,,,30715423
-Q34,N/A,enhanced cell proliferation and junction activity in cell lines and organoids and reduced inflammation in epithelial cells. ,,cell lines and organoids and epithelial cells and human IBD,,36801450
-Q34 ,tRNAAsp(QUC),increase the coden errors,E.coli,,,26704976
-Q34 ,tRNAAsp and tRNAHis,"increases the translation speed at cognate C-ending codons,",S. pombe.,,,30715423
-Q34 ,tRNAHis(GUG),enhances decoding of U-ending codons,Xenopus,,,2988936
-Q34 ,tRNATyr,细胞机制至关重要，在各种细胞过程中起着不同的作用,E.coli,,,38768229
-"Q34,mnm5s2U34, ms2io6A37, ψ39, ψ55, miG37 and yW37",N/A,不同七聚体序列的-1 帧移位误差、,大肠杆菌、肠道沙门氏菌血清型鼠伤寒和酿酒酵母,,,12756333
-Q35 in, tRNATyr(QUA),decrease the coden errors,E.coli,,,26704976
-s2C54,N/A,高温下稳定嗜热微生物中的tRNA ,E.Coli,,,28655838
-s2U,N/A,plays an important role in thermal stability,Thermuc thermophilus,,,985514
-S2U33,tRNATrp,线粒体中作为编辑的负面决定因素起作用，在细胞质中起作用 tRNA Gln、tRNA Glu 和 tRNA Lys  的稳定性。 在反密码子回路之外发生的修饰在 tRNA 稳定性中起着结构性作用 ,布鲁氏锥虫,,,21419700
-s2U33 ,tRNATrp,help cells deal with changing environmental demands,,trypanosomatid mitochondria,,22024020
-s2U34,N/A,efficient decoding of AA-ending cognate codons,Magnaporthe oryzae,,,37563288
-s2U34,N/A,"highly conserved in all domains, guaranteeing fidelity of protein translation",all domains,,,33744947
-s2U34,N/A,碳和氮的代谢动态平衡，从而影响磷酸的动态平衡和代谢重组,S. cerevisiae,,,31259691
-s2U34,N/A," during host infection, the translation of PWL2 mRNA (encoding an unconventionally secreted effector) requires s2U34-dependent ecient decoding of AA-ending cognate codons",,瘟疫真菌Magnaporthe oryzae感染的宿主水稻细胞,,37563288
-s2U34,N/A,修饰对于鉴定嘌呤至关重要，特别是促进特定氨基酸的正确翻译和掺入多肽链,假结核耶尔森氏菌,,,35576231
-s2U34,N/A, a conserved modification required for efficient decoding of AA-ending cognate codons,Magnaporthe oryzae,,,37563288
-s2U34 , tRNALys(UUU),发现 trnalys s2uuu 表达的增加可抑制 Elongator 突变体中的端粒基因沉默缺陷,yeast,,,21912530
-s2U34 ," tRNALys, tRNAGlu, tRNAGln",修饰的缺失导致线粒体功能出现问题，例如线粒体tRNA水平降低，线粒体翻译受损，呼吸系统问题和ATP产生减少,斑马鱼,,,30137487
-s4U ,E.coli 8/19 tRNA,S4u修饰的功能与大肠杆菌暴露于近紫外线辐射后诱发生长延迟有关,E.coli,,,35155896
-s4U8,N/A,这种修改允许碱基在用近紫外线照射时，在tRNA的13号位置与胞嘧啶形成共价光交叉链接，充当曝光传感器并触发细胞反应 。 位于 8 的改性尿苷被埋在 tRNA 的核心中，这表明 tRNA 分子的结构变化是酶活性所必需的 ,炭疽芽孢杆菌,,,17001104
-t6A,N/A,作为tRNA氨酰化的一个必要条件,bacterial,,,26337258
-t6A,N/A,缺乏修饰会导致对外界压力敏感，并且会导致细胞生长缓慢，缺失不会影响整体翻译水平，但是会影响局部翻译起始,酵母,,,26798630
-t6A,N/A,"作为tRNAIle氨酰化的一个必要条件,并且缺乏t6A会导致在编码ANN的时候有分歧效应，并且产生+1framshifting",,293T,,35104889
-t6A(37),N/A,establishment of the non-universal genetic code,,echinoderm mitochondria,,28783151
-"t6A, m5U, m1G, m2G, mcm5s2U, i6A, yW and m1A",N/A,"H2O2刺激下，t6A随着m5U, m1G, m2G, mcm5s2U, i6A, yW and m1A增长而增长",S. cerevisiae,,,21187895
-t6A37,N/A," crucial for codon-biased mitochondrial translation under physiological conditions, and it is also sensitive to the environmental availability of CO2/bicarbonate, which is rate-limiting for t6A37 formation in human mitochondria",,human mitochondria,,29760464
-t6A37,tRNA(ANN), facilitate codon–anticodon pairing and to prevent frameshifting during protein synthesis,E.coli,,,23258706
-t6A37, tRNAiMet,携带该修饰的tRNAiMet是作为细胞和动物生长的主要限制因素,,Drosophila and in mammals,,26063805
-t6A37,tRNA(ANN),提高了翻译保真度 。 tRNA 的 t6a 修饰对蛋白质翻译至关重要，与维持基因组稳定性有关 。 包括T6a在内的tRNA修饰失调会影响基本细胞功能并导致神经精神障碍,酵母,,,32914678
-t6A37 ,tRNA(ANN),翻译精度和效率至关重要,,人类永生足细胞系（AB813）和人类原代成纤维细胞,,31481669
-t6A37 ,tRNAIle(GAU) and tRNASer(GCU) and in tRNAThr(UGC) and in tRNALys(UUU) and in tRNAAsn(QUU),线粒体中t6A修饰水平下降，会产生一定的病理后果，如MERRF成纤维细胞和成肌细胞,,293T等,,29760464
-t6A37 ,tRNALys(UUU),enhance translation efficiency,yeast,,,23836657
-tm5U34,N/A,help with protein synthesis and decoding cognate codens,,human mt,,21957023
-Um34 ,tRNA(Ser)Sec,维持硒蛋白产量，维持蛋白翻译速度,,proband的皮肤成纤维细胞,,26854926
-Um34 ,tRNAGln,"be important not only for the sufficient production of a viral UAG readthrough protein, but also for the efficient translation of viral mRNAs",,virus infected cells,,2539781
-Um34 and i6a37 ,tRNASec,"Um34 修饰被发现对各种哺乳动物硒蛋白的表达至关重要,Sec tRNA 中缺乏 i6a37 和 Um34 修饰影响了特定硒蛋白的合成,tRNA 反密码子回路内的核苷修饰与翻译影响、影响核糖体帧移位和抑制无意义密码子有关",哺乳动物细胞,,,15611090
-Um54 ,tRNA3Lys,as a second RT-stop site was supported by conservation of retrovi-ral genome-tRNALys sequence-complementarity,人类细胞,,,34642752
-yW,N/A,"crucial for translational fidelity in Archaea and Eukarya, important for mitochondrial function.",Archaea and Eukarya,,,25845597
-yW,N/A,保证翻译的准确性,布鲁氏菌线粒体,,,25845597
-yW37,N/A,ensures correct codon recognition by stabilizing codon-anticodon pairings during the decoding process in the ribosome,eukaryotic,,,19287006
-yW37,N/A,essential for correct phenylalanine coden translation,eukaryotes and archaea,,,20972222
-yW37,N/A, it stabilizes codon-anticodon interactions,eukaryotic,,,16642040
-τm 5 U at wobble , mt-tRNALys and mt-tRNALeu(UUR),提升蛋白翻译的效率和准确率,哺乳动物细胞,,,36045139
-τm5s2U,"mt-tRNAsGlu, mt-tRNALys and mt-tRNAGln ","promote accurate decoding of purine-ending codons (NNR; N = U, C, A or G) and prevent misreading of pyrimidine-ending codons (NNY; Y = U or C)",,human mitochondrial ,,29390138
-τm5s2U and τm5U ,N/A,"promote accurate decoding of NNR codons (N = U, C, A or G; R = A or G) and prevents misreading of NNY codons (Y = U or C)",,human mitochondrial ,,33619562
-τm5U,mt-tRNAsLeu(UUR) and mt-tRNATrp,"promote accurate decoding of purine-ending codons (NNR; N = U, C, A or G) and prevent misreading of pyrimidine-ending codons (NNY; Y = U or C)",,human mitochondrial ,,29390138
-τm5U34,N/A,培养基中牛磺酸浓度影响该修饰水平,,hela,,29390138
-ψ,N/A,在细胞分裂中起重要作用,E.coli,,,1938930
-"ψ38,39",N/A,修饰过程与智力障碍有相关性,人类,,,27055666
-Ψ55 ,tRNAThr,is required for low-temperature adaptation and have nagative impact on other modified like Gm18,Thermus thermophilus,,,21097467
+﻿Modification_Type,Modomics_CODE,Modification_site,tRNA_TYPE,Function_of_Modification,species,tissue_or_cell_line,condition,PMID
+ac4C,M,N/A,N/A,Enhanced tRNA stability and improved translation efficiency of epidermal growth factor mRNA,,Esophageal cancer,,37463108
+ac4C,M,12,tRNASer and tRNALeu,help with fine-tuning the abundance of receptors such as serine and leucine in tRNAs and essential for maintaining the structural integrity of tRNAs and ensuring proper function during protein synthesis ,,yeast lack RES,,23605039
+ac4C ,M,wobble , tRNA-Ser(CGA),"help with tRNA stability, folding, recognition, translation rate and fidelity, as well as cellular processes such as growth, development and stress response",,HEK293T and HeLa ,,35196516
+acp3U,X,47,N/A,Loss of acp3U47 in E. coli ΔtapT mutant also leads to genome instability under continuous heat shock stress.,E.coli,,,31804502
+Am and Um m5C,/ʍ ，J， ?,N/A,N/A,"NaOCl stimulation, Am and Um and m5C and NaOCl concentrations are related",S. cerevisiae,,,21187895
+"Am, Im, hm5C, m2,2G, I, , M2G, ac4C, m3U, Gm, m5C, m5U, m6A","/ʍ, /Ш,  /Ƣ ,R, I, L, M, /δ, #, ?, T,/Ж",N/A,N/A,Significantly down-regulated in non-small cell carcinoma and interacts with down-regulation of the related protein FTJSJ1 protein to reduce cancer prognosis,,Non-Small Cell Lung Cancer (NSCLC),,32393790
+Cm,B,N/A,N/A,upregulate tRNA fragments synthesis,,HEK292T,,37792516
+Cm,B,N/A,N/A,Modification levels rise as cells grow over 24 hours,yeast,,,28488916
+Cm,B,32,tRNAPhe(GAA),prevent the digestion of RNase at this site and reduce tRFs production,fruit fly,,,31943105
+Cm,B,34,tRNALeu(CmAA),Improved codon swing base interaction efficiency and support for a functional role of sup-tRNAs in decoding UAG amber stop codons,E.Coli,,,20855540
+Cm/Um,B/J,34,N/A, is essential for RPO and Hfq expression,E.coli,,,28471404
+cm5s2U,℘,wobble,RNAucu(Arg) and tRNACCU(Glu),enhance binding of the anticodon with specific codons in mixed codon boxes,S. cerevisiae,,,350282
+cm5U,◊,wobble,RNAucu(Arg) and tRNACCU(Glu),enhance binding of the anticodon with specific codons in mixed codon boxes,S. cerevisiae,,,350282
+cmo5U,V,34,N/A,augment the wobbliness in decoding,E.coli,,,23695253
+cmo5U,V,34," tRNAPro, tRNAAla. tRNAVal and tRNAThr","crucial for expanding the ability of wobble U to read G, A, U, and sometimes C",S. enterica,,,17942742
+cnm5s2U,N/A,34,N/A,"reveal the  M. jannaschii, like H. volcanii, follows codon-decoding strategies similar to those used by bacteria, although position 37 appears to be modified to a greater extent than seen in H. volcanii.",M. jannaschii ,,,30745370
+cnm5U,Ѷ,34, tRNAIle,"exist in euryarchaea but not in solfataricus, Saccharomyces cerevisiae and E.coli, affecting their ability to recognize specific codons (e.g. AUA, AUU and AUG).",haloarcheae and M. maripaludis,,,24344322
+ct6A,e,37,N/A,modification losses would reduce ribosome A-site binding and enhance ribosome pausing at critical codens and ribosomal frameshifting,yeast,,,27496282
+D,D,36,tRNATyr(CUD),help with reading through UGA,,,,35532803
+D,D,47, tRNAVal(AAC),plays a crucial role in tRNA stability and cell survival,S. cerevisiae,,,16387656
+f5C,>,wobble , mt-tRNAMet,"Facilitates accurate codon decoding,  essential for efficient mitochondrial translation and respiratory activity",,"HEK294T, HeLa, cat hepatocytes and muscle cells of flounder",,29390138
+f5C,>,34,N/A,plays an essential role in translation of the dialectal AUA codon as Met,,human mitochondrial ,,19151083
+G+,(,15,N/A,"stabilizes the structure of tRNAs, and the loss of G+ leads to a severe lack of thermophilicity",,Coccidioides immitis,,32041795
+"G+, m1A/m1I, ac4C, and m2G/m2,2G","( ,	/Ѣ/O,  	M, 	L/R",N/A,N/A,help with the heperthermotolerance,,hyperthermophilic archaeon,,30605516
+ges2U,Γ,N/A,N/A,"ges2U-G pair is 10℃ higher than the native ges2U-A duplex, affecting the coding specificity",E.coli,Hela,,27307604
+Gm,#,18,N/A,"antagonize tRNA-induced TLR7/8 activation, suggesting a potential role of Gm18 as an immune escape mechanism.",E.coli,,,31019095
+Gm,#,18,"tRNAIle(k 2 CAU), tRNAMet(ac 4 CAU) and tRNAGln(UUG)",modificatio increases to response to mild bacteriostatic antibiotics stress ,E.Coli,,,33275131
+ht6A,«,37,N/A,prevent mt-tRNALys from misreading AAA as lysine,,echinoderm mitochondria,,28783151
+I,I,wobble,N/A,modification level correlated with cell cycle,fission yeast,,,17875641
+I,I,34,N/A,"expand the decoding capacity of tRNAs, revealing that the synergy of tRNA modifications and codon usage patterns is an important mechanism for humoral immunity.",,Plasma cells (PCs),,38207021
+I,I,34," tRNAAla(AGC), tRNAArg(ACG), tRNAIle(AAT), tRNAThr(AGT), tRNALeu(AAG), tRNAPro(AGG),tRNASer(AGA), tRNAVal(AAC)",Accelerating rapid translation of immune-related proteins,,Plasma cells (PCs),,38207021
+I,I,34,N/A,enhance codons decoding,,embryonic stem cell,,31174582
+I,I,34,tRNAOpt(AUG),Influence codon discrimination,,NEB 5-α,,27915288
+I ,I ,wobble,N/A,enhance the wobbliness,human,,,26230688
+i6A,/Ч,N/A,N/A,affects the catalytic activity of the Dnase,,,in vitro,32681686
+i6A,/Ч,37,N/A,Increased efficiency of sup-tRNA in cytoplasmic suppression of nonsense mutations in UAA,S. cerevisiae,,,10618371
+i6A,/Ч,37, tRNATyr and tRNACys,"increased the activity of tRNA Cys at a cognate codon and that of tRNA Tyr at a near-cognate codon, suggesting that i6A37 promotes decoding activity generally and increases fidelity at cognate codons while decreasing fidelity at noncognate codons.",Schizosaccharomyces pombe ,,,23716598
+i6A,/Ч,37,tRNATyr(GψA）,"help with stabilize the anticodon loop, further with whole tRNA",S. cerevisiae,,,30143741
+i6A,/Ч,37,hmtRNASer,help METTL8 modified m3C32 in human mt,,human mitochondrial ,,35357504
+i6A,/Ч,37,tRNASer(UCN),As a specific recognition feature of the m3C32-modifying enzyme METTL8-Iso1,,,,38744809
+i6A,/Ч,37,tRNALeu(UUX),Correct decoding of UUX-leucine codons ,E.Coli,,,26979278
+i6A,/Ч,37,tRNASec,"essential for the expression of various mammalian selenoproteins and affect ribosomal frameshifts, and suppressing nonsense codons",mammalian cell,,,15611090
+imG,€,N/A,N/A,important for Translation fidelity to maintain the reading frame in mitochondria,Archeae and Eukarya ,,,25845597
+m1A,/Ѣ,58 ,N/A,enhance translation efficiency,,Naive T cells,,36138184
+m1A,/Ѣ,N/A,N/A,indicate rothelial carcinoma of the bladder,,,bladder,35444240
+m1A,/Ѣ,N/A,N/A,Stabilizes its structure by participating in tertiary interactions,human ,,,38471794
+m1A,/Ѣ,58,N/A,coordinators of tissue-specific gene expression,mice,,,36537222
+m1A,/Ѣ,58,N/A,as coordinators of tissue-specific gene expression,,,,36537222
+m1A,/Ѣ,58,tRNA3Lys,"During HIV infection, the associated tRNA acts as a reverse transcription primer. m1A58 removes classical pairing and acts as a reverse transcription primer binding end, limiting the ongoing transcription process",S. cerevisiae,,,26470919
+m1A,/Ѣ,58, tRNAiMet,promotes translation initiation and cell pro-liferation,,Hela,,27745969
+m1A,/Ѣ,58,tRNAiMet,"has major effects on the structural properties of initiator tRNAi Met , so that the tRNA elbow structure is only properly assembled when this modification is present",S. cerevisiae,,,38331425
+m1A,/Ѣ,58,tRNATrp and tRNAAla,Introduction of ψ55 as a key recognition information for the modifying enzyme TRUB2,E.coli,,,33023933
+m1A,/Ѣ,9,N/A, induce a stable cloverleaf conformation,,human mitochondria,,15019776
+m1G,K,37,N/A, is essential for translational fidelity and efficiency,archaea and eukaryotes,,,19749755
+m1G,K,37,N/A, frameshift prevention,bacterial,,,2471265
+m1G,K,37,N/A," tRNAPro, tRNAArg and tRNALeu increases the rate of ribosomal A-site entry20 and prevents the slippage of the ribosomal peptidyl-tRNA",,,,11532950
+m1G,K,37,N/A,efficient and accurate aminoacylation,,,,18425141
+m1G,K,37,N/A,enhances the aminoacylation rates of cysteinyl-tRNA synthetase,archaeal,,,18559341
+m1G,K,37,N/A,enhances the aminoacylation rates of phosphoseryl-tRNA synthetase,archaeal,,,18559341
+m1G,K,37,N/A,tRNAAspGUC prevents incorrect aminoacylation,yeast,,,2330033
+m1G,K,37,N/A,prevents +1 errors in the reading frame during protein translation ,bacterial,,,32602532
+m1G,K,37,N/A,,eukaryotes and archaea,,,28335556
+m1G,K,37,N/A,"Critical in RNA maturation, plays an essential role in translation",all domains,,,20452364
+m1G,K,37,tRNA pro,help with aminoacylation compaired with unmodified and contain the precision of translation,E.coli,,,34761260
+m1G,K,37," tRNALeu, tRNAPro, tRNAArg",prevent the frame shifting in decoding ,all domains,,,11226173
+m1G,K,37," tRNALeu, tRNAPro, tRNAArg",affecting the protein synthesis by influencing peptide chain extension,salmonella typhimurium,,,7592438
+m1G,K,37,tRNAMet,help with maintainging the reading frame in mitochondrial,yeast,,,17652090
+m1G,K,37,tRNAPro(CGG),"causes +1 frameshifting on polynucleotide, slippery codons.",viruses,,,33016876
+m1G,K,37,tRNAPro(CGG),"s important for the association step during binding to a cognate CCG codon. In contrast, m1 G37 prevented association with a slippery CCC-U or +1 codon",E.coli,,,30782843
+m1G,K,37, tRNAPhe,will dramatically increase the binding affinity of the tRNA(Phe)AC to the 30S E. coli ribosomal subunit when compared to unmodified tRNA(Phe)AC,E.coli,,,9478206
+m1G,K,9,N/A,,yeast,,,
+m1G,K,9,tRNATrp,enhance the stability of tRNA and escape from digestion,S. cerevisiae,,,38071471
+m1G,K,37,N/A,"The -1 frame shift error for different heptameric sequences,","Escherichia coli, Salmonella enterica serotypes typhoid and Saccharomyces cerevisiae",,,12756333
+m1G/m1I,K/O,37,"tRNALeu(AAG, TAA, CAA,), tRNAPro(TGG), tRNAHis(GTG), tRNASer(TGA), tRNAArg(CCG, ACG, TCG)",The addition of m1A58 requires a signal from m1G37/m1I37,,HEK293T,,36537222
+"m2,2G",R,9,N/A,Lack of modification is a symptom of intellectual disability in humans,,Cells from a patient with the TRMT1 missense variant (R323C),,31898845
+"m2,2G",R,N/A,N/A,help with maintaining the cell proliferation and protein synthesis to augment cell stability,human ,,,28784718
+"m2,2G",R,10,N/A, induce a stable cloverleaf conformation,archaeal ,,,16434050
+"m2,2G",R,26,N/A, induce a stable cloverleaf conformation,,mitochondrial,,8548653
+m2A,/ɿ,N/A,N/A,resistance of ROS,E. faecalis ,,,37433804
+m2A,/ɿ,37,N/A,resistance of antobiotics,E.Coli,,,27081063
+m2A,/ɿ,37,"tRNAArg(ICG), tRNAAsp(QUC), tRNAGln(cmnm5s2UUG), tRNAGln(CUG), tRNAGlu(mnm5s2UUC), tRNAGlu(mnm5s2UUC) and tRNAHis(QUG)",Optimized codon-anticodon recognition and maintained the translational reading frame ,E.Coli,,,22891362
+m2G,L,26,N/A, strongly downregulated in TRM1A/TRM1B mutants and  upregulated tRNAs did not contain m22G26,,,,37945696
+m3C,/Щ,32, tRNASer,The function of this modification requires n6-prenyl modification of A37 for certain tRNAs.,S. pombe,,,27354703
+m3C,/Щ,32,mt-tRNAThr(UGU) and mt-tRNASer(UGA),influence the conformation of tRNA,,,in vitro gel,35247384
+m3C,/Щ,32, tRNASer,"global changes in translation profile and ribosome occupancy, as well as loss of mouse stem cell pluripotency",,human cell and mouse stem cell,,32923617
+m3C ,/Щ,N/A,"tRNAArg(UCG,CCG,ACG)",can help DALRD3 protein recognize and bind this tRNA,,HEK293T,,32427860
+m5C,?,N/A,N/A,Loss of NSUN2-specific m5C modification does not reduce the abundance of specific tRNAs but causes an accumulation of 5′ tRNA-derived small RNA fragments (5′ tRF) by promoting angiogenin-mediated tRNA cleavage.,mice and human ,,,25063673
+m5C,?,N/A,N/A,Modification levels decreased as cells grew over 25 hours,yeast,,,28488916
+m5C,?,wobble , tRNACAA(Leu),Accelerated mRNA translation of UUG codons,S. cerevisiae,,,22760636
+m5C,?,34,N/A,help with maintaining correct codon-anticodon pairings during translation,human,,,22995836
+m5C,?,38,N/A,influence the production of tRNA-derived fragments and intergenerational transmission of paternal metabolic disorders to offspring,human,,,34871455
+m5C,?,38,tRNAAsp(GTC),help with maintaining the structural stability of tRNA,plasmodium (malaria parasite),,,34724812
+m5C,?,38," tRNAAsp(GTC), tRNAGly(GCC), and tRNAVal(AAC)",help with maintaining the structural stability of tRNA to decrease tRFs synthesis,mouse,,,26271101
+m5C,?,40,tRNAPhe,will dramatically increase the binding affinity of the tRNA(Phe)AC to the 32S E. coli ribosomal subunit when compared to unmodified tRNA(Phe)AC,E.coli,,,9478206
+m5C,?,48,tRNAGly(GCC),help with maintaining the structural stability of tRNA to prevent digestion,human,,,22995836
+m5C,?,49,tRNAGly(GCC),help with maintaining the structural stability of tRNA to prevent digestion,human,,,22995836
+m5C,?,50,tRNAGly(GCC),help with maintaining the structural stability of tRNA to prevent digestion,human,,,22995836
+m5C,?,49, tRNAVal(AAC),"plays a crucial role in tRNA stability and cell survival,   can trigger rapid tRNA degradation pathways",S. cerevisiae,,,16387656
+"m5C, Cm and m22G","?,B,R",N/A,N/A,"m5C, Cm and m22G increase under H2O2 ",S. cerevisiae,,,21187895
+m5s2U,F,N/A,N/A,important for the capacity of the tRNA to synthesize protein at high temperature.,,Thermus thermophilus HB 8,,4369142
+m5U,T,N/A,N/A,gave rise to the “TΨC”-arm nomenclature.,,,,
+m5U,T,54,N/A,have effects on the other modifications like Gm18 and m1A58 in tRNA through the network at 50 °C,Thermus thermophilus,,,27238446
+m5U,T,54,tRNAPhe,Elongation cycle steps between impact peptidyl transfers and subsequent Aa-tRNA binding translocations,S. cerevisiae,,,37986750
+m5U,T,54,tRNASer(CGA),"help with tRNA maturation, stability and function",S. cerevisiae,,,12003492
+m5U ,T,wobble , tRNALeu (UUR) and mt-trRNATrp,"Facilitates accurate codon decoding,  essential for efficient mitochondrial translation and respiratory activity",,"HEK294T, HeLa, cat hepatocytes and muscle cells of flounder",,29390138
+m6G,N/A,N/A,N/A,increases RPTOR mRNA translation and further regulates autophagic activity in ESCC cancer cells,,Esophageal Squamous Cell Carcinoma (ESCC),,35574843
+m7G,7,N/A,N/A,indicate esophageal squamous cell carcinoma,,esophageal squamous cell,,35304469
+m7G,7,N/A,N/A,induced polymorphonuclear  myeloid-derived suppressor cells  accumulation in ICC tumours and that polymorphonuclear  myeloid-derived suppressor cells  suppressed T cell proliferation and the antitumoural activity,mouse,,,36418437
+m7G,7,N/A,N/A,enhances the translation of oncogenic transcripts and plays a cancer-promoting role,,intrahepatic cholangiocarcinoma,,34352206
+m7G,7,N/A,N/A,"reduced m7G modification results in decreased translation of tumor-relevant mRNAs, and impaired cell proliferation, colony formation, cell invasion, and tumorigenicity",,lung cancer,,34371184
+m7G,7,N/A,N/A,"increased m7G modification  promotes the growth and metastasis of NPC cells in vitro and in vivo and  up-regulated the WNT/β-catenin signaling pathway, and finally enhanced the epithelial-mesenchymal transition (EMT) and chemotherapy resistance of NPC cells",,breast cancer,,34936728
+m7G,7,N/A,N/A,"increased m7G modification  is clearly negatively correlated with patient prognosis. Silencing METTL1 inhibited the proliferation, migration, and invasion of breast cancer cells mediated by EGFR/EFEMP2 up-regulation",, nasopharyngeal carcinoma(NPC),,35217794
+m7G,7,N/A,N/A,reduced m7G modification results in  reduced translation of oncogenic transcripts enriched in the RPTOR/ULK1/autophagy pathway ,,esophageal squamous cell carcinoma (ESCC),,35304469
+m7G,7,N/A,N/A,influencing the apoptotic process in cancer cells.,,Hepatocellular carcinoma,,36102722
+m7G,7,N/A,N/A,help with stalbility of tRNA conformation and confirm the global translation,,"mouse melanoma cells and acute myeloid leukemia (AML) cells, etc.",,34352207
+m7G,7,N/A,N/A,"affects intracellular tRNA levels and protein production processes, further influence leukemia cells grow and survive",,Acute Myeloid Leukemia (AML),,38268051
+m7G,7,46,N/A,is required for cell viability at high temperatures,Thermus thermophilus,,,19934251
+m7G,7,46,N/A,a conserved modification that modulates steady-state tRNA levels to affect cell growth,human,,,36599982
+m7G,7,46,N/A,"modulated the expression of the catalase genes katA and katB, which are enriched with Phe/Asp codons at the translational level. In response to H2O2 exposure, the level of m7G modification increased, consistent with the increased translation efficiency of Phe- and Asp-enriched mRNAs",Pseudomonas aeruginosa,,,31428787
+m7G,7,46,N/A,"forms a tertiary base pair with C13-G22, and stabilizes the tRNA structure","eubacteria, eukaryotes, and a few archaea",,,30562954
+m7G,7,46,N/A,"Deficiency may result in slowed growth of the lower bag, which is associated with the induction of primitive dwarfism disease",yeast,,,26416026
+m7G,7,46,tRNAArg(TCT),"Stabilizes mRNA from decay, improves translational efficiency, reduces ribosome pausing, and is associated with low survival in human cancer and direct transformation",,cancer cell,,34416137
+m7G,7,46, tRNAPhe,Associated with human diseases such as cerebellar primordial dwarfism,human,,,34006170
+m7G,7,46,N/A,Introduction of acp3U47 as an important marker for the modifying enzyme Yfip,E.coli,,,31863583
+m7G,7,46, tRNAVal(AAC),"plays a crucial role in tRNA stability and cell survival,   can trigger rapid tRNA degradation pathways",S. cerevisiae,,,16387656
+m7G,7,47,N/A,"positively affects the formations of Gm18 and m1G37, besides is required for cell viability at high temperatures via a tRNA modification network",Thermus thermophilus,,,19934251
+m7G ,7,N/A,N/A,suppressed T cell proliferation and the antitumoural activity,mouse,,,36418437
+"m7G, Am,m5C,Cm, mcm5s2U, i6A, and yW","7,/ʍ,	?,	B,3,	/Ч,	Y",N/A,N/A,"Methyl methanesulfonate stimulation increased m7G and decreased Am, m5C, Cm, mcm5s2U, i6A, and yW",S. cerevisiae,,,21187895
+mchm5U,b,wobble,N/A,Critical for translation efficiency and fidelity and affects brain function if wobble uridine modification is severely impaired,,Lymphoblastoid cell line (LCL),,31079898
+mcm5s2U,3,wobble,RNAucu(Arg) and tRNACCU(Glu),enhance binding of the anticodon with specific codons in mixed codon boxes,S. cerevisiae,,,350282
+mcm5s2U,3,wobble,N/A,Critical for translation efficiency and fidelity and affects brain function if wobble uridine modification is severely impaired,,Lymphoblastoid cell line (LCL),,31079898
+mcm5S2U,3,34,N/A,translational defects including ribosome pause and accumulation of ribosomes on XAA codons-enriched transcripts,, breast cancer cell lines (MCF7 and MDA-MB231),,33859181
+mcm5S2U,3,34,N/A,"help with decoding specific codons such as AAA, GAA, CAA",,MDA-MB231 cells,,33859181
+mcm5S2U,3,34, tRNAGln(UUG) and tRNAGlu(UUC),rescues the defects of the Δelp3 mutant of Aspergillus fumigatus,,Aspergillus fumigatus,,36374932
+mcm5S2U,3,34,"tRNALys(UUU), tRNAGlu(UUC), tRNAGln(UUG)",affect translation efficiency,S. pomb,,,23874237
+mcm5S2U,3,34, tRNALys(UUU),enhance translation efficiency,yeast,,,28368583
+mcm5S2U,3,34,"tRNAPhe(UUU,UUC), tRNALeu(UUG)",Adjustment of the translation process of the related protein LEF1 and the development of breast cancer,,Elp3-deficient PyMT tumors,,27811057
+mcm5s2U,3,34,"tRNAGlu(UUC) , Lys(UUU) , and tRNAGln(UUG)",Levels decrease at higher temperatures,S. cerevisiae,,,25505025
+mcm5s2U,3,34, tRNAArg(UCU) and tRNAGlu(UUC),Enhanced translation efficiency in AGA and GAA codons,yeast,,,26670883
+mcm5s2U ,3,N/A,N/A,independently contribute to reading frame maintenance,S. cerevisiae,,,32085421
+mcm5s2U ,3,N/A, tRNAGlnUUG,mediate efficient synthesis of the Q/N rich [PIN+] prion forming protein Rnq1,S. cerevisiae,,,28281930
+mcm5s2U ,3, wobble ,N/A,Associated with the pathogenesis of amyotrophic lateral sclerosis,,mouse and in NSC34 cells,,29415125
+mcm5s2U ,3,wobble, tRNAGlnUUG,essential for efficient translation of homologous codons and for preventing ribosome pauses during decoding,yeast,,,30360492
+mcm5s2U ,3,wobble,tRNAArg and tRNAGlu,key determinants of translational fidelity to down regulate the protein fidelity,S. cerevisiae,,,22832247
+mcm5U,1,34, tRNAArg(UCU) and tRNAGlu(UUC),Enhanced translation efficiency in AGA and GAA codons,yeast,,,26670883
+mcm5U,1,wobble ,tRNALys(UUU),"contribute to reading frame maintenance, loss may cause observed growth defects",S. cerevisiae,,,27937809
+mcm5U,1,wobble,RNAucu(Arg) and tRNACCU(Glu),enhance binding of the anticodon with specific codons in mixed codon boxes,S. cerevisiae,,,350282
+mcm5U ,1,wobble,N/A,Critical for translation efficiency and fidelity and affects brain function if wobble uridine modification is severely impaired,,Lymphoblastoid cell line (LCL),,31079898
+mcm5U ,1,wobble,tRNAArg and tRNAGlu,key determinants of translational fidelity to down regulate the protein fidelity,S. cerevisiae,,,22832247
+mcm5U ,1,wobble ," tRNAArg(UCU,ICG) and tRNAAsn(GTT) and tRNAAsp(GTC) and tRNAGlu(UUC) and tRNALeu(CAA) and tRNALys(CTT)",n linked to DNA damage survival,human cell,,,20308323
+mcm5U ,1,wobble , tRNAGlu,regulate the translation rate of specific codons and is essential for proteome integrity,fission yeast,,,31223645
+"mcm5U, m3C, m7G, mcm5s2U, i6A, yW, m5C, and Cm","1,	/Щ, 7,3,	/Ч,	Y,	?,	B",N/A,N/A,"NaAsO2-stimulated rise in mcm5U, m3C, m7G, mcm5s2U, i6A, yW, m5C, and Cm",S. cerevisiae,,,21187895
+mcm5U/s2U,1/2,34,N/A,modification losses would result in severe synthetic growth defects and elevated levels of protein aggregation,Saccharomyces cerevisiae,,,32484543
+mcm5U/s2U,1/2,34,N/A,"lack of the mcm5 or s2 modification at U34 of tRNALys, tRNAGlu, and tRNAGln causes ribosome pausing at the respective codons",yeast,,,28368583
+mcm5Um,∩,34, sec-tRNA [Ser] Sec ,Increased translation rate of glutathione peroxidase 1,,rabbit reticulocyte,,28702279
+mcm5um ,∩,wobble,N/A,Critical for translation efficiency and fidelity and affects brain function if wobble uridine modification is severely impaired,,Lymphoblastoid cell line (LCL),,31079898
+mcn5U,N/A,wobble ,N/A,"increases in HU-induced S-phase, relative to G1 and G 2 , to promote the codon-dependent translation of RNR1 and boost RNR activity",S. cerevisiae,,,22935709
+mnm5s2U,S,34, tRNAGlu(CUC),leads to weakened codon-anti-codon interactions and shifted translational frames,E.coli,,,11544186
+mnm5s2U,S,34,tRNALys(UUU),enhance tranlation speed,E.coli,,,35595100
+mnm5s2U,S,34,N/A,"The -1 frame shift error for different heptameric sequences,","Escherichia coli, Salmonella enterica serotypes typhoid and Saccharomyces cerevisiae",,,12756333
+ms2i6A,*,37,N/A,"promote efficient A:U codon–anticodon base-pairing and to prevent unintended base pairing by near cognates, thus enhancing translational fidelity",,,,34526715
+ms2i6A,*,37,N/A,acts as a physiological switch that modulates spontaneous mutation frequency and other metabolic functions.,,E.coli K-12,,1999389
+ms2i6A,*,37,N/A,Helps with cell division,E.coli,,,1938930
+ms2i6A,*,37,tRNALeu(UUX),Correct decoding of UUX-leucine codons ,E.Coli,,,26979278
+ms2io6A,≠,37,N/A,"The -1 frame shift error for different heptameric sequences,","Escherichia coli, Salmonella enterica serotypes typhoid and Saccharomyces cerevisiae",,,12756333
+ms2t6A,[,37, tRNALys(UUU),crucial for maintaining the translation fidelity of AAA and AAG codons.,,mouse pancreatic β cell,,21841312
+ms2t6A,[,37,tRNALys3,Establishment of adequate codon . Anti-codon interactions to decode the swing codon AAG,,NIT-1 cell line,,33634165
+ncm5U,&,34, tRNAIle(UAU),reduce decoding fidelity,S. cerevisiae,,,30997502
+nm5s2U,∫,34,tRNAGln,"Pairing U34,U35 as key recognition sites for further methylase MnmM",Bacillus subtilis,,,36762482
+Q,Q,N/A,N/A,"changes correlate with genome-wide alteration of Tyr/His/Asn/Asp codons, which is consistent with the coordination of codon-mediated expression and translational fidelity",D. melanogaster,,,25489848
+Q,Q,N/A,N/A,Improvement of the body's tolerance to divalent metal ions,E.coli,,,36066904
+Q,Q,N/A,N/A, adjusting the strength of codon-anticodon interactions,human and rice,,,30093495
+Q,Q,N/A,N/A,help with protecting cell intergrity,,inflammatory bowel disease cell,,36801450
+Q,Q,N/A,N/A,influence gene expression to protect cell integraty,E. histolytica,,,33688012
+Q,Q,wobble, tRNAAsp(GUC),Can stimulate the methylation reaction of m5C38,E. histolytica,,,33688012
+Q,Q,wobble, tRNAAsp(QUC),Improve translation accuracy and reduce codon reading error rate,E.coli,,,26704976
+Q,Q,wobble, tRNATyr,affects translation fidelity and protein coding across the animal genus,Drosophila melanogaster,,,25489848
+Q,Q,wobble,tRNATyr(QUA),Reduced translation accuracy and elevated codon reading error rate,E.coli,,,26704976
+Q,Q,34,N/A,Q modification is lacked in a variety of tumors,,tumor,,6420054
+Q,Q,34,N/A, be associated the occurrence and development of human colon adenocarcinoma,,human colon adenocarcinoma,,1378304
+Q,Q,34,N/A,promotes antioxidant defense system by increasing antioxidant enzyme activities and inhibits oxidative stress and tumorigenesis,,cancer,,18290765
+Q,Q,34,N/A,"loss of Q modification can promote Warburg type metabolism, which is beneficial to the energy metabolism of tumors",,Hela cells,,32213952
+Q,Q,34,N/A,help with stalling of ribosomes on Q-decoded codens and hold the global balance in translation elongation speed between codons that engage in weakand  strong  interactions  with  their  cognate  anticodons.,mice,,,37609797
+Q,Q,34,N/A,"Favorable for codon encoding process, can be used for codon rearrangement process",E.coli,,,36120552
+Q,Q,34,tRNAAsn and tRNATyr,decreases the translation speed at cognate U-ending codons,S. pombe.,,,30715423
+Q,Q,34,N/A,enhanced cell proliferation and junction activity in cell lines and organoids and reduced inflammation in epithelial cells. ,,cell lines and organoids and epithelial cells and human IBD,,36801450
+Q,Q,34,tRNAAsp(QUC),increase the coden errors,E.coli,,,26704976
+Q,Q,34,tRNAAsp and tRNAHis,"increases the translation speed at cognate C-ending codons,",S. pombe.,,,30715423
+Q,Q,34,tRNAHis(GUG),enhances decoding of U-ending codons,Xenopus,,,2988936
+Q,Q,34,tRNATyr,Critical to cellular mechanisms,E.coli,,,38768229
+Q,Q,34,N/A,"The -1 frame shift error for different heptameric sequences,","Escherichia coli, Salmonella enterica serotypes typhoid and Saccharomyces cerevisiae",,,12756333
+Q,Q,35, tRNATyr(QUA),decrease the coden errors,E.coli,,,26704976
+s2U,2,54,N/A,Stabilization of tRNA in thermophilic microorganisms at high temperature ,E.Coli,,,28655838
+s2U,2,N/A,N/A,plays an important role in thermal stability,Thermuc thermophilus,,,985514
+s2U,2,33,tRNATrp,"Acts as a negative determinant of editing in mitochondria, and in the cytoplasm in the stability of tRNA Gln, tRNA Glu, and tRNA Lys. Modifications occurring outside the anticodon loop play a structural role in tRNA stability ",Trypanosoma brucei,,,21419700
+s2U,2,33,tRNATrp,help cells deal with changing environmental demands,,trypanosomatid mitochondria,,22024020
+s2U,2,34,N/A,efficient decoding of AA-ending cognate codons,Magnaporthe oryzae,,,37563288
+s2U,2,34,N/A,"highly conserved in all domains, guaranteeing fidelity of protein translation",all domains,,,33744947
+s2U,2,34,N/A,"Dynamic equilibrium of carbon and nitrogen metabolism, thus affecting dynamic equilibrium and metabolic reorganization of phosphate",S. cerevisiae,,,31259691
+s2U,2,34,N/A," during host infection, the translation of PWL2 mRNA (encoding an unconventionally secreted effector) requires s2U34-dependent ecient decoding of AA-ending cognate codons",,Host rice cells infected by the plague fungus Magnaporthe oryzae,,37563288
+s2U,2,34,N/A,identification of purines and facilitate the correct translation,Yersinia pseudotuberculosis,,,35576231
+s2U,2,34,N/A, a conserved modification required for efficient decoding of AA-ending cognate codons,Magnaporthe oryzae,,,37563288
+s2U,2,34, tRNALys(UUU),suppress telomere gene silencing defects in Elongator mutants,yeast,,,21912530
+s2U,2,34," tRNALys, tRNAGlu, tRNAGln",help with maintaining funtion of mitochondrial,Danio rerio,,,30137487
+S2U ,2,wobble ,tRNALys(UUU),"contribute to reading frame maintenance, loss may cause observed growth defects",S. cerevisiae,,,27937809
+s4U,4,8,N/A,change conformation of tRNA under UV,Bacillus anthracis,,,17001104
+s4U ,4,N/A,E.coli 8/19 tRNA,associated with induced growth delay in Escherichia coli after exposure to near-ultraviolet radiation,E.coli,,,35155896
+t6A,6,N/A,N/A,independently contribute to reading frame maintenance,S. cerevisiae,,,32085421
+t6A,6,N/A,N/A,as an essential condition for tRNA aminoacylation,bacterial,,,26337258
+t6A,6,N/A,N/A,downregulate sensitivity to external stresses and help with function integraty,S. cerevisiae,,,26798630
+t6A,6,N/A,N/A,"as a requirement for tRNAIle aminylation, maibtaining reading frame",,HEK293T,,35104889
+t6A,6,37,N/A,establishment of the non-universal genetic code,,echinoderm mitochondria,,28783151
+t6A,6,37,N/A," crucial for codon-biased mitochondrial translation under physiological conditions, and it is also sensitive to the environmental availability of CO2/bicarbonate, which is rate-limiting for t6A37 formation in human mitochondria",,human mitochondria,,29760464
+t6A,6,37,tRNA(ANN), facilitate codon–anticodon pairing and to prevent frameshifting during protein synthesis,E.coli,,,23258706
+t6A,6,37, tRNAiMet,The tRNAiMet carrying this modification is used as a major limiting factor for cell and animal growth,,Drosophila and in mammals,,26063805
+t6A,6,37,tRNA(ANN),Improved translation fidelity,S. cerevisiae,,,32914678
+t6A,6,37,tRNA(ANN),critical in translation accuracy and efficiency,,Human immortalized foot cell line (AB813) and human primary fibroblasts,,31481669
+t6A,6,37,tRNAIle(GAU) and tRNASer(GCU) and in tRNAThr(UGC) and in tRNALys(UUU) and in tRNAAsn(QUU),"Decreased levels of t6A modification in mitochondria have certain pathological consequences, such as MERRF fibroblasts and myofibroblasts",,293T.etc,,29760464
+t6A,6,37,tRNALys(UUU),enhance translation efficiency,yeast,,,23836657
+t6A not to ms2t6A,6 not to [,37, tRNALysUUU,cause diabete,,human β cells,,31941883
+"t6A, m5U, m1G, m2G, mcm5s2U, i6A, yW and m1A","6, T, K, L, 3, /Ч, Y, /Ѣ",N/A,N/A,"H2O2-stimulated t6A grows with m5U, m1G, m2G, mcm5s2U, i6A, yW and m1A growth",S. cerevisiae,,,21187895
+tm5s2U,/ƕ,N/A,"mt-tRNAsGlu, mt-tRNALys and mt-tRNAGln ","promote accurate decoding of purine-ending codons (NNR; N = U, C, A or G) and prevent misreading of pyrimidine-ending codons (NNY; Y = U or C)",,human mitochondrial ,,29390138
+tm5s2U,/ƕ,N/A,N/A,"promote accurate decoding of NNR codons (N = U, C, A or G; R = A or G) and prevents misreading of NNY codons (Y = U or C)",,human mitochondrial ,,33619562
+tm5U,/ʭ,34,N/A,help with protein synthesis and decoding cognate codens,,human mt,,21957023
+tm5U,/ʭ,N/A,mt-tRNAsLeu(UUR) and mt-tRNATrp,"promote accurate decoding of purine-ending codons (NNR; N = U, C, A or G) and prevent misreading of pyrimidine-ending codons (NNY; Y = U or C)",,human mitochondrial ,,29390138
+tm5U,/ʭ,wobble, mt-tRNALys and mt-tRNALeu(UUR),Enhancing the efficiency and accuracy of protein translation,mammalian cell,,,36045139
+tm5U,/ʭ,34,N/A,The concentration of taurine in the medium affects the level of this modification,,Hela,,29390138
+tm5U,/ʭ,N/A,N/A,"promote accurate decoding of NNR codons (N = U, C, A or G; R = A or G) and prevents misreading of NNY codons (Y = U or C)",,human mitochondrial ,,33619562
+Um,J,13, tRNAVal(AAC),plays a crucial role in tRNA stability and cell survival,S. cerevisiae,,,16387656
+Um,J,34,tRNA(Ser)Sec,"Maintenance of selenoprotein production, maintenance of protein translation rate",,Proband skin fibroblasts,,26854926
+Um,J,34,tRNAGln,"be important not only for the sufficient production of a viral UAG readthrough protein, but also for the efficient translation of viral mRNAs",,virus infected cells,,2539781
+Um,J,34,tRNASec,"essential for the expression of various mammalian selenoproteins and affect ribosomal frameshifts, and suppressing nonsense codons",mammalian cell,,,15611090
+Um,J,54,tRNA3Lys,as a second RT-stop site was supported by conservation of retrovi-ral genome-tRNALys sequence-complementarity,human cell,,,34642752
+yW,Y,37,N/A,"The -1 frame shift error for different heptameric sequences,","Escherichia coli, Salmonella enterica serotypes typhoid and Saccharomyces cerevisiae",,,12756333
+yW,Y,N/A,N/A,"crucial for translational fidelity in Archaea and Eukarya, important for mitochondrial function.",Archaea and Eukarya,,,25845597
+yW,Y,N/A,N/A,Guaranteed accuracy of translations,,Brucella mitochondria,,25845597
+yW,Y,37,N/A,ensures correct codon recognition by stabilizing codon-anticodon pairings during the decoding process in the ribosome,eukaryotic,,,19287006
+yW,Y,37,N/A,essential for correct phenylalanine coden translation,eukaryotes and archaea,,,20972222
+yW,Y,37,N/A, it stabilizes codon-anticodon interactions,eukaryotic,,,16642040
+Ψ,Ψ,38,N/A,modification losses would reduce ribosome A-site binding and enhance ribosome pausing at critical codens and ribosomal frameshifting,yeast,,,27496282
+ψ,ψ,N/A,tRNATrp,enhance the stability of tRNA and escape from digestion,S. cerevisiae,,,38071471
+Ψ,Ψ,38, tRNAGlnUUG,mediate efficient synthesis of the Q/N rich [PIN+] prion forming protein Rnq1,S. cerevisiae,,,28281930
+Ψ,Ψ,38, tRNAGlnUUG,essential for efficient translation of homologous codons and for preventing ribosome pauses during decoding,yeast,,,30360492
+ψ,ψ,39,N/A,"The -1 frame shift error for different heptameric sequences,","Escherichia coli, Salmonella enterica serotypes typhoid and Saccharomyces cerevisiae",,,12756333
+ψ,ψ,55,N/A,"The -1 frame shift error for different heptameric sequences,","Escherichia coli, Salmonella enterica serotypes typhoid and Saccharomyces cerevisiae",,,12756333
+ψ,ψ,N/A,N/A,Plays an important role in cell division,E.coli,,,1938930
+Ψ,Ψ,38,N/A,Modification processes correlate with mental retardation,human,,,27055666
+Ψ,Ψ,39,N/A,Modification processes correlate with mental retardation,human,,,27055666
+ψ,ψ,55,N/A,As tRMA introduces a preference condition for m5U54,E.coli,,,32385137
+Ψ,Ψ,55,N/A,cell growth,E.Coli,,,11779468
+Ψ,Ψ,55,tRNAThr,is required for low-temperature adaptation and have nagative impact on other modified like Gm18,Thermus thermophilus,,,21097467
+ψ ,ψ ,35, tRNA(G psi ATyr),help with readthrough UAG in tobocco,tobocco,,,2539781
+ψ ,ψ ,N/A,tRNATyr,Significant role for early termination codon recognition as well as suppression,yeast,,,29507244
+ψ ,ψ ,39, tRNAPhe,will dramatically increase the binding affinity of the tRNA(Phe)AC to the 31S E. coli ribosomal subunit when compared to unmodified tRNA(Phe)AC,E.coli,,,9478206
+ψ ,ψ ,39,tRNALys,significantly change the structure of anticoden loop,,,,9478205

@@ -109,7 +109,6 @@ type DataType = {
 };
 
 import en from '@shene/table/dist/locale/en';
-import { dataType } from 'element-plus/es/components/table-v2/src/common.js';
 const locale = ref(en);
 
 export default defineComponent({
