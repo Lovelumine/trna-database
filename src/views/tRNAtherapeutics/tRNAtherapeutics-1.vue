@@ -44,6 +44,18 @@
                 </ElTag>
               </ElSpace>
             </template>
+            <template v-else-if="column.key === 'E_Value'">
+              {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).eValue }}
+            </template>
+            <template v-else-if="column.key === 'Score'">
+              {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).score }}
+            </template>
+            <template v-else-if="column.key === 'Alignment'">
+              {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).alignment }}
+            </template>
+            <template v-else-if="column.key === 'Gaps'">
+              {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).gaps }}
+            </template>
           </template>
           <template #expandedRowRender="{ record }">
   <div>
@@ -67,11 +79,11 @@
     <p><b>sup-tRNA Gene:</b> {{ record.sup_tRNA_gene }}</p>
     <p><b>Modification:</b> {{ record.Modification }}</p>
     <p><b>Prediction of tRNAScan-SE:</b> {{ record.Prediction_of_tRNAScan_SE }}</p>
-    <p><b>Alignment:</b> <pre>{{ record.Alignment }}</pre></p>
-    <p><b>E-Value:</b> {{ record.E_Value }}</p>
-    <p><b>Score:</b> {{ record.Score }}</p>
-    <p><b>Identities:</b> {{ record.Identities }}</p>
-    <p><b>Gaps:</b> {{ record.Gaps }}</p>
+    <p><b>Alignment:</b> <pre>{{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).alignment }}</pre></p>
+    <p><b>E-Value:</b> {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).eValue }}</p>
+    <p><b>Score:</b> {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).score }}</p>
+    <p><b>Identities:</b> {{record.identities }}</p>
+    <p><b>Gaps:</b> {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).gaps }}</p>
     <p><b>Ref Length:</b> {{ record.Ref_length }}</p>
     <p><b>Engineered aaRS:</b> {{ record.Engineered_aaRS }}</p>
     <p><b>Reading Through Efficiency:</b> {{ record.Reading_through_efficiency }}</p>
@@ -100,6 +112,7 @@
   import { STableProvider } from '@shene/table';
   import type { STableColumnsType } from '@shene/table';
   import { useTableData } from '../../assets/js/useTableData.js';
+  import {calculateAlignment} from '../../utils/calculateAlignment'
   
   type DataType = { [key: string]: string };
   
@@ -192,6 +205,7 @@
     );
 
 
+
     return {
       columns: displayedColumns,
       filteredDataSource,
@@ -200,6 +214,7 @@
       locale,
       selectedColumns,
       displayedColumns,
+      calculateAlignment,
       allColumns // 列选择控件
     };
   }
