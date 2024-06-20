@@ -39,5 +39,13 @@ export default defineConfig({
     sourcemap: false, // 生产环境中不生成 source map
     minify: 'terser' // 确保使用 terser 进行代码压缩和混淆
   },
-  assetsInclude: ['**/*.txt']
+  assetsInclude: ['**/*.txt'],
+  server: {
+    proxy: {
+      '/scan': {
+        target: 'http://localhost:3456',
+        changeOrigin: true,
+      },
+    },
+  },
 })
