@@ -80,7 +80,7 @@
       </tr>
       <tr>
         <td><b>Origin AA and Codon:</b></td>
-        <td>{{ record.Origin_aa_and_codon }}</td>
+        <td>{{ record.Origin_aa_and_codon_of_PTC_site }}</td>
       </tr>
       <tr>
         <td><b>PTC Codon:</b></td>
@@ -98,15 +98,15 @@
       </tr>
       <tr>
         <td><b>PTC Model Sequence:</b></td>
-        <td>{{ record.PTC_model_sequence }}</td>
+        <td>{{ record.Sequence_of_PTC_model }}</td>
       </tr>
       <tr>
         <td><b>Species Source:</b></td>
-        <td>{{ record.Species_source }}</td>
+        <td>{{ record.Species_source_of_PTC_model}}</td>
       </tr>
       <tr>
         <td><b>NCBI ref ID:</b></td>
-        <td>{{ record.NCBI_ref_ID }}</td>
+        <td>{{ record.NCBI_ref_ID}}</td>
       </tr>
     </table>
   </div>
@@ -114,52 +114,99 @@
   <div class="section">
     <h2>Sup-tRNA Treatment</h2>
     <table>
+  <tr>
+    <td><b>ENSURE ID of sup-tRNA:</b></td>
+    <td>
+      <a :href="record.ENSURE_ID_link" target="_blank">{{ record.ENSURE_ID }}</a>
+    </td>
+  </tr>
+  <tr>
+    <td><b>Species source:</b></td>
+    <td>{{ record.Species_source_of_origin_tRNA}}</td>
+  </tr>
+  <tr>
+    <td><b>AA and Anticodon of sup-tRNA:</b></td>
+    <td>{{ record.aa_and_anticodon_of_sup_tRNA }}</td>
+  </tr>
+  <tr>
+    <td><b>Dose:</b></td>
+    <td>{{ record.Delivery_as_vector_or_IVT_tRNA }}</td>
+  </tr>
+  <tr v-if="record.Delivery_as_vector_or_IVT_tRNA === 'IVT_tRNA'">
+    <td><b>Dose_for_IVT_tRNA_delivery:</b></td>
+    <td>{{ record.Dose_for_IVT_tRNA_delivery }}</td>
+  </tr>
+  <tr v-if="record.Delivery_as_vector_or_IVT_tRNA === 'vector'">
+    <td><b>Dose for vector delivery:</b></td>
+    <td>{{ record.Dose_for_vector_delivery}}</td>
+  </tr>
+  <tr v-if="record.Delivery_as_vector_or_IVT_tRNA === 'vector'">
+    <td><b>Gene Copy Per Vector:</b></td>
+    <td>{{ record.tRNA_gene_copy_number_for_vector_delivery}}</td>
+  </tr>
+  <tr v-if="record.Delivery_as_vector_or_IVT_tRNA === 'vector'">
+    <td><b>Promoter Per Copy:</b></td>
+    <td>{{ record.Promoter_for_vector_delivery}}</td>
+  </tr>
+  
+</table>
+
+    </div>
+  <div class="section">
+    <h2>Sup-tRNA Information</h2>
+    <h3>Sup-tRNA</h3>
+    <table>
       <tr>
-        <td><b>ENSURE ID of sup-tRNA:</b></td>
+        <td><b>ENSURE ID :</b></td>
         <td>
-          <a :href="record.ENSURE_ID_link" target="_blank">{{ record.ENSURE_ID_of_sup_tRNA }}</a>
+          <a :href="record.ENSURE_ID_link" target="_blank">{{ record.ENSURE_ID }}</a>
         </td>
       </tr>
       <tr>
-        <td><b>Species Source:</b></td>
-        <td>{{ record.Species_source }}</td>
-      </tr>
-      <tr>
-        <td><b>AA and Anticodon of sup-tRNA:</b></td>
+        <td><b>AA and Anticodon:</b></td>
         <td>{{ record.aa_and_anticodon_of_sup_tRNA }}</td>
       </tr>
       <tr>
-        <td><b>Dose:</b></td>
-        <td>{{ record.Dose }}</td>
+        <td><b>Gene sequence:</b></td>
+        <td>{{ record.sup_tRNA_gene}}</td>
       </tr>
       <tr>
-        <td><b>Reaction System:</b></td>
-        <td>{{ record.Reaction_system }}</td>
+        <td><b>tRNA sequence:</b></td>
+        <td>{{ record.Sequence_of_sup_tRNA}}</td>
       </tr>
       <tr>
-        <td><b>Reading Through Efficiency:</b></td>
-        <td>{{ record.Reading_through_efficiency }}</td>
+        <td><b>Modification:</b></td>
+        <td>{{ record.Modification}}</td>
       </tr>
       <tr>
-        <td><b>Measuring of Efficiency:</b></td>
-        <td>{{ record.Measuring_of_efficiency }}</td>
-      </tr>
-      <tr>
-        <td><b>Safety:</b></td>
-        <td>{{ record.Safety }}</td>
-      </tr>
-      <tr>
-        <td><b>Immunogenicity:</b></td>
-        <td>{{ record.Immunogenicity }}</td>
-      </tr>
-      <tr>
-        <td><b>Citation:</b></td>
-        <td>{{ record.Citation }}</td>
+        <td><b>Secondary structure:</b></td>
+        <td></td>
       </tr>
     </table>
-  </div>
-  <div class="section">
-    <h2>Other</h2>
+    <h3>origin tRNA</h3>
+    <table>
+      <tr>
+        <td><b>Rnacentral ID:</b></td>
+        <td>{{ record.rnacentral_ID_of_origin_tRNA}}</td>
+      </tr>
+      <tr>
+        <td><b>tRNAscan-SE ID:</b></td>
+        <td>{{ record.tRNAscan_SE_ID_of_origin_tRNA}}</td>
+      </tr>
+      <tr>
+        <td><b>Species source:</b></td>
+        <td>{{ record.Species_source_of_origin_tRNA}}</td>
+      </tr>
+      <tr>
+        <td><b>AA and Anticodon:</b></td>
+        <td>{{ record.aa_and_anticodon_of_origin_tRNA}}</td>
+      </tr>
+      <tr>
+        <td><b>tRNA sequence:</b></td>
+        <td>{{ record.Sequence_of_origin_tRNA}}</td>
+      </tr>
+    </table>
+    <h3>Engineered site</h3>
     <table>
     <tr>
         <td><b>Alignment:</b></td>
@@ -251,7 +298,7 @@ export default defineComponent({
       { title: 'AA and Anticodon of Origin tRNA', dataIndex: 'aa_and_anticodon_of_origin_tRNA', width: 200, ellipsis: true, key: 'aa_and_anticodon_of_origin_tRNA', resizable: true },
       { title: 'AA and Anticodon of sup-tRNA', dataIndex: 'aa_and_anticodon_of_sup_tRNA', width: 200, ellipsis: true, key: 'aa_and_anticodon_of_sup_tRNA', resizable: true },
       { title: 'Rnacentral ID of Origin tRNA', dataIndex: 'rnacentral_ID_of_origin_tRNA', width: 100, ellipsis: true, key: 'rnacentral_ID_of_origin_tRNA', resizable: true },
-      { title: 'tRNAscan-SE ID of origin tRNA', dataIndex: 'tRNAscan-SE_ID_of_origin_tRNA', width: 300, ellipsis: true, key: 'tRNAscan-SE_ID_of_origin_tRNA', resizable: true },
+      { title: 'tRNAscan-SE ID of origin tRNA', dataIndex: 'tRNAscan_SE_ID_of_origin_tRNA', width: 300, ellipsis: true, key: 'tRNAscan_SE_ID_of_origin_tRNA', resizable: true },
       { title: 'Species Source of Origin tRNA', dataIndex: 'Species_source_of_origin_tRNA', width: 300, ellipsis: true, key: 'Species_source_of_origin_tRNA', resizable: true },
       { title: 'ENSURE ID', dataIndex: 'ENSURE_ID', width: 300, ellipsis: true, key: 'ENSURE_ID', resizable: true },
       { title: 'Sequence of Origin tRNA', dataIndex: 'Sequence_of_origin_tRNA', width: 300, ellipsis: true, key: 'Sequence_of_origin_tRNA', resizable: true },
@@ -272,8 +319,8 @@ export default defineComponent({
       { title: 'Reaction System', dataIndex: 'Reaction_system', width: 150, ellipsis: true, key: 'Reaction_system', resizable: true },
       { title: 'Dose for IVT tRNA Delivery', dataIndex: 'Dose_for_IVT_tRNA_delivery', width: 150, ellipsis: true, key: 'Dose_for_IVT_tRNA_delivery', resizable: true },
       { title: 'Dose for Vector Delivery', dataIndex: 'Dose_for_IVT_tRNA_delivery', width: 150, ellipsis: true, key: 'Dose_for_IVT_tRNA_delivery', resizable: true },
-      { title: 'tRNA Gene Copy Number for Vector Delivery', dataIndex: 'tRNA_gene_copy_number_for_vector-delivery', width: 150, ellipsis: true, key: 'tRNA_gene_copy_number_for_vector-delivery', resizable: true },
-      { title: 'Promoter for Vector Delivery', dataIndex: 'Promoter_for_vector-delivery', width: 150, ellipsis: true, key: 'Promoter_for_vector-delivery', resizable: true },
+      { title: 'tRNA Gene Copy Number for Vector Delivery', dataIndex: 'tRNA_gene_copy_number_for_vector_delivery', width: 150, ellipsis: true, key: 'tRNA_gene_copy_number_for_vector_delivery', resizable: true },
+      { title: 'Promoter for Vector Delivery', dataIndex: 'Promoter_for_vector_delivery', width: 150, ellipsis: true, key: 'Promoter_for_vector_delivery', resizable: true },
       { title: 'Safety', dataIndex: 'Safety', width: 100, ellipsis: true, key: 'Safety', resizable: true },
       { title: 'Immunogenicity', dataIndex: 'Immunogenicity', width: 150, ellipsis: true, key: 'Immunogenicity', resizable: true },
       { title: 'Citation', dataIndex: 'Citation', width: 300, ellipsis: true, key: 'Citation', resizable: true },
