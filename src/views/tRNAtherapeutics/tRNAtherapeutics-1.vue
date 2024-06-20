@@ -58,46 +58,135 @@
             </template>
           </template>
           <template #expandedRowRender="{ record }">
-  <div>
-    <p><b>Pathogenic Gene:</b> {{ record.Pathogenic_gene }}</p>
-    <p><b>PTC Model:</b> {{ record.PTC_model }}</p>
-    <p><b>Species Source of PTC Model:</b> {{ record.Species_source_of_PTC_model }}</p>
-    <p><b>NCBI ref ID:</b> {{ record.NCBI_ref_ID }}</p>
-    <p><b>Sequence of PTC Model:</b> {{ record.Sequence_of_PTC_model }}</p>
-    <p><b>PTC Site:</b> {{ record.PTC_site }}</p>
-    <p><b>Origin AA and Codon of PTC Site:</b> {{ record.Origin_aa_and_codon_of_PTC_site }}</p>
-    <p><b>PTC Codon:</b> {{ record.PTC_codon }}</p>
-    <p><b>Delivery as Vector or IVT tRNA:</b> {{ record.Delivery_as_vector_or_IVT_tRNA }}</p>
-    <p><b>AA and Anticodon of Origin tRNA:</b> {{ record.aa_and_anticodon_of_origin_tRNA }}</p>
-    <p><b>AA and Anticodon of Sup-tRNA:</b> {{ record.aa_and_anticodon_of_sup_tRNA }}</p>
-    <p><b>Rnacentral ID of Origin tRNA:</b> {{ record.rnacentral_ID_of_origin_tRNA }}</p>
-    <p><b>tRNAscan-SE ID of Origin tRNA:</b> {{ record.tRNAscan_SE_ID_of_origin_tRNA }}</p>
-    <p><b>Species Source of Origin tRNA:</b> {{ record.Species_source_of_origin_tRNA }}</p>
-    <p><b>ENSURE ID:</b> {{ record.ENSURE_ID }}</p>
-    <p><b>Sequence of Origin tRNA:</b> {{ record.Sequence_of_origin_tRNA }}</p>
-    <p><b>Sequence of Sup-tRNA:</b> {{ record.Sequence_of_sup_tRNA }}</p>
-    <p><b>sup-tRNA Gene:</b> {{ record.sup_tRNA_gene }}</p>
-    <p><b>Modification:</b> {{ record.Modification }}</p>
-    <p><b>Prediction of tRNAScan-SE:</b> {{ record.Prediction_of_tRNAScan_SE }}</p>
-    <p><b>Alignment:</b> <pre>{{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).alignment }}</pre></p>
-    <p><b>E-Value:</b> {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).eValue }}</p>
-    <p><b>Score:</b> {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).score }}</p>
-    <p><b>Identities:</b> {{record.identities }}</p>
-    <p><b>Gaps:</b> {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).gaps }}</p>
-    <p><b>Ref Length:</b> {{ record.Ref_length }}</p>
-    <p><b>Engineered aaRS:</b> {{ record.Engineered_aaRS }}</p>
-    <p><b>Reading Through Efficiency:</b> {{ record.Reading_through_efficiency }}</p>
-    <p><b>Measuring of Efficiency:</b> {{ record.Measuring_of_efficiency }}</p>
-    <p><b>Supplementary Information of Measurement:</b> {{ record.Supplenmentary_information_of_Measurement }}</p>
-    <p><b>Reaction System:</b> {{ record.Reaction_system }}</p>
-    <p><b>Dose for IVT tRNA Delivery:</b> {{ record.Dose_for_IVT_tRNA_delivery }}</p>
-    <p><b>Dose for Vector Delivery:</b> {{ record.Dose_for_vector_delivery }}</p>
-    <p><b>tRNA Gene Copy Number for Vector Delivery:</b> {{ record.tRNA_gene_copy_number_for_vector_delivery }}</p>
-    <p><b>Promoter for Vector Delivery:</b> {{ record.Promoter_for_vector_delivery }}</p>
-    <p><b>Safety:</b> {{ record.Safety }}</p>
-    <p><b>Immunogenicity:</b> {{ record.Immunogenicity }}</p>
-    <p><b>Citation:</b> {{ record.Citation }}</p>
-    <p><b>Notes:</b> {{ record.notes }}</p>
+  <div class="expanded-row">
+    <div class="section">
+      <h2>PTC Disease</h2>
+      <table>
+        <tr>
+          <td><b>Related Disease:</b></td>
+          <td>{{ record.Related_disease }}</td>
+        </tr>
+        <tr>
+          <td><b>Pathogenic Gene:</b></td>
+          <td>
+            <a :href="record.Coding_Variation_Disease_database_link" target="_blank">{{ record.Pathogenic_gene }}</a>
+          </td>
+        </tr>
+        <tr>
+          <td><b>PTC Site:</b></td>
+          <td>
+            <a :href="record.PTC_site_link" target="_blank">{{ record.PTC_site }}</a>
+          </td>
+        </tr>
+        <tr>
+          <td><b>Origin AA and Codon:</b></td>
+          <td>{{ record.Origin_aa_and_codon }}</td>
+        </tr>
+        <tr>
+          <td><b>PTC Codon:</b></td>
+          <td>{{ record.PTC_codon }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>PTC Model</h2>
+      <table>
+        <tr>
+          <td><b>PTC Model:</b></td>
+          <td>{{ record.PTC_model }}</td>
+        </tr>
+        <tr>
+          <td><b>PTC Model Sequence:</b></td>
+          <td>{{ record.PTC_model_sequence }}</td>
+        </tr>
+        <tr>
+          <td><b>Species Source:</b></td>
+          <td>{{ record.Species_source }}</td>
+        </tr>
+        <tr>
+          <td><b>NCBI ref ID:</b></td>
+          <td>{{ record.NCBI_ref_ID }}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Sup-tRNA Treatment</h2>
+      <table>
+        <tr>
+          <td><b>ENSURE ID of sup-tRNA:</b></td>
+          <td>
+            <a :href="record.ENSURE_ID_link" target="_blank">{{ record.ENSURE_ID_of_sup_tRNA }}</a>
+          </td>
+        </tr>
+        <tr>
+          <td><b>Species Source:</b></td>
+          <td>{{ record.Species_source }}</td>
+        </tr>
+        <tr>
+          <td><b>AA and Anticodon of sup-tRNA:</b></td>
+          <td>{{ record.aa_and_anticodon_of_sup_tRNA }}</td>
+        </tr>
+        <tr>
+          <td><b>Delivery Method:</b></td>
+          <td>{{ record.Delivery_method }}</td>
+        </tr>
+        <tr>
+          <td><b>Dose:</b></td>
+          <td>{{ record.Dose }}</td>
+        </tr>
+        <tr>
+          <td><b>Reaction System:</b></td>
+          <td>{{ record.Reaction_system }}</td>
+        </tr>
+        <tr>
+          <td><b>Reading Through Efficiency:</b></td>
+          <td>{{ record.Reading_through_efficiency }}</td>
+        </tr>
+        <tr>
+          <td><b>Measuring of Efficiency:</b></td>
+          <td>{{ record.Measuring_of_efficiency }}</td>
+        </tr>
+        <tr>
+          <td><b>Supplementary Information of Measurement:</b></td>
+          <td>{{ record.Supplenmentary_information_of_Measurement }}</td>
+        </tr>
+        <tr>
+          <td><b>Safety:</b></td>
+          <td>{{ record.Safety }}</td>
+        </tr>
+        <tr>
+          <td><b>Immunogenicity:</b></td>
+          <td>{{ record.Immunogenicity }}</td>
+        </tr>
+        <tr>
+          <td><b>Citation:</b></td>
+          <td>{{ record.Citation }}</td>
+        </tr>
+      </table>
+    </div>
+    <div class="section">
+      <h2>Other</h2>
+      <table>
+      <tr>
+          <td><b>Alignment:</b></td>
+          <td>{{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).alignment }}</td>
+        </tr>
+        <tr>
+          <td><b>E-Value:</b></td>
+          <td> {{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).eValue }}</td>
+        </tr>
+        <tr>
+          <td><b>Score:</b></td>
+          <td>{{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).score }}</td>
+        </tr>
+        <tr>
+          <td><b>Gaps:</b></td>
+          <td>{{ calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA).gaps }}</td>
+        </tr>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -245,6 +334,35 @@
 .column-select {
   margin-left: 10px;
   width: 200px; /* 设置选择框的宽度 */
+}
+
+.expanded-row {
+  border: 1px solid #ccc;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.section {
+  margin-bottom: 16px;
+}
+
+.section h2 {
+  margin-bottom: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
 }
 </style>
 
