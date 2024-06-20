@@ -9,7 +9,7 @@
   
   <script lang="ts">
   import { defineComponent } from 'vue';
-  import { systemInformation, projectBackground, projectObjectives, projectContent } from './presetInformation.ts';
+  import { systemInformation, projectBackground, projectObjectives, projectContent } from './presetInformation';
   
   export default defineComponent({
     name: 'PresetInformation',
