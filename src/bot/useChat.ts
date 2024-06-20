@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import { systemInformation, projectBackground, projectObjectives, projectContent } from './presetInformation';
+import {modomicsnatural} from './modomicsnatural'
 
 
 export function useChat() {
@@ -20,6 +21,7 @@ const messages = ref<Array<{ id: number; text: string; sender: string; image?: s
     ${projectBackground}
     ${projectObjectives}
     ${projectContent}
+    ${modomicsnatural}
   `;
 
   // 切换聊天窗口的显示状态
