@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import axios from 'axios';
-import { systemInformation, projectBackground, projectObjectives, projectContent } from './presetInformation';
+import { systemInformation, projectBackground, projectObjectives, projectContent,QA } from './presetInformation';
 import {modomicsnatural} from './modomicsnatural'
 
 
@@ -21,6 +21,7 @@ const messages = ref<Array<{ id: number; text: string; sender: string; image?: s
     ${projectBackground}
     ${projectObjectives}
     ${projectContent}
+    ${QA}
     ${modomicsnatural}
   `;
 
