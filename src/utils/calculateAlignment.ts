@@ -7,7 +7,7 @@ export async function calculateAlignment(sequence1: string, sequence2: string) {
             sequence2
         });
         const { alignment, eValue,  gaps,score } = response.data; // 提取返回值
-        console.log(alignment)
+        // console.log(alignment)
         return {
             alignment,
             eValue,

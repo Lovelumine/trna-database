@@ -188,9 +188,10 @@
         <td>{{ record.Modification}}</td>
       </tr>
       <tr>
-        <td><b>Secondary structure:</b></td>
-        <td></td>
-      </tr>
+  <td><b>Secondary structure:</b></td>
+  <td>{{ secondaryStructures[record.key] }}</td>
+</tr>
+
     </table>
     <h3>origin tRNA</h3>
     <table>
@@ -244,12 +245,13 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, computed, nextTick } from 'vue';
 import { ElTag, ElSpace, ElSelect, ElOption  } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import {calculateAlignment} from '../../utils/calculateAlignment'
+import axios from 'axios';
 
 type DataType = { [key: string]: string };
 
@@ -276,9 +278,31 @@ export default defineComponent({
     'Reaction_system',
   ]);
 
-    onMounted(() => {
-      loadData();
-    });
+onMounted(async () => {
+  console.log('On mounted hook triggered');
+  try {
+    await loadData();
+    console.log('Data loaded');
+  } catch (error) {
+    console.error('Failed to load data:', error);
+  }
+
+  try {
+    await loadAlignments(filteredDataSource.value);
+    console.log('Alignments loaded');
+  } catch (error) {
+    console.error('Failed to load alignments:', error);
+  }
+
+  try {
+    await loadSecondaryStructures(filteredDataSource.value);
+    console.log('Secondary structures loaded');
+  } catch (error) {
+    console.error('Failed to load secondary structures:', error);
+  }
+});
+
+
 
     const allColumns: STableColumnsType<DataType> = [
       { title: 'Related Disease', dataIndex: 'Related_disease', width: 200, ellipsis: true, key: 'Related_disease', 
@@ -350,10 +374,34 @@ const loadAlignments = async (dataSource: DataType[]) => {
   }
 };
 
-onMounted(async () => {
-  await loadData();
-  await loadAlignments(filteredDataSource.value);
-});
+const secondaryStructures = ref<{ [key: string]: string }>({});
+
+const loadSecondaryStructures = async (dataSource: DataType[]) => {
+      console.log('Loading secondary structures...');
+      for (const record of dataSource) {
+        try {
+          const response = await axios.post('/scan', { sequence: record.Sequence_of_sup_tRNA });
+          console.log(`Fetched structure for record ${record.key}:`, response.data.str); // 添加日志
+          secondaryStructures.value = { ...secondaryStructures.value, [record.key]: response.data.str }; // 使用响应式方法更新对象
+        } catch (error) {
+          console.error(`Failed to fetch secondary structure for record ${record.key}:`, error);
+          secondaryStructures.value = { ...secondaryStructures.value, [record.key]: 'Error fetching structure' }; // 使用响应式方法更新对象
+        }
+      }
+      console.log('Secondary structures loaded', secondaryStructures.value);
+      await nextTick(); // 确保 DOM 已更新
+    };
+
+
+    onMounted(async () => {
+      console.log('On mounted hook triggered');
+      await loadData();
+      console.log('Data loaded');
+      await loadAlignments(filteredDataSource.value);
+      console.log('Alignments loaded');
+      await loadSecondaryStructures(filteredDataSource.value);
+      console.log('Secondary structures loaded');
+    });
 
   return {
     columns: displayedColumns,
@@ -367,6 +415,7 @@ onMounted(async () => {
     calculateAlignment,
     allColumns, // 列选择控件
     alignments,
+    secondaryStructures,
   };
 }
 });
