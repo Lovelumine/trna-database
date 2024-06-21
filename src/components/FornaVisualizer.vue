@@ -13,24 +13,23 @@
 
 <script>
 import * as fornac from "../fornac/fornac.js";
-import axios from "axios";
+
 export default {
   name: "TranStructure",
   data() {
     return {
       modified: true,
-      comment: '',
       options: {
-        name: 'tRNA-Ala-AGC-8-1',
-        structure: '(((((((....((.((.........)).))...((.............))))))))).',
-        sequence: 'GAGAAAGCTCACAAGAACTGCTAACTCATGCCCCCATGTCTAACACATGGCTTTCTCA', 
+        name: '',
+        structure: '',
+        sequence: '',
         color: ''
       }
     }
   },
   methods: {
     drawPlot(id) {
-      let container = new fornac.FornaContainer(("#"+id), {
+      let container = new fornac.FornaContainer(("#" + id), {
         animation: true,
         zoomable: true,
         editable: false
@@ -40,9 +39,12 @@ export default {
       container.addCustomColorsText(this.options.color);
     },
     async get_structure() {
-      const url = 'https://43.138.148.56:20004/get-hg38/tRNA_Ala_AGC_8/';
-      let res = await axios.get(url);
-      res = res.data;
+      const res = [{
+        "modified_sequence": "-;G;G;G;G;G;A;U;U;A;m2G;C;U;C;A;A;A;D;-;G;G;D;-;-;A;G;A;G;C;m2,2G;C;U;C;G;C;Um;U;I;G;C;m1I;Y;Gm;C;G;A;G;A;G;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;m7G;U;A;G;C;G;G;G;A;Y;C;G;m1A;U;G;C;C;C;G;C;A;U;C;C;U;C;C;A;C;C;A",
+        "name": "tRNA-Ala-AGC-8",
+        "sequence_db": "GGGGGATTAGCTCAAATGGTAGAGCGCTCGCTTAGCATGCGAGAGGTAGCGGGATCGATGCCCGCATCCTCCA",
+        "structure": "(((((((..((((........)))).(((((.......))))).....(((((.......))))))))))))."
+      }];
 
       function arrayRemove(arr, value) {
         return arr.filter(ele => ele !== value);
