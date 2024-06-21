@@ -82,7 +82,7 @@
             </div>
             <p><b>Readthrough mechanism:</b> {{ record['Readthrough mechanism'] }}</p>
             <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
-            <p><b>PMID of references:</b> {{ record['PMID of references'] }}</p>
+            <p><b>PMID of references:</b> <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID" target="_blank" class="tilt-hover">{{record.PMID}}</a></p>
             <p><b>Note:</b> {{ record['Note'] }}</p>
           </div>
         </template>
@@ -118,7 +118,7 @@ type DataType = {
   'Structure of sup-tRNA': string;
   'Readthrough mechanism': string;
   'Mutational position of sup-tRNA': string;
-  'PMID of references': string;
+  'PMID': string;
   pictureid: string;
 };
 
@@ -205,7 +205,7 @@ export default defineComponent({
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA_sequence_after_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_after_mutation', resizable: true },
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
-      { title: 'PMID of references', dataIndex: 'PMID of references', width: 150, ellipsis: true, key: 'PMID of references', resizable: true },
+      { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>),resizable: true },
       { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true }
     ];
 
