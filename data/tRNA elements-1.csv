@@ -2,10 +2,15 @@
 ac4C,M,N/A,N/A,Enhanced tRNA stability and improved translation efficiency of epidermal growth factor mRNA,,Esophageal cancer,,37463108
 ac4C,M,12,tRNASer and tRNALeu,help with fine-tuning the abundance of receptors such as serine and leucine in tRNAs and essential for maintaining the structural integrity of tRNAs and ensuring proper function during protein synthesis ,,yeast lack RES,,23605039
 ac4C ,M,wobble , tRNA-Ser(CGA),"help with tRNA stability, folding, recognition, translation rate and fidelity, as well as cellular processes such as growth, development and stress response",,HEK293T and HeLa ,,35196516
+"Am, Im, hm5C, m2,2G, I, , M2G, ac4C, m3U, Gm, m5C, m5U, m6A","/ʍ, /Ш,  /Ƣ ,R, I, L, M, /δ, #, ?, T,/Ж",N/A,N/A,Significantly down-regulated in non-small cell carcinoma and interacts with down-regulation of the related protein FTJSJ1 protein to reduce cancer prognosis,,Non-Small Cell Lung Cancer (NSCLC),,32393790
+ht6A,«,37,N/A,prevent mt-tRNALys from misreading AAA as lysine,,echinoderm mitochondria,,28783151
+f5C,>,34,N/A,plays an essential role in translation of the dialectal AUA codon as Met,,human mitochondrial ,,19151083
+Cm,B,N/A,N/A,upregulate tRNA fragments synthesis,,HEK292T,,37792516
+i6A,/Ч,37,hmtRNASer,help METTL8 modified m3C32 in human mt,,human mitochondrial ,,35357504
+m1A,/Ѣ,58 ,N/A,enhance translation efficiency,,Naive T cells,,36138184
+m1A,/Ѣ,9,N/A, induce a stable cloverleaf conformation,,human mitochondria,,15019776
 acp3U,X,47,N/A,Loss of acp3U47 in E. coli ΔtapT mutant also leads to genome instability under continuous heat shock stress.,E.coli,,,31804502
 Am and Um m5C,/ʍ ，J， ?,N/A,N/A,"NaOCl stimulation, Am and Um and m5C and NaOCl concentrations are related",S. cerevisiae,,,21187895
-"Am, Im, hm5C, m2,2G, I, , M2G, ac4C, m3U, Gm, m5C, m5U, m6A","/ʍ, /Ш,  /Ƣ ,R, I, L, M, /δ, #, ?, T,/Ж",N/A,N/A,Significantly down-regulated in non-small cell carcinoma and interacts with down-regulation of the related protein FTJSJ1 protein to reduce cancer prognosis,,Non-Small Cell Lung Cancer (NSCLC),,32393790
-Cm,B,N/A,N/A,upregulate tRNA fragments synthesis,,HEK292T,,37792516
 Cm,B,N/A,N/A,Modification levels rise as cells grow over 24 hours,yeast,,,28488916
 Cm,B,32,tRNAPhe(GAA),prevent the digestion of RNase at this site and reduce tRFs production,fruit fly,,,31943105
 Cm,B,34,tRNALeu(CmAA),Improved codon swing base interaction efficiency and support for a functional role of sup-tRNAs in decoding UAG amber stop codons,E.Coli,,,20855540
@@ -20,13 +25,11 @@ ct6A,e,37,N/A,modification losses would reduce ribosome A-site binding and enhan
 D,D,36,tRNATyr(CUD),help with reading through UGA,,,,35532803
 D,D,47, tRNAVal(AAC),plays a crucial role in tRNA stability and cell survival,S. cerevisiae,,,16387656
 f5C,>,wobble , mt-tRNAMet,"Facilitates accurate codon decoding,  essential for efficient mitochondrial translation and respiratory activity",,"HEK294T, HeLa, cat hepatocytes and muscle cells of flounder",,29390138
-f5C,>,34,N/A,plays an essential role in translation of the dialectal AUA codon as Met,,human mitochondrial ,,19151083
 G+,(,15,N/A,"stabilizes the structure of tRNAs, and the loss of G+ leads to a severe lack of thermophilicity",,Coccidioides immitis,,32041795
 "G+, m1A/m1I, ac4C, and m2G/m2,2G","( ,	/Ѣ/O,  	M, 	L/R",N/A,N/A,help with the heperthermotolerance,,hyperthermophilic archaeon,,30605516
 ges2U,Γ,N/A,N/A,"ges2U-G pair is 10℃ higher than the native ges2U-A duplex, affecting the coding specificity",E.coli,Hela,,27307604
 Gm,#,18,N/A,"antagonize tRNA-induced TLR7/8 activation, suggesting a potential role of Gm18 as an immune escape mechanism.",E.coli,,,31019095
 Gm,#,18,"tRNAIle(k 2 CAU), tRNAMet(ac 4 CAU) and tRNAGln(UUG)",modificatio increases to response to mild bacteriostatic antibiotics stress ,E.Coli,,,33275131
-ht6A,«,37,N/A,prevent mt-tRNALys from misreading AAA as lysine,,echinoderm mitochondria,,28783151
 I,I,wobble,N/A,modification level correlated with cell cycle,fission yeast,,,17875641
 I,I,34,N/A,"expand the decoding capacity of tRNAs, revealing that the synergy of tRNA modifications and codon usage patterns is an important mechanism for humoral immunity.",,Plasma cells (PCs),,38207021
 I,I,34," tRNAAla(AGC), tRNAArg(ACG), tRNAIle(AAT), tRNAThr(AGT), tRNALeu(AAG), tRNAPro(AGG),tRNASer(AGA), tRNAVal(AAC)",Accelerating rapid translation of immune-related proteins,,Plasma cells (PCs),,38207021
@@ -37,12 +40,10 @@ i6A,/Ч,N/A,N/A,affects the catalytic activity of the Dnase,,,in vitro,32681686
 i6A,/Ч,37,N/A,Increased efficiency of sup-tRNA in cytoplasmic suppression of nonsense mutations in UAA,S. cerevisiae,,,10618371
 i6A,/Ч,37, tRNATyr and tRNACys,"increased the activity of tRNA Cys at a cognate codon and that of tRNA Tyr at a near-cognate codon, suggesting that i6A37 promotes decoding activity generally and increases fidelity at cognate codons while decreasing fidelity at noncognate codons.",Schizosaccharomyces pombe ,,,23716598
 i6A,/Ч,37,tRNATyr(GψA）,"help with stabilize the anticodon loop, further with whole tRNA",S. cerevisiae,,,30143741
-i6A,/Ч,37,hmtRNASer,help METTL8 modified m3C32 in human mt,,human mitochondrial ,,35357504
 i6A,/Ч,37,tRNASer(UCN),As a specific recognition feature of the m3C32-modifying enzyme METTL8-Iso1,,,,38744809
 i6A,/Ч,37,tRNALeu(UUX),Correct decoding of UUX-leucine codons ,E.Coli,,,26979278
 i6A,/Ч,37,tRNASec,"essential for the expression of various mammalian selenoproteins and affect ribosomal frameshifts, and suppressing nonsense codons",mammalian cell,,,15611090
 imG,€,N/A,N/A,important for Translation fidelity to maintain the reading frame in mitochondria,Archeae and Eukarya ,,,25845597
-m1A,/Ѣ,58 ,N/A,enhance translation efficiency,,Naive T cells,,36138184
 m1A,/Ѣ,N/A,N/A,indicate rothelial carcinoma of the bladder,,,bladder,35444240
 m1A,/Ѣ,N/A,N/A,Stabilizes its structure by participating in tertiary interactions,human ,,,38471794
 m1A,/Ѣ,58,N/A,coordinators of tissue-specific gene expression,mice,,,36537222
@@ -51,7 +52,6 @@ m1A,/Ѣ,58,tRNA3Lys,"During HIV infection, the associated tRNA acts as a reverse
 m1A,/Ѣ,58, tRNAiMet,promotes translation initiation and cell pro-liferation,,Hela,,27745969
 m1A,/Ѣ,58,tRNAiMet,"has major effects on the structural properties of initiator tRNAi Met , so that the tRNA elbow structure is only properly assembled when this modification is present",S. cerevisiae,,,38331425
 m1A,/Ѣ,58,tRNATrp and tRNAAla,Introduction of ψ55 as a key recognition information for the modifying enzyme TRUB2,E.coli,,,33023933
-m1A,/Ѣ,9,N/A, induce a stable cloverleaf conformation,,human mitochondria,,15019776
 m1G,K,37,N/A, is essential for translational fidelity and efficiency,archaea and eukaryotes,,,19749755
 m1G,K,37,N/A, frameshift prevention,bacterial,,,2471265
 m1G,K,37,N/A," tRNAPro, tRNAArg and tRNALeu increases the rate of ribosomal A-site entry20 and prevents the slippage of the ribosomal peptidyl-tRNA",,,,11532950
