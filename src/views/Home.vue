@@ -48,7 +48,7 @@ export default {
 
 <style>
 .site--main {
- /* Center text and elements inside this container */
+  padding: 80px;
 }
 
 .image-container {
