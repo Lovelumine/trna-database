@@ -131,7 +131,7 @@ export default defineComponent({
     console.log();
 
     const tableSize = ref('default');
-    const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stopcodonforreadthrough','Mutational position of sup-tRNA']);
+    const selectedColumns = ref<string[]>(['Species', 'Stopcodonforreadthrough', 'NoncanonicalChargedAminoAcids','Readthrough mechanism']);
 
 
     onMounted(async () => {
@@ -156,10 +156,10 @@ export default defineComponent({
     };
 
     const allColumns: STableColumnsType<DataType> = [
-      { title: 'Species', dataIndex: 'Species', width: 150, ellipsis: true, key: 'Species', resizable: true },
+      { title: 'Species', dataIndex: 'Species', width: 280, ellipsis: true, key: 'Species', resizable: true },
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
-      { title: 'Stop codon for readthrough', dataIndex: 'Stopcodonforreadthrough', width: 200, ellipsis: true, key: 'Stopcodonforreadthrough', resizable: true ,
+      { title: 'Stop codon for readthrough', dataIndex: 'Stopcodonforreadthrough', width: 240, ellipsis: true, key: 'Stopcodonforreadthrough', resizable: true ,
       filter: {
           type: 'multiple',
           list: [
@@ -192,7 +192,7 @@ export default defineComponent({
        },
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA_sequence_before_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_before_mutation', resizable: true },
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA_sequence_after_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_after_mutation', resizable: true },
-      { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 200, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
+      { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
       { title: 'PMID of references', dataIndex: 'PMID of references', width: 150, ellipsis: true, key: 'PMID of references', resizable: true },
       { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true }
