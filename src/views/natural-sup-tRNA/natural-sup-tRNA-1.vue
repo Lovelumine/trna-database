@@ -65,6 +65,7 @@
         <template #expandedRowRender="{ record }">
           <div>
             <p><b>Species:</b> {{ record.Species }}</p>
+            <p><b>Tissue/Organelle of Origin:</b> {{ record['Tissue/Organelle of Origin'] }}</p>
             <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
             <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
             <p><b>Stop codon for readthrough:</b> <ElSpace>
@@ -174,6 +175,7 @@ export default defineComponent({
 
     const allColumns: STableColumnsType<DataType> = [
       { title: 'Species', dataIndex: 'Species', width: 280, ellipsis: true, key: 'Species', resizable: true, sorter: true },
+      { title: 'Tissue/Organelle of Origin', dataIndex: 'Tissue/Organelle of Origin', width: 280, ellipsis: true, key: 'Tissue/Organelle of Origin', resizable: true, sorter: true },      
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
       { title: 'Stop codon for readthrough', dataIndex: 'Stopcodonforreadthrough', width: 240, ellipsis: true, key: 'Stopcodonforreadthrough', resizable: true,
