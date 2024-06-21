@@ -63,8 +63,9 @@
                   {{ items }}
                 </ElTag>
               </ElSpace></p>
-            <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
-            <p><b>tRNA sequence after  mutation:</b> <span v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
+            <p><b>tRNA sequence before mutation:</b> {{ record['tRNA_sequence_before_mutation'] }}</p>
+            <p><b>tRNA sequence after  mutation:</b> <span v-html="highlightMutation(record['tRNA_sequence_after_mutation'])"></span></p>
+            <!-- <p><b>Alignment:</b><pre v-html="alignments[record.key]?.alignment"></pre></p> -->
             <div>
               <b>Structure of sup-tRNA:</b>
               <img :src="`https://trna.lumoxuan.cn/data/picture/${record.pictureid}.png`" @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
@@ -91,16 +92,18 @@ import VueEasyLightbox from 'vue-easy-lightbox';
 import {highlightMutation} from '../../utils/highlightMutation.js'
 import {getTagType} from '../../utils/tag.js'
 import {processCSVData} from '../../utils/processCSVData.js'
+import {calculateAlignment} from '../../utils/calculateAlignment'
 
 type DataType = {
   [key: string]: string | string[];
+  key: string; 
   Species: string;
   'Anticodon before mutation': string;
   'Anticodon after mutation': string;
   'Stop codon for readthrough': string[];
   'Noncanonical charged amino acids': string[];
-  'tRNA sequence before mutation': string;
-  'tRNA sequence after mutation': string;
+  'tRNA_sequence_before_mutation': string;
+  'tRNA_sequence_after_mutation': string;
   'Structure of sup-tRNA': string;
   'Readthrough mechanism': string;
   'Mutational position of sup-tRNA': string;
@@ -131,9 +134,10 @@ export default defineComponent({
     const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stopcodonforreadthrough','Mutational position of sup-tRNA']);
 
 
-    onMounted(() => {
-      loadData();
-    });
+    onMounted(async () => {
+  await loadData();
+  await loadAlignments(filteredDataSource.value);
+});
     
     const visible = ref(false);
     const lightboxImgs = ref<string[]>([]);
@@ -186,8 +190,8 @@ export default defineComponent({
           onFilter: (value, record) => record.NoncanonicalChargedAminoAcids.includes(value)
         },
        },
-      { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence before mutation', width: 200, ellipsis: true, key: 'tRNA sequence before mutation', resizable: true },
-      { title: 'tRNA sequence after mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
+      { title: 'tRNA sequence before mutation', dataIndex: 'tRNA_sequence_before_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_before_mutation', resizable: true },
+      { title: 'tRNA sequence after mutation', dataIndex: 'tRNA_sequence_after_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_after_mutation', resizable: true },
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 200, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
       { title: 'PMID of references', dataIndex: 'PMID of references', width: 150, ellipsis: true, key: 'PMID of references', resizable: true },
@@ -197,6 +201,13 @@ export default defineComponent({
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
+    const alignments = ref<{ [key: string]: any }>({});
+    const loadAlignments = async (dataSource: DataType[]) => {
+  for (const record of dataSource) {
+    const result = await calculateAlignment(record.tRNA_sequence_before_mutation, record.tRNA_sequence_after_mutation);
+    alignments.value[record.key] = result;
+  }
+};
 
     return {
       allColumns,
@@ -212,7 +223,8 @@ export default defineComponent({
       lightboxImgs,
       showLightbox,
       hideLightbox,
-      getTagType // 获取标签类型
+      getTagType ,// 获取标签类型
+      alignments
     };
   }
 });
