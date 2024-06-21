@@ -234,7 +234,7 @@
           <td><b>Secondary Structure Diagram:</b></td>
           <td >
             {{ console.log(record.key, secondaryStructures[record.key], record.Sequence_of_sup_tRNA) }}
-            <div style="max-height: 400px; max-width: 360px; overflow: auto; margin: auto">
+            <div style="max-height: 420px; max-width: 360px; overflow: auto; margin: auto">
               <TranStructure
                 :titleA="'Origin-tRNA'"
                 :titleB="'Sup-tRNA'" 
