@@ -31,4 +31,5 @@ trnascan-se-2.0.12.tar.gz
 uploads
 *.fasta
 *.txt
+query.fasta
 
