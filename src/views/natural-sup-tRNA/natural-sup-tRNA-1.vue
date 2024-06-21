@@ -24,7 +24,17 @@
     </div>
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :locale="locale">
-      <s-table :columns="displayedColumns" :data-source="filteredDataSource" :row-key="record => record.key" :stripe="true" :show-sorter-tooltip="true" :size="tableSize" :expand-row-by-click="true">
+      <s-table 
+        :columns="displayedColumns" 
+        :data-source="filteredDataSource" 
+        :row-key="record => record.key" 
+        :stripe="true" 
+        :show-sorter-tooltip="true" 
+        :size="tableSize" 
+        :expand-row-by-click="true" 
+        @sorter-change="onSorterChange"
+        :loading="loading"
+      >
         <template #bodyCell="{ text, column, record }">
           <template v-if="column.key === 'Structure of sup-tRNA'">
             <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
@@ -53,18 +63,18 @@
             <p><b>Species:</b> {{ record.Species }}</p>
             <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
             <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
-            <p><b>Stop codon for readthrough:</b>              <ElSpace>
-                <ElTag v-for="items in (Array.isArray(record.Stopcodonforreadthrough) ? record.Stopcodonforreadthrough : record.Stopcodonforreadthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
-                  {{ items }}
-                </ElTag>
-              </ElSpace></p>
+            <p><b>Stop codon for readthrough:</b> <ElSpace>
+              <ElTag v-for="items in (Array.isArray(record.Stopcodonforreadthrough) ? record.Stopcodonforreadthrough : record.Stopcodonforreadthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+                {{ items }}
+              </ElTag>
+            </ElSpace></p>
             <p><b>Noncanonical charged amino acids:</b> <ElSpace>
-                <ElTag v-for="items in (Array.isArray(record.NoncanonicalChargedAminoAcids) ? record.NoncanonicalChargedAminoAcids : record.NoncanonicalChargedAminoAcids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
-                  {{ items }}
-                </ElTag>
-              </ElSpace></p>
+              <ElTag v-for="items in (Array.isArray(record.NoncanonicalChargedAminoAcids) ? record.NoncanonicalChargedAminoAcids : record.NoncanonicalChargedAminoAcids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+                {{ items }}
+              </ElTag>
+            </ElSpace></p>
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA_sequence_before_mutation'] }}</p>
-            <p><b>tRNA sequence after  mutation:</b> <span v-html="highlightMutation(record['tRNA_sequence_after_mutation'])"></span></p>
+            <p><b>tRNA sequence after mutation:</b> <span v-html="highlightMutation(record['tRNA_sequence_after_mutation'])"></span></p>
             <!-- <p><b>Alignment:</b><pre v-html="alignments[record.key]?.alignment"></pre></p> -->
             <div>
               <b>Structure of sup-tRNA:</b>
@@ -85,7 +95,7 @@
 <script lang="tsx">
 import { defineComponent, ref, onMounted, computed } from 'vue';
 import { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption } from 'element-plus';
-import { STableProvider } from '@shene/table';
+import { STableProvider, STableProps  } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import VueEasyLightbox from 'vue-easy-lightbox';
@@ -124,25 +134,25 @@ export default defineComponent({
     VueEasyLightbox
   },
   setup() {
-    const { searchText, filteredDataSource, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
+    const { searchText, filteredDataSource: originalFilteredDataSource, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
       return processCSVData(data, ['Stopcodonforreadthrough', 'NoncanonicalChargedAminoAcids']);
     });
 
-    console.log();
-
     const tableSize = ref('default');
     const selectedColumns = ref<string[]>(['Species', 'Stopcodonforreadthrough', 'NoncanonicalChargedAminoAcids','Readthrough mechanism']);
-
+    const loading = ref(false);
+    const dataSource = ref<DataType[]>([]);
+    const sortedDataSource = ref<DataType[]>([]);
 
     onMounted(async () => {
-  await loadData();
-  await loadAlignments(filteredDataSource.value);
-});
-    
+      await loadData();
+      dataSource.value = originalFilteredDataSource.value;
+      sortedDataSource.value = originalFilteredDataSource.value;
+    });
+
     const visible = ref(false);
     const lightboxImgs = ref<string[]>([]);
     const lightboxKey = ref(0);
-
 
     const showLightbox = (pictureid: string) => {
       const imgUrl = `https://trna.lumoxuan.cn/data/picture/${pictureid}.png`;
@@ -156,11 +166,11 @@ export default defineComponent({
     };
 
     const allColumns: STableColumnsType<DataType> = [
-      { title: 'Species', dataIndex: 'Species', width: 280, ellipsis: true, key: 'Species', resizable: true },
+      { title: 'Species', dataIndex: 'Species', width: 280, ellipsis: true, key: 'Species', resizable: true, sorter: true },
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
-      { title: 'Stop codon for readthrough', dataIndex: 'Stopcodonforreadthrough', width: 240, ellipsis: true, key: 'Stopcodonforreadthrough', resizable: true ,
-      filter: {
+      { title: 'Stop codon for readthrough', dataIndex: 'Stopcodonforreadthrough', width: 240, ellipsis: true, key: 'Stopcodonforreadthrough', resizable: true,
+        filter: {
           type: 'multiple',
           list: [
             { text: 'UAG(amber)', value: 'UAG(amber)' },
@@ -168,10 +178,10 @@ export default defineComponent({
             { text: 'UGA(opal)', value: 'UGA(opal)'},        
           ],
           onFilter: (value, record) => record.Stopcodonforreadthrough.includes(value)
-        },
+        }
       },
       { title: 'Noncanonical charged amino acids', dataIndex: 'NoncanonicalChargedAminoAcids', width: 150, ellipsis: true, key: 'NoncanonicalChargedAminoAcids', resizable: true,
-      filter: {
+        filter: {
           type: 'multiple',
           list: [
             { text: 'Ser', value: 'Ser' },
@@ -183,13 +193,13 @@ export default defineComponent({
             { text: 'Gly', value: 'Gly' },
             { text: 'Pro', value: 'Pro' },
             { text: 'Glu', value: 'Glu' },
-            { text: 'Sec', value: 'Sec' },       
+            { text: 'Sec', value: 'Sec' },
             { text: 'Cys', value: 'Cys' },
             { text: 'Pyl', value: 'Pyl' },
           ],
           onFilter: (value, record) => record.NoncanonicalChargedAminoAcids.includes(value)
-        },
-       },
+        }
+      },
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA_sequence_before_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_before_mutation', resizable: true },
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA_sequence_after_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_after_mutation', resizable: true },
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
@@ -202,17 +212,42 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
     const alignments = ref<{ [key: string]: any }>({});
-    const loadAlignments = async (dataSource: DataType[]) => {
-  for (const record of dataSource) {
-    const result = await calculateAlignment(record.tRNA_sequence_before_mutation, record.tRNA_sequence_after_mutation);
-    alignments.value[record.key] = result;
-  }
-};
+
+    const onSorterChange = (params: any) => {
+      let sorter: { field?: string, order?: 'ascend' | 'descend' } = {};
+      if (Array.isArray(params)) {
+        sorter = params[0];
+      } else {
+        sorter = params;
+      }
+
+      loading.value = true;
+      const timer = setTimeout(() => {
+        if (sorter && sorter.order) {
+          sortedDataSource.value = originalFilteredDataSource.value
+            .concat()
+            .sort((a, b) => {
+              if (sorter.field === 'Species') {
+                return sorter.order === 'descend' 
+                  ? b[sorter.field].localeCompare(a[sorter.field])
+                  : a[sorter.field].localeCompare(b[sorter.field]);
+              }
+              return sorter.order === 'descend' 
+                ? b[sorter.field] - a[sorter.field]
+                : a[sorter.field] - b[sorter.field];
+            });
+        } else {
+          sortedDataSource.value = originalFilteredDataSource.value;
+        }
+        loading.value = false;
+        clearTimeout(timer);
+      }, 300);
+    };
 
     return {
       allColumns,
       displayedColumns,
-      filteredDataSource,
+      filteredDataSource: computed(() => sortedDataSource.value),
       tableSize,
       searchText,
       locale,
@@ -223,12 +258,15 @@ export default defineComponent({
       lightboxImgs,
       showLightbox,
       hideLightbox,
-      getTagType ,// 获取标签类型
-      alignments
+      getTagType, // 获取标签类型
+      alignments,
+      onSorterChange,
+      loading
     };
   }
 });
 </script>
+
 
 <style scoped>
 .site--main {
@@ -257,3 +295,4 @@ export default defineComponent({
   width: 200px;
 }
 </style>
+
