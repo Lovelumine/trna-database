@@ -48,14 +48,14 @@ export default {
 
 <style>
 .site--main {
-  padding: 80px;
+  padding: 20px;
 }
 
 .image-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 20px 0; /* Add some margin for spacing */
+  margin: 0px 0; /* Add some margin for spacing */
 }
 
 .centered-image {
