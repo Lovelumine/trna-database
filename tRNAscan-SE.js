@@ -38,7 +38,7 @@ app.post('/scan', (req, res) => {
 
             // 解析 output.txt 文件，提取 Str 部分
             const strMatch = data.match(/Str: (.+)/);
-            const str = strMatch ? strMatch[1] : '未找到 Str 部分';
+            const str = strMatch ? strMatch[1] : 'Unable to obtain secondary structure through tRNAscan SE';
 
             // 替换括号
             const formattedStr = str.replace(/>/g, ')').replace(/</g, '(');
