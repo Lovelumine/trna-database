@@ -4,8 +4,16 @@
     <!-- 顶部行包含尺寸调整、搜索框和列选择 -->
     <div class="top-controls">
       <!-- 搜索框 -->
-      <div class="search-box" style="margin-bottom: 10px">
+      <div class="search-box">
         <input v-model="searchText" placeholder="Enter search content" class="search-input">
+        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
+          <el-option :key="'all'" :label="'All columns'" :value="''" />
+          <el-option
+            v-for="column in allColumns"
+            :key="column.key"
+            :value="column.dataIndex"
+          />
+        </el-select>
       </div>
       <!-- 调整尺寸 -->
       <div class="size-controls" style="margin-bottom: 10px">
@@ -135,7 +143,7 @@ export default defineComponent({
     VueEasyLightbox
   },
   setup() {
-    const { searchText, filteredDataSource: originalFilteredDataSource, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
+    const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
       return processCSVData(data, ['Stopcodonforreadthrough', 'NoncanonicalChargedAminoAcids']);
     });
 
@@ -212,6 +220,7 @@ export default defineComponent({
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
+
     const alignments = ref<{ [key: string]: any }>({});
 
     const onSorterChange = (params: any) => {
@@ -230,12 +239,25 @@ export default defineComponent({
       }, 300);
     };
 
+    const filteredDataSource = computed(() => {
+      if (!searchText.value) {
+        return sortedDataSource.value;
+      }
+      return sortedDataSource.value.filter(record => {
+        if (!searchColumn.value) {
+          return Object.values(record).some(val => String(val).toLowerCase().includes(searchText.value.toLowerCase()));
+        }
+        return String(record[searchColumn.value]).toLowerCase().includes(searchText.value.toLowerCase());
+      });
+    });
+
     return {
       allColumns,
       displayedColumns,
-      filteredDataSource: computed(() => sortedDataSource.value),
+      filteredDataSource,
       tableSize,
       searchText,
+      searchColumn,
       locale,
       selectedColumns,
       highlightMutation,
@@ -252,7 +274,6 @@ export default defineComponent({
   }
 });
 </script>
-
 
 <style scoped>
 .site--main {
@@ -282,3 +303,31 @@ export default defineComponent({
 }
 </style>
 
+
+<style scoped>
+.site--main {
+  padding: 20px;
+}
+
+.top-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-box {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.size-controls,
+.column-controls {
+  display: flex;
+  align-items: center;
+}
+
+.column-select {
+  margin-left: 10px;
+  width: 200px;
+}
+</style>
