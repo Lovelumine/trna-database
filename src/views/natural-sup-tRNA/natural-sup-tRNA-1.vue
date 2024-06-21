@@ -8,11 +8,7 @@
         <input v-model="searchText" placeholder="Enter search content" class="search-input">
         <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
           <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :value="column.dataIndex"
-          />
+          <el-option v-for="column in allColumns" :key="column.key" :value="column.dataIndex" />
         </el-select>
       </div>
       <!-- 调整尺寸 -->
@@ -83,7 +79,7 @@
             </ElSpace></p>
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA_sequence_before_mutation'] }}</p>
             <p><b>tRNA sequence after mutation:</b> <span v-html="highlightMutation(record['tRNA_sequence_after_mutation'])"></span></p>
-            <!-- <p><b>Alignment:</b><pre v-html="alignments[record.key]?.alignment"></pre></p> -->
+
             <div>
               <b>Structure of sup-tRNA:</b>
               <img :src="`https://trna.lumoxuan.cn/data/picture/${record.pictureid}.png`" @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
@@ -112,6 +108,7 @@ import {getTagType} from '../../utils/tag.js'
 import {processCSVData} from '../../utils/processCSVData.js'
 import {calculateAlignment} from '../../utils/calculateAlignment'
 import { sortData } from '../../utils/sort.js';
+import TranStructure from '@/components/TranStructure.vue';
 
 type DataType = {
   [key: string]: string | string[];
@@ -140,7 +137,8 @@ export default defineComponent({
     ElImage,
     ElSelect,
     ElOption,
-    VueEasyLightbox
+    VueEasyLightbox,
+    TranStructure
   },
   setup() {
     const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
@@ -213,7 +211,7 @@ export default defineComponent({
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA_sequence_after_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_after_mutation', resizable: true },
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
-      { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>),resizable: true },
+      { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>), resizable: true },
       { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true }
     ];
 
@@ -302,5 +300,3 @@ export default defineComponent({
   width: 200px;
 }
 </style>
-
-
