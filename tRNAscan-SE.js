@@ -41,7 +41,7 @@ app.post('/scan', (req, res) => {
             const str = strMatch ? strMatch[1] : 'Unable to obtain secondary structure through tRNAscan SE';
 
             // 替换括号
-            const formattedStr = str.replace(/>/g, ')').replace(/</g, '(');
+            const formattedStr = str.replace(/>/g, '(').replace(/</g, ')');
             res.json({ str: formattedStr });
 
             // 删除临时文件
