@@ -4,8 +4,16 @@
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->
-      <div class="search-box" style="margin-bottom: 10px">
+      <div class="search-box">
         <input v-model="searchText" placeholder="Enter search content" class="search-input">
+        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
+          <el-option :key="'all'" :label="'All columns'" :value="''" />
+          <el-option
+            v-for="column in allColumns"
+            :key="column.key"
+            :value="column.dataIndex"
+          />
+        </el-select>
       </div>
       <!-- 调整尺寸 -->
       <div class="size-controls" style="margin-bottom: 10px">
@@ -115,7 +123,7 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource, loadData } = useTableData('/data/PTC in Cancer.csv', (data) => {
+    const { searchText, filteredDataSource, searchColumn,loadData } = useTableData('/data/PTC in Cancer.csv', (data) => {
       // 在加载数据时将 DISEASE 列转换为数组
       return data.map(item => {
         // 处理DISEASE字段
@@ -166,6 +174,7 @@ export default defineComponent({
       searchText,
       displayedColumns,
       locale,
+      searchColumn,
       selectedColumns,
       allColumns, // 列选择控件
       getTagType // 获取标签类型
