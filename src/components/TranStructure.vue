@@ -1,15 +1,16 @@
 <template>
-  <div>
-    <el-tabs>
-      <el-tab-pane label="Secondary Structure">
+  <div class="outer-container">
+    <el-tabs class="full-width-tabs">
+      <el-tab-pane :label="titleA">
         <div id="rna_ss"></div>
       </el-tab-pane>
-      <el-tab-pane label="Modification Annotation" :disabled="!modified">
+      <el-tab-pane :label="titleB" :disabled="!modified">
         <div id="rna_ss_m"></div>
       </el-tab-pane>
     </el-tabs>
   </div>
 </template>
+
 
 <script>
 import * as fornac from "../fornac/fornac.js";
@@ -33,6 +34,14 @@ export default {
       type: String,
       required: false,
       default: null,
+    },
+    titleA: {
+      type: String,
+      required: true,
+    },
+    titleB: {
+      type: String,
+      required: true,
     },
   },
   data() {
@@ -128,5 +137,32 @@ line[class="link fornac-link fornac-transparent"] {
 }
 text[class="fornac-nodeLabel fornac-transparent"] {
   display: none;
+}
+
+.full-width-tabs {
+  width: 100%;
+}
+
+.outer-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.tabs-wrapper {
+  width: auto;
+}
+
+.el-tabs__header {
+  display: flex;
+  justify-content: center;
+}
+
+.el-tabs__nav-wrap {
+  justify-content: center;
+}
+
+.el-tabs__nav {
+  display: inline-flex;
 }
 </style>

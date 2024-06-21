@@ -7,6 +7,8 @@
       :initialStructure="structure"
       :initialSequence="sequence"
       :initialModifiedSequence="modifiedSequence"
+      :titleA="A"
+      :titleB="B"
     />
   </div>
 </template>
@@ -23,6 +25,8 @@ const { tRNAName } = toRefs(route.params);
 const structure = "(((((((..((((........)))).(((((.......))))).....(((((.......)))))))))))).";
 const sequence = "GGGGGATTAGCTCAAATGGTAGAGCGCTCGCTTAGCATGCGAGAGGTAGCGGGATCGATGCCCGCATCCTCCA";
 const modifiedSequence = "-;G;G;G;G;G;A;U;U;A;m2G;C;U;C;A;A;A;D;-;G;G;D;-;-;A;G;A;G;C;m2,2G;C;U;C;G;C;Um;U;I;G;C;m1I;Y;Gm;C;G;A;G;A;G;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;-;m7G;U;A;G;C;G;G;G;A;Y;C;G;m1A;U;G;C;C;C;G;C;A;U;C;C;U;C;C;A;C;C;A";
+const A="Secondary Structure"
+const B="Modification Annotation"
 </script>
 
 <style scoped>
