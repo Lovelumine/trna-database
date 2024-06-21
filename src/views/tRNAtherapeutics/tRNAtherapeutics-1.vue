@@ -1,8 +1,17 @@
 <template>
   <div class="site--main">
     <div class="top-controls">
-      <div class="search-box" style="margin-bottom: 10px">
+      <!-- 搜索框 -->
+      <div class="search-box">
         <input v-model="searchText" placeholder="Enter search content" class="search-input">
+        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
+          <el-option :key="'all'" :label="'All columns'" :value="''" />
+          <el-option
+            v-for="column in allColumns"
+            :key="column.key"
+            :value="column.dataIndex"
+          />
+        </el-select>
       </div>
       <div class="size-controls" style="margin-bottom: 10px">
         <el-radio-group v-model="tableSize">
@@ -256,7 +265,7 @@ export default defineComponent({
   ElOption
 },
   setup() {
-    const { searchText, filteredDataSource, loadData } = useTableData('/data/tRNAtherapeutics.csv');
+    const { searchText, filteredDataSource, searchColumn,loadData } = useTableData('/data/tRNAtherapeutics.csv');
 
     const tableSize = ref('default');
     const selectedColumns = ref<string[]>([
@@ -351,6 +360,7 @@ onMounted(async () => {
     filteredDataSource,
     tableSize,
     searchText,
+    searchColumn,
     locale,
     selectedColumns,
     displayedColumns,
