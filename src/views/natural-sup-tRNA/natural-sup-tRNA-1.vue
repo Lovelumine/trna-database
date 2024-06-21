@@ -304,30 +304,3 @@ export default defineComponent({
 </style>
 
 
-<style scoped>
-.site--main {
-  padding: 20px;
-}
-
-.top-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.search-box {
-  flex-grow: 1;
-  margin-right: 10px;
-}
-
-.size-controls,
-.column-controls {
-  display: flex;
-  align-items: center;
-}
-
-.column-select {
-  margin-left: 10px;
-  width: 200px;
-}
-</style>
