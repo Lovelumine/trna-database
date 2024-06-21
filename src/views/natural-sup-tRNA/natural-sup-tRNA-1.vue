@@ -103,6 +103,7 @@ import {highlightMutation} from '../../utils/highlightMutation.js'
 import {getTagType} from '../../utils/tag.js'
 import {processCSVData} from '../../utils/processCSVData.js'
 import {calculateAlignment} from '../../utils/calculateAlignment'
+import { sortData } from '../../utils/sort.js';
 
 type DataType = {
   [key: string]: string | string[];
@@ -223,22 +224,7 @@ export default defineComponent({
 
       loading.value = true;
       const timer = setTimeout(() => {
-        if (sorter && sorter.order) {
-          sortedDataSource.value = originalFilteredDataSource.value
-            .concat()
-            .sort((a, b) => {
-              if (sorter.field === 'Species') {
-                return sorter.order === 'descend' 
-                  ? b[sorter.field].localeCompare(a[sorter.field])
-                  : a[sorter.field].localeCompare(b[sorter.field]);
-              }
-              return sorter.order === 'descend' 
-                ? b[sorter.field] - a[sorter.field]
-                : a[sorter.field] - b[sorter.field];
-            });
-        } else {
-          sortedDataSource.value = originalFilteredDataSource.value;
-        }
+        sortedDataSource.value = sortData(originalFilteredDataSource.value, sorter);
         loading.value = false;
         clearTimeout(timer);
       }, 300);
