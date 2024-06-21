@@ -1,40 +1,65 @@
 <template>
   <div class="site--main">
-    <h2>Project Background</h2>
+    <h2>Recent Advances in Suppressor tRNA (sup-tRNA) for the Treatment of Genetic Diseases</h2>
+        <!-- Image with Lightbox -->
+        <div class="image-container">
+      <img :src="imageSrc" @click="showViewer = true" class="centered-image" alt="Structure">
+    </div>
+    <p>Recent advances in the use of suppressor tRNA (sup-tRNA) for the treatment of genetic diseases have achieved remarkable progress and raised several thought-provoking questions:</p>
     <ul>
-      <li>Genetic mutations (sequence, structure)</li>
-      <li>Genetic mutations leading to diseases (coding variation disease)</li>
-      <li>tRNA therapeutics and Genetic Code Expansion (GCE) technology</li>
+      <li><strong>Targeted Mutation Sites in Diseases:</strong> Which mutation sites in which diseases can be targeted by tRNA therapeutics?</li>
+      <li><strong>Naturally Occurring sup-tRNAs:</strong> Naturally occurring sup-tRNAs capable of suppressing nonsense mutations and frameshifts are present in certain species. What are their sequences and structures?</li>
+      <li><strong>Targeted Diseases and Efficacy:</strong> Which diseases are primarily targeted by existing tRNA therapies, and what is their efficiency and safety?</li>
+      <li><strong>Key Sites on tRNA Molecules:</strong> What roles do specific sites on tRNA molecules play, and can they serve as a basis for designing sup-tRNAs?</li>
     </ul>
-    <h2>Project Objectives</h2>
-    <ol class="graph">
-      <li>Collect types of rare genetic diseases and mutation sites applicable to tRNA therapy, serving as potential drug targets.</li>
-      <li>Display sequence and structural data of natural sup-tRNA (focusing on their mutation sites) to aid in discovering more natural sup-tRNAs.</li>
-      <li>Gather design plans for engineered tRNA molecules (highlighting their modification sites), showcasing their therapeutic effects, safety, and immunogenicity, to support subsequent experimental verification.</li>
-      <li>Illustrate the functions of essential elements on tRNA molecules (including sequence, structure, chemical modifications, etc.) to provide theoretical support for the design and modification of engineered tRNA.</li>
-    </ol>
-    <h2>Project Content</h2>
-    <section>
-      <h3>PTC in Disease</h3>
-      <p>Which diseases are suitable for tRNA therapy? What are their characteristics?</p>
-    </section>
-    <section>
-      <h3>Natural sup-tRNA</h3>
-      <p>What are the naturally occurring sup-tRNAs, in which species are they found? What are their sequences? What key positions have mutations?</p>
-    </section>
-    <section>
-      <h3>tRNA Therapeutics</h3>
-      <p>For which diseases are the current tRNA therapies mainly used? What are their design strategies? What key sites have been modified? What amino acids have been introduced? Does the resulting protein structure change? How effective are they? How safe are they?</p>
-    </section>
-    <section>
-      <h3>tRNA Elements</h3>
-      <p>What are the key elements on the tRNA molecule that determine its characteristics and functions?</p>
-    </section>
+    <p>To address these questions, we have developed <strong>ENSURE: The Encyclopedia of Suppressor tRNA Therapeutics with AI Assistant</strong>. ENSURE compiles genetic variations occurring in genetic diseases and cancers, including those caused by missense, nonsense, and frameshift mutations. Furthermore, we have cataloged hundreds of natural sup-tRNAs, detailing their source species, sequences, and structures.</p>
+    <h3>ENSURE Features:</h3>
+    <ul>
+      <li><strong>Pathogenic Genes and Mutation Sites:</strong> Information on the pathogenic genes, mutation sites, sequences, and structures of sup-tRNAs. Efficiency and safety data of existing tRNA therapies.</li>
+      <li><strong>BLAST Comparisons:</strong> Performed BLAST comparisons of similar sequences of sup-tRNAs.</li>
+      <li><strong>Key Elements of tRNA Molecules:</strong> Summarized key elements (including sequences, structures, and modifications) on tRNA molecules critical for their function.</li>
+    </ul>
+    <p>Based on ENSURE's data, we have trained a virtual assistant named <strong>Yingying</strong>, built on the GPT-4o model. Yingying is capable of answering various questions regarding tRNA therapy. The ENSURE platform aids researchers in quickly identifying the biological mechanisms and application scopes of sup-tRNAs while providing a rich data resource and analytical platform for the design of engineered tRNAs.</p>
+        <vue-easy-lightbox
+      :visible="showViewer"
+      :imgs="[imageSrc]"
+      @hide="showViewer = false"
+    />
   </div>
 </template>
 
 <script>
+import VueEasyLightbox from 'vue-easy-lightbox';
+import structureImage from '/data/picture/structure.png'; // Correct path to your image
+
 export default {
-  name: 'Home'
+  name: 'Home',
+  components: {
+    VueEasyLightbox
+  },
+  data() {
+    return {
+      showViewer: false,
+      imageSrc: structureImage
+    };
+  }
 }
 </script>
+
+<style>
+.site--main {
+ /* Center text and elements inside this container */
+}
+
+.image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0; /* Add some margin for spacing */
+}
+
+.centered-image {
+  cursor: pointer;
+  max-width: 50%;
+}
+</style>
