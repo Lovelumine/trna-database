@@ -2,15 +2,16 @@
   <div class="outer-container">
     <el-tabs class="full-width-tabs">
       <el-tab-pane :label="titleA">
-        <div id="rna_ss"></div>
+        <div v-if="error" class="error">{{ error }}</div>
+        <div v-else id="rna_ss"></div>
       </el-tab-pane>
       <el-tab-pane :label="titleB" :disabled="!modified">
-        <div id="rna_ss_m"></div>
+        <div v-if="error" class="error">{{ error }}</div>
+        <div v-else id="rna_ss_m"></div>
       </el-tab-pane>
     </el-tabs>
   </div>
 </template>
-
 
 <script>
 import * as fornac from "../fornac/fornac.js";
@@ -47,6 +48,7 @@ export default {
   data() {
     return {
       modified: true,
+      error: null,
       options: {
         name: this.initialName,
         structure: this.initialStructure,
@@ -67,26 +69,31 @@ export default {
       container.addCustomColorsText(color);
     },
     processModifiedSequence() {
-      function arrayRemove(arr, value) {
-        return arr.filter((ele) => ele !== value);
-      }
-
-      if (this.initialModifiedSequence == null) {
-        this.modified = false;
-        this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
-      } else {
-        this.modified = true;
-        let arr = this.initialModifiedSequence.split(";");
-        let arr_rm = arrayRemove(arr, "-");
-        let text = arr_rm.join(";");
-        let color = "";
-        for (let i = 0; i < arr_rm.length; i++) {
-          if (!["A", "C", "G", "U"].includes(arr_rm[i])) {
-            color += `${i + 1}:#ACBFE6 `;
-          }
+      try {
+        function arrayRemove(arr, value) {
+          return arr.filter((ele) => ele !== value);
         }
-        this.drawPlot("rna_ss_m", this.options.structure, text, color);
-        this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
+
+        if (this.initialModifiedSequence == null) {
+          this.modified = false;
+          this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
+        } else {
+          this.modified = true;
+          let arr = this.initialModifiedSequence.split(";");
+          let arr_rm = arrayRemove(arr, "-");
+          let text = arr_rm.join(";");
+          let color = "";
+          for (let i = 0; i < arr_rm.length; i++) {
+            if (!["A", "C", "G", "U"].includes(arr_rm[i])) {
+              color += `${i + 1}:#ACBFE6 `;
+            }
+          }
+          this.drawPlot("rna_ss_m", this.options.structure, text, color);
+          this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
+        }
+      } catch (e) {
+        this.error = 'The secondary structure cannot be displayed temporarily';
+        console.error(e);
       }
     },
   },
@@ -127,14 +134,17 @@ circle[node_type="label"] {
   fill: white;
   display: none;
 }
+
 path[class="fornac-directionArrow"] {
   fill: #777;
   stroke: none;
   stroke-width: 0.8px;
 }
+
 line[class="link fornac-link fornac-transparent"] {
   display: none;
 }
+
 text[class="fornac-nodeLabel fornac-transparent"] {
   display: none;
 }
@@ -164,5 +174,10 @@ text[class="fornac-nodeLabel fornac-transparent"] {
 
 .el-tabs__nav {
   display: inline-flex;
+}
+
+.error {
+  color: red;
+  font-weight: bold;
 }
 </style>

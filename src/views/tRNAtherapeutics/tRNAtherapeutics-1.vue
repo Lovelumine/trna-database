@@ -239,9 +239,9 @@
                 :titleA="'Origin-tRNA'"
                 :titleB="'Sup-tRNA'" 
                 :initialName="record.key"
-                :initialStructure="'(((((((..((((........)))).(((((.......))))).....(((((.......)))))))))))).'"
-                :initialSequence="'GGGGGATTAGCTCAAATGGTAGAGCGCTCGCTTAGCATGCGAGAGGTAGCGGGATCGATGCCCGCATCCTCCA'"
-                :initialModifiedSequence="'GGGGGATTAGCTCAAATGGTAGAGCGCTCGCTTAGCATGCGAGAGGTAGCGGGATCGATGCCCGCATCCTCCA'"
+                :initialStructure=" secondaryStructures[record.key]"
+                :initialSequence="record.Sequence_of_origin_tRNA"
+                :initialModifiedSequence="record.Sequence_of_sup_tRNA"
               />
             </div>
           </td>
