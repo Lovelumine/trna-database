@@ -85,6 +85,18 @@
               <b>Structure of sup-tRNA:</b>
               <img :src="`https://trna.lumoxuan.cn/data/picture/${record.pictureid}.png`" @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
             </div>
+            {{ console.log(record.key, secondaryStructures[record.key], record.tRNA_sequence_before_mutation) }}
+            <div style="max-height: 220px; max-width: 800px; overflow: auto; ">
+              <b>Displaying the Secondary Structure with Fornac:</b>
+              <TranStructure
+                :titleA="'tRNA sequence before mutation:'"
+                :titleB="'tRNA sequence after mutation'" 
+                :initialName="record.key"
+                :initialStructure=" secondaryStructures[record.key]"
+                :initialSequence="record.tRNA_sequence_before_mutation"
+                :initialModifiedSequence="record.tRNA_sequence_after_mutation"
+              />
+            </div>
             <p><b>Readthrough mechanism:</b> {{ record['Readthrough mechanism'] }}</p>
             <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
             <p><b>PMID of references:</b> <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID" target="_blank" class="tilt-hover">{{record.PMID}}</a></p>
@@ -98,7 +110,7 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, computed, nextTick } from 'vue';
 import { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption } from 'element-plus';
 import { STableProvider, STableProps  } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
@@ -109,6 +121,7 @@ import {getTagType} from '../../utils/tag.js'
 import {processCSVData} from '../../utils/processCSVData.js'
 import {calculateAlignment} from '../../utils/calculateAlignment'
 import { sortData } from '../../utils/sort.js';
+import axios from 'axios';
 import TranStructure from '@/components/TranStructure.vue';
 
 type DataType = {
@@ -156,6 +169,7 @@ export default defineComponent({
       await loadData();
       dataSource.value = originalFilteredDataSource.value;
       sortedDataSource.value = originalFilteredDataSource.value;
+      loadSecondaryStructures(filteredDataSource.value)
     });
 
     const visible = ref(false);
@@ -251,6 +265,24 @@ export default defineComponent({
       });
     });
 
+    const secondaryStructures = ref<{ [key: string]: string }>({});
+
+const loadSecondaryStructures = async (dataSource: DataType[]) => {
+  console.log('Loading secondary structures...');
+  for (const record of dataSource) {
+    try {
+      const response = await axios.post('/scan', { sequence: record['Anticodon before mutation'] });
+      console.log(`Fetched structure for record ${record.key}:`, response.data.str);
+      secondaryStructures.value = { ...secondaryStructures.value, [record.key]: response.data.str };
+    } catch (error) {
+      console.error(`Failed to fetch secondary structure for record ${record.key}:`, error);
+      secondaryStructures.value = { ...secondaryStructures.value, [record.key]: 'Error fetching structure' };
+    }
+  }
+  console.log('Secondary structures loaded', secondaryStructures.value);
+  await nextTick();
+};
+
     return {
       allColumns,
       displayedColumns,
@@ -266,6 +298,7 @@ export default defineComponent({
       lightboxImgs,
       showLightbox,
       hideLightbox,
+      secondaryStructures,
       getTagType, // 获取标签类型
       alignments,
       onSorterChange,

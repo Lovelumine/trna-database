@@ -1,7 +1,9 @@
 import express from 'express';
 import { exec } from 'child_process';
 import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
+import os from 'os';
 
 const app = express();
 const port = 3456;
@@ -16,11 +18,21 @@ app.post('/scan', (req, res) => {
         return;
     }
 
+    // 将非A、U、G、C的碱基替换为N
+    const cleanedSequence = sequence.replace(/[^AUGC]/gi, 'N');
+
     // 生成哈希值作为文件名的一部分
-    const hash = crypto.createHash('md5').update(sequence).digest('hex');
-    const inputFilePath = `input_${hash}.fasta`;
-    const outputFilePath = `output_${hash}.txt`;
-    const fastaContent = `>input_sequence\n${sequence}\n`;
+    const hash = crypto.createHash('md5').update(cleanedSequence).digest('hex');
+
+    // 创建临时文件夹
+    const tempDir = path.join(os.tmpdir(), 'trnascan_temp');
+    if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir);
+    }
+
+    const inputFilePath = path.join(tempDir, `input_${hash}.fasta`);
+    const outputFilePath = path.join(tempDir, `output_${hash}.txt`);
+    const fastaContent = `>input_sequence\n${cleanedSequence}\n`;
     
     fs.writeFileSync(inputFilePath, fastaContent);
 
@@ -38,7 +50,12 @@ app.post('/scan', (req, res) => {
 
             // 解析 output.txt 文件，提取 Str 部分
             const strMatch = data.match(/Str: (.+)/);
-            const str = strMatch ? strMatch[1] : 'Unable to obtain secondary structure through tRNAscan SE';
+            let str = strMatch ? strMatch[1] : 'Unable to obtain secondary structure through tRNAscan SE';
+
+            // 检查是否因为替换了碱基而导致错误
+            if (!strMatch) {
+                str = 'Unable to obtain secondary structure through tRNAscan SE after replacing non-AUGC bases with N';
+            }
 
             // 替换括号
             const formattedStr = str.replace(/>/g, '(').replace(/</g, ')');
