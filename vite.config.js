@@ -49,6 +49,10 @@ export default defineConfig({
       '/align': {
         target: 'http://localhost:3457',
         changeOrigin: true,
+      },      
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
       }
     },
   },
