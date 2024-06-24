@@ -89,12 +89,12 @@
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA_sequence_before_mutation'] }}</p>
             <p><b>tRNA sequence after mutation:</b> <span v-html="highlightMutation(record['tRNA_sequence_after_mutation'])"></span></p>
 
-            <!-- <div>
+            <div>
               <b>Structure of sup-tRNA:</b>
               <img :src="`https://trna.lumoxuan.cn/data/picture/${record.pictureid}.png`" @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
             </div>
-            {{ console.log(record.key, secondaryStructures[record.key], record.tRNA_sequence_before_mutation) }} -->
-            <div style="max-height: 220px; max-width: 800px; overflow: auto; ">
+            {{ console.log(record.key, secondaryStructures[record.key], record.tRNA_sequence_before_mutation) }}
+            <!-- <div style="max-height: 220px; max-width: 800px; overflow: auto; ">
               <b>Displaying the Secondary Structure with Fornac:</b>
               <TranStructure
                 :titleA="'tRNA sequence before mutation:'"
@@ -104,7 +104,7 @@
                 :initialSequence="record.tRNA_sequence_before_mutation"
                 :initialModifiedSequence="record.tRNA_sequence_after_mutation"
               />
-            </div>
+            </div> -->
             <p><b>Readthrough mechanism:</b> <ElSpace>
               <ElTag v-for="items in (Array.isArray(record['Readthrough mechanism']) ? record['Readthrough mechanism'] : record['Readthrough mechanism'].split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}

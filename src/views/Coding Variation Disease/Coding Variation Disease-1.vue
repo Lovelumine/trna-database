@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Coding Variation Disease</h2>
+    <h2>Coding Variation in Genetic Disease</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -51,7 +51,7 @@
             <p><b>Mutation Type:</b> {{ record.mutationType }}</p>
             <p><b>Disease Name:</b> {{ record.diseaseName }}</p>
             <p><b>Phenotype MIM Number:</b> {{ record.Phenotype }}</p>
-            <p><b>GenBank Accession Number:</b> {{ record.GenBankaccessionnumber}}</p>
+            <p><b>GenBank Accession Number:</b> {{ record['GenBank Accession Number']}}</p>
             <p><b>Gene:</b> {{ record.gene }}</p>
             <p><b>Gene/Locus MIM Number:</b> {{ record.Locus }}</p>
             <p><b>Mutation Site:</b> {{ record.mutationSite }}</p>
@@ -128,7 +128,7 @@ export default defineComponent({
       },
       { title: 'Disease Name', dataIndex: 'diseaseName', width: 360, ellipsis: true, key: 'diseaseName', resizable: true },
       { title: 'Phenotype MIM Number', dataIndex: 'Phenotype', width: 200, ellipsis: true, key: 'Phenotype', resizable: true },
-      { title: 'GenBank Accession Number', dataIndex: 'GenBankaccessionnumber', width: 200, ellipsis: true, key: 'GenBankaccessionnumber', resizable: true },
+      { title: 'GenBank Accession Number', dataIndex: 'GenBank Accession Number', width: 200, ellipsis: true, key: 'GenBank Accession Number', resizable: true },
       { title: 'Gene', dataIndex: 'gene', width: 120, ellipsis: true, key: 'gene', resizable: true },
       { title: 'Gene/Locus MIM Number', dataIndex: 'Locus', width: 200, ellipsis: true, key: 'Locus', resizable: true },
       { title: 'Mutation Site', dataIndex: 'mutationSite', width: 120, ellipsis: true, key: 'mutationSite', resizable: true },

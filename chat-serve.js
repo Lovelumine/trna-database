@@ -17,7 +17,7 @@ app.use(bodyParser.json({ limit: '50mb' })); // 设置请求体大小限制
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 const OPENAI_API_KEY = process.env.VITE_OPENAI_API_KEY;
-const API_BASE_URL = 'https://api.lqqq.ltd/v1'; // 统一使用这个URL
+const API_BASE_URL = 'https://lqapi.lqqq.ltd/v1'; // 统一使用这个URL
 
 // 创建日志记录器
 const logger = winston.createLogger({
@@ -45,7 +45,7 @@ app.post('/api/openai', async (req, res) => {
     const response = await axios.post(
       `${API_BASE_URL}/chat/completions`,
       {
-        model: 'claude-3-haiku-20240307',
+        model: 'gpt-3.5-turbo-0125',
         messages: req.body.messages,
         max_tokens: 1000,
       },

@@ -75,7 +75,7 @@ const messages = ref<Array<{ id: number; text: string; sender: string; image?: s
       // 使用 OpenAI 生成回答
       try {
         const response = await axios.post(
-          'https://op.lovelumine.com/api/openai', // 代理服务器的地址
+          '/api/openai', // 代理服务器的地址
           {
             messages: conversation
           }
