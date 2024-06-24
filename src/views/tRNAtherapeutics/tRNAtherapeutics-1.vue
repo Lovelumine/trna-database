@@ -42,6 +42,8 @@
           :show-sorter-tooltip="true"
           :size="tableSize"
           :expand-row-by-click="true"
+          :expanded-row-keys="expandedRowKeys"
+          @expandedRowsChange="onExpandedRowsChange"
         >
           <template #bodyCell="{ text, column, record }">
             <template v-if="column.key === 'Citation'">
@@ -231,21 +233,21 @@
                     <td>{{ alignments[record.key]?.gaps }}</td>
                   </tr>
                   <tr v-if="secondaryStructures[record.key]">
-          <td><b>Secondary Structure Diagram:</b></td>
-          <td >
-            {{ console.log(record.key, secondaryStructures[record.key], record.Sequence_of_sup_tRNA) }}
-            <div style="max-height: 420px; max-width: 360px; overflow: auto; margin: auto">
-              <TranStructure
-                :titleA="'Origin-tRNA'"
-                :titleB="'Sup-tRNA'" 
-                :initialName="record.key"
-                :initialStructure=" secondaryStructures[record.key]"
-                :initialSequence="record.Sequence_of_origin_tRNA"
-                :initialModifiedSequence="record.Sequence_of_sup_tRNA"
-              />
-            </div>
-          </td>
-        </tr>
+                    <td><b>Secondary Structure Diagram:</b></td>
+                    <td >
+                      {{ console.log(record.key, secondaryStructures[record.key], record.Sequence_of_sup_tRNA) }}
+                      <div style="max-height: 420px; max-width: 360px; overflow: auto; margin: auto">
+                        <TranStructure
+                          :titleA="'Origin-tRNA'"
+                          :titleB="'Sup-tRNA'" 
+                          :initialName="record.key"
+                          :initialStructure=" secondaryStructures[record.key]"
+                          :initialSequence="record.Sequence_of_origin_tRNA"
+                          :initialModifiedSequence="record.Sequence_of_sup_tRNA"
+                        />
+                      </div>
+                    </td>
+                  </tr>
                 </table>
               </div>
             </div>
@@ -263,7 +265,7 @@ import { STableProvider } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import { calculateAlignment } from '../../utils/calculateAlignment';
 import axios from 'axios';
-import { allColumns,DataType } from './columns';
+import { allColumns, DataType } from './columns';
 import TranStructure from '@/components/TranStructure.vue';
 
 import en from '@shene/table/dist/locale/en';
@@ -323,6 +325,12 @@ export default defineComponent({
       await nextTick();
     };
 
+    const expandedRowKeys = ref([]);
+
+    const onExpandedRowsChange = (expandedKeys) => {
+      expandedRowKeys.value = expandedKeys.length > 0 ? [expandedKeys[expandedKeys.length - 1]] : [];
+    };
+
     onMounted(async () => {
       console.log('On mounted hook triggered');
       try {
@@ -351,7 +359,9 @@ export default defineComponent({
       alignments,
       secondaryStructures,
       loading, // 添加到返回对象中
-      TranStructure
+      TranStructure,
+      expandedRowKeys,
+      onExpandedRowsChange
     };
   }
 });
