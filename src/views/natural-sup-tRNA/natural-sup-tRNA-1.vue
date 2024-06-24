@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Nosense Sup-RNA</h2>
+    <h2>Nonsense Sup-RNA</h2>
     <!-- 顶部行包含尺寸调整、搜索框和列选择 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -27,7 +27,8 @@
       </div>
     </div>
     <!-- 表格组件 -->
-    <s-table-provider :hover="true" :locale="locale">
+    <div class="custom-tag-styles">
+    <s-table-provider :hover="true" :locale="locale" >
       <s-table 
         :columns="displayedColumns" 
         :data-source="filteredDataSource" 
@@ -117,7 +118,7 @@
       </s-table>
     </s-table-provider>
     <vue-easy-lightbox :key="lightboxKey" :visible="visible" :imgs="lightboxImgs" :index="0" @hide="hideLightbox" />
-  </div>
+  </div></div>
 </template>
 
 <script lang="tsx">
@@ -188,7 +189,7 @@ export default defineComponent({
         max-height: 400px !important;
       }
 
-.el-tag.el-tag--info {
+  .custom-tag-styles .el-tag.el-tag--info {
     --el-tag-bg-color:#f5e1f8;
     --el-tag-border-color: var(--el-color-info-light-8);
     --el-tag-hover-color: var(--el-color-info);
