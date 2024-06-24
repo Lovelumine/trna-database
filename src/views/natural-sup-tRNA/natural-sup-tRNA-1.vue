@@ -89,11 +89,11 @@
             <p><b>tRNA sequence before mutation:</b> {{ record['tRNA_sequence_before_mutation'] }}</p>
             <p><b>tRNA sequence after mutation:</b> <span v-html="highlightMutation(record['tRNA_sequence_after_mutation'])"></span></p>
 
-            <div>
+            <!-- <div>
               <b>Structure of sup-tRNA:</b>
               <img :src="`https://trna.lumoxuan.cn/data/picture/${record.pictureid}.png`" @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
             </div>
-            {{ console.log(record.key, secondaryStructures[record.key], record.tRNA_sequence_before_mutation) }}
+            {{ console.log(record.key, secondaryStructures[record.key], record.tRNA_sequence_before_mutation) }} -->
             <div style="max-height: 220px; max-width: 800px; overflow: auto; ">
               <b>Displaying the Secondary Structure with Fornac:</b>
               <TranStructure
@@ -258,14 +258,14 @@ export default defineComponent({
           type: 'multiple',
           list: [
             { text: 'a single base mutation in anticodon', value: 'a single base mutation in anticodon' },
-            { text: 'recode/reassignment ', value: 'recode/reassignment ' },
+            { text: 'recode/reassignment', value: 'recode/reassignment ' },
             { text: 'wobble/misread/mispair/mismatch', value: 'wobble/misread/mispair/mismatch' },
             { text: 'a base mutation outside the anticodon', value: 'a base mutation outside the anticodon' },
             { text: 'mischarge', value: 'mischarge' },
             { text: 'other', value: 'other' },
             { text: 'unknown', value: 'unknown' },
           ],
-          onFilter: (value, record) => record['Readthrough mechanism'].includes(value)
+          onFilter: (value, record)=> value.includes(record['Readthrough mechanism'])
         }},
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
       { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>), resizable: true },
