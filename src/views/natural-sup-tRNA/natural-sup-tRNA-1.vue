@@ -187,6 +187,13 @@ export default defineComponent({
         padding: 16px !important;
         max-height: 400px !important;
       }
+
+.el-tag.el-tag--info {
+    --el-tag-bg-color: #ecbeff;
+    --el-tag-border-color: var(--el-color-info-light-8);
+    --el-tag-hover-color: var(--el-color-info);
+    --el-tag-text-color: #4348a4;
+}
     `;
     document.head.appendChild(style);
   
