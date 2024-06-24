@@ -116,14 +116,14 @@ export default defineComponent({
         width: 140, ellipsis: true,
         key: 'mutationType',
         resizable: true,
-        // filter: {
-        //   type: 'multiple',
-        //   list: [
-        //     { text: 'missense', value: 'missense' },
-        //     { text: 'nonsense', value: 'nonsense' }
-        //   ],
-        //   onFilter: (value, record) => value.includes(record.mutationType)
-        // }
+        filter: {
+          type: 'multiple',
+          list: [
+            { text: 'Missense', value: 'Missense' },
+            { text: 'Nonsense', value: 'Nonsense' }
+          ],
+          onFilter: (value, record) => value.includes(record.mutationType)
+        }
       },
       { title: 'Disease Name', dataIndex: 'diseaseName', width: 320, ellipsis: true, key: 'diseaseName', resizable: true },
       { title: 'Phenotype MIM Number', dataIndex: 'Phenotype', width: 200, ellipsis: true, key: 'Phenotype', resizable: true },
