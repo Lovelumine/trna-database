@@ -9,9 +9,9 @@
         <FrameshiftsuptRNA />
       </div>
   
-      <div class="table-section">
+      <!-- <div class="table-section">
         <ConstructionofsuptRNA />
-      </div>
+      </div> -->
 
     </div>
   </template>
