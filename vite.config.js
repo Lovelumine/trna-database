@@ -4,6 +4,9 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 import path from "path"
 import terser from "@rollup/plugin-terser"; // 引入 terser 插件
 
+// 允许的来源站点
+const allowedOrigin = 'https://trna.lumoxuan.cn/';
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -55,5 +58,17 @@ export default defineConfig({
         changeOrigin: true,
       }
     },
+    // 使用 configureServer API 添加中间件来检查请求来源
+    configureServer: (server) => {
+      server.middlewares.use((req, res, next) => {
+        const origin = req.headers.origin;
+        if (origin && origin !== allowedOrigin) {
+          res.statusCode = 403;
+          res.end('Forbidden');
+        } else {
+          next();
+        }
+      });
+    }
   },
 })
