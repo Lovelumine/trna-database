@@ -189,10 +189,11 @@ export default defineComponent({
       }
 
 .el-tag.el-tag--info {
-    --el-tag-bg-color: #ecbeff;
+    --el-tag-bg-color:#f5e1f8;
     --el-tag-border-color: var(--el-color-info-light-8);
     --el-tag-hover-color: var(--el-color-info);
-    --el-tag-text-color: #4348a4;
+    --el-tag-text-color:#ed8afc
+
 }
     `;
     document.head.appendChild(style);
