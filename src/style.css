@@ -13,6 +13,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+::v-deep .s-table__filter-dropdown-content {
+  padding: 16px;
+  max-height: 400px;
+}
+
 a {
   font-weight: 500;
   color: #646cff;

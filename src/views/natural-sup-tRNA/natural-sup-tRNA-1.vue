@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Natural Sup-tRNA</h2>
+    <h2>Nosense Sup-RNA</h2>
     <!-- 顶部行包含尺寸调整、搜索框和列选择 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -43,16 +43,23 @@
           <template v-if="column.key === 'Structure of sup-tRNA'">
             <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
           </template>
-          <template v-else-if="column.key === 'Stopcodonforreadthrough'">
+          <template v-else-if="column.key === 'Stop Codon for Readthrough'">
             <ElSpace>
-              <ElTag v-for="items in (Array.isArray(record.Stopcodonforreadthrough) ? record.Stopcodonforreadthrough : record.Stopcodonforreadthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+              <ElTag v-for="items in (Array.isArray(record.Stop_codon_for_readthrough) ? record.Stop_codon_for_readthrough : record.Stop_codon_for_readthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace>
           </template>
-          <template v-else-if="column.key === 'NoncanonicalChargedAminoAcids'">
+          <template v-else-if="column.key === 'Noncanonical_charged_amino_acids'">
             <ElSpace>
-              <ElTag v-for="items in (Array.isArray(record.NoncanonicalChargedAminoAcids) ? record.NoncanonicalChargedAminoAcids : record.NoncanonicalChargedAminoAcids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+              <ElTag v-for="items in (Array.isArray(record.Noncanonical_charged_amino_acids) ? record.Noncanonical_charged_amino_acids : record.Noncanonical_charged_amino_acids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+                {{ items }}
+              </ElTag>
+            </ElSpace>
+          </template>
+          <template v-else-if="column.key === 'Readthrough mechanism'">
+            <ElSpace>
+              <ElTag v-for="items in (Array.isArray( record['Readthrough mechanism']) ?  record['Readthrough mechanism'] :  record['Readthrough mechanism'].split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace>
@@ -69,12 +76,12 @@
             <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
             <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
             <p><b>Stop codon for readthrough:</b> <ElSpace>
-              <ElTag v-for="items in (Array.isArray(record.Stopcodonforreadthrough) ? record.Stopcodonforreadthrough : record.Stopcodonforreadthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+              <ElTag v-for="items in (Array.isArray(record.Stop_codon_for_readthrough) ? record.Stop_codon_for_readthrough : record.Stop_codon_for_readthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace></p>
             <p><b>Noncanonical charged amino acids:</b> <ElSpace>
-              <ElTag v-for="items in (Array.isArray(record.NoncanonicalChargedAminoAcids) ? record.NoncanonicalChargedAminoAcids : record.NoncanonicalChargedAminoAcids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+              <ElTag v-for="items in (Array.isArray(record.Noncanonical_charged_amino_acids) ? record.Noncanonical_charged_amino_acids : record.Noncanonical_charged_amino_acids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace></p>
@@ -97,7 +104,11 @@
                 :initialModifiedSequence="record.tRNA_sequence_after_mutation"
               />
             </div>
-            <p><b>Readthrough mechanism:</b> {{ record['Readthrough mechanism'] }}</p>
+            <p><b>Readthrough mechanism:</b> <ElSpace>
+              <ElTag v-for="items in (Array.isArray(record['Readthrough mechanism']) ? record['Readthrough mechanism'] : record['Readthrough mechanism'].split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+                {{ items }}
+              </ElTag>
+            </ElSpace></p>
             <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
             <p><b>PMID of references:</b> <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID" target="_blank" class="tilt-hover">{{record.PMID}}</a></p>
             <p><b>Note:</b> {{ record['Note'] }}</p>
@@ -156,11 +167,11 @@ export default defineComponent({
   },
   setup() {
     const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
-      return processCSVData(data, ['Stopcodonforreadthrough', 'NoncanonicalChargedAminoAcids']);
+      return processCSVData(data, ['Stop_codon_for_readthrough', 'Noncanonical_charged_amino_acids','Readthrough mechanism']);
     });
 
     const tableSize = ref('default');
-    const selectedColumns = ref<string[]>(['Species', 'Stopcodonforreadthrough', 'NoncanonicalChargedAminoAcids','Readthrough mechanism']);
+    const selectedColumns = ref<string[]>(['Species', 'Stop Codon for Readthrough', 'Noncanonical_charged_amino_acids','Readthrough mechanism']);
     const loading = ref(false);
     const dataSource = ref<DataType[]>([]);
     const sortedDataSource = ref<DataType[]>([]);
@@ -169,7 +180,16 @@ export default defineComponent({
       await loadData();
       dataSource.value = originalFilteredDataSource.value;
       sortedDataSource.value = originalFilteredDataSource.value;
-      loadSecondaryStructures(filteredDataSource.value)
+      loadSecondaryStructures(filteredDataSource.value);
+      const style = document.createElement('style');
+    style.innerHTML = `
+      .s-table__filter-dropdown-content {
+        padding: 16px !important;
+        max-height: 400px !important;
+      }
+    `;
+    document.head.appendChild(style);
+  
     });
 
     const visible = ref(false);
@@ -192,7 +212,7 @@ export default defineComponent({
       { title: 'Tissue/Organelle of Origin', dataIndex: 'Tissue/Organelle of Origin', width: 280, ellipsis: true, key: 'Tissue/Organelle of Origin', resizable: true, sorter: true },      
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
-      { title: 'Stop codon for readthrough', dataIndex: 'Stopcodonforreadthrough', width: 240, ellipsis: true, key: 'Stopcodonforreadthrough', resizable: true,
+      { title: 'Stop codon for readthrough', dataIndex: 'Stop_codon_for_readthrough', width: 240, ellipsis: true, key: 'Stop Codon for Readthrough', resizable: true,
         filter: {
           type: 'multiple',
           list: [
@@ -200,10 +220,10 @@ export default defineComponent({
             { text: 'UAA(ochre)', value: 'UAA(ochre)' },
             { text: 'UGA(opal)', value: 'UGA(opal)'},        
           ],
-          onFilter: (value, record) => record.Stopcodonforreadthrough.includes(value)
+          onFilter: (value, record) => record.Stop_codon_for_readthrough.includes(value)
         }
       },
-      { title: 'Noncanonical charged amino acids', dataIndex: 'NoncanonicalChargedAminoAcids', width: 150, ellipsis: true, key: 'NoncanonicalChargedAminoAcids', resizable: true,
+      { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical_charged_amino_acids', width: 250, ellipsis: true, key: 'Noncanonical_charged_amino_acids', resizable: true,
         filter: {
           type: 'multiple',
           list: [
@@ -220,12 +240,24 @@ export default defineComponent({
             { text: 'Cys', value: 'Cys' },
             { text: 'Pyl', value: 'Pyl' },
           ],
-          onFilter: (value, record) => record.NoncanonicalChargedAminoAcids.includes(value)
+          onFilter: (value, record) => record.Noncanonical_charged_amino_acids.includes(value)
         }
       },
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA_sequence_before_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_before_mutation', resizable: true },
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA_sequence_after_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_after_mutation', resizable: true },
-      { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
+      { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true ,        filter: {
+          type: 'multiple',
+          list: [
+            { text: 'a single base mutation in anticodon', value: 'a single base mutation in anticodon' },
+            { text: 'recode/reassignment ', value: 'recode/reassignment ' },
+            { text: 'wobble/misread/mispair/mismatch', value: 'wobble/misread/mispair/mismatch' },
+            { text: 'a base mutation outside the anticodon', value: 'a base mutation outside the anticodon' },
+            { text: 'mischarge', value: 'mischarge' },
+            { text: 'other', value: 'other' },
+            { text: 'unknown', value: 'unknown' },
+          ],
+          onFilter: (value, record) => record['Readthrough mechanism'].includes(value)
+        }},
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
       { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>), resizable: true },
       { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true }
@@ -308,7 +340,7 @@ const loadSecondaryStructures = async (dataSource: DataType[]) => {
 });
 </script>
 
-<style scoped>
+<style>
 .site--main {
   padding: 20px;
 }
