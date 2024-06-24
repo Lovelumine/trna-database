@@ -249,7 +249,7 @@ export default defineComponent({
             { text: 'Cys', value: 'Cys' },
             { text: 'Pyl', value: 'Pyl' },
           ],
-          onFilter: (value, record) => record.Noncanonical_charged_amino_acids.includes(value)
+          onFilter: (value, record) => value.includes(record.Noncanonical_charged_amino_acids)
         }
       },
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA_sequence_before_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_before_mutation', resizable: true },
