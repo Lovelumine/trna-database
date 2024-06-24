@@ -55,8 +55,8 @@
             <p><b>Gene:</b> {{ record.gene }}</p>
             <p><b>Gene/Locus MIM Number:</b> {{ record.Locus }}</p>
             <p><b>Mutation Site:</b> {{ record.mutationSite }}</p>
-            <p><b>Original Codon and Amino Acid:</b> {{ record.originalCodon }}</p>
-            <p><b>Mutated Codon and Amino Acid:</b> {{ record.mutatedCodon }}</p>
+            <p><b>Protein Alteration:</b> {{ record['Protein Alteration'] }}</p>
+            <p><b>Codon Change:</b> {{ record['Codon Change'] }}</p>
             <p><b>Chromosome:</b> {{ record.chromosome }}</p>
             <p><b>Genome Position:</b> {{ record.Genomeposition }}</p>
             <p><b>De Novo / Inherited:</b> {{ record.denovoinherited }}</p>
@@ -105,8 +105,8 @@ export default defineComponent({
       'mutationType',
       'diseaseName',
       'gene',
-      'originalCodon',
-      'mutatedCodon',
+      'Protein Alteration',
+      'Codon Change',
 
   ])
     const allColumns: STableColumnsType<DataType> = [
@@ -120,19 +120,20 @@ export default defineComponent({
           type: 'multiple',
           list: [
             { text: 'Missense', value: 'Missense' },
-            { text: 'Nonsense', value: 'Nonsense' }
+            { text: 'Nonsense', value: 'Nonsense' },
+            {text:'Frameshift',value:'Frameshift'}
           ],
           onFilter: (value, record) => value.includes(record.mutationType)
         }
       },
-      { title: 'Disease Name', dataIndex: 'diseaseName', width: 320, ellipsis: true, key: 'diseaseName', resizable: true },
+      { title: 'Disease Name', dataIndex: 'diseaseName', width: 360, ellipsis: true, key: 'diseaseName', resizable: true },
       { title: 'Phenotype MIM Number', dataIndex: 'Phenotype', width: 200, ellipsis: true, key: 'Phenotype', resizable: true },
       { title: 'GenBank Accession Number', dataIndex: 'GenBankaccessionnumber', width: 200, ellipsis: true, key: 'GenBankaccessionnumber', resizable: true },
       { title: 'Gene', dataIndex: 'gene', width: 120, ellipsis: true, key: 'gene', resizable: true },
       { title: 'Gene/Locus MIM Number', dataIndex: 'Locus', width: 200, ellipsis: true, key: 'Locus', resizable: true },
       { title: 'Mutation Site', dataIndex: 'mutationSite', width: 120, ellipsis: true, key: 'mutationSite', resizable: true },
-      { title: 'Original Codon and Amino Acid', dataIndex: 'originalCodon', width: 240, ellipsis: true, key: 'originalCodon', resizable: true },
-      { title: 'Mutated Codon and Amino Acid', dataIndex: 'mutatedCodon', width: 240, ellipsis: true, key: 'mutatedCodon', resizable: true },
+      { title: 'Protein Alteration', dataIndex: 'Protein Alteration', width: 240, ellipsis: true, key: 'Protein Alteration', resizable: true },
+      { title: 'Codon Change', dataIndex: 'Codon Change', width: 240, ellipsis: true, key: 'Codon Change', resizable: true },
       { title: 'Chromosome', dataIndex: 'chromosome', width: 120, ellipsis: true, key: 'chromosome', resizable: true },
       { title: 'Genome Position', dataIndex: 'Genomeposition', width: 220, ellipsis: true, key: 'Genomeposition', resizable: true },
       {
