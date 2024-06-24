@@ -51,10 +51,6 @@
             <p><b>PMID of references:</b> {{ record['PMID of references'] }}</p>
           </div>
         </template>
-
-
-
-
       </s-table>
     </s-table-provider>
   </div>
