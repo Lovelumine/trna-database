@@ -45,7 +45,7 @@ app.post('/api/openai', async (req, res) => {
     const response = await axios.post(
       `${API_BASE_URL}/chat/completions`,
       {
-        model: 'gpt-4o',
+        model: 'claude-3-haiku-20240307',
         messages: req.body.messages,
         max_tokens: 1000,
       },
