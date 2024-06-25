@@ -68,7 +68,7 @@
         </tr>
         <tr>
           <td><b>AA and Anticodon of sup-tRNA:</b></td>
-          <td>{{ record.aa_and_anticodon_of_sup_tRNA }}</td>
+          <td>{{ record['aa_and_anticodon_of_sup-tRNA'] }}</td>
         </tr>
         <tr>
           <td><b>Dose:</b></td>
@@ -104,15 +104,15 @@
         </tr>
         <tr>
           <td><b>AA and Anticodon:</b></td>
-          <td>{{ record.aa_and_anticodon_of_sup_tRNA }}</td>
+          <td>{{ record['aa_and_anticodon_of_sup-tRNA'] }}</td>
         </tr>
         <tr>
           <td><b>Gene sequence:</b></td>
-          <td>{{ record.sup_tRNA_gene}}</td>
+          <td>{{ record['sup-tRNA_gene']}}</td>
         </tr>
         <tr>
           <td><b>tRNA sequence:</b></td>
-          <td>{{ record.Sequence_of_sup_tRNA}}</td>
+          <td>{{ record['Sequence_of_sup-tRNA']}}</td>
         </tr>
         <tr>
           <td><b>Modification:</b></td>
@@ -167,7 +167,7 @@
         <tr v-if=" record['Secondary structure']">
           <td><b>Secondary Structure Diagram:</b></td>
           <td >
-            {{ console.log(record.key,  record['Secondary structure'], record.Sequence_of_sup_tRNA) }}
+            {{ console.log(record.key,  record['Secondary structure'], record['Sequence_of_sup-tRNA']) }}
             <div style="max-height: 420px; max-width: 360px; overflow: auto; margin: auto">
               <TranStructure
                 :titleA="'Origin-tRNA'"
@@ -175,7 +175,7 @@
                 :initialName="record.NCBI_ref_ID"
                 :initialStructure="  record['Secondary structure']"
                 :initialSequence="record.Sequence_of_origin_tRNA"
-                :initialModifiedSequence="record.Sequence_of_sup_tRNA"
+                :initialModifiedSequence="record['Sequence_of_sup-tRNA']"
               />
             </div>
           </td>
