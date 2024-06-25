@@ -99,7 +99,7 @@
         <tr>
           <td><b>ENSURE ID :</b></td>
           <td>
-            <a :href="record.ENSURE_ID_link" target="_blank">{{ record.ENSURE_ID }}</a>
+            <a :href="record.ENSURE_ID_link" target="_blank" class="tilt-hover">{{ record.ENSURE_ID }}</a>
           </td>
         </tr>
         <tr>
