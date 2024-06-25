@@ -229,7 +229,7 @@ export default defineComponent({
             { text: 'UAA(ochre)', value: 'UAA(ochre)' },
             { text: 'UGA(opal)', value: 'UGA(opal)'},        
           ],
-          onFilter:(value, record) => value.includes(record.Stop_codon_for_readthrough)
+          onFilter:(value, record) => value.includes(record.Stop_codon_for_readthrough)|| record.Stop_codon_for_readthrough.includes(value)
         }
       },
       { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical_charged_amino_acids', width: 250, ellipsis: true, key: 'Noncanonical_charged_amino_acids', resizable: true,
