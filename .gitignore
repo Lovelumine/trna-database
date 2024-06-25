@@ -32,4 +32,6 @@ uploads
 *.fasta
 *.txt
 query.fasta
+*.py
+data/tmp/*
 
