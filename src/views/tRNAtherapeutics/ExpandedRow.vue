@@ -1,6 +1,6 @@
 <template>
     <div class="site--main">
-        <h1>ENSURE_ID:{{key}}</h1>
+        <h1>id:{{id}}</h1>
       <div>
         <div v-for="record in filteredRecords" :key="record.key" class="expanded-row">
             <div class="section">
@@ -120,7 +120,7 @@
         </tr>
         <tr>
           <td><b>Secondary structure:</b></td>
-          <td>{{ record.secondaryStructures}}</td>
+          <td>{{ record['Secondary structure']}}</td>
         </tr>
       </table>
       <h3>origin tRNA</h3>
@@ -154,26 +154,26 @@
         </tr>
         <tr>
           <td><b>E-Value:</b></td>
-          <td>{{ record.eValue }}</td>
+          <td>{{ record['E-Value']}}</td>
         </tr>
         <tr>
           <td><b>Score:</b></td>
-          <td>{{ record.score }}</td>
+          <td>{{ record.Score }}</td>
         </tr>
         <tr>
           <td><b>Gaps:</b></td>
-          <td>{{ record.gaps }}</td>
+          <td>{{ record.Gaps }}</td>
         </tr> 
-        <tr v-if="record.secondaryStructures">
+        <tr v-if=" record['Secondary structure']">
           <td><b>Secondary Structure Diagram:</b></td>
           <td >
-            {{ console.log(record.key, record.secondaryStructures, record.Sequence_of_sup_tRNA) }}
+            {{ console.log(record.key,  record['Secondary structure'], record.Sequence_of_sup_tRNA) }}
             <div style="max-height: 420px; max-width: 360px; overflow: auto; margin: auto">
               <TranStructure
                 :titleA="'Origin-tRNA'"
                 :titleB="'Sup-tRNA'" 
-                :initialName="record.key"
-                :initialStructure=" record.secondaryStructures"
+                :initialName="record.NCBI_ref_ID"
+                :initialStructure="  record['Secondary structure']"
                 :initialSequence="record.Sequence_of_origin_tRNA"
                 :initialModifiedSequence="record.Sequence_of_sup_tRNA"
               />
@@ -192,49 +192,30 @@
   import axios from 'axios';
   import { useRoute } from 'vue-router';
   import { useTableData } from '../../assets/js/useTableData.js';
-  import { calculateAlignment } from '../../utils/calculateAlignment';
+  import TranStructure from '@/components/TranStructure.vue';
   
   export default defineComponent({
     name: 'TRNATherapeutics-1',
+    components: {
+    TranStructure
+  },
     setup() {
 
         const route = useRoute();  // 使用useRoute获取当前路由信息
-        const key = route.params.key;  // 获取key参数
+        const id = route.params.key;  // 获取key参数
 
       const { searchText, filteredDataSource, loadData } = useTableData('/data/tRNAtherapeutics.csv');
   
       const loading = ref(true);
-  
-      const alignments = ref<{ [key: string]: any }>({});
-  
-      const loadAlignments = async (dataSource) => {
-        for (const record of dataSource) {
-          const result = await calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA);
-          alignments.value[record.key] = result;
-        }
-      };
-  
-      const secondaryStructures = ref<{ [key: string]: string }>({});
-  
-      const loadSecondaryStructures = async (dataSource) => {
-        for (const record of dataSource) {
-          try {
-            const response = await axios.post('/scan', { sequence: record.Sequence_of_sup_tRNA });
-            secondaryStructures.value = { ...secondaryStructures.value, [record.key]: response.data.str };
-          } catch (error) {
-            secondaryStructures.value = { ...secondaryStructures.value, [record.key]: 'Error fetching structure' };
-          }
-        }
-      };
+
   
       const filteredRecords = computed(() => {
-        return filteredDataSource.value.filter(record => record.ENSURE_ID === key);
+        return filteredDataSource.value.filter(record => record.ids == id);
       });
   
       onMounted(async () => {
         try {
           await loadData();
-          await Promise.all([loadAlignments(filteredDataSource.value), loadSecondaryStructures(filteredDataSource.value)]);
         } catch (error) {
           console.error('Failed to load data:', error);
         } finally {
@@ -245,7 +226,8 @@
       return {
         filteredRecords,
         loading,
-        key
+        id,
+        TranStructure,
       };
     }
   });
