@@ -1,9 +1,10 @@
 <template>
     <div class="site--main">
+        <h1>ENSURE_ID:{{key}}</h1>
       <div>
         <div v-for="record in filteredRecords" :key="record.key" class="expanded-row">
             <div class="section">
-      <h2>PTC Disease</h2>
+      <h2>PTC Disease </h2>
       <table>
         <tr>
           <td><b>Related Disease:</b></td>
@@ -119,7 +120,7 @@
         </tr>
         <tr>
           <td><b>Secondary structure:</b></td>
-          <!-- <td>{{ secondaryStructures[record.key] }}</td> -->
+          <td>{{ record.secondaryStructures}}</td>
         </tr>
       </table>
       <h3>origin tRNA</h3>
@@ -149,36 +150,36 @@
       <table>
         <tr>
           <td><b>Alignment:</b></td>
-          <td>  <pre v-html="alignments[record.key]?.alignment"></pre></td>
+          <td>  <pre v-html="record.Alignment"></pre></td>
         </tr>
-        <!-- <tr>
+        <tr>
           <td><b>E-Value:</b></td>
-          <td>{{ alignments[record.key]?.eValue }}</td>
+          <td>{{ record.eValue }}</td>
         </tr>
         <tr>
           <td><b>Score:</b></td>
-          <td>{{ alignments[record.key]?.score }}</td>
+          <td>{{ record.score }}</td>
         </tr>
         <tr>
           <td><b>Gaps:</b></td>
-          <td>{{ alignments[record.key]?.gaps }}</td>
-        </tr> -->
-        <!-- <tr v-if="secondaryStructures[record.key]">
+          <td>{{ record.gaps }}</td>
+        </tr> 
+        <tr v-if="record.secondaryStructures">
           <td><b>Secondary Structure Diagram:</b></td>
           <td >
-            {{ console.log(record.key, secondaryStructures[record.key], record.Sequence_of_sup_tRNA) }}
+            {{ console.log(record.key, record.secondaryStructures, record.Sequence_of_sup_tRNA) }}
             <div style="max-height: 420px; max-width: 360px; overflow: auto; margin: auto">
               <TranStructure
                 :titleA="'Origin-tRNA'"
                 :titleB="'Sup-tRNA'" 
                 :initialName="record.key"
-                :initialStructure=" secondaryStructures[record.key]"
+                :initialStructure=" record.secondaryStructures"
                 :initialSequence="record.Sequence_of_origin_tRNA"
                 :initialModifiedSequence="record.Sequence_of_sup_tRNA"
               />
             </div>
           </td>
-        </tr> -->
+        </tr>
       </table>
     </div>
         </div>
@@ -189,12 +190,17 @@
   <script lang="tsx">
   import { defineComponent, ref, onMounted, computed } from 'vue';
   import axios from 'axios';
+  import { useRoute } from 'vue-router';
   import { useTableData } from '../../assets/js/useTableData.js';
   import { calculateAlignment } from '../../utils/calculateAlignment';
   
   export default defineComponent({
     name: 'TRNATherapeutics-1',
     setup() {
+
+        const route = useRoute();  // 使用useRoute获取当前路由信息
+        const key = route.params.key;  // 获取key参数
+
       const { searchText, filteredDataSource, loadData } = useTableData('/data/tRNAtherapeutics.csv');
   
       const loading = ref(true);
@@ -222,7 +228,7 @@
       };
   
       const filteredRecords = computed(() => {
-        return filteredDataSource.value.filter(record => record.ENSURE_ID === 'ttd27');
+        return filteredDataSource.value.filter(record => record.ENSURE_ID === key);
       });
   
       onMounted(async () => {
@@ -239,6 +245,7 @@
       return {
         filteredRecords,
         loading,
+        key
       };
     }
   });
