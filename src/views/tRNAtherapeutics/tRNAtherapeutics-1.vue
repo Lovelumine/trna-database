@@ -70,7 +70,7 @@
             </template>
           </template>
           <template #expandedRowRender="{ record }">
-            <a :href="`expanded/${record.ENSURE_ID}`">View Details:{{record.ENSURE_ID}}</a>
+            <a :href="`expanded/${record.ids}`">View Details</a>
           </template>
         </s-table>
       </s-table-provider>
