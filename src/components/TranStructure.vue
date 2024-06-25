@@ -70,29 +70,26 @@ export default {
     },
     processModifiedSequence() {
       try {
-        function arrayRemove(arr, value) {
-          return arr.filter((ele) => ele !== value);
-        }
-
         if (this.initialModifiedSequence == null) {
           this.modified = false;
           this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
         } else {
           this.modified = true;
-          let arr = this.initialModifiedSequence.split(";");
-          let arr_rm = arrayRemove(arr, "-");
-          let text = arr_rm.join(";");
-          let color = "";
-          for (let i = 0; i < arr_rm.length; i++) {
-            if (!["A", "C", "G", "U"].includes(arr_rm[i])) {
-              color += `${i + 1}:#ACBFE6 `;
+          if (this.initialSequence.length !== this.initialModifiedSequence.length) {
+            this.error = 'The two sequences have different lengths and cannot be displayed';
+          } else {
+            let color = "";
+            for (let i = 0; i < this.initialSequence.length; i++) {
+              if (this.initialSequence[i] !== this.initialModifiedSequence[i]) {
+                color += `${i + 1}:#ACBFE6 `;
+              }
             }
+            this.drawPlot("rna_ss_m", this.options.structure, this.initialModifiedSequence, color);
+            this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
           }
-          this.drawPlot("rna_ss_m", this.options.structure, text, color);
-          this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
         }
       } catch (e) {
-        this.error = 'The secondary structure cannot be displayed temporarily';
+        this.error = 'Temporarily unable to display secondary structure';
         console.error(e);
       }
     },
