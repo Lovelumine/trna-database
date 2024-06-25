@@ -107,7 +107,7 @@ export default defineComponent({
       { title: 'Modomics CODE', dataIndex: 'Modomics_CODE', width: 140, ellipsis: true, key: 'Modomics_CODE', resizable: true },
       { title: 'Modification site', dataIndex: 'Modification_site', width: 500, ellipsis: true, key: 'Modification_site', resizable: true },
       { title: 'tRNA TYPE', dataIndex: 'tRNA_TYPE', width: 500, ellipsis: true, key: 'tRNA_TYPE', resizable: true },
-      { title: 'Function of Modification', dataIndex: 'Function_of_Modification', width: 440, ellipsis: true, key: 'Function_of_Modification', resizable: true },
+      { title: 'Function of Modification', dataIndex: 'Function_of_Modification', width: 560, ellipsis: true, key: 'Function_of_Modification', resizable: true },
       { title: 'species', dataIndex: 'species', width: 200, ellipsis: true, key: 'species', resizable: true, customRender: ({ text, record }) => (<span className="latin-name">{record.species}</span>)},
       { title: 'tissue or cell line', dataIndex: 'tissue_or_cell_line', width: 240, ellipsis: true, key: 'tissue_or_cell_line', resizable: true },
       { title: 'condition', dataIndex: 'condition', width: 200, ellipsis: true, key: 'condition', resizable: true },      
