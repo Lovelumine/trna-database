@@ -70,7 +70,7 @@
             </template>
           </template>
           <template #expandedRowRender="{ record }">
-            <a :href="`expanded/${record.ids}`" target="_blank" class="tilt-hover">View Details</a>
+            <a :href="`expanded/${record.ENSURE_ID}`" target="_blank" class="tilt-hover">View Details</a>
           </template>
         </s-table>
       </s-table-provider>

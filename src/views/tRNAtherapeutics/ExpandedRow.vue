@@ -1,6 +1,6 @@
 <template>
     <div class="site--main">
-        <h1>id:{{id}}</h1>
+        <h1>ENSURE_ID:{{id}}</h1>
       <div>
         <div v-for="record in filteredRecords" :key="record.key" class="expanded-row">
             <div class="section">
@@ -210,7 +210,7 @@
 
   
       const filteredRecords = computed(() => {
-        return filteredDataSource.value.filter(record => record.ids == id);
+        return filteredDataSource.value.filter(record => record.ENSURE_ID == id);
       });
   
       onMounted(async () => {
