@@ -24,6 +24,7 @@ import CodingVariationDisease from './views/Coding Variation Disease/Coding Vari
 import tRNAtherapeutics from './views/tRNAtherapeutics/tRNAtherapeutics.vue';
 import naturalsuptRNA from './views/natural-sup-tRNA/natural-sup-tRNA.vue';
 import TrnaElements from './views/tRNA elements/tRNA elements.vue';
+import ExpandedRow from './views/tRNAtherapeutics/ExpandedRow.vue';  // 引入新组件
 import Display from './views/display/Display.vue';
 
 // 引入表格组件
@@ -39,7 +40,8 @@ const routes: RouteRecordRaw[] = [
     { path: '/tRNAtherapeutics', component: tRNAtherapeutics },
     { path: '/naturalsuptRNA', component: naturalsuptRNA },
     { path: '/TrnaElements', component: TrnaElements },
-    { path: '/display/:tRNAName', component: Display }, // 动态路由
+    { path: '/expanded/:key', name: 'ExpandedRow', component: ExpandedRow }, 
+    { path: '/display/:tRNAName', name: 'Display', component: Display }, // 动态路由
     { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
   ];
 
