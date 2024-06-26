@@ -6,8 +6,7 @@
         <div v-else id="rna_ss"></div>
       </el-tab-pane>
       <el-tab-pane :label="titleB" :disabled="!modified">
-        <div v-if="error" class="error">{{ error }}</div>
-        <div v-else id="rna_ss_m"></div>
+        <div id="rna_ss_m"></div>
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -74,10 +73,11 @@ export default {
           this.modified = false;
           this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
         } else {
-          this.modified = true;
           if (this.initialSequence.length !== this.initialModifiedSequence.length) {
-            this.error = 'The two sequences have different lengths and cannot be displayed';
+            this.modified = false;
+            this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
           } else {
+            this.modified = true;
             let color = "";
             for (let i = 0; i < this.initialSequence.length; i++) {
               if (this.initialSequence[i] !== this.initialModifiedSequence[i]) {

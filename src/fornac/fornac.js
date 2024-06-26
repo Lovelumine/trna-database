@@ -19,6 +19,11 @@ import {simpleXyCoordinates} from './simplernaplot.js';
 import {NAView} from './naview/naview.js';
 var customData = 'somedata'
 function modification2SupOrSubForD3(text) {
+    // 如果text是未定义的或null，设置为空字符串
+    if (text == null) {
+        text = "";
+    }
+
     // 这个函数用来将文本的修饰名称格式化为有上下标的形式，用于d3的text标签
     // 除此之外还转化特殊符号，例如Y→ψ和tau→τ
     let f = function ($1) {
@@ -27,15 +32,16 @@ function modification2SupOrSubForD3(text) {
     let reg1 = new RegExp("[0-9]+", 'g');
     let reg2 = new RegExp(",<tspan baseline-shift=\"super\" style=\"font-size:0.2rem\">[0-9]+</tspan>", 'g');
     let text1 = text.toString().replace(reg1, "<tspan baseline-shift=\"super\" style=\"font-size:0.2rem\">$&</tspan>");
-    let text2 = text1.replace(reg2, f)
-    let text3 = text2.replaceAll("Y", "Ψ")
-    let text4 = text3.replaceAll("tau", "τ")
-    return (text4)
+    let text2 = text1.replace(reg2, f);
+    let text3 = text2.replaceAll("Y", "Ψ");
+    let text4 = text3.replaceAll("tau", "τ");
+    return text4;
     // modification2SupOrSub("m2G")
     // 'm<sup>2</sup>G'
     // modification2SupOrSub("m2,2tau")
     // 'm<sup>2</sup><sub>2</sub>τ'
 }
+
 export default {
     customData: function(){
         return customData
