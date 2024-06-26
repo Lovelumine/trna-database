@@ -11,7 +11,8 @@
         <li><router-link to="/CodingVariationDisease" active-class="active-link">Coding Variation Disease</router-link></li>
         <li><router-link to="/naturalsuptRNA" active-class="active-link">Natural Sup-tRNA</router-link></li>
         <li><router-link to="/tRNAtherapeutics" active-class="active-link">tRNA Therapeutics</router-link></li>
-        <li><router-link to="/TrnaElements" active-class="active-link">tRNA Elements</router-link></li>
+        <li><router-link to="/tRNAModificationwithFunction" active-class="active-link">tRNA Modification with Function</router-link></li>
+        <li><router-link to="/about" active-class="active-link">About</router-link></li>
       </ul>
     </nav>
   </header>

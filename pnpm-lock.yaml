@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      3dmol:
+        specifier: ^2.1.0
+        version: 2.1.0
       '@element-plus/icons-vue':
         specifier: ^2.3.1
         version: 2.3.1(vue@3.4.27(typescript@5.4.5))
@@ -113,6 +116,10 @@ importers:
         version: 5.2.12(@types/node@20.14.6)(terser@5.31.1)
 
 packages:
+
+  3dmol@2.1.0:
+    resolution: {integrity: sha512-w1pfTR8+pDtOpxbGDrBWCbOXiTBqLhHO/OQ5xK3nD4trM0OTPCl8opaTl2iyCfwFRUbqmd2I4Qtjw7x9Boe+OA==}
+    engines: {node: '>=16.16.0', npm: '>=8.11'}
 
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
@@ -1713,6 +1720,9 @@ packages:
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
 
+  iobuffer@5.3.2:
+    resolution: {integrity: sha512-kO3CjNfLZ9t+tHxAMd+Xk4v3D/31E91rMs1dHrm7ikEQrlZ8mLDbQ4z3tZfDM48zOkReas2jx8MWSAmN9+c8Fw==}
+
   ipaddr.js@1.9.1:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
     engines: {node: '>= 0.10'}
@@ -1946,6 +1956,9 @@ packages:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
     engines: {node: '>= 0.6'}
 
+  netcdfjs@3.0.0:
+    resolution: {integrity: sha512-LOvT8KkC308qtpUkcBPiCMBtii7ZQCN6LxcVheWgyUeZ6DQWcpSRFV9dcVXLj/2eHZ/bre9tV5HTH4Sf93vrFw==}
+
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
     engines: {node: '>=10.5.0'}
@@ -2001,6 +2014,12 @@ packages:
   p-pipe@1.2.0:
     resolution: {integrity: sha512-IA8SqjIGA8l9qOksXJvsvkeQ+VGb0TAzNCzvKvz9wt5wWLqfWbV6fXy43gpR2L4Te8sOq3S+Ql9biAaMKPdbtw==}
     engines: {node: '>=4'}
+
+  pako@1.0.11:
+    resolution: {integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==}
+
+  pako@2.1.0:
+    resolution: {integrity: sha512-w+eufiZ1WuJYgPXbV/PO3NCMEc3xqylkKHzp8bxp1uW4qaSNQUkwmLLEc3kKsfz8lpV1F8Ht3U1Cm+9Srog2ug==}
 
   papaparse@5.4.1:
     resolution: {integrity: sha512-HipMsgJkZu8br23pW15uvo6sib6wne/4woLZPlFf3rpDyMe9ywEXUsuD7+6K9PRkJlVT51j/sCOYDKGGS3ZJrw==}
@@ -2356,6 +2375,9 @@ packages:
     peerDependencies:
       browserslist: '>= 4.21.0'
 
+  upng-js@2.1.0:
+    resolution: {integrity: sha512-d3xzZzpMP64YkjP5pr8gNyvBt7dLk/uGI67EctzDuVp4lCZyVMo0aJO6l/VDlgbInJYDY6cnClLoBp29eKWI6g==}
+
   urix@0.1.0:
     resolution: {integrity: sha512-Am1ousAhSLBeB9cG/7k7r2R0zj50uDRlZHPGbazid5s9rlF1F/QKYObEKSIunSjIOkJZqwRRLpvewjEkM7pSqg==}
     deprecated: Please see https://github.com/lydell/urix#deprecated
@@ -2502,6 +2524,13 @@ packages:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
 
 snapshots:
+
+  3dmol@2.1.0:
+    dependencies:
+      iobuffer: 5.3.2
+      netcdfjs: 3.0.0
+      pako: 2.1.0
+      upng-js: 2.1.0
 
   '@ampproject/remapping@2.3.0':
     dependencies:
@@ -4357,6 +4386,8 @@ snapshots:
 
   inherits@2.0.4: {}
 
+  iobuffer@5.3.2: {}
+
   ipaddr.js@1.9.1: {}
 
   is-accessor-descriptor@1.0.1:
@@ -4575,6 +4606,10 @@ snapshots:
 
   negotiator@0.6.3: {}
 
+  netcdfjs@3.0.0:
+    dependencies:
+      iobuffer: 5.3.2
+
   node-domexception@1.0.0: {}
 
   node-fetch@2.7.0:
@@ -4629,6 +4664,10 @@ snapshots:
       - encoding
 
   p-pipe@1.2.0: {}
+
+  pako@1.0.11: {}
+
+  pako@2.1.0: {}
 
   papaparse@5.4.1: {}
 
@@ -5005,6 +5044,10 @@ snapshots:
       browserslist: 4.23.0
       escalade: 3.1.2
       picocolors: 1.0.1
+
+  upng-js@2.1.0:
+    dependencies:
+      pako: 1.0.11
 
   urix@0.1.0: {}
 
