@@ -23,7 +23,7 @@ import Home from './views/Home.vue';
 import CodingVariationDisease from './views/Coding Variation Disease/Coding Variation Disease.vue';
 import tRNAtherapeutics from './views/tRNAtherapeutics/tRNAtherapeutics.vue';
 import naturalsuptRNA from './views/natural-sup-tRNA/natural-sup-tRNA.vue';
-import tRNAModificationwithFunction from './views/tRNA elements/tRNA elements.vue';
+import tRNAElements from './views/tRNA elements/tRNA elements.vue';
 import ExpandedRow from './views/tRNAtherapeutics/ExpandedRow.vue';  // 引入新组件
 import Display from './views/display/Display.vue';
 import about from './views/about/about.vue';
@@ -42,7 +42,7 @@ const routes: RouteRecordRaw[] = [
     { path: '/CodingVariationDisease', component: CodingVariationDisease },
     { path: '/tRNAtherapeutics', component: tRNAtherapeutics },
     { path: '/naturalsuptRNA', component: naturalsuptRNA },
-    { path: '/tRNAModificationwithFunction', component: tRNAModificationwithFunction },
+    { path: '/tRNAElements', component: tRNAElements },
     { path: '/expanded/:key', name: 'ExpandedRow', component: ExpandedRow }, 
     { path: '/about', name: 'about', component: about }, 
     { path: '/display/:tRNAName', name: 'Display', component: Display }, // 动态路由
