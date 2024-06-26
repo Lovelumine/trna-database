@@ -45,7 +45,7 @@ app.post('/api/openai', async (req, res) => {
     const response = await axios.post(
       `${API_BASE_URL}/chat/completions`,
       {
-        model: 'gpt-3.5-turbo-0125',
+        model: 'gpt-4o',
         messages: req.body.messages,
         max_tokens: 1000,
       },
