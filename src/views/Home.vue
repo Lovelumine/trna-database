@@ -1,26 +1,37 @@
 <template>
   <div class="site--main">
-    <h2>Recent Advances in Suppressor tRNA (sup-tRNA) for the Treatment of Genetic Diseases</h2>
-        <!-- Image with Lightbox -->
-        <div class="image-container">
+    <h1>Welcome to ENSURE: The Encyclopedia of Suppressor tRNA Therapeutics with AI Assistant</h1>
+    <p>Welcome to ENSURE! Our platform offers extensive data and tools to advance the field of tRNA-therapeutics.</p>
+    
+    <div class="image-container">
       <img :src="imageSrc" @click="showViewer = true" class="centered-image" alt="Structure">
     </div>
-    <p>Recent advances in the use of suppressor tRNA (sup-tRNA) for the treatment of genetic diseases have achieved remarkable progress and raised several thought-provoking questions:</p>
+    
+    <h2>Key Features</h2>
+    
+    <h3><a :href="geneticVariationUrl">Genetic Variation Database</a></h3>
+    <p>Explore variations in genetic diseases and cancers, including missense, nonsense, and frameshift mutations, with potential sup-tRNA therapy applications.</p>
+    
+    <h3><a :href="naturalSupTRNACatalogUrl">Natural Sup-tRNAs Catalog</a></h3>
+    <p>Discover detailed information on natural sup-tRNAs, including their species of origin, sequences, and structures.</p>
+    
+    <h3><a :href="tRNATherapeuticsDataUrl">tRNA Therapeutics Data</a></h3>
+    <p>Access data on existing tRNA therapies, including targeted genes, mutation sites, sup-tRNA sequences, and therapy efficiency and safety.</p>
+    
+    <h3><a :href="tRNAIdentifyElementsUrl">tRNA Identify Elements</a></h3>
+    <p>Understand key elements of tRNA molecules—sequences, structures, and modifications—that influence their function including interaction sites with AARS, EF-Tu and ribosome.</p>
+    
+    <h2>Research Tools</h2>
     <ul>
-      <li><strong>Targeted Mutation Sites in Diseases:</strong> Which mutation sites in which diseases can be targeted by tRNA therapeutics?</li>
-      <li><strong>Naturally Occurring sup-tRNAs:</strong> Naturally occurring sup-tRNAs capable of suppressing nonsense mutations and frameshifts are present in certain species. What are their sequences and structures?</li>
-      <li><strong>Targeted Diseases and Efficacy:</strong> Which diseases are primarily targeted by existing tRNA therapies, and what is their efficiency and safety?</li>
-      <li><strong>Key Sites on tRNA Molecules:</strong> What roles do specific sites on tRNA molecules play, and can they serve as a basis for designing sup-tRNAs?</li>
+      <li><strong>Data Download:</strong> Access downloadable datasets for further research.</li>
+      <li><strong>Interactive Visualization:</strong> Explore tRNA structures and functions interactively.</li>
+      <li><strong>AI Assistant:</strong> Get expert answers to your tRNA therapeutic questions from Yingying, our AI assistant built on the GPT-4o model.</li>
     </ul>
-    <p>To address these questions, we have developed <strong>ENSURE: The Encyclopedia of Suppressor tRNA Therapeutics with AI Assistant</strong>. ENSURE compiles genetic variations occurring in genetic diseases and cancers, including those caused by missense, nonsense, and frameshift mutations. Furthermore, we have cataloged hundreds of natural sup-tRNAs, detailing their source species, sequences, and structures.</p>
-    <h3>ENSURE Features:</h3>
-    <ul>
-      <li><strong>Pathogenic Genes and Mutation Sites:</strong> Information on the pathogenic genes, mutation sites, sequences, and structures of sup-tRNAs. Efficiency and safety data of existing tRNA therapies.</li>
-      <li><strong>BLAST Comparisons:</strong> Performed BLAST comparisons of similar sequences of sup-tRNAs.</li>
-      <li><strong>Key Elements of tRNA Molecules:</strong> Summarized key elements (including sequences, structures, and modifications) on tRNA molecules critical for their function.</li>
-    </ul>
-    <p>Based on ENSURE's data, we have trained a virtual assistant named <strong>Yingying</strong>, built on the GPT-4o model. Yingying is capable of answering various questions regarding tRNA therapy. The ENSURE platform aids researchers in quickly identifying the biological mechanisms and application scopes of sup-tRNAs while providing a rich data resource and analytical platform for the design of engineered tRNAs.</p>
-        <vue-easy-lightbox
+    
+    <h2>Empowering tRNA Research</h2>
+    <p>ENSURE is designed to accelerate the discovery and development of tRNA-based therapeutics. Our rich dataset, combined with AI-driven insights, makes ENSURE an invaluable resource for the tRNA research community.</p>
+    
+    <vue-easy-lightbox
       :visible="showViewer"
       :imgs="[imageSrc]"
       @hide="showViewer = false"
@@ -40,16 +51,51 @@ export default {
   data() {
     return {
       showViewer: false,
-      imageSrc: structureImage
+      imageSrc: structureImage,
+      geneticVariationUrl: '/CodingVariationDisease',
+      naturalSupTRNACatalogUrl: '/naturalsuptRNA',
+      tRNATherapeuticsDataUrl: '/tRNAtherapeutics',
+      tRNAIdentifyElementsUrl: '/tRNAElements'
     };
   }
 }
 </script>
 
-<style>
+<style scoped>
 .site--main {
   padding: 20px;
 }
+
+.image-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.centered-image {
+  max-width: 100%;
+  height: auto;
+  cursor: pointer;
+}
+
+h1, h2, h3 {
+  color: #333;
+}
+
+p, ul {
+  color: #555;
+}
+
+a {
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+
 
 .image-container {
   display: flex;
