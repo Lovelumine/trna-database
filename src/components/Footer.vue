@@ -5,12 +5,14 @@
         © Copyright 2024 Zheng Lab. School of Life Science, Sun Yat-sen University, China.
       </div>
       <div class="beian-source-code">
-        <a href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank" class="beian-link">赣ICP备2024033025号</a>
+        <a href="https://beian.miit.gov.cn" target="_blank" class="beian-link">赣ICP备2024033025号</a>
         <span class="separator">|</span>
         <a href="https://github.com/Lovelumine/trna-database" target="_blank" class="source-code-link">
           <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub" class="github-logo" />
           Source Code
         </a>
+        <span class="separator">|</span>
+        <a href="/about" class="about-link">About</a>
       </div>
       <div class="hosted-by">
         Server provided by Yongxin County Aiying Technology Co., Ltd.
@@ -89,5 +91,15 @@ export default {
   width: 20px;
   height: 20px;
   margin-right: 5px;
+}
+
+.site--footer .footer-content .about-link {
+  color: var(--farallon-text-light);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--farallon-text-light);
+}
+
+.site--footer .footer-content .about-link:hover {
+  color: var(--farallon-text-light-hover);
 }
 </style>

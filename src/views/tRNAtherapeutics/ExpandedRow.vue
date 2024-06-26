@@ -180,6 +180,17 @@
             </div>
           </td>
         </tr>
+     <!-- New PDB Viewer Row -->
+   <tr>
+      <td><b>3D Structure:</b></td>
+              <td>
+                <div
+                  :id="'pdb-container-' + record.ENSURE_ID"
+                  style="height: 400px; width: 400px; position: relative"
+                  class="viewer_3Dmoljs"
+                ></div>
+              </td>
+            </tr>
       </table>
     </div>
         </div>
@@ -188,12 +199,12 @@
   </template>
   
   <script lang="tsx">
-  import { defineComponent, ref, onMounted, computed } from 'vue';
+  import { defineComponent, ref, onMounted, computed , nextTick} from 'vue';
   import axios from 'axios';
   import { useRoute } from 'vue-router';
   import { useTableData } from '../../assets/js/useTableData.js';
   import TranStructure from '@/components/TranStructure.vue';
-  
+  import * as $3Dmol from '3dmol';
   export default defineComponent({
     name: 'TRNATherapeutics-1',
     components: {
@@ -214,14 +225,35 @@
       });
   
       onMounted(async () => {
-        try {
-          await loadData();
-        } catch (error) {
-          console.error('Failed to load data:', error);
-        } finally {
-          loading.value = false;
-        }
-      });
+      try {
+        await loadData();
+        await nextTick(); // Ensure DOM is fully rendered before loading PDB files
+        filteredRecords.value.forEach(record => {
+          loadPDBFile(record.ENSURE_ID);
+        });
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      } finally {
+        loading.value = false;
+      }
+    });
+      const loadPDBFile = (ensureId) => {
+      const pdbFilePath = `/data/pdb/${ensureId}.pdb`;
+      axios.get(pdbFilePath)
+        .then(response => {
+          const element = document.getElementById('pdb-container-' + ensureId);
+          if (element) {
+            const viewer = $3Dmol.createViewer(element, { backgroundColor: 'white' });
+            viewer.addModel(response.data, 'pdb');
+            viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+            viewer.zoomTo();
+            viewer.render();
+          }
+        })
+        .catch(error => {
+          console.error(`Failed to load PDB file for ${ensureId}:`, error);
+        });
+    };
   
       return {
         filteredRecords,
@@ -272,5 +304,9 @@
     text-align: center;
     padding: 20px;
   }
+
+  .viewer_3Dmoljs {
+  position: relative;
+}
   </style>
   

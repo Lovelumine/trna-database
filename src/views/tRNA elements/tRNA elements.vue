@@ -1,6 +1,6 @@
 <template>
     <div class="site--main">
-      <h2>tRNA Elements</h2>
+      <h2>tRNA Modification with Function</h2>
   
       <div class="table-section">
         <trna-elements-1 />
