@@ -56,7 +56,7 @@
                 </ElTag>
               </ElSpace>
             </template>
-            <template v-else-if="column.key === 'E_Value'">
+            <!-- <template v-else-if="column.key === 'E_Value'">
               {{ alignments[record.key]?.eValue }}
             </template>
             <template v-else-if="column.key === 'Score'">
@@ -67,7 +67,7 @@
             </template>
             <template v-else-if="column.key === 'Gaps'">
               {{ alignments[record.key]?.gaps }}
-            </template>
+            </template> -->
           </template>
           <template #expandedRowRender="{ record }">
             <a :href="`expanded/${record.ENSURE_ID}`" target="_blank" class="tilt-hover">View Details</a>
@@ -118,32 +118,32 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
-    const alignments = ref<{ [key: string]: any }>({});
+    // const alignments = ref<{ [key: string]: any }>({});
 
-    const loadAlignments = async (dataSource: DataType[]) => {
-      for (const record of dataSource) {
-        const result = await calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA);
-        alignments.value[record.key] = result;
-      }
-    };
+    // const loadAlignments = async (dataSource: DataType[]) => {
+    //   for (const record of dataSource) {
+    //     const result = await calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA);
+    //     alignments.value[record.key] = result;
+    //   }
+    // };
 
-    const secondaryStructures = ref<{ [key: string]: string }>({});
+    // const secondaryStructures = ref<{ [key: string]: string }>({});
 
-    const loadSecondaryStructures = async (dataSource: DataType[]) => {
-      console.log('Loading secondary structures...');
-      for (const record of dataSource) {
-        try {
-          const response = await axios.post('/scan', { sequence: record.Sequence_of_sup_tRNA });
-          console.log(`Fetched structure for record ${record.key}:`, response.data.str);
-          secondaryStructures.value = { ...secondaryStructures.value, [record.key]: response.data.str };
-        } catch (error) {
-          console.error(`Failed to fetch secondary structure for record ${record.key}:`, error);
-          secondaryStructures.value = { ...secondaryStructures.value, [record.key]: 'Error fetching structure' };
-        }
-      }
-      console.log('Secondary structures loaded', secondaryStructures.value);
-      await nextTick();
-    };
+    // const loadSecondaryStructures = async (dataSource: DataType[]) => {
+    //   console.log('Loading secondary structures...');
+    //   for (const record of dataSource) {
+    //     try {
+    //       const response = await axios.post('/scan', { sequence: record.Sequence_of_sup_tRNA });
+    //       console.log(`Fetched structure for record ${record.key}:`, response.data.str);
+    //       secondaryStructures.value = { ...secondaryStructures.value, [record.key]: response.data.str };
+    //     } catch (error) {
+    //       console.error(`Failed to fetch secondary structure for record ${record.key}:`, error);
+    //       secondaryStructures.value = { ...secondaryStructures.value, [record.key]: 'Error fetching structure' };
+    //     }
+    //   }
+    //   console.log('Secondary structures loaded', secondaryStructures.value);
+    //   await nextTick();
+    // };
 
     const expandedRowKeys = ref([]);
 
@@ -156,7 +156,7 @@ export default defineComponent({
       try {
         await loadData();
         console.log('Data loaded');
-        await Promise.all([loadAlignments(filteredDataSource.value), loadSecondaryStructures(filteredDataSource.value)]);
+        // await Promise.all([loadAlignments(filteredDataSource.value), loadSecondaryStructures(filteredDataSource.value)]);
         console.log('Alignments and Secondary structures loaded');
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -176,8 +176,8 @@ export default defineComponent({
       displayedColumns,
       calculateAlignment,
       allColumns,
-      alignments,
-      secondaryStructures,
+      // alignments,
+      // secondaryStructures,
       loading, // 添加到返回对象中
       TranStructure,
       expandedRowKeys,
