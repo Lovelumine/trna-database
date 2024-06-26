@@ -36,18 +36,20 @@ import '@shene/table/dist/index.css';
 import 'vxe-table/lib/style.css';
 import VXETable from 'vxe-table';
 
-// 路由配置
+// 路由配置，使用懒加载
 const routes: RouteRecordRaw[] = [
-    { path: '/', component: Home },
-    { path: '/CodingVariationDisease', component: CodingVariationDisease },
-    { path: '/tRNAtherapeutics', component: tRNAtherapeutics },
-    { path: '/naturalsuptRNA', component: naturalsuptRNA },
-    { path: '/tRNAElements', component: tRNAElements },
-    { path: '/expanded/:key', name: 'ExpandedRow', component: ExpandedRow }, 
-    { path: '/about', name: 'about', component: about }, 
-    { path: '/display/:tRNAName', name: 'Display', component: Display }, // 动态路由
-    { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
-  ];
+  { path: '/', component: () => import('./views/Home.vue') },
+  { path: '/CodingVariationDisease', component: () => import('./views/Coding Variation Disease/Coding Variation Disease.vue') },
+  { path: '/tRNAtherapeutics', component: () => import('./views/tRNAtherapeutics/tRNAtherapeutics.vue') },
+  { path: '/naturalsuptRNA', component: () => import('./views/natural-sup-tRNA/natural-sup-tRNA.vue') },
+  { path: '/tRNAElements', component: () => import('./views/tRNA elements/tRNA elements.vue') },
+  { path: '/expanded/:key', name: 'ExpandedRow', component: () => import('./views/tRNAtherapeutics/ExpandedRow.vue') },
+  { path: '/about', name: 'about', component: () => import('./views/about/about.vue') },
+  { path: '/display/:tRNAName', name: 'Display', component: () => import('./views/display/Display.vue') }, // 动态路由
+  { path: '/help', name: 'help', component: () => import('./views/help/help.vue') },
+  { path: '/download', name: 'download', component: () => import('./views/download/download.vue') },
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
+];
 
 // 创建路由器实例
 const router = createRouter({
