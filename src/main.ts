@@ -26,7 +26,9 @@ import naturalsuptRNA from './views/natural-sup-tRNA/natural-sup-tRNA.vue';
 import tRNAModificationwithFunction from './views/tRNA elements/tRNA elements.vue';
 import ExpandedRow from './views/tRNAtherapeutics/ExpandedRow.vue';  // 引入新组件
 import Display from './views/display/Display.vue';
-import about from './views/about/about.vue'
+import about from './views/about/about.vue';
+import help from './views/help/help.vue';
+import download from './views/download/download.vue';
 
 // 引入表格组件
 import STable from '@shene/table';
