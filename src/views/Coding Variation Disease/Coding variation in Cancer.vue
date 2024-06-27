@@ -65,6 +65,7 @@
             <p><b>Mutation Locus in GRCh38:</b> {{ record.MUTATION_LOCUS_IN_GRCh38 }}</p>
             <p><b>Mutation Type:</b> {{ record.MUTATION_TYPE }}</p>
             <p><b>Mutation CDS:</b> {{ record.MUTATION_CDS }}</p>
+            <p><b>MUTATION AA:</b> {{ record.MUTATION_AA }}</p>            
             <p><b>Genomic Ref Allele:</b> {{ record.GENOMIC_REF_ALLELE }}</p>
             <p><b>Genomic Mut Allele:</b> {{ record.GENOMIC_MUT_ALLELE }}</p>
             <p><b>Disease:</b>
@@ -101,6 +102,7 @@ type DataType = {
   MUTATION_LOCUS_IN_GRCh38: string;
   MUTATION_TYPE: string;
   MUTATION_CDS: string;
+  MUTATION_AA: string;
   GENOMIC_REF_ALLELE: string;
   GENOMIC_MUT_ALLELE: string;
   DISEASE: string[]; // 修改为数组类型
@@ -168,6 +170,7 @@ export default defineComponent({
       { title: 'Mutation Locus in GRCh37', dataIndex: 'MUTATION_LOCUS_IN_GRCh37', width: 200, ellipsis: true, key: 'MUTATION_LOCUS_IN_GRCh37', resizable: true },
       { title: 'Mutation Locus in GRCh38', dataIndex: 'MUTATION_LOCUS_IN_GRCh38', width: 200, ellipsis: true, key: 'MUTATION_LOCUS_IN_GRCh38', resizable: true },
       { title: 'Mutation CDS', dataIndex: 'MUTATION_CDS', width: 150, ellipsis: true, key: 'MUTATION_CDS', resizable: true },
+      { title: 'MUTATION AA', dataIndex: 'MUTATION_AA', width: 150, ellipsis: true, key: 'MUTATION_AA', resizable: true },
       { title: 'Genomic Ref Allele', dataIndex: 'GENOMIC_REF_ALLELE', width: 150, ellipsis: true, key: 'GENOMIC_REF_ALLELE', resizable: true },
       { title: 'Genomic Mut Allele', dataIndex: 'GENOMIC_MUT_ALLELE', width: 150, ellipsis: true, key: 'GENOMIC_MUT_ALLELE', resizable: true },
       { title: 'Disease', dataIndex: 'DISEASE', width: 1200, ellipsis: true, key: 'DISEASE', resizable: true }
