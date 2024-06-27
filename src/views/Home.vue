@@ -46,8 +46,8 @@
 
 <script>
 import VueEasyLightbox from 'vue-easy-lightbox';
-import structureImage from '/data/picture/structure.png'; // Correct path to your image
-import flowchartImage from '/data/picture/flowchart-ENSURE.png'; // Correct path to your flowchart image
+import structureImage from '/data/picture/structure.png';
+import flowchartImage from '/data/picture/flowchart-ENSURE.png'; 
 
 export default {
   name: 'Home',
@@ -87,8 +87,8 @@ export default {
 }
 
 .centered-image {
-  width: 800px; /* Set the desired height */
-  object-fit: cover; /* Ensure the image covers the height while maintaining aspect ratio */
+  width: 800px;
+  object-fit: cover; 
   cursor: pointer;
 }
 
