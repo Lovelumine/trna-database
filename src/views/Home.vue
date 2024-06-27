@@ -106,6 +106,6 @@ a:hover {
 
 .centered-image {
   cursor: pointer;
-  max-width: 50%;
+  max-width: 80%;
 }
 </style>
