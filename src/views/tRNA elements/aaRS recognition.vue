@@ -1,6 +1,6 @@
 <template>
     <div class="site--main">
-      <h2>aaRS recognition</h2>
+      <h2>aaRS Recognition</h2>
       <!-- 顶部行包含尺寸调整和搜索框 -->
       <div class="top-controls">
         <!-- 搜索框 -->
