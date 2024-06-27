@@ -163,7 +163,7 @@ export default defineComponent({
     });
 
     const tableSize = ref('default');
-    const selectedColumns = ref<string[]>(['Species', 'Stop Codon for Readthrough', 'Noncanonical_charged_amino_acids','Readthrough mechanism']);
+    const selectedColumns = ref<string[]>(['Species', 'Stop Codon for Readthrough', 'Noncanonical charged amino acids','Readthrough mechanism']);
     const loading = ref(false);
     const dataSource = ref<DataType[]>([]);
     const sortedDataSource = ref<DataType[]>([]);
