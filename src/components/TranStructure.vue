@@ -5,8 +5,9 @@
         <div v-if="error" class="error">{{ error }}</div>
         <div v-else id="rna_ss"></div>
       </el-tab-pane>
-      <el-tab-pane :label="titleB" :disabled="!modified">
-        <div id="rna_ss_m"></div>
+      <el-tab-pane :label="titleB">
+        <div v-if="errorB" class="error">{{ errorB }}</div>
+        <div v-else id="rna_ss_m"></div>
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -28,7 +29,8 @@ export default {
     },
     supStructure: {
       type: String,
-      required: true,
+      required: false,
+      default: null,
     },
     initialSequence: {
       type: String,
@@ -52,6 +54,7 @@ export default {
     return {
       modified: true,
       error: null,
+      errorB: null,
       options: {
         name: this.initialName,
         structure: this.initialStructure,
@@ -73,23 +76,40 @@ export default {
     },
     processModifiedSequence() {
       try {
+        let initialStructure = this.initialStructure;
+        let supStructure = this.supStructure;
+
+        if (!initialStructure && !supStructure) {
+          this.error = "No secondary structure available for both sequences.";
+          this.modified = false;
+          return;
+        }
+
+        if (!initialStructure) {
+          this.error = "No secondary structure available for the initial sequence.";
+          this.modified = false;
+        } else {
+          this.drawPlot("rna_ss", initialStructure, this.initialSequence, '');
+        }
+
         if (this.initialModifiedSequence == null) {
           this.modified = false;
-          this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
         } else {
-          if (this.initialSequence.length !== this.initialModifiedSequence.length) {
-            this.modified = false;
-            this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
-          } else {
-            this.modified = true;
+          if (this.initialSequence.length === this.initialModifiedSequence.length) {
             let color = "";
             for (let i = 0; i < this.initialSequence.length; i++) {
               if (this.initialSequence[i] !== this.initialModifiedSequence[i]) {
                 color += `${i + 1}:#ACBFE6 `;
               }
             }
-            this.drawPlot("rna_ss_m", this.options.structure, this.initialModifiedSequence, color);
-            this.drawPlot("rna_ss", this.options.structure, this.options.sequence, '');
+            let structureToUse = supStructure || initialStructure;
+            this.drawPlot("rna_ss_m", structureToUse, this.initialModifiedSequence, color);
+          } else {
+            if (!supStructure) {
+              this.errorB = "No secondary structure available for the modified sequence.";
+            } else {
+              this.drawPlot("rna_ss_m", supStructure, this.initialModifiedSequence, '');
+            }
           }
         }
       } catch (e) {
