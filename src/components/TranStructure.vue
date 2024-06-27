@@ -26,6 +26,10 @@ export default {
       type: String,
       required: true,
     },
+    supStructure: {
+      type: String,
+      required: true,
+    },
     initialSequence: {
       type: String,
       required: true,
