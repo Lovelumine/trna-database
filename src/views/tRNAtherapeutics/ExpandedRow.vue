@@ -120,7 +120,7 @@
         </tr>
         <tr>
           <td><b>Secondary structure:</b></td>
-          <td>{{ record['Secondary structure']}}</td>
+          <td>{{ record['Secondary structure of sup-trna']}}</td>
         </tr>
       </table>
       <h3>origin tRNA</h3>
@@ -144,6 +144,10 @@
         <tr>
           <td><b>tRNA sequence:</b></td>
           <td>{{ record.Sequence_of_origin_tRNA}}</td>
+        </tr>
+        <tr>
+          <td><b>Secondary structure:</b></td>
+          <td>{{ record['Secondary structure']}}</td>
         </tr>
       </table>
       <h3>Engineered site</h3>
@@ -173,7 +177,8 @@
                 :titleA="'Origin-tRNA'"
                 :titleB="'Sup-tRNA'" 
                 :initialName="record.NCBI_ref_ID"
-                :initialStructure="  record['Secondary structure']"
+                :initialStructure="record['Secondary structure']"
+                :supStructure="record['Secondary structure of sup-trna']"
                 :initialSequence="record.Sequence_of_origin_tRNA"
                 :initialModifiedSequence="record['Sequence_of_sup-tRNA']"
               />
