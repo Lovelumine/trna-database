@@ -153,7 +153,9 @@ export default defineComponent({
           list: [
             { text: 'Missense', value: 'Missense' },
             { text: 'Nonsense', value: 'Nonsense' },
-            {text:'Frameshift',value:'Frameshift'}
+            {text:'Frameshift',value:'Frameshift'},
+            {text:'Deletion-Frameshift',value:'Deletion-Frameshift'},
+            {text:'Insertion-Frameshift',value:'Insertion-Frameshift'}
           ],
           onFilter: (value, record) => value.includes(record.MUTATION_TYPE)
         }},
