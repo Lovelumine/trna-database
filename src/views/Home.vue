@@ -4,7 +4,11 @@
     <p>Welcome to ENSURE! Our platform offers extensive data and tools to advance the field of tRNA-therapeutics.</p>
     
     <div class="image-container">
-      <img :src="imageSrc" @click="showViewer = true" class="centered-image" alt="Structure">
+      <img :src="structureImage" @click="openLightbox(0)" class="centered-image" alt="Structure">
+    </div>
+    
+    <div class="image-container">
+      <img :src="flowchartImage" @click="openLightbox(1)" class="centered-image" alt="Flowchart ENSURE">
     </div>
     
     <h2>Key Features</h2>
@@ -33,7 +37,8 @@
     
     <vue-easy-lightbox
       :visible="showViewer"
-      :imgs="[imageSrc]"
+      :imgs="[structureImage, flowchartImage]"
+      :index="currentIndex"
       @hide="showViewer = false"
     />
   </div>
@@ -42,6 +47,7 @@
 <script>
 import VueEasyLightbox from 'vue-easy-lightbox';
 import structureImage from '/data/picture/structure.png'; // Correct path to your image
+import flowchartImage from '/data/picture/flowchart-ENSURE.png'; // Correct path to your flowchart image
 
 export default {
   name: 'Home',
@@ -51,12 +57,20 @@ export default {
   data() {
     return {
       showViewer: false,
-      imageSrc: structureImage,
+      currentIndex: 0,
+      structureImage: structureImage,
+      flowchartImage: flowchartImage,
       geneticVariationUrl: '/CodingVariationDisease',
       naturalSupTRNACatalogUrl: '/naturalsuptRNA',
       tRNATherapeuticsDataUrl: '/tRNAtherapeutics',
       tRNAIdentifyElementsUrl: '/tRNAElements'
     };
+  },
+  methods: {
+    openLightbox(index) {
+      this.currentIndex = index;
+      this.showViewer = true;
+    }
   }
 }
 </script>
@@ -73,8 +87,8 @@ export default {
 }
 
 .centered-image {
-  max-width: 100%;
-  height: auto;
+  width: 800px; /* Set the desired height */
+  object-fit: cover; /* Ensure the image covers the height while maintaining aspect ratio */
   cursor: pointer;
 }
 
@@ -94,8 +108,6 @@ a {
 a:hover {
   text-decoration: underline;
 }
-
-
 
 .image-container {
   display: flex;
