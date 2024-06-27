@@ -53,13 +53,13 @@
           </template>
         <template #expandedRowRender="{ record }">
           <div>
-            <p><b>Modification Type:</b> {{ record['Modification_Type'] }}</p>
+            <p><b>Modification Type:</b> {{ record.Modification_Type }}</p>
             <p><b>Modomics CODE:</b><span v-html="highlightModification(record['Modomics_CODE'])"></span></p>
-            <p><b>Modification site:</b> {{record['Modification_site']}}</p>
-            <p><b>tRNA TYPE:</b> {{ record['tRNA_TYPE']}}</p>
-            <p><b>Function of Modification:</b> {{ record['Function_of_Modification']}}</p>
-            <p><b>species:</b> <span class="latin-name">{{ record.species}}</span></p>
-            <p><b>tissue or cell line:</b> {{ record['tissue_or_cell_line']}}</p>
+            <p><b>Modification site:</b> {{ record.Modification_site }}</p>
+            <p><b>tRNA TYPE:</b> {{ record.tRNA_TYPE }}</p>
+            <p><b>Function of Modification:</b> {{ record.Function_of_Modification }}</p>
+            <p><b>species:</b> <span class="latin-name">{{ record.species }}</span></p>
+            <p><b>tissue or cell line:</b> {{ record.tissue_or_cell_line }}</p>
             <p><b>condition:</b> {{ record.condition}}</p>
             <p><b>Literature Source(PMID):</b><a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID" target="_blank" class="tilt-hover">{{record.PMID}}</a></p>
           </div>
