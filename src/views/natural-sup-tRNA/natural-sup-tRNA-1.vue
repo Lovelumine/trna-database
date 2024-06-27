@@ -44,16 +44,16 @@
           <template v-if="column.key === 'Structure of sup-tRNA'">
             <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
           </template>
-          <template v-else-if="column.key === 'Stop Codon for Readthrough'">
+          <template v-else-if="column.key === 'Stop codon for readthrough'">
             <ElSpace>
-              <ElTag v-for="items in (Array.isArray(record.Stop_codon_for_readthrough) ? record.Stop_codon_for_readthrough : record.Stop_codon_for_readthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+              <ElTag v-for="items in (Array.isArray(record['Stop codon for readthrough']) ? record['Stop codon for readthrough']: record['Stop codon for readthrough'].split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace>
           </template>
-          <template v-else-if="column.key === 'Noncanonical_charged_amino_acids'">
+          <template v-else-if="column.key === 'Noncanonical charged amino acids'">
             <ElSpace>
-              <ElTag v-for="items in (Array.isArray(record.Noncanonical_charged_amino_acids) ? record.Noncanonical_charged_amino_acids : record.Noncanonical_charged_amino_acids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+              <ElTag v-for="items in (Array.isArray(record['Noncanonical charged amino acids']) ? record['Noncanonical charged amino acids']: record['Noncanonical charged amino acids'].split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace>
@@ -73,46 +73,36 @@
         <template #expandedRowRender="{ record }">
           <div>
             <p><b>Species:</b> {{ record.Species }}</p>
+            <p><b>Species ID:</b> {{ record['Species ID']}}</p>
             <p><b>Tissue/Organelle of Origin:</b> {{ record['Tissue/Organelle of Origin'] }}</p>
             <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
             <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
             <p><b>Stop codon for readthrough:</b> <ElSpace>
-              <ElTag v-for="items in (Array.isArray(record.Stop_codon_for_readthrough) ? record.Stop_codon_for_readthrough : record.Stop_codon_for_readthrough.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+              <ElTag v-for="items in (Array.isArray(record['Stop codon for readthrough']) ? record['Stop codon for readthrough'] : record['Stop codon for readthrough'].split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace></p>
             <p><b>Noncanonical charged amino acids:</b> <ElSpace>
-              <ElTag v-for="items in (Array.isArray(record.Noncanonical_charged_amino_acids) ? record.Noncanonical_charged_amino_acids : record.Noncanonical_charged_amino_acids.split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
+              <ElTag v-for="items in (Array.isArray(record['Noncanonical charged amino acids']) ? record['Noncanonical charged amino acids'] : record['Noncanonical charged amino acids'].split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace></p>
-            <p><b>tRNA sequence before mutation:</b> {{ record['tRNA_sequence_before_mutation'] }}</p>
-            <p><b>tRNA sequence after mutation:</b> <span v-html="highlightMutation(record['tRNA_sequence_after_mutation'])"></span></p>
+            <p><b>RNA central ID of tRNA:</b> {{ record['RNA central ID of tRNA'] }}</p>
+            <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
+            <p><b>tRNA sequence after mutation:</b> <span v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
 
             <div>
               <b>Structure of sup-tRNA:</b>
               <img :src="`https://trna.lumoxuan.cn/data/picture/${record.pictureid}.png`" @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
             </div>
-            {{ console.log(record.key, secondaryStructures[record.key], record.tRNA_sequence_before_mutation) }}
-            <!-- <div style="max-height: 220px; max-width: 800px; overflow: auto; ">
-              <b>Displaying the Secondary Structure with Fornac:</b>
-              <TranStructure
-                :titleA="'tRNA sequence before mutation:'"
-                :titleB="'tRNA sequence after mutation'" 
-                :initialName="record.key"
-                :initialStructure=" secondaryStructures[record.key]"
-                :initialSequence="record.tRNA_sequence_before_mutation"
-                :initialModifiedSequence="record.tRNA_sequence_after_mutation"
-              />
-            </div> -->
-            <p><b>Readthrough mechanism:</b> <ElSpace>
+           <p><b>Readthrough mechanism:</b> <ElSpace>
               <ElTag v-for="items in (Array.isArray(record['Readthrough mechanism']) ? record['Readthrough mechanism'] : record['Readthrough mechanism'].split(';').map(str => str.trim()))" :key="items" :type="getTagType(items)">
                 {{ items }}
               </ElTag>
             </ElSpace></p>
             <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
-            <p><b>PMID of references:</b> <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID" target="_blank" class="tilt-hover">{{record.PMID}}</a></p>
-            <p><b>Note:</b> {{ record['Note'] }}</p>
+            <p><b>PMID of references:</b> <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record['PMID of references']" target="_blank" class="tilt-hover">{{record['PMID of references']}}</a></p>
+            <p><b>Notes:</b> {{ record['Notes'] }}</p>
           </div>
         </template>
       </s-table>
@@ -146,6 +136,7 @@ type DataType = {
   'Noncanonical charged amino acids': string[];
   'tRNA_sequence_before_mutation': string;
   'tRNA_sequence_after_mutation': string;
+  'RNA central ID of tRNA':string;
   'Structure of sup-tRNA': string;
   'Readthrough mechanism': string;
   'Mutational position of sup-tRNA': string;
@@ -168,7 +159,7 @@ export default defineComponent({
   },
   setup() {
     const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
-      return processCSVData(data, ['Stop_codon_for_readthrough', 'Noncanonical_charged_amino_acids','Readthrough mechanism']);
+      return processCSVData(data, ['Stop codon for readthrough', 'Noncanonical charged amino acids','Readthrough mechanism']);
     });
 
     const tableSize = ref('default');
@@ -218,10 +209,11 @@ export default defineComponent({
 
     const allColumns: STableColumnsType<DataType> = [
       { title: 'Species', dataIndex: 'Species', width: 280, ellipsis: true, key: 'Species', resizable: true, sorter: true },
+      { title: 'Species ID', dataIndex: 'Species ID', width: 280, ellipsis: true, key: 'Species ID', resizable: true, sorter: true },
       { title: 'Tissue/Organelle of Origin', dataIndex: 'Tissue/Organelle of Origin', width: 280, ellipsis: true, key: 'Tissue/Organelle of Origin', resizable: true, sorter: true },      
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
-      { title: 'Stop codon for readthrough', dataIndex: 'Stop_codon_for_readthrough', width: 240, ellipsis: true, key: 'Stop Codon for Readthrough', resizable: true,
+      { title: 'Stop codon for readthrough', dataIndex: 'Stop codon for readthrough', width: 240, ellipsis: true, key: 'Stop Codon for Readthrough', resizable: true,
         filter: {
           type: 'multiple',
           list: [
@@ -232,7 +224,7 @@ export default defineComponent({
           onFilter:(value, record) => value.includes(record.Stop_codon_for_readthrough)|| record.Stop_codon_for_readthrough.includes(value)
         }
       },
-      { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical_charged_amino_acids', width: 250, ellipsis: true, key: 'Noncanonical_charged_amino_acids', resizable: true,
+      { title: 'RNA central ID of tRNA', dataIndex: 'RNA central ID of tRNA', width: 250, ellipsis: true, key: 'RNA central ID of tRNA', resizable: true,
         filter: {
           type: 'multiple',
           list: [
@@ -252,8 +244,9 @@ export default defineComponent({
           onFilter: (value, record) => value.includes(record.Noncanonical_charged_amino_acids)
         }
       },
-      { title: 'tRNA sequence before mutation', dataIndex: 'tRNA_sequence_before_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_before_mutation', resizable: true },
-      { title: 'tRNA sequence after mutation', dataIndex: 'tRNA_sequence_after_mutation', width: 200, ellipsis: true, key: 'tRNA_sequence_after_mutation', resizable: true },
+      { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
+       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
+      { title: 'tRNA sequence after mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true ,        filter: {
           type: 'multiple',
           list: [
@@ -269,7 +262,7 @@ export default defineComponent({
         }},
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
       { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>), resizable: true },
-      { title: 'Note', dataIndex: 'Note', width: 150, ellipsis: true, key: 'Note', resizable: true }
+      { title: 'Notes', dataIndex: 'Notes', width: 150, ellipsis: true, key: 'Notes', resizable: true }
     ];
 
     const displayedColumns = computed(() =>
