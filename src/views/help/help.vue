@@ -39,6 +39,7 @@
   ];
   
   const extractHeadings = (markdownContent) => {
+    // 提取标题
     const headingLines = markdownContent.split('\n').filter(line => line.match(/^#{1,6}\s/));
     headings.value = headingLines.map(line => {
       const match = line.match(/^(#{1,6})\s+(.*)/);
@@ -47,17 +48,25 @@
         text: match[2],
       };
     });
+  
+    // 处理图片标签
+    const processedContent = markdownContent.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+      return `<img src="${src}" alt="${alt}" style="max-width: 100%; height: auto;" />`;
+    });
+  
+    return processedContent;
   };
   
   const loadMarkdown = async (file) => {
-    try {
-      const response = await axios.get(`/src/views/help/docs/${file}`);
-      const markdownContent = response.data;
-      extractHeadings(markdownContent);
-      content.value = md.render(markdownContent);
-    } catch (error) {
-      console.error(`Failed to load markdown file: ${file}`, error);
-    }
+      try {
+          const response = await axios.get(`/src/views/help/docs/${file}`);
+          const markdownContent = response.data;
+          extractHeadings(markdownContent);
+          const processedContent = extractHeadings(markdownContent);
+          content.value = md.render(processedContent);
+      } catch (error) {
+          console.error(`Failed to load markdown file: ${file}`, error);
+      }
   };
   
   // 监听路由变化，加载对应的 Markdown 文件
