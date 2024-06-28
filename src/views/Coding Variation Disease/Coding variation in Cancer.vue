@@ -83,7 +83,7 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, computed,watch } from 'vue';
 import { ElTooltip, ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
@@ -145,8 +145,18 @@ export default defineComponent({
       'DISEASE'
     ]);
 
-    onMounted(() => {
-      loadData();
+    onMounted(async() => {
+      await loadData();
+      triggerColumnChange();
+    });
+
+    const triggerColumnChange = () => {
+      // 模拟点击列选择控件以触发数据刷新
+      selectedColumns.value = [...selectedColumns.value];
+    };
+
+    watch([tableSize, searchColumn, searchText, selectedColumns], async () => {
+      await loadData();
     });
 
     const allColumns: STableColumnsType<DataType> = [

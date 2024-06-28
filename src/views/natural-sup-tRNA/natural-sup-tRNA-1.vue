@@ -121,10 +121,8 @@ import VueEasyLightbox from 'vue-easy-lightbox';
 import {highlightMutation} from '../../utils/highlightMutation.js'
 import {getTagType} from '../../utils/tag.js'
 import {processCSVData} from '../../utils/processCSVData.js'
-import {calculateAlignment} from '../../utils/calculateAlignment'
 import { sortData } from '../../utils/sort.js';
 import axios from 'axios';
-import TranStructure from '@/components/TranStructure.vue';
 
 type DataType = {
   [key: string]: string | string[];
@@ -155,7 +153,6 @@ export default defineComponent({
     ElSelect,
     ElOption,
     VueEasyLightbox,
-    TranStructure
   },
   setup() {
     const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
@@ -172,21 +169,8 @@ export default defineComponent({
       await loadData();
       dataSource.value = originalFilteredDataSource.value;
       sortedDataSource.value = originalFilteredDataSource.value;
-      loadSecondaryStructures(filteredDataSource.value);
       const style = document.createElement('style');
     style.innerHTML = `
-      .s-table__filter-dropdown-content {
-        padding: 16px !important;
-        max-height: 400px !important;
-      }
-
-  .custom-tag-styles .el-tag.el-tag--info {
-    --el-tag-bg-color:#f5e1f8;
-    --el-tag-border-color: var(--el-color-info-light-8);
-    --el-tag-hover-color: var(--el-color-info);
-    --el-tag-text-color:#ed8afc
-
-}
     `;
     document.head.appendChild(style);
   
@@ -269,7 +253,6 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
-    const alignments = ref<{ [key: string]: any }>({});
 
     const onSorterChange = (params: any) => {
       let sorter: { field?: string, order?: 'ascend' | 'descend' } = {};
@@ -301,22 +284,6 @@ export default defineComponent({
 
     const secondaryStructures = ref<{ [key: string]: string }>({});
 
-const loadSecondaryStructures = async (dataSource: DataType[]) => {
-  console.log('Loading secondary structures...');
-  for (const record of dataSource) {
-    try {
-      const response = await axios.post('/scan', { sequence: record['Anticodon before mutation'] });
-      console.log(`Fetched structure for record ${record.key}:`, response.data.str);
-      secondaryStructures.value = { ...secondaryStructures.value, [record.key]: response.data.str };
-    } catch (error) {
-      console.error(`Failed to fetch secondary structure for record ${record.key}:`, error);
-      secondaryStructures.value = { ...secondaryStructures.value, [record.key]: 'Error fetching structure' };
-    }
-  }
-  console.log('Secondary structures loaded', secondaryStructures.value);
-  await nextTick();
-};
-
     return {
       allColumns,
       displayedColumns,
@@ -332,9 +299,7 @@ const loadSecondaryStructures = async (dataSource: DataType[]) => {
       lightboxImgs,
       showLightbox,
       hideLightbox,
-      secondaryStructures,
       getTagType, // 获取标签类型
-      alignments,
       onSorterChange,
       loading
     };

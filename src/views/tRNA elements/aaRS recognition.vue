@@ -6,11 +6,7 @@
         <input v-model="searchText" placeholder="Enter search content" class="search-input">
         <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
           <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :value="column.dataIndex"
-          />
+          <el-option v-for="column in allColumns" :key="column.key" :value="column.dataIndex" />
         </el-select>
       </div>
       <div class="size-controls" style="margin-bottom: 10px">
@@ -22,11 +18,7 @@
       </div>
       <div class="column-controls" style="margin-bottom: 10px">
         <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :value="column.key"
-          />
+          <el-option v-for="column in allColumns" :key="column.key" :value="column.key" />
         </el-select>
       </div>
     </div>
@@ -64,7 +56,7 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
 import type { STableColumnsType } from '@shene/table';
@@ -106,8 +98,18 @@ export default defineComponent({
       'Reference'
     ]);
 
-    onMounted(() => {
-      loadData();
+    onMounted(async() => {
+      await loadData();
+      triggerColumnChange();
+    });
+
+    const triggerColumnChange = () => {
+      // 模拟点击列选择控件以触发数据刷新
+      selectedColumns.value = [...selectedColumns.value];
+    };
+
+    watch([tableSize, searchColumn, searchText, selectedColumns], async () => {
+      await loadData();
     });
 
     const allColumns: STableColumnsType<DataType> = [
@@ -221,7 +223,8 @@ export default defineComponent({
       displayedColumns,
       searchColumn,
       allColumns, // 列选择控件
-      isPMID // 添加isPMID函数
+      isPMID, // 添加isPMID函数
+      triggerColumnChange
     };
   }
 });

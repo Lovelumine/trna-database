@@ -73,7 +73,7 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, computed ,watch} from 'vue';
 import { ElTag, ElSpace, ElSelect, ElOption  } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
@@ -97,9 +97,17 @@ export default defineComponent({
     const { searchText, filteredDataSource, loadData ,searchColumn} = useTableData('/data/PTC in Genetic Disease.csv');
     const tableSize = ref('default'); // 表格尺寸状态
 
-    onMounted(() => {
-      loadData();
+    onMounted(async() => {
+      await loadData();
+      triggerColumnChange();
     });
+
+    const triggerColumnChange = () => {
+      // 模拟点击列选择控件以触发数据刷新
+      selectedColumns.value = [...selectedColumns.value];
+    };
+
+
 
     const selectedColumns = ref<string[]>([
       'mutationType',
@@ -197,7 +205,8 @@ export default defineComponent({
       selectedColumns,
       searchColumn,
       displayedColumns,
-      allColumns // 列选择控件
+      allColumns, // 列选择控件
+      triggerColumnChange
     };
   }
 });
