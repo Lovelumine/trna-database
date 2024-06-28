@@ -106,9 +106,9 @@ export default defineComponent({
     const tableSize = ref('default');
     const selectedColumns = ref<string[]>([
       'Related_disease',
-      'PTC_model',
-      'Species_source_of_PTC_model',
-      'Sequence_of_PTC_model',
+      'PTC_model(nonsense_mutation_site)',
+      'Species_source_of_origin_tRNA',
+      'Sequence_of_sup-tRNA',
       'Reaction_system',
     ]);
     
