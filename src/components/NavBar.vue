@@ -1,17 +1,23 @@
 <template>
   <header class="site--header">
-    <!-- Logo and link to home -->
     <router-link to="/" class="site--url" aria-label="18-tRNA therapeutics database">
       <img src="/logo.webp" class="avatar" alt="18-tRNA therapeutics database">
     </router-link>
-    <!-- Navigation links -->
     <nav class="site--header__center">
       <ul class="topNav-items">
-        <li><router-link to="/" active-class="active-link" >Home</router-link></li>
+        <li><router-link to="/" active-class="active-link">Home</router-link></li>
         <li><router-link to="/CodingVariationDisease" active-class="active-link">Coding Variation Disease</router-link></li>
         <li><router-link to="/naturalsuptRNA" active-class="active-link">Natural Sup-tRNA</router-link></li>
-        <li><router-link to="/tRNAtherapeutics" active-class="active-link" >tRNA Therapeutics</router-link></li>
-        <li><router-link to="/tRNAElements" active-class="active-link" >tRNA elements</router-link></li>
+        <li><router-link to="/tRNAtherapeutics" active-class="active-link">tRNA Therapeutics</router-link></li>
+        <li><router-link to="/tRNAElements" active-class="active-link">tRNA elements</router-link></li>
+        <li class="mobile-only"><router-link to="/download" active-class="active-link">Download</router-link></li>
+        <li class="mobile-only"><router-link to="/help" active-class="active-link">Help</router-link></li>
+        <li class="mobile-only"><router-link to="/about" active-class="active-link">About</router-link></li>
+      </ul>
+    </nav>
+    <nav class="site--header__right">
+      <ul class="topNav-items right">
+        <li><router-link to="/download" active-class="active-link">Download</router-link></li>
         <li><router-link to="/help" active-class="active-link">Help</router-link></li>
         <li><router-link to="/about" active-class="active-link">About</router-link></li>
       </ul>
@@ -19,14 +25,16 @@
   </header>
 </template>
 
+
+
+
 <script>
 export default {
   name: 'NavBar'
 }
 </script>
 
-<style>
-@media (max-width: 1100px) {
+<style>@media (max-width: 1100px) {
   .site--header {
     padding: 15px 20px; /* 为较小屏幕减少内边距 */
     flex-direction: column; /* 将徽标和菜单垂直堆叠 */
@@ -122,6 +130,16 @@ export default {
   overflow: hidden;
 }
 
+.site--header__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.topNav-items .mobile-only {
+    display: inline-block; /* 显示移动端的导航链接 */
+  }
+
 .topNav-items {
   display: flex;
   align-items: center;
@@ -133,6 +151,21 @@ export default {
   overflow-x: auto; /* 允许水平滚动 */
   white-space: nowrap; /* 防止项目换行 */
   overflow-y: hidden; /* 禁止垂直滚动 */
+}
+
+.site--header__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: absolute;
+  right: 0; /* 绝对定位到右边 */
+  top: 25px; /* 调整顶部间距 */
+}
+
+@media (min-width: 1101px) {
+  .topNav-items .mobile-only {
+    display: none; /* 隐藏移动端的导航链接 */
+  }
 }
 
 .topNav-items li {
@@ -170,5 +203,6 @@ export default {
   color: #3a5f9a;
   border-bottom: 2px solid #3a5f9a;
 }
+
 </style>
 
