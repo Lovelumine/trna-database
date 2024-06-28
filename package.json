@@ -21,6 +21,7 @@
     "express": "^4.19.2",
     "form-data": "^4.0.0",
     "fs": "0.0.1-security",
+    "markdown-it": "^14.1.0",
     "multer": "1.4.5-lts.1",
     "openai": "^4.48.2",
     "papaparse": "^5.4.1",
@@ -45,6 +46,8 @@
     "@vue/babel-plugin-jsx": "^1.2.2",
     "@vue/babel-preset-jsx": "^1.4.0",
     "@vue/runtime-dom": "^3.4.27",
-    "vite": "^5.2.12"
+    "unplugin-vue-markdown": "^0.26.2",
+    "vite": "^5.2.12",
+    "vitepress": "^1.2.3"
   }
 }
