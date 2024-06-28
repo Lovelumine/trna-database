@@ -15,7 +15,8 @@
           v-for="heading in headings"
           :key="heading.id"
           :index="heading.id"
-          @click="navigateToHeading(heading.id)"
+          @click="handleHeadingClick(heading.id)"
+          :class="{ 'is-active': heading.id === activeHeading }"
         >
           {{ heading.text }}
         </el-menu-item>
@@ -43,6 +44,10 @@ const props = defineProps({
   activeFile: {
     type: String,
     default: ''
+  },
+  activeHeading: {
+    type: String,
+    default: ''
   }
 });
 
@@ -53,7 +58,7 @@ const route = useRoute();
 
 const defaultOpeneds = ref([]);
 
-// 在这里初始化 defaultOpeneds，确保菜单默认展开
+// 初始化 defaultOpeneds，确保菜单默认展开
 watch(
   () => props.files,
   (newFiles) => {
@@ -69,9 +74,12 @@ const handleFileClick = (file) => {
   router.push({ path: '/help', query: { file } });
 };
 
-const navigateToHeading = (id) => {
+const handleHeadingClick = (id) => {
   console.log('Heading clicked:', id);
   emits('navigateToHeading', id);
+  setTimeout(() => {
+    activeHeading.value = '';  // 清除 activeHeading 的值
+  }, 100);  // 设置延迟，确保滚动结束后再清除
 };
 </script>
 
@@ -94,9 +102,11 @@ const navigateToHeading = (id) => {
   padding-left: 20px !important; /* 增加内边距 */
 }
 .custom-menu .el-menu-item.is-active,
-.custom-menu .el-sub-menu__title.is-active {
-  background-color: #3498db;
-  color: #ffffff;
+.custom-menu .el-sub-menu__title.is-active,
+.custom-menu .el-menu-item.is-active:hover,
+.custom-menu .el-sub-menu__title.is-active:hover {
+  background-color: #3498db !important;
+  color: #ffffff !important;
 }
 .custom-menu .el-menu-item:hover,
 .custom-menu .el-sub-menu__title:hover {

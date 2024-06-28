@@ -4,7 +4,7 @@
       <el-row>
         <el-col :span="6">
           <div class="sidebar-container">
-            <Sidebar :headings="headings" :files="files" :activeFile="activeFile" @navigateToHeading="navigateToHeading" @fileSelected="handleFileSelected" />
+            <Sidebar :headings="headings" :files="files" :activeFile="activeFile" :activeHeading="activeHeading" @navigateToHeading="navigateToHeading" @fileSelected="handleFileSelected" />
           </div>
         </el-col>
         <el-col :span="18">
@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import markdownIt from 'markdown-it';
@@ -35,6 +35,7 @@ const images = ref([]);
 const currentIndex = ref(0);
 const showViewer = ref(false);
 const activeFile = ref('');
+const activeHeading = ref('');
 const route = useRoute();
 
 const md = markdownIt({
@@ -96,12 +97,51 @@ const loadMarkdown = async (file) => {
   }
 };
 
+// 简单节流函数
+const throttle = (func, delay) => {
+  let lastCall = 0;
+  return (...args) => {
+    const now = new Date().getTime();
+    if (now - lastCall < delay) {
+      return;
+    }
+    lastCall = now;
+    return func(...args);
+  };
+};
+
+const onScroll = throttle(() => {
+  const headingElements = headings.value.map(heading => document.getElementById(heading.id));
+  const scrollPosition = window.scrollY;
+  for (let i = 0; i < headingElements.length; i++) {
+    const current = headingElements[i];
+    const next = headingElements[i + 1];
+    if (current && (!next || next.offsetTop > scrollPosition)) {
+      activeHeading.value = headings.value[i].id;
+      console.log('Active heading on scroll:', activeHeading.value);
+      break;
+    }
+  }
+}); // 限制滚动事件的调用频率
+
+watch(activeHeading, (newHeading) => {
+  console.log('Active heading changed:', newHeading);
+});
+
 watch(() => route.query.file, (newFile) => {
   const file = newFile || '1-introduction.md';
   console.log('Route query changed, new file:', file);
   activeFile.value = file;
   loadMarkdown(file);
 }, { immediate: true });
+
+onMounted(() => {
+  window.addEventListener('scroll', onScroll);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', onScroll);
+});
 
 const handleFileSelected = (file) => {
   console.log('File selected:', file);
@@ -121,7 +161,9 @@ const navigateToHeading = (id) => {
   const element = document.getElementById(id);
   if (element) {
     console.log('Element found, scrolling into view:', element);
-    element.scrollIntoView({ behavior: 'smooth' });
+    const yOffset = -10; // 可根据需要调整偏移量
+    const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+    window.scrollTo({ top: y, behavior: 'smooth' });
   } else {
     console.warn('Element not found:', id);
   }
