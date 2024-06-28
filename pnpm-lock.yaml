@@ -47,6 +47,9 @@ importers:
       markdown-it:
         specifier: ^14.1.0
         version: 14.1.0
+      markdown-it-table-of-contents:
+        specifier: ^0.6.0
+        version: 0.6.0
       multer:
         specifier: 1.4.5-lts.1
         version: 1.4.5-lts.1
@@ -2143,6 +2146,10 @@ packages:
 
   mark.js@8.11.1:
     resolution: {integrity: sha512-1I+1qpDt4idfgLQG+BNWmrqku+7/2bi5nLf4YwF8y8zXvmfiTBY3PV3ZibfrjBueCByROpuBjLLFCajqkgYoLQ==}
+
+  markdown-it-table-of-contents@0.6.0:
+    resolution: {integrity: sha512-jHvEjZVEibyW97zEYg19mZCIXO16lHbvRaPDkEuOfMPBmzlI7cYczMZLMfUvwkhdOVQpIxu3gx6mgaw46KsNsQ==}
+    engines: {node: '>6.4.0'}
 
   markdown-it@14.1.0:
     resolution: {integrity: sha512-a54IwgWPaeBCAAsv13YgmALOF1elABB08FxO9i+r4VFk5Vl4pKokRPeX8u5TCgSsPi6ec1otfLjdOpVcgbpshg==}
@@ -5196,6 +5203,8 @@ snapshots:
       object-visit: 1.0.1
 
   mark.js@8.11.1: {}
+
+  markdown-it-table-of-contents@0.6.0: {}
 
   markdown-it@14.1.0:
     dependencies:
