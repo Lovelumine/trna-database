@@ -3,7 +3,7 @@
     <div class="help-container">
       <el-row>
         <el-col :span="6">
-          <Sidebar :headings="headings" :files="files" />
+          <Sidebar :headings="headings" :files="files" @navigateToHeading="navigateToHeading" />
         </el-col>
         <el-col :span="18">
           <div v-html="content" class="markdown-body" @click="handleImageClick"></div>
@@ -55,6 +55,7 @@ const extractHeadings = (markdownContent) => {
     return {
       level: match[1].length,
       text: match[2],
+      id: match[2].toLowerCase().replace(/ /g, '-')
     };
   });
 
@@ -68,14 +69,14 @@ const extractHeadings = (markdownContent) => {
 };
 
 const loadMarkdown = async (file) => {
-    try {
-        const response = await axios.get(`/src/views/help/docs/${file}`);
-        const markdownContent = response.data;
-        const processedContent = extractHeadings(markdownContent);
-        content.value = md.render(processedContent);
-    } catch (error) {
-        console.error(`Failed to load markdown file: ${file}`, error);
-    }
+  try {
+    const response = await axios.get(`/src/views/help/docs/${file}`);
+    const markdownContent = response.data;
+    const processedContent = extractHeadings(markdownContent);
+    content.value = md.render(processedContent);
+  } catch (error) {
+    console.error(`Failed to load markdown file: ${file}`, error);
+  }
 };
 
 watch(() => route.query.file, (newFile) => {
@@ -89,6 +90,13 @@ const handleImageClick = (event) => {
     showViewer.value = true;
   }
 };
+
+const navigateToHeading = (id) => {
+  const element = document.getElementById(id);
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth' });
+  }
+};
 </script>
 
 <style scoped>
@@ -97,22 +105,22 @@ const handleImageClick = (event) => {
   justify-content: center;
   padding: 20px;
   box-sizing: border-box;
-  background-color: #f5f5f5; /* 增加背景色 */
+  background-color: #f5f5f5;
 }
 
 .help-container {
   display: flex;
-  max-width: 1200px; /* 增加最大宽度 */
+  max-width: 1200px;
   width: 100%;
   padding: 20px;
   box-sizing: border-box;
-  background-color: #ffffff; /* 增加背景色 */
+  background-color: #ffffff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
 }
 
 .el-row {
-  width: 100%; /* 确保 el-row 使用 100% 的宽度 */
+  width: 100%;
 }
 
 .markdown-body {
@@ -120,13 +128,13 @@ const handleImageClick = (event) => {
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  overflow-wrap: break-word; /* 防止内容超出 */
+  overflow-wrap: break-word;
   box-sizing: border-box;
 }
 
 .markdown-body img {
-  max-width: 100%; /* 确保图片不会溢出 */
+  max-width: 100%;
   height: auto;
-  cursor: pointer; /* 光标变成指针，表明图片可点击 */
+  cursor: pointer;
 }
 </style>

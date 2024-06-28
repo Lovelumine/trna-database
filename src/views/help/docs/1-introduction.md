@@ -2,7 +2,7 @@
 
 This section provides a brief introduction to ENSURE so that users are aware of the information provided by ENSURE, how to refer to it and how to contact us\.
 
-#### 1\.1 About ENSURE
+#### 1.1 About ENSURE
 
 ENSURE is an encyclopedia of suppressed tRNA therapeutics equipped with an artificial intelligence assistant\. It contains genetic variants in genetic diseases and cancers from the HGV database, including those caused by missense, nonsense, and shifted\-code mutations\. ENSURE integrates relevant disease therapeutic tRNAs \(sup\-tRNAs\) mentioned in the literature, naturally\-occurring functional sup\-tRNAs, and provides detailed information on the species of origin, sequence, and structure of sup\-tRNAs\. This platform can help researchers to rapidly identify the biological mechanisms and applications of sup\-tRNAs, while providing abundant data resources and analysis tools to support the design of engineered tRNAs\.
 
