@@ -22,7 +22,7 @@
           :key="heading.id"
           :index="heading.id"
           @click="handleHeadingClick(heading.id)"
-          :class="{ 'is-active': heading.id === activeHeading }"
+          :class="{ 'is-activated': heading.id === activeHeading }"
         >
           {{ heading.text }}
         </el-menu-item>
@@ -83,10 +83,9 @@ const handleFileClick = (file) => {
 const handleHeadingClick = (id) => {
   console.log('Heading clicked:', id);
   emits('navigateToHeading', id);
-  setTimeout(() => {
-    activeHeading.value = ''; // 清除 activeHeading 的值
-  }, 100); // 设置延迟，确保滚动结束后再清除
+
 };
+
 </script>
 
 <style>
@@ -109,10 +108,10 @@ const handleHeadingClick = (id) => {
   padding-left: 20px !important; /* 增加内边距 */
 }
 
-.custom-menu .el-menu-item.is-active,
-.custom-menu .el-sub-menu__title.is-active,
-.custom-menu .el-menu-item.is-active:hover,
-.custom-menu .el-sub-menu__title.is-active:hover {
+.custom-menu .el-menu-item.is-activated,
+.custom-menu .el-sub-menu__title.is-activated,
+.custom-menu .el-menu-item.is-activated:hover,
+.custom-menu .el-sub-menu__title.is-activated:hover {
   background-color: #3498db !important;
   color: #ffffff !important;
 }
