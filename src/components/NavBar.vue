@@ -12,6 +12,7 @@
         <li><router-link to="/naturalsuptRNA" active-class="active-link">Natural Sup-tRNA</router-link></li>
         <li><router-link to="/tRNAtherapeutics" active-class="active-link" >tRNA Therapeutics</router-link></li>
         <li><router-link to="/tRNAElements" active-class="active-link" >tRNA elements</router-link></li>
+        <li><router-link to="/help" active-class="active-link">Help</router-link></li>
         <li><router-link to="/about" active-class="active-link">About</router-link></li>
       </ul>
     </nav>
