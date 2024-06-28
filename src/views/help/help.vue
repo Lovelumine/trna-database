@@ -1,6 +1,10 @@
 <template>
   <div class="site--main">
     <div class="help-container">
+      <div class="help-title">
+        <h1>Help & Documentation</h1>
+        <p>Your guide to navigating and understanding our resources</p>
+      </div>
       <el-row>
         <el-col :span="6">
           <div class="sidebar-container">
@@ -122,7 +126,7 @@ const onScroll = throttle(() => {
       break;
     }
   }
-}); // 限制滚动事件的调用频率
+}, 100); // 限制滚动事件的调用频率
 
 watch(activeHeading, (newHeading) => {
   console.log('Active heading changed:', newHeading);
@@ -181,6 +185,8 @@ const navigateToHeading = (id) => {
 
 .help-container {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   max-width: 1200px;
   width: 100%;
   padding: 20px;
@@ -188,6 +194,23 @@ const navigateToHeading = (id) => {
   background-color: #ffffff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
+}
+
+.help-title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.help-title h1 {
+  font-size: 2em;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.help-title p {
+  font-size: 1em;
+  color: #7f8c8d;
+  margin: 0;
 }
 
 .el-row {
