@@ -51,6 +51,7 @@
     "@vue/babel-plugin-jsx": "^1.2.2",
     "@vue/babel-preset-jsx": "^1.4.0",
     "@vue/runtime-dom": "^3.4.27",
+    "sass": "^1.77.6",
     "unplugin-vue-markdown": "^0.26.2",
     "vite": "^5.2.12",
     "vite-plugin-style-import": "^2.0.0",
