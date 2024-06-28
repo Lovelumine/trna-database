@@ -79,7 +79,7 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed, nextTick } from 'vue';
+import { defineComponent, ref, onMounted, computed, nextTick,watch } from 'vue';
 import { ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
@@ -151,18 +151,18 @@ export default defineComponent({
       expandedRowKeys.value = expandedKeys.length > 0 ? [expandedKeys[expandedKeys.length - 1]] : [];
     };
 
-    onMounted(async () => {
-      console.log('On mounted hook triggered');
-      try {
-        await loadData();
-        console.log('Data loaded');
-        // await Promise.all([loadAlignments(filteredDataSource.value), loadSecondaryStructures(filteredDataSource.value)]);
-        console.log('Alignments and Secondary structures loaded');
-      } catch (error) {
-        console.error('Failed to load data:', error);
-      } finally {
-        loading.value = false;
-      }
+    onMounted(async() => {
+      await loadData();
+      triggerColumnChange();
+    });
+
+    const triggerColumnChange = () => {
+      // 模拟点击列选择控件以触发数据刷新
+      selectedColumns.value = [...selectedColumns.value];
+    };
+
+    watch([tableSize, searchColumn, searchText, selectedColumns], async () => {
+      await loadData();
     });
 
     return {
@@ -181,7 +181,8 @@ export default defineComponent({
       loading, // 添加到返回对象中
       TranStructure,
       expandedRowKeys,
-      onExpandedRowsChange
+      onExpandedRowsChange,
+      triggerColumnChange
     };
   }
 });
