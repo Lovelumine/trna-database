@@ -39,6 +39,18 @@ const md = markdownIt({
   html: true,
   linkify: true,
   typographer: true,
+}).use(md => {
+  const defaultRender = md.renderer.rules.heading_open || function(tokens, idx, options, env, self) {
+    return self.renderToken(tokens, idx, options);
+  };
+
+  md.renderer.rules.heading_open = function(tokens, idx, options, env, self) {
+    const token = tokens[idx];
+    const headingId = tokens[idx + 1].content.toLowerCase().replace(/ /g, '-');
+    token.attrs = token.attrs || [];
+    token.attrs.push(['id', headingId]);
+    return defaultRender(tokens, idx, options, env, self);
+  };
 });
 
 const files = [
@@ -71,10 +83,12 @@ const extractHeadings = (markdownContent) => {
 
 const loadMarkdown = async (file) => {
   try {
+    console.log('Loading markdown file:', file);
     const response = await axios.get(`/src/views/help/docs/${file}`);
     const markdownContent = response.data;
     const processedContent = extractHeadings(markdownContent);
     content.value = md.render(processedContent);
+    console.log('Markdown content loaded and processed:', content.value);
   } catch (error) {
     console.error(`Failed to load markdown file: ${file}`, error);
   }
@@ -82,25 +96,32 @@ const loadMarkdown = async (file) => {
 
 watch(() => route.query.file, (newFile) => {
   const file = newFile || '1-introduction.md';
+  console.log('Route query changed, new file:', file);
   activeFile.value = file;
   loadMarkdown(file);
 }, { immediate: true });
 
 const handleFileSelected = (file) => {
+  console.log('File selected:', file);
   activeFile.value = file;
 };
 
 const handleImageClick = (event) => {
   if (event.target.tagName === 'IMG' && event.target.classList.contains('clickable-image')) {
+    console.log('Image clicked:', event.target.src);
     currentIndex.value = images.value.indexOf(event.target.src);
     showViewer.value = true;
   }
 };
 
 const navigateToHeading = (id) => {
+  console.log('Navigating to heading:', id);
   const element = document.getElementById(id);
   if (element) {
+    console.log('Element found, scrolling into view:', element);
     element.scrollIntoView({ behavior: 'smooth' });
+  } else {
+    console.warn('Element not found:', id);
   }
 };
 </script>
