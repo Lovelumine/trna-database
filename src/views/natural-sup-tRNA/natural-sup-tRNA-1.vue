@@ -155,7 +155,7 @@ export default defineComponent({
     VueEasyLightbox,
   },
   setup() {
-    const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('/data/natural-sup-tRNA.csv', (data) => {
+    const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('/data/Nonsense Sup-RNA.csv', (data) => {
       return processCSVData(data, ['Stop codon for readthrough', 'Noncanonical charged amino acids','Readthrough mechanism']);
     });
 
