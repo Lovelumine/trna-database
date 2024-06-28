@@ -74,6 +74,9 @@ importers:
       vue-router:
         specifier: ^4.3.2
         version: 4.3.2(vue@3.4.27(typescript@5.4.5))
+      vue-sidebar-menu:
+        specifier: ^5.4.0
+        version: 5.4.0
       vue3-beautiful-chat:
         specifier: ^3.3.1
         version: 3.3.1(vue@3.4.27(typescript@5.4.5))
@@ -2830,6 +2833,9 @@ packages:
     resolution: {integrity: sha512-hKQJ1vDAZ5LVkKEnHhmm1f9pMiWIBNGF5AwU67PdH7TyXCj/a4hTccuUuYCAMgJK6rO/NVYtQIEN3yL8CECa7Q==}
     peerDependencies:
       vue: ^3.2.0
+
+  vue-sidebar-menu@5.4.0:
+    resolution: {integrity: sha512-0lgUlYgqTQg9KQkv7VraWHl40ExJa8NCzyAp6lXtut/V4A+Yn41h4MzXN/Tt7f9cTtdVBbs9srVOvhqkKkgD0g==}
 
   vue3-beautiful-chat@3.3.1:
     resolution: {integrity: sha512-QYQQ3bizpD5mwKbHpg++EjJCu898wCL6unSeJm98YHLLzqC3PpB0QdHYkIJLuoZdiLcyP1RSB3vPM9K5CvZWxQ==}
@@ -5911,6 +5917,8 @@ snapshots:
     dependencies:
       '@vue/devtools-api': 6.6.3
       vue: 3.4.27(typescript@5.4.5)
+
+  vue-sidebar-menu@5.4.0: {}
 
   vue3-beautiful-chat@3.3.1(vue@3.4.27(typescript@5.4.5)):
     dependencies:

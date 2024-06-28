@@ -31,6 +31,9 @@ import '@shene/table/dist/index.css';
 import 'vxe-table/lib/style.css';
 import VXETable from 'vxe-table';
 
+import VueSidebarMenu from 'vue-sidebar-menu';
+import 'vue-sidebar-menu/dist/vue-sidebar-menu.css';
+
 // 路由配置，使用懒加载
 const routes: RouteRecordRaw[] = [
   { path: '/', component: Home },
@@ -64,6 +67,7 @@ app.use(STable);
 app.use(VXETable);
 app.use(router);
 app.use(ElementPlus);
+app.use(VueSidebarMenu);
 app.mount('#app');
 
 // 预加载其他路由组件
