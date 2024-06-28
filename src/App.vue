@@ -7,10 +7,12 @@
         <p>LOADING</p>
       </div>
     </div>
-    <nav-bar v-if="!loading" />
-    <router-view v-if="!loading" />
-    <footer-comp v-if="!loading" />
-    <bot-component v-if="!loading" />
+    <div v-else>
+      <nav-bar />
+      <router-view />
+      <footer-comp />
+      <bot-component />
+    </div>
   </div>
 </template>
 
@@ -102,6 +104,4 @@ export default defineComponent({
     transform: translateX(0) scale(1);
   }
 }
-
-/* 其他全局样式 */
 </style>

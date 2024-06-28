@@ -31,6 +31,7 @@
     "vue": "^3.4.27",
     "vue-easy-lightbox": "^1.19.0",
     "vue-router": "^4.3.2",
+    "vue-sidebar-menu": "^5.4.0",
     "vue3-beautiful-chat": "^3.3.1",
     "vxe-table": "^4.6.17",
     "vxe-table-plugin-element-plus": "^1.0.2",
