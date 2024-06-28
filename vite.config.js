@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
+import styleImport from 'vite-plugin-style-import'
 import path from "path"
 import terser from "@rollup/plugin-terser"; // 引入 terser 插件
 
@@ -10,6 +11,18 @@ const allowedOrigin = 'https://trna.lumoxuan.cn/';
 export default defineConfig({
   plugins: [
     vue(),
+    styleImport({
+      libs: [
+        {
+          libraryName: 'element-plus',
+          esModule: true,
+          ensureStyleFile: true,
+          resolveStyle: (name) => {
+            return `element-plus/theme-chalk/${name}.css`
+          },
+        },
+      ],
+    }),
     vueJsx({}),
     terser({ // 配置 terser 插件
       format: {
