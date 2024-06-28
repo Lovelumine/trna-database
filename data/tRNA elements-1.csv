@@ -21,8 +21,21 @@ Am and Um m5C,/ʍ ，J， ?,N/A,N/A,"NaOCl stimulation, Am and Um and m5C and Na
 Cm,B,N/A,N/A,upregulate tRNA fragments synthesis,,HEK292T,,37792516
 Cm,B,N/A,N/A,Modification levels rise as cells grow over 24 hours,yeast,,,28488916
 Cm,B,32,tRNAPhe(GAA),prevent the digestion of RNase at this site and reduce tRFs production,fruit fly,,,31943105
+Cm,B,34,tRNALeu(CmAA),Improved codon swing base interaction efficiency and support for a functional role of sup-tRNAs in decoding UAG amber stop codons,E.Coli,,,20855540
+Cm/Um,B/J,34,N/A," is essential for RPO and Hfq expression",E.coli,,,28471404
+cm5s2U,℘,wobble,RNAucu(Arg) and tRNACCU(Glu),enhance binding of the anticodon with specific codons in mixed codon boxes,S. cerevisiae,,,350282
+cm5U,◊,wobble,RNAucu(Arg) and tRNACCU(Glu),enhance binding of the anticodon with specific codons in mixed codon boxes,S. cerevisiae,,,350282
+cmo5U,V,34,N/A,augment the wobbliness in decoding,E.coli,,,23695253
+cmo5U,V,34," tRNAPro, tRNAAla. tRNAVal and tRNAThr","crucial for expanding the ability of wobble U to read G, A, U, and sometimes C",S. enterica,,,17942742
+cnm5s2U,N/A,34,N/A,"reveal the  M. jannaschii, like H. volcanii, follows codon-decoding strategies similar to those used by bacteria, although position 37 appears to be modified to a greater extent than seen in H. volcanii.",M. jannaschii ,,,30745370
+cnm5U,Ѷ,34," tRNAIle","exist in euryarchaea but not in solfataricus, Saccharomyces cerevisiae and E.coli, affecting their ability to recognize specific codons (e.g. AUA, AUU and AUG).",haloarcheae and M. maripaludis,,,24344322
+ct6A,e,37,N/A,modification losses would reduce ribosome A-site binding and enhance ribosome pausing at critical codens and ribosomal frameshifting,yeast,,,27496282
 D,D,36,tRNATyr(CUD),help with reading through UGA,,,,35532803
 D,D,47," tRNAVal(AAC)",plays a crucial role in tRNA stability and cell survival,S. cerevisiae,,,16387656
+f5C,>,"wobble "," mt-tRNAMet","Facilitates accurate codon decoding,  essential for efficient mitochondrial translation and respiratory activity",,"HEK294T, HeLa, cat hepatocytes and muscle cells of flounder",,29390138
+f5C,>,34,N/A,plays an essential role in translation of the dialectal AUA codon as Met,,"human mitochondrial ",,19151083
+G+,(,15,N/A,"stabilizes the structure of tRNAs, and the loss of G+ leads to a severe lack of thermophilicity",,Coccidioides immitis,,32041795
+"G+, m1A/m1I, ac4C, and m2G/m2,2G","( ,	/Ѣ/O,  	M, 	L/R",N/A,N/A,help with the heperthermotolerance,,hyperthermophilic archaeon,,30605516
 ges2U,Γ,N/A,N/A,"ges2U-G pair is 10℃ higher than the native ges2U-A duplex, affecting the coding specificity",E.coli,Hela,,27307604
 Gm,#,18,N/A,"antagonize tRNA-induced TLR7/8 activation, suggesting a potential role of Gm18 as an immune escape mechanism.",E.coli,,,31019095
 Gm,#,18,"tRNAIle(k 2 CAU), tRNAMet(ac 4 CAU) and tRNAGln(UUG)","modificatio increases to response to mild bacteriostatic antibiotics stress ",E.Coli,,,33275131
@@ -254,82 +267,3 @@ yW,Y,37,N/A, it stabilizes codon-anticodon interactions,eukaryotic,,,16642040
 "ψ ","ψ ",N/A,tRNATyr,Significant role for early termination codon recognition as well as suppression,yeast,,,29507244
 "ψ ","ψ ",39," tRNAPhe",will dramatically increase the binding affinity of the tRNA(Phe)AC to the 31S E. coli ribosomal subunit when compared to unmodified tRNA(Phe)AC,E.coli,,,9478206
 "ψ ","ψ ",39,tRNALys,significantly change the structure of anticoden loop,,,,9478205
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-Attached Table1,,,,,,,,
-aaRS(aminoacyl-tRNA synthetase) recognize characteristics,,,,,,,,
-aaRS,,,,,,,,
-,ldentity element location,,,,,,,
-AARS,Acceptor stem,Anticodon arm,other location,Other domains (d-arm/T-arm/variable arm),reference(PMID),,,
-Alanine,"A73.G2:C71,G3:U70,G4:C69",,,G20,"3285220, 2459773, 1284550",,,
-Arginine,AG73,"C35, U/G36",,A20,"2193162, 2688091, 2251270, 2049085",,,
-Asparagine,G73,G34.,,,"1375736, 8232541",,,
-Aspartic acid,"G73,G2:C71","G34.U35, C36,",C38,G10,"2694679,  1472058",,,
-Cysteine,U73.G2:C71.C3:G70,"G34.C35, A36",,G15: G48.A13:A22,"1373131, 1375736, 3285220, 2452483, 8338841, 9222494",,,
-Glutamine,"G73,U1:A72,G2:C71,G3:C70","C/T34.U35, G36",A37.U38,G10,"Rogers and S'll, 1988; Jahn et al., 1991; Hayase et al., 1992; lbbaet al.. 1996",,,
-Glutamic acid,G1:C72.U2:A71,"U34, U35,",A37,"U11:A24, U13:G22-A46.47","Nomanly et al., 1990; Syivers et al., 1993; Gregory and Dahlberg.1995: Sekine et al.. 1996",,,
-Glycine,"U73.G1:C72,C2:G71,G3:C70","C35, C36",,,"Shimizu et al., 1992; Francklyn et al., 1992; McClain et al., 1991",,,
-Histidine,"C73,G1",Anticodon,,,"Shimizu et al., 1992; Francklyn et al., 1992; Himeno et al.. 1989;Francktyn and Schimmel, 1990; Yan and Franckhyn, 1994; Yan et al.1996",,,
-lsoleucine,"A73,C4:G69","G34,A35, U36",A37.A38,"U12:A23,C29:G41","Pallanck and Schulman, 1991: Muramatsu et al., 1988: Nureki et al.1993: Nureki et al.. 1994",,,
-Leucine,A73,,,U8:A14,"Noranly et al., 1992; Asahara et al.. 1993",,,
-Lysine,A73,"U34.U35, U36",,,"Nomanly et al., 1990: McClain et al., 1990: Tamura et al.. 1992",,,
-Methionine,"A73,",C34,"C32,",,"Uemura et al., 1982; $chulman and Pelka, 1988; Meinnel et al., 1993;",,,
-fmet,"U4:A69,A5:U68G2:C71,C3:G70","A35, U36","U33, A37",,"Uemura et al., 1982; $chulman and Pelka, 1988; Meinnel et al., 1993;Lee et al., 1992",,,
-Phemyialanine,A73,"G34,A35,A36 ",G27:043.G28:C42,"U20, G44, U45, U59, U60","Pallanck and Schulman, 1991; McClain and Foss, 1988c; Petersonet al..1993: Peterson and Uhlenbeck, 1992",,,
-Proline,"A73, G72","G35, G36",,G15:C48,"Shimizu et al., 1992; McClain et al., 1994; Liu et al.. 1995",,,
-Serine,"G73,C72,G2:C71,A3:U70.C11:G24,G/A4:T/C69",,,C11:G24 (variable arm),"Nomanly et al., 1992; Himeno et al., 1990; Rogers and S'll, 1988:Nomanlyet al., 1986; Sampson and Saks, 1993: Asahara et al.. 1994Saks and Sampson, 1996",,,
-Threonine,"G1:C72,C2:G71","G34.G35, U36",,,"Schulman and Pelka, 1990; Hasegawa et al., 1992",,,
-Tryptophan,"G73,A1:U72.G2:C71,G3:C70","C34.C35,A36",,,"Himeno et al.,1991; Pak et al., 1992: Rogers et al.. 1992",,,
-Tyrosine,A73,U35,,,"Hou and Schimmel, 1989: Bedouelle,1990; Himeno et al.. 1990;Sherman et al..1992",,,
-Valine,"A73.G3:C70,U4:A69","A35, C36",,,"Chu and Horowitz, 1991;Tamura et al., 1991; Pallanck and Schulman,1991)",,,
-Leucine,C2:G71,,,,8114091,,,
-lsoleucine,,"U34,A35,U36",,,35122395,,,
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-Attached Table2,,,,,,,,
-,,,,,,,,
-tRNA Characteristic,tRNA Type,Function,Cell,Reference(PMID),,,,
-G19-C56,,remarkable part of the tertiary structure and important for interaction with other RNAs and proteins,,26771646,,,,
- lacking both D- and T-arm," tRNAAsp",tRNAAsp can be aminoacylated,yeast,10508395,,,,
-s2Um or m22Gm,,only found in archaea,archaea,,,,,
-anti-coden(C-A-U),tRNAIle," generally the anti-codon of tRNAMet, but highly conserved in cp tRNAs of Gossypium L",Gossypium L.,34071968,,,,
-" A(+)-C ",,reduces the size of the normal 7 nucleotide anticodon loop to 5 nucleotides and induces a change in the loop backbone conformation,,9478205,,,,
- long variable arm composed of over ten nucleotides,,"stem-length-specifically, but not sequence-specifically, important for recognition",E.coli,8114091,,,,
-introns,,"All the intronless strains were viable, but the tRNAPheGAA and tRNATyrGUA intronless strains displayed slow growth and help with psi34 synthesis",Saccharomyces cerevisiae,30997502,,,,
-m1I37 and m1I57,tRNAAla,m1I is found exclusively at position 37 (3' adjacent to the anticodon) of eukaryotic tRNA(Ala) and at position 57 (in the middle of the psi loop) of several tRNAs from halophilic and thermophilic archaebacteria.,eukaryotic,8915538,,,,
-"a conserved U1 nucleotide ", tRNAAsn and tRNAGln,while others contain G 1st,cyanobacterial ,29321793,,,,
-"C28:U42 "," tRNACys (GCA)",mismatch in the anticodon stem,potato mt,11732609,,,,
-D in D loop,,destabilizes the C3'-endo ribose conformation and increases the flexibility of the tRNA tertiary structure,E.coli,23908023,,,,
-"U33 and nm5s2U34-U35 ",tRNAGln,as a key recognition site for the further methylase MnmM,Bacillus subtilis,36762482,,,,
-demethylation in 57,tRNAGlu(CTC),Driving the creation of relevant 5'tRFs,airway epithelial cells,36680097,,,,
-"C31:G39 "," tRNAArg(CCG)","Correct folding of tRNA precursors, and nodes of mature tRNA production",Saccharomyces cerevisiae,16581807,,,,
-"G37 to A ",tRNASep,Enhanced suppression of UGA,E.Coli,26350500,,,,
-"GUUCAm1AAUC at position 53–61 of tRNA along with a stable acceptor stem "," tRNALys3",Information on the key recognition site for the formation of ψ54 as a pus10 enzyme in human cells,SF9 cells,30530625,,,,
-3'-end of tRNA,pre-tRNAIle(UAU) and pre-tRNATyr,"Under stress conditions, different ends are produced, such as single C, CC or intact CCA",Saccharomyces cerevisiae,26729922,,,,
-base32-base38,,"should not be used as a complementary base, otherwise it will result in a less than optimal conformation of the hairpin codon paired with the codon and may be rejected by the ribosomal decoding site",E.Coli,27448410,,,,
-"U13 in ",tRNAGln,acts as a specific substrate for PUS7 and structurally conforms to the modification domain of PUS7,293,34718722,,,,
-G35 -U 36-t 6 A37 in,tRNAThr,As a specific recognition sequence for the m3C32 modifying enzyme Trm140,yeast Saccharomyces cerevisiae,28003514,,,,
-"V-loop, as well as by t6 A 37 and i 6 A37",tRNASer,As a specific recognition sequence for the m3C32 modifying enzyme Trm141,yeast Saccharomyces cerevisiae,28003514,,,,
-G35,tRNAThr,As a specific recognition feature of the m3C32-modifying enzyme METTL8-Iso2,,38744809,,,,
-"G36G37 ","tRNA Leu(GAG), Leu(CAG), Leu(UAG), Pro(GGG), Pro(UGG), Pro(CGG), and His(GUG)",Specific recognition features of PaTrmD as a m1G37-modifying enzyme,Pseudomonas aeruginosa,31399541,,,,
-"G31:C39 to A31:C39 ",tRNAGln(CUG),UAG can be encoded after mutation,Saccharomyces cerevisiae,28134782,,,,
-"CCA terminus, the target site C72, the discriminator base U73, and the second and third base pairs (2:71 and 3:70) of the acceptor stem",tRNAThr and tRNACys,As a key recognition element for C72 catalyzed by nsun6 methyltransferase,human cell,27703015,,,,
-introns in pre-tRNAIle(UAU),,"Introduction of key elements of the ψ modification at the 34,36 locus",Eukaryotic,36292915,,,,
-D-arms,,is essential for the introduction of TrmH into Gm18 to deeply modify the catalytic center of the enzyme,in vitro,15062082,,,,
-tRNA without modification,,TruB preferred molecules for ψ55 modification,E.coli,32385137,,,,
-C32 and two base pairs in the D-stem in tRNAMet,,Introduction of KEOPS as a t6A-modifying enzyme as a key component of t6A recognition,293T,35104889,,,,
-"U8, A14, G15, G18, G19, U55, Purine57, and A58 U8, A14, G18, and U55 ",tRNALeu,Introduction of TrmK as a key site for m1A22 recognition by the m1A22 modifying enzyme TrmK,Geobacillus stearothermophilus,36462666,,,,
-"G30, R178 with G30 and U31, K12 with C32 and",,as a key site which MOMO enzyme binds,in silico,37587716,,,,
-"U33, N16 with U33 and cmo5 U34, K22 with cmo5 U34,",,,,,,,,
-"H158 and R246 with G35, and K176 with A36 and i6 A37",,,,,,,,
-"A36-A37-A38 or  i 6 A37 ","tRNALeu(CAA,UAA)",tRNA recognize site that Trml incorporate Um/Cm34,E.coli,26106808,,,,
-"C/A>U>G) 32-N 33-(U/G>A) 34-N 35-U 36 A 37 A 38 in ",hmttRNAThr,As a recognition element for t6A modification introduction into the enzyme OSGEPL1 introduction modification,mitochondrial,32047918,,,,
