@@ -6,10 +6,16 @@
             <Sidebar :headings="headings" :files="files" />
           </el-col>
           <el-col :span="18">
-            <div v-html="content" class="markdown-body"></div>
+            <div v-html="content" class="markdown-body" @click="handleImageClick"></div>
           </el-col>
         </el-row>
       </div>
+      <vue-easy-lightbox
+        :visible="showViewer"
+        :imgs="images"
+        :index="currentIndex"
+        @hide="showViewer = false"
+      />
     </div>
   </template>
   
@@ -19,9 +25,13 @@
   import axios from 'axios';
   import markdownIt from 'markdown-it';
   import Sidebar from './sidebar.vue';
+  import VueEasyLightbox from 'vue-easy-lightbox';
   
   const content = ref('');
   const headings = ref([]);
+  const images = ref([]);
+  const currentIndex = ref(0);
+  const showViewer = ref(false);
   const route = useRoute();
   
   const md = markdownIt({
@@ -49,9 +59,11 @@
       };
     });
   
-    // 处理图片标签
+    // 提取并处理图片标签
+    images.value = [];
     const processedContent = markdownContent.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-      return `<img src="${src}" alt="${alt}" style="max-width: 100%; height: auto;" />`;
+      images.value.push(src);
+      return `<img src="${src}" alt="${alt}" style="max-width: 100%; height: auto;" class="clickable-image" />`;
     });
   
     return processedContent;
@@ -61,7 +73,6 @@
       try {
           const response = await axios.get(`/src/views/help/docs/${file}`);
           const markdownContent = response.data;
-          extractHeadings(markdownContent);
           const processedContent = extractHeadings(markdownContent);
           content.value = md.render(processedContent);
       } catch (error) {
@@ -74,6 +85,13 @@
     const file = newFile || '1-introduction.md';
     loadMarkdown(file);
   }, { immediate: true });
+  
+  const handleImageClick = (event) => {
+    if (event.target.tagName === 'IMG' && event.target.classList.contains('clickable-image')) {
+      currentIndex.value = images.value.indexOf(event.target.src);
+      showViewer.value = true;
+    }
+  };
   </script>
   
   <style scoped>
@@ -103,6 +121,12 @@
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
     overflow-wrap: break-word; /* 防止内容超出 */
     box-sizing: border-box;
+  }
+  
+  .markdown-body img {
+    max-width: 100%; /* 确保图片不会溢出 */
+    height: auto;
+    cursor: pointer; /* 光标变成指针，表明图片可点击 */
   }
   </style>
   
