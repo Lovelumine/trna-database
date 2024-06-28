@@ -1,5 +1,5 @@
 <template>
-  <el-menu :default-active="activeFile + '-sub'" class="custom-menu">
+  <el-menu :default-active="activeFile + '-sub'" class="custom-menu" :default-openeds="defaultOpeneds">
     <template v-for="file in files" :key="file.file">
       <el-menu-item 
         v-if="file.file !== activeFile" 
@@ -51,6 +51,17 @@ const emits = defineEmits(['navigateToHeading', 'fileSelected']);
 const router = useRouter();
 const route = useRoute();
 
+const defaultOpeneds = ref([]);
+
+// 在这里初始化 defaultOpeneds，确保菜单默认展开
+watch(
+  () => props.files,
+  (newFiles) => {
+    defaultOpeneds.value = newFiles.map(file => file.file + '-sub');
+  },
+  { immediate: true }
+);
+
 const handleFileClick = (file) => {
   emits('fileSelected', file);
   router.push({ path: '/help', query: { file } });
@@ -61,7 +72,7 @@ const navigateToHeading = (id) => {
 };
 </script>
 
-<style scoped>
+<style>
 .custom-menu {
   width: 100%;
   background-color: #f5f5f5;
@@ -69,15 +80,16 @@ const navigateToHeading = (id) => {
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
-.custom-menu .el-menu-item {
+.custom-menu .el-menu-item,
+.custom-menu .el-sub-menu__title {
   font-size: 14px;
   color: #2c3e50;
-  white-space: normal; /* 确保文本自动换行 */
-  word-break: break-word; /* 防止长单词溢出 */
-}
-.custom-menu .el-sub-menu__title {
-  white-space: normal; /* 确保文本自动换行 */
-  word-break: break-word; /* 防止长单词溢出 */
+  white-space: normal !important; /* 确保文本自动换行 */
+  word-break: break-word !important; /* 防止长单词溢出 */
+  overflow-wrap: break-word !important; /* 处理长单词或URL */
+
+  line-height: 1.5 !important; /* 确保行高正常 */
+  padding-left: 20px !important; /* 增加内边距 */
 }
 .custom-menu .el-menu-item.is-active,
 .custom-menu .el-sub-menu__title.is-active {
@@ -88,6 +100,17 @@ const navigateToHeading = (id) => {
 .custom-menu .el-sub-menu__title:hover {
   background-color: #d3d3d3;
   color: #2c3e50;
+}
+.custom-menu .el-menu-item {
+  padding: 10px 20px !important; /* 设置一级标题的内边距 */
+  text-align: left !important; /* 一级标题左对齐 */
+}
+
+.el-sub-menu .el-menu-item {
+  height: auto !important; /* 自动调整高度 */
+  line-height: 1.5 !important; /* 设置行高 */
+  padding: 10px 20px !important; /* 设置内边距 */
+  text-align: left !important; /* 二级标题左对齐 */
 }
 
 ::v-deep .el-sub-menu__title {
