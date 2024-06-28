@@ -19,11 +19,10 @@ export const allColumns: STableColumnsType<DataType> = [
     },
     resizable: true },
   { title: 'Pathogenic Gene', dataIndex: 'Pathogenic_gene', width: 150, ellipsis: true, key: 'Pathogenic_gene', resizable: true },
-  { title: 'PTC Model', dataIndex: 'PTC_model', width: 100, ellipsis: true, key: 'PTC_model', resizable: true },
-  { title: 'Species Source of PTC Model', dataIndex: 'Species_source_of_PTC_model', width: 220, ellipsis: true, key: 'Species_source_of_PTC_model', resizable: true },
+  { title: 'Species_source_of_PTC_plasmid', dataIndex: 'Species_source_of_PTC_plasmid', width: 100, ellipsis: true, key: 'Species_source_of_PTC_plasmid', resizable: true },
+  { title: 'NCBI_ref_ID', dataIndex: 'NCBI_ref_ID', width: 220, ellipsis: true, key: 'NCBI_ref_ID', resizable: true },
   { title: 'NCBI ref ID', dataIndex: 'NCBI_ref_ID', width: 220, ellipsis: true, key: 'NCBI_ref_ID', resizable: true },
-  { title: 'Sequence of PTC Model', dataIndex: 'Sequence_of_PTC_model', width: 340, ellipsis: true, key: 'Sequence_of_PTC_model', resizable: true },
-  { title: 'PTC Site', dataIndex: 'PTC_site', width: 150, ellipsis: true, key: 'PTC_site', resizable: true },
+  { title: 'PTC_model(nonsense_mutation_site)', dataIndex: 'PTC_model(nonsense_mutation_site)', width: 340, ellipsis: true, key: 'PTC_model(nonsense_mutation_site)', resizable: true },
   { title: 'Origin AA and Codon of PTC Site', dataIndex: 'Origin_aa_and_codon_of_PTC_site', width: 200, ellipsis: true, key: 'Origin_aa_and_codon_of_PTC_site', resizable: true },
   { title: 'PTC Codon', dataIndex: 'PTC_codon', width: 100, ellipsis: true, key: 'PTC_codon', resizable: true },
   { title: 'Delivery as Vector or IVT tRNA', dataIndex: 'Delivery_as_vector_or_IVT_tRNA', width: 200, ellipsis: true, key: 'Delivery_as_vector_or_IVT_tRNA', resizable: true },
@@ -55,6 +54,5 @@ export const allColumns: STableColumnsType<DataType> = [
   { title: 'Promoter for Vector Delivery', dataIndex: 'Promoter_for_vector_delivery', width: 150, ellipsis: true, key: 'Promoter_for_vector_delivery', resizable: true },
   { title: 'Safety', dataIndex: 'Safety', width: 100, ellipsis: true, key: 'Safety', resizable: true },
   { title: 'Immunogenicity', dataIndex: 'Immunogenicity', width: 150, ellipsis: true, key: 'Immunogenicity', resizable: true },
-  { title: 'Citation', dataIndex: 'Citation', width: 300, ellipsis: true, key: 'Citation', resizable: true },
-  { title: 'Notes', dataIndex: 'notes', width: 300, ellipsis: true, key: 'notes', resizable: true }
+  { title: 'PMID', dataIndex: 'PMID', width: 300, ellipsis: true, key: 'PMID', resizable: true },
 ];

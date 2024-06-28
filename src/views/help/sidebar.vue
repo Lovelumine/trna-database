@@ -1,10 +1,16 @@
 <template>
-  <el-menu :default-active="activeFile + '-sub'" class="custom-menu" :default-openeds="defaultOpeneds">
+  <el-menu
+    :default-active="activeFile + '-sub'"
+    class="custom-menu"
+    :default-openeds="defaultOpeneds"
+    collapse-transition
+  >
     <template v-for="file in files" :key="file.file">
-      <el-menu-item 
-        v-if="file.file !== activeFile" 
-        :index="file.file" 
-        @click="handleFileClick(file.file)">
+      <el-menu-item
+        v-if="file.file !== activeFile"
+        :index="file.file"
+        @click="handleFileClick(file.file)"
+      >
         {{ file.name }}
       </el-menu-item>
       <el-sub-menu v-else :index="file.file + '-sub'">
@@ -43,12 +49,12 @@ const props = defineProps({
   },
   activeFile: {
     type: String,
-    default: ''
+    default: '',
   },
   activeHeading: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 });
 
 const emits = defineEmits(['navigateToHeading', 'fileSelected']);
@@ -62,7 +68,7 @@ const defaultOpeneds = ref([]);
 watch(
   () => props.files,
   (newFiles) => {
-    defaultOpeneds.value = newFiles.map(file => file.file + '-sub');
+    defaultOpeneds.value = newFiles.map((file) => file.file + '-sub');
     console.log('Default openeds initialized:', defaultOpeneds.value);
   },
   { immediate: true }
@@ -78,8 +84,8 @@ const handleHeadingClick = (id) => {
   console.log('Heading clicked:', id);
   emits('navigateToHeading', id);
   setTimeout(() => {
-    activeHeading.value = '';  // 清除 activeHeading 的值
-  }, 100);  // 设置延迟，确保滚动结束后再清除
+    activeHeading.value = ''; // 清除 activeHeading 的值
+  }, 100); // 设置延迟，确保滚动结束后再清除
 };
 </script>
 
@@ -91,6 +97,7 @@ const handleHeadingClick = (id) => {
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
+
 .custom-menu .el-menu-item,
 .custom-menu .el-sub-menu__title {
   font-size: 14px;
@@ -101,6 +108,7 @@ const handleHeadingClick = (id) => {
   line-height: 1.5 !important; /* 确保行高正常 */
   padding-left: 20px !important; /* 增加内边距 */
 }
+
 .custom-menu .el-menu-item.is-active,
 .custom-menu .el-sub-menu__title.is-active,
 .custom-menu .el-menu-item.is-active:hover,
@@ -108,11 +116,13 @@ const handleHeadingClick = (id) => {
   background-color: #3498db !important;
   color: #ffffff !important;
 }
+
 .custom-menu .el-menu-item:hover,
 .custom-menu .el-sub-menu__title:hover {
   background-color: #d3d3d3;
   color: #2c3e50;
 }
+
 .custom-menu .el-menu-item {
   padding: 10px 20px !important; /* 设置一级标题的内边距 */
   text-align: left !important; /* 一级标题左对齐 */
@@ -128,5 +138,16 @@ const handleHeadingClick = (id) => {
 ::v-deep .el-sub-menu__title {
   background-color: #3498db;
   color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .custom-menu {
+    font-size: 12px; /* 调整字体大小 */
+  }
+
+  .custom-menu .el-menu-item,
+  .custom-menu .el-sub-menu__title {
+    padding: 8px 15px !important; /* 调整内边距 */
+  }
 }
 </style>
