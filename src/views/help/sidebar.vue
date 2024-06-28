@@ -1,10 +1,13 @@
 <template>
-  <el-menu :default-active="activeFile" class="custom-menu">
+  <el-menu :default-active="activeFile + '-sub'" class="custom-menu">
     <template v-for="file in files" :key="file.file">
-      <el-menu-item :index="file.file" @click="navigateToFile(file.file)">
+      <el-menu-item 
+        v-if="file.file !== activeFile" 
+        :index="file.file" 
+        @click="handleFileClick(file.file)">
         {{ file.name }}
       </el-menu-item>
-      <el-sub-menu v-if="file.file === activeFile" :index="file.file + '-sub'">
+      <el-sub-menu v-else :index="file.file + '-sub'">
         <template #title>
           <span>{{ file.name }}</span>
         </template>
@@ -37,23 +40,19 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  activeFile: {
+    type: String,
+    default: ''
+  }
 });
 
-const emits = defineEmits(['navigateToHeading']);
+const emits = defineEmits(['navigateToHeading', 'fileSelected']);
 
-const activeFile = ref('');
 const router = useRouter();
 const route = useRoute();
 
-watch(
-  () => route.query.file,
-  (newFile) => {
-    activeFile.value = newFile || '1-introduction.md';
-  },
-  { immediate: true }
-);
-
-const navigateToFile = (file) => {
+const handleFileClick = (file) => {
+  emits('fileSelected', file);
   router.push({ path: '/help', query: { file } });
 };
 
@@ -71,15 +70,28 @@ const navigateToHeading = (id) => {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 .custom-menu .el-menu-item {
-  font-size: 16px;
+  font-size: 14px;
   color: #2c3e50;
+  white-space: normal; /* 确保文本自动换行 */
+  word-break: break-word; /* 防止长单词溢出 */
 }
-.custom-menu .el-menu-item.is-active {
+.custom-menu .el-sub-menu__title {
+  white-space: normal; /* 确保文本自动换行 */
+  word-break: break-word; /* 防止长单词溢出 */
+}
+.custom-menu .el-menu-item.is-active,
+.custom-menu .el-sub-menu__title.is-active {
   background-color: #3498db;
   color: #ffffff;
 }
-.custom-menu .el-menu-item:hover {
+.custom-menu .el-menu-item:hover,
+.custom-menu .el-sub-menu__title:hover {
   background-color: #d3d3d3;
   color: #2c3e50;
+}
+
+::v-deep .el-sub-menu__title {
+  background-color: #3498db;
+  color: #ffffff;
 }
 </style>

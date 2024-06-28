@@ -3,7 +3,7 @@
     <div class="help-container">
       <el-row>
         <el-col :span="6">
-          <Sidebar :headings="headings" :files="files" @navigateToHeading="navigateToHeading" />
+          <Sidebar :headings="headings" :files="files" :activeFile="activeFile" @navigateToHeading="navigateToHeading" @fileSelected="handleFileSelected" />
         </el-col>
         <el-col :span="18">
           <div v-html="content" class="markdown-body" @click="handleImageClick"></div>
@@ -32,6 +32,7 @@ const headings = ref([]);
 const images = ref([]);
 const currentIndex = ref(0);
 const showViewer = ref(false);
+const activeFile = ref('');
 const route = useRoute();
 
 const md = markdownIt({
@@ -81,8 +82,13 @@ const loadMarkdown = async (file) => {
 
 watch(() => route.query.file, (newFile) => {
   const file = newFile || '1-introduction.md';
+  activeFile.value = file;
   loadMarkdown(file);
 }, { immediate: true });
+
+const handleFileSelected = (file) => {
+  activeFile.value = file;
+};
 
 const handleImageClick = (event) => {
   if (event.target.tagName === 'IMG' && event.target.classList.contains('clickable-image')) {
