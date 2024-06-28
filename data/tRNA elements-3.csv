@@ -1,15 +1,15 @@
 ﻿aaRS,AcceptorStem,AnticodonArm,OtherLocation,OtherDomains,Reference
 Alanine,"A73.G2:C71,G3:U70,G4:C69",,,G20,"3285220, 2459773, 1284550"
-Arg,,,,A21,29358943
-Arg,,,,A15,29358943
+Arginine,,,,A21,29358943
+Arginine,,,,A15,29358943
 Arginine,AG73,"C35, U/G36",,A20,"2193162, 2688091, 2251270, 2049085"
 Arginine,,"N34,C35,G36",,,"___ , ibid. 246, 1595 (1989); M. Shimizu et a., J. Mol. Evol. 35, 436 (1992)"
 Arginine,,"Y34,C35,U36",,,"_, R. A. Jenkins, J. Schneider, Proc. Natl.Acad. Sci. U.S.A. 87, 9260 (1990); J. Normanly et al., ibid., p. 719."
-Asp,,,,U11,29358943
-Asp,,,,G22,29358943
-Asp,,,,U21,29358943
-Asp,,,,A14,29358943
-Asp,,,,A15,29358943
+Aspartic acid,,,,U11,29358943
+Aspartic acid,,,,G22,29358943
+Aspartic acid,,,,U21,29358943
+Aspartic acid,,,,A14,29358943
+Aspartic acid,,,,A15,29358943
 Asparagine,G73,G34.,,,"1375736, 8232541"
 Asparagine,,"G34,U35,U36",,,"S. U, H. Pelka, L. H. Schulman, J. Biol. Chem.268, 18335 (1993); M. Shimizu et a., J. Mol. Evol. 35, 436 (1992)"
 Aspartic acid,"G73,G2:C71","G34.U35, C36,",C38,G10,"2694679,  1472058"
@@ -77,8 +77,8 @@ Methionine,"A73,",C34,"C32,",,"Uemura et al., 1982; $chulman and Pelka, 1988; Me
 Methionine,,,,A9,29358943
 Methionine,,,,A9,29358943
 Methionine,,"C34,A35,U36",,," L H. Schulman and H. Pelka, Proc. Natl. Acad.Sci. U.S.A. 80, 6755 (1983); J. Normanly et al., ibid., p. 719.; R. Chattapadhyay, H. Pelka, L H. Schulman,Biochemistry 29, 4263 (1990)"
-Phe,,,,G24,29358943
-Phe,,,,U16,29358943
+Phemyialanine,,,,G24,29358943
+Phemyialanine,,,,U16,29358943
 Phemyialanine,A73,"G34,A35,A36 ",G27:043.G28:C42,"U20, G44, U45, U59, U60","Pallanck and Schulman, 1991; McClain and Foss, 1988c; Petersonet al..1993: Peterson and Uhlenbeck, 1992"
 Phenylalanine,,"G34,A35,A36",,,"E. T. Peterson and 0. C. Uhlenbeck, ibid. 31,10380 (1992).; R. Chattapadhyay, H. Pelka, L H. Schulman,Biochemistry 29, 4263 (1990).;  L Pallanck and L. H. Schulman, Proc. Natl.Acad. Sci. U.S.A. 88, 3872 (1991)"
 Proline,"A73, G72","G35, G36",,G15:C48,"Shimizu et al., 1992; McClain et al., 1994; Liu et al.. 1995"
