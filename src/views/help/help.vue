@@ -3,7 +3,9 @@
     <div class="help-container">
       <el-row>
         <el-col :span="6">
-          <Sidebar :headings="headings" :files="files" :activeFile="activeFile" @navigateToHeading="navigateToHeading" @fileSelected="handleFileSelected" />
+          <div class="sidebar-container">
+            <Sidebar :headings="headings" :files="files" :activeFile="activeFile" @navigateToHeading="navigateToHeading" @fileSelected="handleFileSelected" />
+          </div>
         </el-col>
         <el-col :span="18">
           <div v-html="content" class="markdown-body" @click="handleImageClick"></div>
@@ -148,6 +150,11 @@ const navigateToHeading = (id) => {
 
 .el-row {
   width: 100%;
+}
+
+.sidebar-container {
+  position: sticky;
+  top: 20px; /* 调整此值以设置边栏的顶部偏移 */
 }
 
 .markdown-body {
