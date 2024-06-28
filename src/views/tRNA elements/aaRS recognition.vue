@@ -39,11 +39,11 @@
             <p><b>Anticodon arm:</b> {{ record.AnticodonArm }}</p>
             <p><b>Other location:</b> {{ record.OtherLocation }}</p>
             <p><b>Other domains:</b> {{ record.OtherDomains }}</p>
-            <p><b>Reference/PMID:</b> 
+            <p><b>Reference/PMID:</b>
               <span v-if="isPMID(record.Reference)">
-                <span v-for="(pmid, index) in (typeof record.Reference === 'string' ? record.Reference.split(',') : [])" :key="index">
+                <span v-for="(pmid, index) in String(record.Reference).split(',')" :key="index">
                   <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + pmid.trim()" target="_blank" class="tilt-hover">{{ pmid.trim() }}</a>
-                  <span v-if="index < (typeof record.Reference === 'string' ? record.Reference.split(',').length - 1 : 0)">,</span>
+                  <span v-if="index < String(record.Reference).split(',').length - 1">, </span>
                 </span>
               </span>
               <span v-else>{{ record.Reference }}</span>
@@ -54,6 +54,7 @@
     </s-table-provider>
   </div>
 </template>
+
 
 <script lang="tsx">
 import { defineComponent, ref, onMounted, watch, computed } from 'vue';
@@ -77,7 +78,9 @@ const locale = ref(en);
 
 // 判断是否为PMID格式
 function isPMID(reference) {
-  return typeof reference === 'string' && /^\d+(,\s*\d+)*$/.test(reference);
+  // 将输入转换为字符串再进行判断
+  const referenceStr = String(reference);
+  return /^\d+(,\s*\d+)*$/.test(referenceStr);
 }
 
 export default defineComponent({
@@ -177,10 +180,11 @@ export default defineComponent({
         align: 'center',
         ellipsis: true,
         customRender: ({ text, record }) => {
-          if (isPMID(record.Reference)) {
+          const reference = String(record.Reference); // 确保 Reference 是字符串类型
+          if (isPMID(reference)) {
             return (
               <div>
-                {(typeof record.Reference === 'string' ? record.Reference.split(',') : []).map((pmid, index, array) => (
+                {reference.split(',').map((pmid, index, array) => (
                   <span key={pmid}>
                     <a href={`https://pubmed.ncbi.nlm.nih.gov/${pmid.trim()}`} target="_blank" class="bracket-links">{pmid.trim()}</a>
                     {index < array.length - 1 && ','}
@@ -189,7 +193,7 @@ export default defineComponent({
               </div>
             );
           } else {
-            return <div>{record.Reference}</div>;
+            return <div>{reference}</div>;
           }
         }
       }
