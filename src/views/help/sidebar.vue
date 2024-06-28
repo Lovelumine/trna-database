@@ -58,16 +58,19 @@ watch(
   () => props.files,
   (newFiles) => {
     defaultOpeneds.value = newFiles.map(file => file.file + '-sub');
+    console.log('Default openeds initialized:', defaultOpeneds.value);
   },
   { immediate: true }
 );
 
 const handleFileClick = (file) => {
+  console.log('File clicked:', file);
   emits('fileSelected', file);
   router.push({ path: '/help', query: { file } });
 };
 
 const navigateToHeading = (id) => {
+  console.log('Heading clicked:', id);
   emits('navigateToHeading', id);
 };
 </script>
@@ -87,7 +90,6 @@ const navigateToHeading = (id) => {
   white-space: normal !important; /* 确保文本自动换行 */
   word-break: break-word !important; /* 防止长单词溢出 */
   overflow-wrap: break-word !important; /* 处理长单词或URL */
-
   line-height: 1.5 !important; /* 确保行高正常 */
   padding-left: 20px !important; /* 增加内边距 */
 }
