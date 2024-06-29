@@ -125,7 +125,7 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource, searchColumn,loadData } = useTableData('/data/Coding Variation in Cancer.csv', (data) => {
+    const { searchText, filteredDataSource, searchColumn,loadData } = useTableData('/src/data/Coding Variation in Cancer.csv', (data) => {
       // 在加载数据时将 DISEASE 列转换为数组
       return data.map(item => {
         // 处理DISEASE字段

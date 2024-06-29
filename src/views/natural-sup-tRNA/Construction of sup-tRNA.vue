@@ -91,7 +91,7 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource, loadData } = useTableData('/data/Construction of sup-tRNA.csv');
+    const { searchText, filteredDataSource, loadData } = useTableData('/src/data/Construction of sup-tRNA.csv');
 
     const tableSize = ref('default');
     const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stop codon for readthrough', 'Mutational position of sup-tRNA']);
