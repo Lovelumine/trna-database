@@ -160,7 +160,7 @@ export default defineComponent({
     });
 
     const tableSize = ref('default');
-    const selectedColumns = ref<string[]>(['Species', 'Stop Codon for Readthrough', 'Noncanonical charged amino acids','Readthrough mechanism']);
+    const selectedColumns = ref<string[]>(['Species', 'Stop codon for readthrough', 'Noncanonical charged amino acids','Readthrough mechanism']);
     const loading = ref(false);
     const dataSource = ref<DataType[]>([]);
     const sortedDataSource = ref<DataType[]>([]);
@@ -197,7 +197,7 @@ export default defineComponent({
       { title: 'Tissue/Organelle of Origin', dataIndex: 'Tissue/Organelle of Origin', width: 280, ellipsis: true, key: 'Tissue/Organelle of Origin', resizable: true, sorter: true },      
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
-      { title: 'Stop codon for readthrough', dataIndex: 'Stop codon for readthrough', width: 240, ellipsis: true, key: 'Stop Codon for Readthrough', resizable: true,
+      { title: 'Stop codon for readthrough', dataIndex: 'Stop codon for readthrough', width: 240, ellipsis: true, key: 'Stop codon for readthrough', resizable: true,
         filter: {
           type: 'multiple',
           list: [
@@ -205,7 +205,7 @@ export default defineComponent({
             { text: 'UAA(ochre)', value: 'UAA(ochre)' },
             { text: 'UGA(opal)', value: 'UGA(opal)'},        
           ],
-          onFilter:(value, record) => value.includes(record.Stop_codon_for_readthrough)|| record.Stop_codon_for_readthrough.includes(value)
+          onFilter:(value, record) => value.includes(record['Stop codon for readthrough'])|| record['Stop codon for readthrough'].includes(value)
         }
       },
       { title: 'RNA central ID of tRNA', dataIndex: 'RNA central ID of tRNA', width: 250, ellipsis: true, key: 'RNA central ID of tRNA', resizable: true,
@@ -234,16 +234,17 @@ export default defineComponent({
       { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true ,        filter: {
           type: 'multiple',
           list: [
-            { text: 'a single base mutation in anticodon', value: 'a single base mutation in anticodon' },
             { text: 'recode/reassignment', value: 'recode/reassignment ' },
             { text: 'wobble/misread/mispair/mismatch', value: 'wobble/misread/mispair/mismatch' },
-            { text: 'a base mutation outside the anticodon', value: 'a base mutation outside the anticodon' },
-            { text: 'mischarge', value: 'mischarge' },
+            { text: 'mutations outside the anticodon', value: 'mutations outside the anticodon' },
             { text: 'other', value: 'other' },
-            { text: 'unknown', value: 'unknown' },
+            { text: 'mischarge', value: 'mischarge' },
+            {text: 'mutations in the anticodon', value: 'mutations in the anticodon'}
           ],
-          onFilter: (value, record)=> value.includes(record['Readthrough mechanism'])
-        }},
+    onFilter: (value, record) => {
+      const mechanism = record['Readthrough mechanism'];
+      return value.some(val => mechanism.includes(val));
+    }}},
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
       { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>), resizable: true },
       { title: 'Notes', dataIndex: 'Notes', width: 150, ellipsis: true, key: 'Notes', resizable: true }
