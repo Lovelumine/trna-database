@@ -30,6 +30,7 @@ import STable from '@shene/table';
 import '@shene/table/dist/index.css';
 import 'vxe-table/lib/style.css';
 import VXETable from 'vxe-table';
+import VueMatomo from 'vue-matomo';
 
 import VueSidebarMenu from 'vue-sidebar-menu';
 import 'vue-sidebar-menu/dist/vue-sidebar-menu.css';
@@ -68,6 +69,32 @@ app.use(VXETable);
 app.use(router);
 app.use(ElementPlus);
 app.use(VueSidebarMenu);
+
+// 配置 Vue Matomo
+app.use(VueMatomo, {
+  // 配置 Matomo 服务器和站点 ID
+  host: 'https://analysis.lumoxuan.cn',
+  siteId: 1,
+
+  // 其他可选配置
+  trackerFileName: 'matomo',
+  enableLinkTracking: true,
+  trackInitialView: true,
+  disableCookies: false,
+  requireConsent: false,
+  requireCookieConsent: false,
+  enableHeartBeatTimer: false,
+  heartBeatTimerInterval: 15,
+  debug: false,
+  userId: undefined,
+  cookieDomain: undefined,
+  domains: undefined,
+  preInitActions: [],
+  trackSiteSearch: false,
+  crossOrigin: undefined,
+  router: router
+});
+
 app.mount('#app');
 
 // 预加载其他路由组件

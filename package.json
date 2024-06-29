@@ -34,6 +34,7 @@
     "typescript": "^5.4.5",
     "vue": "^3.4.27",
     "vue-easy-lightbox": "^1.19.0",
+    "vue-matomo": "^4.2.0",
     "vue-router": "^4.3.2",
     "vue-sidebar-menu": "^5.4.0",
     "vue3-beautiful-chat": "^3.3.1",
