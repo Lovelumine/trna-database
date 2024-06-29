@@ -1,23 +1,25 @@
 <template>
   <div>
-    <div v-if="loading" class="loading-spinner">
-      <!-- 加载动画 -->
-      <div class="spinner">
-        <div class="loader">
-          <div class="dot"></div>
-          <div class="dot"></div>
-          <div class="dot"></div>
-          <div class="dot"></div>
-          <div class="dot"></div>
+    <transition name="fade" mode="out-in">
+      <div v-if="loading" key="loading" class="loading-spinner">
+        <!-- 加载动画 -->
+        <div class="spinner">
+          <div class="loader">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
         </div>
       </div>
-    </div>
-    <div v-else>
-      <nav-bar />
-      <router-view />
-      <footer-comp />
-      <bot-component />
-    </div>
+      <div v-else key="content">
+        <nav-bar />
+        <router-view />
+        <footer-comp />
+        <bot-component />
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -158,5 +160,13 @@ export default defineComponent({
   100% {
     transform: scale(1);
   }
+}
+
+/* 添加过渡效果 */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active in <2.1.8 */ {
+  opacity: 0;
 }
 </style>
