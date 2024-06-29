@@ -11,15 +11,13 @@
           <td>{{ record.Related_disease }}</td>
         </tr>
         <tr>
-          <td><b>Pathogenic Gene:</b></td>
-          <td>
-            <a :href="record.Coding_Variation_Disease_database_link" target="_blank">{{ record.Pathogenic_gene }}</a>
-          </td>
+          <td><b>PTC Gene:</b></td>
+          <td>{{ record.PTC_gene }}</td>
         </tr>
         <tr>
           <td><b>PTC Site:</b></td>
           <td>
-            <a :href="record.PTC_site_link" target="_blank">{{ record.PTC_site }}</a>
+            <a :href="record.PTC_site_link" target="_blank">{{ record['PTC(mutation_site)']}}</a>
           </td>
         </tr>
         <tr>
@@ -36,20 +34,21 @@
       <h2>PTC Model</h2>
       <table>
         <tr>
-          <td><b>PTC Model:</b></td>
-          <td>{{ record.PTC_model }}</td>
-        </tr>
-        <tr>
           <td><b>PTC Model Sequence:</b></td>
           <td>{{ record.Sequence_of_PTC_model }}</td>
         </tr>
         <tr>
           <td><b>Species Source:</b></td>
-          <td>{{ record.Species_source_of_PTC_model}}</td>
+          <td>{{ record.Species_source_of_PTC_gene}}</td>
         </tr>
         <tr>
           <td><b>NCBI ref ID:</b></td>
           <td>{{ record.NCBI_ref_ID}}</td>
+        </tr>
+        <tr>
+          <td><b>PMID:</b></td>
+          <td><a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record['PMID']" target="_blank" class="tilt-hover">{{record['PMID']}}</a>
+          </td>
         </tr>
       </table>
     </div>
@@ -131,7 +130,7 @@
         </tr>
         <tr>
           <td><b>tRNAscan-SE ID:</b></td>
-          <td>{{ record.tRNAscan_SE_ID_of_origin_tRNA}}</td>
+          <td>{{ record['tRNAscan-SE_ID_of_origin_tRNA']}}</td>
         </tr>
         <tr>
           <td><b>Species source:</b></td>
@@ -226,7 +225,7 @@
 
   
       const filteredRecords = computed(() => {
-        return filteredDataSource.value.filter(record => record.ENSURE_ID == id);
+        return filteredDataSource.value.filter(record => record.pre_ENSURE_ID == id);
       });
   
       onMounted(async () => {
