@@ -70,7 +70,7 @@
             </template> -->
           </template>
           <template #expandedRowRender="{ record }">
-            <a :href="`expanded/${record.ENSURE_ID}`" target="_blank" class="tilt-hover">View Details</a>
+            <a :href="`expanded/${record.pre_ENSURE_ID}`" target="_blank" class="tilt-hover">View Details</a>
           </template>
         </s-table>
       </s-table-provider>
@@ -84,8 +84,7 @@ import { ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import { calculateAlignment } from '../../utils/calculateAlignment';
-import axios from 'axios';
-import { allColumns, DataType } from './columns';
+import { allColumns} from './columns';
 import TranStructure from '@/components/TranStructure.vue';
 
 import en from '@shene/table/dist/locale/en';
@@ -117,34 +116,6 @@ export default defineComponent({
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
-
-    // const alignments = ref<{ [key: string]: any }>({});
-
-    // const loadAlignments = async (dataSource: DataType[]) => {
-    //   for (const record of dataSource) {
-    //     const result = await calculateAlignment(record.Sequence_of_origin_tRNA, record.Sequence_of_sup_tRNA);
-    //     alignments.value[record.key] = result;
-    //   }
-    // };
-
-    // const secondaryStructures = ref<{ [key: string]: string }>({});
-
-    // const loadSecondaryStructures = async (dataSource: DataType[]) => {
-    //   console.log('Loading secondary structures...');
-    //   for (const record of dataSource) {
-    //     try {
-    //       const response = await axios.post('/scan', { sequence: record.Sequence_of_sup_tRNA });
-    //       console.log(`Fetched structure for record ${record.key}:`, response.data.str);
-    //       secondaryStructures.value = { ...secondaryStructures.value, [record.key]: response.data.str };
-    //     } catch (error) {
-    //       console.error(`Failed to fetch secondary structure for record ${record.key}:`, error);
-    //       secondaryStructures.value = { ...secondaryStructures.value, [record.key]: 'Error fetching structure' };
-    //     }
-    //   }
-    //   console.log('Secondary structures loaded', secondaryStructures.value);
-    //   await nextTick();
-    // };
-
     const expandedRowKeys = ref([]);
 
     const onExpandedRowsChange = (expandedKeys) => {

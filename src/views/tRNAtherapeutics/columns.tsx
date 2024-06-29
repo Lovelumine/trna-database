@@ -18,10 +18,11 @@ export const allColumns: STableColumnsType<DataType> = [
       onFilter: (value, record) => value.includes(record.Related_disease)
     },
     resizable: true },
-  { title: 'Pathogenic Gene', dataIndex: 'Pathogenic_gene', width: 150, ellipsis: true, key: 'Pathogenic_gene', resizable: true },
-  { title: 'Species source of PTC plasmid', dataIndex: 'Species_source_of_PTC_plasmid', width: 100, ellipsis: true, key: 'Species_source_of_PTC_plasmid', resizable: true },
+  { title: 'PTC_gene', dataIndex: 'PTC_gene', width: 150, ellipsis: true, key: 'PTC_gene', resizable: true },
+  { title: 'Species_source_of_PTC_gene', dataIndex: 'Species_source_of_PTC_gene', width: 100, ellipsis: true, key: 'Species_source_of_PTC_gene', resizable: true },
   { title: 'NCBI ref ID', dataIndex: 'NCBI_ref_ID', width: 220, ellipsis: true, key: 'NCBI_ref_ID', resizable: true },
-  { title: 'PTC model(nonsense_mutation_site)', dataIndex: 'PTC_model(nonsense_mutation_site)', width: 340, ellipsis: true, key: 'PTC_model(nonsense_mutation_site)', resizable: true },
+  { title: 'PTC(mutation_site)', dataIndex: 'PTC(mutation_site)', width: 340, ellipsis: true, key: 'PTC(mutation_site)', resizable: true },
+  { title: 'PTC_site', dataIndex: 'PTC_site', width: 340, ellipsis: true, key: 'PTC_site', resizable: true },
   { title: 'Origin AA and Codon of PTC Site', dataIndex: 'Origin_aa_and_codon_of_PTC_site', width: 200, ellipsis: true, key: 'Origin_aa_and_codon_of_PTC_site', resizable: true },
   { title: 'PTC Codon', dataIndex: 'PTC_codon', width: 100, ellipsis: true, key: 'PTC_codon', resizable: true },
   { title: 'Delivery as Vector or IVT tRNA', dataIndex: 'Delivery_as_vector_or_IVT_tRNA', width: 200, ellipsis: true, key: 'Delivery_as_vector_or_IVT_tRNA', resizable: true },
@@ -53,5 +54,5 @@ export const allColumns: STableColumnsType<DataType> = [
   { title: 'Promoter for Vector Delivery', dataIndex: 'Promoter_for_vector_delivery', width: 150, ellipsis: true, key: 'Promoter_for_vector_delivery', resizable: true },
   { title: 'Safety', dataIndex: 'Safety', width: 100, ellipsis: true, key: 'Safety', resizable: true },
   { title: 'Immunogenicity', dataIndex: 'Immunogenicity', width: 150, ellipsis: true, key: 'Immunogenicity', resizable: true },
-  { title: 'PMID', dataIndex: 'PMID', width: 300, ellipsis: true, key: 'PMID', resizable: true },
+  { title: 'PMID', dataIndex: 'PMID', width: 300, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>), resizable: true },
 ];
