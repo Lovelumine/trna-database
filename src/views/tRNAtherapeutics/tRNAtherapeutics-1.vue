@@ -101,7 +101,7 @@ export default defineComponent({
     TranStructure
   },
   setup() {
-    const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('/src/data/tRNAtherapeutics.csv');
+    const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('/src/assets/data/tRNAtherapeutics.csv');
 
     const tableSize = ref('default');
     const selectedColumns = ref<string[]>([

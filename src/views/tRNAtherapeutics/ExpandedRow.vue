@@ -220,7 +220,7 @@
         const route = useRoute();  // 使用useRoute获取当前路由信息
         const id = route.params.key;  // 获取key参数
 
-      const { searchText, filteredDataSource, loadData } = useTableData('/src/data/tRNAtherapeutics.csv');
+      const { searchText, filteredDataSource, loadData } = useTableData('/src/assets/data/tRNAtherapeutics.csv');
   
       const loading = ref(true);
 
@@ -243,7 +243,7 @@
       }
     });
       const loadPDBFile = (ensureId) => {
-      const pdbFilePath = `/src/data/pdb/${ensureId}.pdb`;
+      const pdbFilePath = `/src/assets/data/pdb/${ensureId}.pdb`;
       axios.get(pdbFilePath)
         .then(response => {
           const element = document.getElementById('pdb-container-' + ensureId);
