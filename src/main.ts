@@ -13,6 +13,9 @@ import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
 import * as ElIcons from '@element-plus/icons-vue'; // 引入 Element Plus 图标
 
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css'; // 引入 NProgress 样式
+
 // 引入组件
 const Home = () => import('./views/Home.vue');
 const CodingVariationDisease = () => import('./views/Coding Variation Disease/Coding Variation Disease.vue');
@@ -54,6 +57,16 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+});
+
+// 添加路由钩子来控制 NProgress
+router.beforeEach((to, from, next) => {
+  NProgress.start();
+  next();
+});
+
+router.afterEach(() => {
+  NProgress.done();
 });
 
 // 创建 Vue 应用实例

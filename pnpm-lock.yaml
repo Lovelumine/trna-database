@@ -65,6 +65,9 @@ importers:
       multer:
         specifier: 1.4.5-lts.1
         version: 1.4.5-lts.1
+      nprogress:
+        specifier: ^0.2.0
+        version: 0.2.0
       openai:
         specifier: ^4.48.2
         version: 4.48.2
@@ -152,7 +155,7 @@ importers:
         version: 2.0.0(vite@5.2.12(@types/node@20.14.6)(sass@1.77.6)(terser@5.31.1))
       vitepress:
         specifier: ^1.2.3
-        version: 1.2.3(@algolia/client-search@4.24.0)(@types/node@20.14.6)(async-validator@4.2.5)(axios@1.7.2)(change-case@4.1.2)(postcss@8.4.38)(sass@1.77.6)(search-insights@2.14.0)(terser@5.31.1)(typescript@5.4.5)
+        version: 1.2.3(@algolia/client-search@4.24.0)(@types/node@20.14.6)(async-validator@4.2.5)(axios@1.7.2)(change-case@4.1.2)(nprogress@0.2.0)(postcss@8.4.38)(sass@1.77.6)(search-insights@2.14.0)(terser@5.31.1)(typescript@5.4.5)
 
 packages:
 
@@ -2533,6 +2536,9 @@ packages:
   normalize-wheel-es@1.2.0:
     resolution: {integrity: sha512-Wj7+EJQ8mSuXr2iWfnujrimU35R2W4FAErEyTmJoJ7ucwTn2hOUSsRehMb5RSYkxXGTM7Y9QpvPmp++w5ftoJw==}
 
+  nprogress@0.2.0:
+    resolution: {integrity: sha512-I19aIingLgR1fmhftnbWWO3dXc0hSxqHQHQb3H8m+K3TnEn/iSeTZZOyvKXWqQESMwuUVnatlCnZdLBZZt2VSA==}
+
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
@@ -4653,7 +4659,7 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
-  '@vueuse/integrations@10.11.0(async-validator@4.2.5)(axios@1.7.2)(change-case@4.1.2)(focus-trap@7.5.4)(vue@3.4.27(typescript@5.4.5))':
+  '@vueuse/integrations@10.11.0(async-validator@4.2.5)(axios@1.7.2)(change-case@4.1.2)(focus-trap@7.5.4)(nprogress@0.2.0)(vue@3.4.27(typescript@5.4.5))':
     dependencies:
       '@vueuse/core': 10.11.0(vue@3.4.27(typescript@5.4.5))
       '@vueuse/shared': 10.11.0(vue@3.4.27(typescript@5.4.5))
@@ -4663,6 +4669,7 @@ snapshots:
       axios: 1.7.2
       change-case: 4.1.2
       focus-trap: 7.5.4
+      nprogress: 0.2.0
     transitivePeerDependencies:
       - '@vue/composition-api'
       - vue
@@ -5964,6 +5971,8 @@ snapshots:
 
   normalize-wheel-es@1.2.0: {}
 
+  nprogress@0.2.0: {}
+
   object-assign@4.1.1: {}
 
   object-copy@0.1.0:
@@ -6566,7 +6575,7 @@ snapshots:
       sass: 1.77.6
       terser: 5.31.1
 
-  vitepress@1.2.3(@algolia/client-search@4.24.0)(@types/node@20.14.6)(async-validator@4.2.5)(axios@1.7.2)(change-case@4.1.2)(postcss@8.4.38)(sass@1.77.6)(search-insights@2.14.0)(terser@5.31.1)(typescript@5.4.5):
+  vitepress@1.2.3(@algolia/client-search@4.24.0)(@types/node@20.14.6)(async-validator@4.2.5)(axios@1.7.2)(change-case@4.1.2)(nprogress@0.2.0)(postcss@8.4.38)(sass@1.77.6)(search-insights@2.14.0)(terser@5.31.1)(typescript@5.4.5):
     dependencies:
       '@docsearch/css': 3.6.0
       '@docsearch/js': 3.6.0(@algolia/client-search@4.24.0)(search-insights@2.14.0)
@@ -6577,7 +6586,7 @@ snapshots:
       '@vue/devtools-api': 7.3.4
       '@vue/shared': 3.4.27
       '@vueuse/core': 10.11.0(vue@3.4.27(typescript@5.4.5))
-      '@vueuse/integrations': 10.11.0(async-validator@4.2.5)(axios@1.7.2)(change-case@4.1.2)(focus-trap@7.5.4)(vue@3.4.27(typescript@5.4.5))
+      '@vueuse/integrations': 10.11.0(async-validator@4.2.5)(axios@1.7.2)(change-case@4.1.2)(focus-trap@7.5.4)(nprogress@0.2.0)(vue@3.4.27(typescript@5.4.5))
       focus-trap: 7.5.4
       mark.js: 8.11.1
       minisearch: 6.3.0
