@@ -4,8 +4,12 @@
     <!-- 顶部行包含尺寸调整、搜索框和列选择 -->
     <div class="top-controls">
       <!-- 搜索框 -->
-      <div class="search-box" style="margin-bottom: 10px">
+      <div class="search-box">
         <input v-model="searchText" placeholder="Enter search content" class="search-input">
+        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
+          <el-option :key="'all'" :label="'All columns'" :value="''" />
+          <el-option v-for="column in allColumns" :key="column.key" :value="column.dataIndex" />
+        </el-select>
       </div>
       <!-- 调整尺寸 -->
       <div class="size-controls" style="margin-bottom: 10px">
@@ -25,156 +29,285 @@
       </div>
     </div>
     <!-- 表格组件 -->
-    <s-table-provider :hover="true" :locale="locale">
-      <s-table :columns="displayedColumns" :data-source="filteredDataSource" :row-key="record => record.key"
-        :stripe="true" :show-sorter-tooltip="true" :size="tableSize" :expand-row-by-click="true">
-        <template #bodyCell="{ text, column, record }">
-          <template v-if="column.key === 'Structure of sup-tRNA'">
-            <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
+    <div class="custom-tag-styles">
+      <s-table-provider :hover="true" :locale="locale">
+        <s-table :columns="displayedColumns" :data-source="filteredDataSource" :row-key="record => record.key"
+          :stripe="true" :show-sorter-tooltip="true" :size="tableSize" :expand-row-by-click="true"
+          @sorter-change="onSorterChange" :loading="loading">
+          <template #bodyCell="{ text, column, record }">
+            <template v-if="column.key === 'Structure of sup-tRNA'">
+              <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
+            </template>
+            <template v-else-if="column.key === 'Codon for readthrough'">
+              <ElSpace>
+                <ElTag
+                  v-for="items in (Array.isArray(record['Codon for readthrough']) ? record['Codon for readthrough'] : record['Codon for readthrough'].split(';').map(str => str.trim()))"
+                  :key="items" :type="getTagType(items)">
+                  {{ items }}
+                </ElTag>
+              </ElSpace>
+            </template>
+            <template v-else-if="column.key === 'Noncanonical charged amino acids'">
+              <ElSpace>
+                <ElTag
+                  v-for="items in (Array.isArray(record['Noncanonical charged amino acids']) ? record['Noncanonical charged amino acids'] : record['Noncanonical charged amino acids'].split(';').map(str => str.trim()))"
+                  :key="items" :type="getTagType(items)">
+                  {{ items }}
+                </ElTag>
+              </ElSpace>
+            </template>
+            <template v-else-if="column.key === 'Readthrough mechanism'">
+              <ElSpace>
+                <ElTag
+                  v-for="items in (Array.isArray(record['Readthrough mechanism']) ? record['Readthrough mechanism'] : record['Readthrough mechanism'].split(';').map(str => str.trim()))"
+                  :key="items" :type="getTagType(items)">
+                  {{ items }}
+                </ElTag>
+              </ElSpace>
+            </template>
+            <template v-else>
+              <span>{{ text }}</span>
+            </template>
           </template>
-          <template v-else>
-            <span>{{ text }}</span>
+
+          <template #expandedRowRender="{ record }">
+            <div>
+              <p><b>Species:</b> {{ record.Species }}</p>
+              <p><b>Species ID:</b> {{ record['Species ID'] }}</p>
+              <p><b>Tissue/Organelle of Origin:</b> {{ record['Tissue/Organelle of Origin'] }}</p>
+              <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
+              <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
+              <p><b>Codon for readthrough:</b>
+                <ElSpace>
+                  <ElTag
+                    v-for="items in (Array.isArray(record['Codon for readthrough']) ? record['Codon for readthrough'] : record['Codon for readthrough'].split(';').map(str => str.trim()))"
+                    :key="items" :type="getTagType(items)">
+                    {{ items }}
+                  </ElTag>
+                </ElSpace>
+              </p>
+              <p><b>Noncanonical charged amino acids:</b>
+                <ElSpace>
+                  <ElTag
+                    v-for="items in (Array.isArray(record['Noncanonical charged amino acids']) ? record['Noncanonical charged amino acids'] : record['Noncanonical charged amino acids'].split(';').map(str => str.trim()))"
+                    :key="items" :type="getTagType(items)">
+                    {{ items }}
+                  </ElTag>
+                </ElSpace>
+              </p>
+              <p><b>RNA central ID of tRNA:</b> {{ record['RNA central ID of tRNA'] }}</p>
+              <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
+              <p><b>tRNA sequence after mutation:</b> <span
+                  v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
+
+              <div>
+                <b>Structure of sup-tRNA:</b>
+                <img :src="`https://trna.lumoxuan.cn/src/assets/data/picture/${record.pictureid}.png`"
+                  @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
+              </div>
+              <p><b>Readthrough mechanism:</b>
+                <ElSpace>
+                  <ElTag
+                    v-for="items in (Array.isArray(record['Readthrough mechanism']) ? record['Readthrough mechanism'] : record['Readthrough mechanism'].split(';').map(str => str.trim()))"
+                    :key="items" :type="getTagType(items)">
+                    {{ items }}
+                  </ElTag>
+                </ElSpace>
+              </p>
+              <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
+              <p><b>PMID of references:</b> <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record['PMID of references']"
+                  target="_blank" class="tilt-hover">{{ record['PMID of references'] }}</a></p>
+              <p><b>Notes:</b> {{ record['Notes'] }}</p>
+            </div>
           </template>
-        </template>
-        <template #expandedRowRender="{ record }">
-          <div>
-            <p><b>Species:</b> {{ record.Species }}</p>
-            <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
-            <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
-            <p><b>Stop codon for readthrough:</b> {{ record['Stop codon for readthrough'] }}</p>
-            <p><b>Noncanonical charged amino acids:</b> {{ record['Noncanonical charged amino acids'] }}</p>
-            <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
-            <p><b>tRNA sequence after mutation:</b> <span
-                v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
-            <p><b>Readthrough mechanism:</b> {{ record['Readthrough mechanism'] }}</p>
-            <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
-            <p><b>PMID of references:</b> {{ record['PMID of references'] }}</p>
-          </div>
-        </template>
-      </s-table>
-    </s-table-provider>
+        </s-table>
+      </s-table-provider>
+      <vue-easy-lightbox :key="lightboxKey" :visible="visible" :imgs="lightboxImgs" :index="0" @hide="hideLightbox" />
+    </div>
   </div>
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, computed, nextTick } from 'vue';
 import { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption } from 'element-plus';
-import { STableProvider } from '@shene/table';
+import { STableProvider, STableProps } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
+import VueEasyLightbox from 'vue-easy-lightbox';
+import { highlightMutation } from '../../utils/highlightMutation.js'
+import { getTagType } from '../../utils/tag.js'
+import { processCSVData } from '../../utils/processCSVData.js'
+import { sortData } from '../../utils/sort.js';
+import axios from 'axios';
 
 type DataType = {
   [key: string]: string | string[];
+  key: string;
   Species: string;
   'Anticodon before mutation': string;
   'Anticodon after mutation': string;
-  'Stop codon for readthrough': string;
-  'Noncanonical charged amino acids': string;
-  'tRNA sequence before mutation': string;
-  'tRNA sequence after mutation': string;
+  'Codon for readthrough': string[];
+  'Noncanonical charged amino acids': string[];
+  'tRNA_sequence_before_mutation': string;
+  'tRNA_sequence_after_mutation': string;
+  'RNA central ID of tRNA': string;
   'Structure of sup-tRNA': string;
   'Readthrough mechanism': string;
   'Mutational position of sup-tRNA': string;
-  'PMID of references': string;
+  'PMID': string;
+  pictureid: string;
 };
 
-import en from '@shene/table/dist/locale/en'
-const locale = ref(en)
+import en from '@shene/table/dist/locale/en';
+const locale = ref(en);
 
 export default defineComponent({
-  name: 'Frameshift-sup-tRNA',
+  name: 'NaturalSupTRNA',
   components: {
     ElTooltip,
     ElImage,
     ElSelect,
-    ElOption
+    ElOption,
+    VueEasyLightbox,
   },
   setup() {
-    const { searchText, filteredDataSource, loadData } = useTableData('/src/assets/data/Frameshift sup-tRNA.csv');
-
-    const tableSize = ref('default');
-    const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stop codon for readthrough', 'Mutational position of sup-tRNA']);
-
-    onMounted(() => {
-      loadData();
+    const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('/src/assets/data/Frameshift sup-tRNA.csv', (data) => {
+      return processCSVData(data, ['Codon for readthrough', 'Noncanonical charged amino acids', 'Readthrough mechanism']);
     });
 
+    const tableSize = ref('default');
+    const selectedColumns = ref<string[]>(['Species', 'Codon for readthrough', 'Anticodon after mutation', 'Codon for readthrough', 'Noncanonical charged amino acids', 'Readthrough mechanism']);
+    const loading = ref(false);
+    const dataSource = ref<DataType[]>([]);
+    const sortedDataSource = ref<DataType[]>([]);
+
+    onMounted(async () => {
+      await loadData();
+      dataSource.value = originalFilteredDataSource.value;
+      sortedDataSource.value = originalFilteredDataSource.value;
+      const style = document.createElement('style');
+      style.innerHTML = `
+    `;
+      document.head.appendChild(style);
+
+    });
+
+    const visible = ref(false);
+    const lightboxImgs = ref<string[]>([]);
+    const lightboxKey = ref(0);
+
+    const showLightbox = (pictureid: string) => {
+      const imgUrl = `https://trna.lumoxuan.cn/src/assets/data/picture/${pictureid}.png`;
+      lightboxImgs.value = [imgUrl];
+      lightboxKey.value += 1;  // 更新key以重新渲染组件
+      visible.value = true;
+    };
+
+    const hideLightbox = () => {
+      visible.value = false;
+    };
+
     const allColumns: STableColumnsType<DataType> = [
-      { title: 'Species', dataIndex: 'Species', width: 150, ellipsis: true, key: 'Species', resizable: true },
+      { title: 'Species', dataIndex: 'Species', width: 240, ellipsis: true, key: 'Species', resizable: true, sorter: true },
+      { title: 'Species ID', dataIndex: 'Species ID', width: 280, ellipsis: true, key: 'Species ID', resizable: true, sorter: true },
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
-      { title: 'Stop codon for readthrough', dataIndex: 'Stop codon for readthrough', width: 180, ellipsis: true, key: 'Stop codon for readthrough', resizable: true },
-      { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical charged amino acids', width: 150, ellipsis: true, key: 'Noncanonical charged amino acids', resizable: true },
-      { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence before mutation', width: 200, ellipsis: true, key: 'tRNA sequence before mutation', resizable: true },
+      {
+        title: 'Codon for readthrough', dataIndex: 'Codon for readthrough', width: 240, ellipsis: true, key: 'Codon for readthrough', resizable: true
+      },
+      {
+        title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical charged amino acids', width: 260, ellipsis: true, key: 'Noncanonical charged amino acids', resizable: true,
+        filter: {
+          type: 'multiple',
+          list: [
+            { text: 'Val', value: 'Val' },
+            { text: 'Gln', value: 'Gln' },
+            { text: 'Lys', value: 'Lys' },
+            { text: 'Pro', value: 'Pro' },
+            { text: 'Gly', value: 'Gly' },
+            { text: 'Thr', value: 'Thr' },
+          ],
+          onFilter: (value, record) => value.includes(record['Noncanonical charged amino acids']) || record['Noncanonical charged amino acids'].includes(value)
+        }
+      },
+      { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
-      { title: 'Structure of sup-tRNA', dataIndex: 'Structure of sup-tRNA', width: 150, ellipsis: true, key: 'Structure of sup-tRNA', resizable: true },
-      { title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 200, ellipsis: true, key: 'Readthrough mechanism', resizable: true },
+      {
+        title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true, filter: {
+          type: 'multiple',
+          list: [
+            { text: 'mutations in the anticodon', value: 'mutations in the anticodon' },
+            { text: 'tRNA hopping', value: 'tRNA hopping' },
+            { text: 'quadruple pairing', value: 'quadruple pairing' },
+            { text: 'mutations outside the anticodon', value: 'mutations outside the anticodon' },
+          ],
+    onFilter: (value, record) => {
+      const mechanism = record['Readthrough mechanism'];
+      return value.some(val => mechanism.includes(val));
+    }}
+      },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
-      { title: 'PMID of references', dataIndex: 'PMID of references', width: 150, ellipsis: true, key: 'PMID of references', resizable: true }
-    ];
+      { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>), resizable: true }];
 
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
-    const highlightMutation = (sequence) => {
-      if (!sequence) return sequence;
 
-      let highlightedSequence = '';
-      let lastIndex = 0;
-
-      const regex = /(\\\\\\[A-Z])|(\\\\[A-Z])|(\\[A-Z])/g;
-      let match;
-
-      while ((match = regex.exec(sequence)) !== null) {
-        const [fullMatch] = match;
-        const index = match.index;
-
-        // 添加非突变部分
-        if (index > lastIndex) {
-          highlightedSequence += sequence.slice(lastIndex, index);
-        }
-
-        // 添加突变部分
-        if (fullMatch.startsWith("\\\\\\\\")) { // 删除
-          const base = fullMatch[4];
-          highlightedSequence += `<span style="text-decoration: line-through; color: black;" title="Deleted ${base}">${base}</span>`;
-        } else if (fullMatch.startsWith("\\\\")) { // 增添
-          const base = fullMatch[2];
-          highlightedSequence += `<span style="color: green;" title="Added ${base}">${base}</span>`;
-        } else if (fullMatch.startsWith("\\")) { // 替换
-          const base = fullMatch[1];
-          highlightedSequence += `<span style="color: red;" title="Replaced with ${base}">${base}</span>`;
-        }
-
-        lastIndex = index + fullMatch.length;
+    const onSorterChange = (params: any) => {
+      let sorter: { field?: string, order?: 'ascend' | 'descend' } = {};
+      if (Array.isArray(params)) {
+        sorter = params[0];
+      } else {
+        sorter = params;
       }
 
-      // 添加剩余部分
-      if (lastIndex < sequence.length) {
-        highlightedSequence += sequence.slice(lastIndex);
-      }
-
-      return highlightedSequence;
+      loading.value = true;
+      const timer = setTimeout(() => {
+        sortedDataSource.value = sortData(originalFilteredDataSource.value, sorter);
+        loading.value = false;
+        clearTimeout(timer);
+      }, 300);
     };
 
+    const filteredDataSource = computed(() => {
+      if (!searchText.value) {
+        return sortedDataSource.value;
+      }
+      return sortedDataSource.value.filter(record => {
+        if (!searchColumn.value) {
+          return Object.values(record).some(val => String(val).toLowerCase().includes(searchText.value.toLowerCase()));
+        }
+        return String(record[searchColumn.value]).toLowerCase().includes(searchText.value.toLowerCase());
+      });
+    });
+
+    const secondaryStructures = ref<{ [key: string]: string }>({});
 
     return {
       allColumns,
-      columns: displayedColumns,
+      displayedColumns,
       filteredDataSource,
       tableSize,
       searchText,
+      searchColumn,
       locale,
       selectedColumns,
-      displayedColumns,
-      highlightMutation // 返回highlightMutation方法
+      highlightMutation,
+      visible,
+      lightboxKey,
+      lightboxImgs,
+      showLightbox,
+      hideLightbox,
+      getTagType, // 获取标签类型
+      onSorterChange,
+      loading
     };
   }
 });
 </script>
 
-<style scoped>
+<style>
 .site--main {
   padding: 20px;
 }
