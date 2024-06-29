@@ -46,8 +46,8 @@
 
 <script>
 import VueEasyLightbox from 'vue-easy-lightbox';
-import structureImage from '/data/picture/structure.png';
-import flowchartImage from '/data/picture/flowchart-ENSURE.png'; 
+import structureImage from '/src/data/picture/structure.png';
+import flowchartImage from '/src/data/picture/flowchart-ENSURE.png'; 
 
 export default {
   name: 'Home',

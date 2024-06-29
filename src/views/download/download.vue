@@ -26,13 +26,13 @@
   export default {
     setup() {
       const downloadData = ref([
-        { category: 'Coding Variation Disease', name: 'Coding Variation in Cancer', link: 'data/Coding Variation in Cancer.csv' },
-        { category: 'Coding Variation Disease', name: 'Coding Variation in Genetic Disease', link: 'data/Coding Variation in Genetic Disease.csv' },
-        { category: 'Natural Sup-tRNA', name: 'Nonsense Sup-RNA', link: 'data/Nonsense Sup-RNA.csv' },
-        { category: 'Natural Sup-tRNA', name: 'Frameshift sup-tRNA', link: 'data/Frameshift sup-tRNA.csv' },
-        { category: 'tRNA Therapeutics', name: 'tRNAtherapeutics', link: 'data/tRNAtherapeutics.csv' },
-        { category: 'tRNA elements', name: 'Function and Modification', link: 'data/Function and Modification.csv' },
-        { category: 'tRNA elements', name: 'aaRS Recognition', link: 'data/aaRS Recognition.csv' }
+        { category: 'Coding Variation Disease', name: 'Coding Variation in Cancer', link: '/src/data/Coding Variation in Cancer.csv' },
+        { category: 'Coding Variation Disease', name: 'Coding Variation in Genetic Disease', link: '/src/data/Coding Variation in Genetic Disease.csv' },
+        { category: 'Natural Sup-tRNA', name: 'Nonsense Sup-RNA', link: '/src/data/Nonsense Sup-RNA.csv' },
+        { category: 'Natural Sup-tRNA', name: 'Frameshift sup-tRNA', link: '/src/data/Frameshift sup-tRNA.csv' },
+        { category: 'tRNA Therapeutics', name: 'tRNAtherapeutics', link: '/src/data/tRNAtherapeutics.csv' },
+        { category: 'tRNA elements', name: 'Function and Modification', link: '/src/data/Function and Modification.csv' },
+        { category: 'tRNA elements', name: 'aaRS Recognition', link: '/src/data/aaRS Recognition.csv' }
       ]);
   
       const percentage = ref(0);

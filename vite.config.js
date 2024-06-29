@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import path from "path"
 import terser from "@rollup/plugin-terser"; // 引入 terser 插件
+import { viteStaticCopy } from 'vite-plugin-static-copy'; // 引入 vite-plugin-static-copy 插件
 
 // 允许的来源站点
 const allowedOrigin = 'https://trna.lumoxuan.cn/';
@@ -26,7 +27,24 @@ export default defineConfig({
         toplevel: true, // 混淆顶层作用域中的变量和函数名称
         reserved: ['_', 'Vue'] // 不混淆全局的 Vue 变量以及其他可能需要保留的标识符
       }
-    })
+    }),
+    // viteStaticCopy({
+    //   targets: [
+    //     {
+    //       src: 'data/**/**/*', // 将根目录中的 webfonts 目录复制到打包后的输出目录中
+    //       dest: 'data/webfonts'
+    //     },
+        
+    //     {
+    //       src: 'src/assets/global.css', // 将 global.css 文件复制到打包后的输出目录中
+    //       dest: 'assets'
+    //     },
+    //     {
+    //       src: 'src/fonts/**/*', // 将 fonts 目录中的所有文件复制到打包后的输出目录中
+    //       dest: 'fonts'
+    //     }
+    //   ]
+    // })
   ],
   resolve: {
     alias: {
