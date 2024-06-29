@@ -75,25 +75,3 @@ body {
     height: 400px;
   }
   
-  @font-face {
-    font-family: 'HarmonyOS Sans';
-    src: url('/fonts/HarmonyOS_Sans_Regular.ttf') format('truetype');
-
-  
-}
-
-@font-face {
-  font-family: '字魂白鸽天行体';
-  src: url('/fonts/字魂白鸽天行体.ttf') format('truetype');}
-
-@font-face {
-  font-family: '台北黑体';
-  src: url('/fonts/台北黑体/TaipeiSansTCBeta-Regular.ttf') format('truetype');}
-
-  @font-face {
-    font-family: '三极新雅宋黑简体';
-    src: url('/fonts/思源字体/三极新雅宋黑简体.ttf') format('truetype');}
-
-  @font-face {
-      font-family: '花园明朝体';
-      src: url('/fonts/思源字体/花园明朝体.ttf') format('truetype');}
