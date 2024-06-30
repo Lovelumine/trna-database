@@ -74,18 +74,16 @@ watch(
   { immediate: true }
 );
 
-const handleFileClick = (file) => {
+const handleFileClick = async (file) => {
   console.log('File clicked:', file);
   emits('fileSelected', file);
-  router.push({ path: '/help', query: { file } });
+  await router.push({ path: '/help', query: { file } });
 };
 
 const handleHeadingClick = (id) => {
   console.log('Heading clicked:', id);
   emits('navigateToHeading', id);
-
 };
-
 </script>
 
 <style>

@@ -12,7 +12,12 @@
           </div>
         </el-col>
         <el-col :span="18">
-          <div v-html="content" class="markdown-body" @click="handleImageClick"></div>
+          <div v-if="loading" class="loading-container">
+            <el-spinner type="circle"></el-spinner>
+          </div>
+          <transition name="fade">
+            <div v-html="content" class="markdown-body" @click="handleImageClick" v-show="!loading"></div>
+          </transition>
         </el-col>
       </el-row>
     </div>
@@ -26,7 +31,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import markdownIt from 'markdown-it';
@@ -40,6 +45,7 @@ const currentIndex = ref(0);
 const showViewer = ref(false);
 const activeFile = ref('');
 const activeHeading = ref('');
+const loading = ref(false);
 const route = useRoute();
 
 const md = markdownIt({
@@ -53,7 +59,7 @@ const md = markdownIt({
 
   md.renderer.rules.heading_open = function(tokens, idx, options, env, self) {
     const token = tokens[idx];
-    const headingId = tokens[idx + 1].content.toLowerCase().replace(/ /g, '-');
+    const headingId = tokens[idx + 1].content.toLowerCase().replace(/[^\w]+/g, '-');
     token.attrs = token.attrs || [];
     token.attrs.push(['id', headingId]);
     return defaultRender(tokens, idx, options, env, self);
@@ -75,14 +81,14 @@ const extractHeadings = (markdownContent) => {
     return {
       level: match[1].length,
       text: match[2],
-      id: match[2].toLowerCase().replace(/ /g, '-')
+      id: match[2].toLowerCase().replace(/[^\w]+/g, '-')
     };
   });
 
   images.value = [];
   const processedContent = markdownContent.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
     images.value.push(src);
-    return `<img src="${src}" alt="${alt}" style="max-width: 100%; height: auto;" class="clickable-image" />`;
+    return `<img data-src="${src}" alt="${alt}" style="max-width: 100%; height: auto;" class="clickable-image lazy-load" />`;
   });
 
   return processedContent;
@@ -90,15 +96,48 @@ const extractHeadings = (markdownContent) => {
 
 const loadMarkdown = async (file) => {
   try {
-    console.log('Loading markdown file:', file);
+    loading.value = true;
+    content.value = '';
     const response = await axios.get(`/src/views/help/docs/${file}`);
     const markdownContent = response.data;
     const processedContent = extractHeadings(markdownContent);
     content.value = md.render(processedContent);
-    console.log('Markdown content loaded and processed:', content.value);
+    await nextTick();
+    initLazyLoad();
+    loading.value = false;
   } catch (error) {
     console.error(`Failed to load markdown file: ${file}`, error);
+    loading.value = false;
   }
+};
+
+const initLazyLoad = () => {
+  const lazyImages = document.querySelectorAll('.lazy-load');
+  const imageObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const img = entry.target;
+        img.src = img.dataset.src;
+        img.classList.remove('lazy-load');
+        observer.unobserve(img);
+      }
+    });
+  });
+
+  lazyImages.forEach(image => {
+    imageObserver.observe(image);
+  });
+
+  // Preload remaining images
+  lazyImages.forEach(img => {
+    const src = img.dataset.src;
+    const image = new Image();
+    image.src = src;
+    image.onload = () => {
+      img.src = src;
+      img.classList.remove('lazy-load');
+    };
+  });
 };
 
 // 简单节流函数
@@ -132,11 +171,12 @@ watch(activeHeading, (newHeading) => {
   console.log('Active heading changed:', newHeading);
 });
 
-watch(() => route.query.file, (newFile) => {
+watch(() => route.query.file, async (newFile) => {
   const file = newFile || '1-introduction.md';
   console.log('Route query changed, new file:', file);
   activeFile.value = file;
-  loadMarkdown(file);
+  headings.value = []; // 清空headings
+  await loadMarkdown(file); // 加载新的文件并更新headings
 }, { immediate: true });
 
 onMounted(() => {
@@ -235,5 +275,20 @@ const navigateToHeading = (id) => {
   max-width: 100%;
   height: auto;
   cursor: pointer;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+
+.fade-enter, .fade-leave-to /* .fade-leave-active in <2.1.8 */ {
+  opacity: 0;
 }
 </style>
