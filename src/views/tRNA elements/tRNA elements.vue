@@ -1,13 +1,15 @@
 <template>
     <div class="site--main">
       <h2>tRNA elements</h2>
-      <div class="center-align">
-        <ConceptMap />
-      </div>
+
       <div class="table-section">
         <trna-elements-1 />
       </div>
+      <h2>tRNA Binding Site of Recognition</h2>
+      <div class="center-align">
 
+        <ConceptMap />
+      </div>
       <div class="table-section">
         <trna-elements-2 />
       </div>

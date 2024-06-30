@@ -41,9 +41,7 @@
           :stripe="true"
           :show-sorter-tooltip="true"
           :size="tableSize"
-          :expand-row-by-click="true"
-          :expanded-row-keys="expandedRowKeys"
-          @expandedRowsChange="onExpandedRowsChange"
+
         >
           <template #bodyCell="{ text, column, record }">
             <template v-if="column.key === 'Citation'">
@@ -56,21 +54,6 @@
                 </ElTag>
               </ElSpace>
             </template>
-            <!-- <template v-else-if="column.key === 'E_Value'">
-              {{ alignments[record.key]?.eValue }}
-            </template>
-            <template v-else-if="column.key === 'Score'">
-              {{ alignments[record.key]?.score }}
-            </template>
-            <template v-else-if="column.key === 'Alignment'">
-              {{ alignments[record.key]?.alignment }}
-            </template>
-            <template v-else-if="column.key === 'Gaps'">
-              {{ alignments[record.key]?.gaps }}
-            </template> -->
-          </template>
-          <template #expandedRowRender="{ record }">
-            <a :href="`expanded/${record.pre_ENSURE_ID}`" target="_blank" class="tilt-hover">View Details</a>
           </template>
         </s-table>
       </s-table-provider>
@@ -109,6 +92,7 @@ export default defineComponent({
       'Species_source_of_origin_tRNA',
       'Sequence_of_sup-tRNA',
       'Reaction_system',
+      'pre_ENSURE_ID'
     ]);
     
     const loading = ref(true); // 添加加载状态
@@ -116,11 +100,6 @@ export default defineComponent({
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
-    const expandedRowKeys = ref([]);
-
-    const onExpandedRowsChange = (expandedKeys) => {
-      expandedRowKeys.value = expandedKeys.length > 0 ? [expandedKeys[expandedKeys.length - 1]] : [];
-    };
 
     onMounted(async() => {
       await loadData();
@@ -151,8 +130,6 @@ export default defineComponent({
       // secondaryStructures,
       loading, // 添加到返回对象中
       TranStructure,
-      expandedRowKeys,
-      onExpandedRowsChange,
       triggerColumnChange
     };
   }
