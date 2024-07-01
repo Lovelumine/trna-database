@@ -70,6 +70,10 @@
           <td>{{ record['aa_and_anticodon_of_sup-tRNA'] }}</td>
         </tr>
         <tr>
+          <td><b>Reading Through Efficiency:</b></td>
+          <td>{{ record['Reading_through_efficiency'] }}</td>
+        </tr>
+        <tr>
           <td><b>Dose:</b></td>
           <td>{{ record.Delivery_as_vector_or_IVT_tRNA }}</td>
         </tr>
