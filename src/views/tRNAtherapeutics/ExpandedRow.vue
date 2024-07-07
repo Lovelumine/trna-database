@@ -17,7 +17,7 @@
         <tr>
           <td><b>PTC Site:</b></td>
           <td>
-            <a :href="record.PTC_site_link" target="_blank">{{ record['PTC(mutation_site)']}}</a>
+            {{ record['PTC_site']}}
           </td>
         </tr>
         <tr>
@@ -35,7 +35,7 @@
       <table>
         <tr>
           <td><b>PTC Model Sequence:</b></td>
-          <td>{{ record.Sequence_of_PTC_model }}</td>
+          <td>{{ record['PTC(mutation_site)'] }}</td>
         </tr>
         <tr>
           <td><b>Species Source:</b></td>
