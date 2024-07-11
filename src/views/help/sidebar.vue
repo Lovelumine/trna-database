@@ -34,7 +34,6 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { defineProps, defineEmits } from 'vue';
 import 'element-plus/theme-chalk/el-menu.css';
 import 'element-plus/theme-chalk/el-sub-menu.css';
 

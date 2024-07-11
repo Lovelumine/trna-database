@@ -45,6 +45,14 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.txt'],
   server: {
+    host: '0.0.0.0', // 允许外部访问
+    port: 5174, // 使用5174端口
+    strictPort: true,
+    hmr: {
+      protocol: 'ws', // 使用 WebSocket
+      host: 'trna.lumoxuan.cn', // 使用您的域名
+      port: 5174, // 使用5174端口进行热模块重载
+    },
     proxy: {
       '/scan': {
         target: 'http://localhost:3456',
@@ -72,5 +80,14 @@ export default defineConfig({
       });
     }
   },
-  base:"./"
+  optimizeDeps: {
+    exclude: [
+      '@formkit/vue',
+      '@formkit/addons',
+      '@formkit/i18n',
+      'chunk-LH747XKU.js',
+      'chunk-G3PMV62Z.js'
+    ]
+  },
+  base: "./"
 })
