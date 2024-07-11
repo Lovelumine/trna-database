@@ -42,7 +42,7 @@ export default defineComponent({
       // 强制加载动画至少显示两秒
       setTimeout(() => {
         loading.value = false;
-      }, 2000);
+      }, 500);
     });
 
     return { loading };
