@@ -48,11 +48,6 @@ export default defineConfig({
     host: '0.0.0.0', // 允许外部访问
     port: 5174, // 使用5174端口
     strictPort: true,
-    hmr: {
-      protocol: 'ws', // 使用 WebSocket
-      host: 'trna.lumoxuan.cn', // 使用您的域名
-      port: 5174, // 使用5174端口进行热模块重载
-    },
     proxy: {
       '/scan': {
         target: 'http://localhost:3456',
