@@ -32,7 +32,7 @@ uploads
 *.fasta
 *.txt
 query.fasta
-*.py
+
 data/tmp/*
 updated_tRNAtherapeutics.csv
 
