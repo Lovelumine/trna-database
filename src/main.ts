@@ -27,6 +27,7 @@ const Display = () => import('./views/display/Display.vue');
 const About = () => import('./views/about/about.vue');
 const Help = () => import('./views/help/help.vue');
 const Download = () => import('./views/download/download.vue');
+const BlastSearch = () => import('./views/blast/BlastSearch.vue'); // 新添加的 BLAST 搜索组件
 
 // 引入表格组件
 import STable from '@shene/table';
@@ -50,6 +51,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/display/:tRNAName', name: 'Display', component: Display },
   { path: '/help', name: 'help', component: Help },
   { path: '/download', name: 'download', component: Download },
+  { path: '/blast', name: 'blast', component: BlastSearch }, // 新添加的 BLAST 搜索路由
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
 ];
 

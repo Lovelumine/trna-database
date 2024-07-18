@@ -60,6 +60,10 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+      },
+      '/run-blast': {
+        target: 'http://localhost:3945',
+        changeOrigin: true,
       }
     },
     // 使用 configureServer API 添加中间件来检查请求来源
