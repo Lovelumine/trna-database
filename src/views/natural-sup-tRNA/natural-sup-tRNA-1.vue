@@ -222,7 +222,10 @@ export default defineComponent({
       },
       {
         title: 'RNA central ID of tRNA', dataIndex: 'RNA central ID of tRNA', width: 250, ellipsis: true, key: 'RNA central ID of tRNA', resizable: true,
-        filter: {
+
+      },
+      { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical charged amino acids', width: 260, ellipsis: true, key: 'Noncanonical charged amino acids', resizable: true        
+      ,filter: {
           type: 'multiple',
           list: [
             { text: 'Ser', value: 'Ser' },
@@ -239,9 +242,7 @@ export default defineComponent({
             { text: 'Pyl', value: 'Pyl' },
           ],
           onFilter: (value, record) => value.includes(record.Noncanonical_charged_amino_acids)
-        }
-      },
-      { title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical charged amino acids', width: 260, ellipsis: true, key: 'Noncanonical charged amino acids', resizable: true },
+        } },
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
       {
@@ -325,6 +326,10 @@ export default defineComponent({
 </script>
 
 <style>
+
+.s-table__filter-dropdown-content {
+    overflow-y: auto;
+}
 .site--main {
   padding: 20px;
 }
