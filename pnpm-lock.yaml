@@ -77,6 +77,9 @@ importers:
       markdown-it-table-of-contents:
         specifier: ^0.6.0
         version: 0.6.0
+      marked:
+        specifier: ^13.0.3
+        version: 13.0.3
       multer:
         specifier: 1.4.5-lts.1
         version: 1.4.5-lts.1
@@ -2452,6 +2455,11 @@ packages:
 
   markdown-it@14.1.0:
     resolution: {integrity: sha512-a54IwgWPaeBCAAsv13YgmALOF1elABB08FxO9i+r4VFk5Vl4pKokRPeX8u5TCgSsPi6ec1otfLjdOpVcgbpshg==}
+    hasBin: true
+
+  marked@13.0.3:
+    resolution: {integrity: sha512-rqRix3/TWzE9rIoFGIn8JmsVfhiuC8VIQ8IdX5TfzmeBucdY05/0UlzKaw0eVtpcN/OdVFpBk7CjKGo9iHJ/zA==}
+    engines: {node: '>= 18'}
     hasBin: true
 
   mdurl@2.0.0:
@@ -5909,6 +5917,8 @@ snapshots:
       mdurl: 2.0.0
       punycode.js: 2.3.1
       uc.micro: 2.1.0
+
+  marked@13.0.3: {}
 
   mdurl@2.0.0: {}
 

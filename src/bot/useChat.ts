@@ -1,3 +1,4 @@
+//src/bot/useChat.ts
 import { ref } from 'vue';
 import axios from 'axios';
 import { systemInformation, projectBackground, projectObjectives, projectContent,QA } from './presetInformation';
