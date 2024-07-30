@@ -11,14 +11,13 @@
         </button>
       </div>
       <div id="chat-content">
-        <div v-for="message in messages" :key="message.id" :class="['message-container', message.sender]">
+        <div v-for="message in renderedMessages" :key="message.id" :class="['message-container', message.sender]">
           <img v-if="message.sender === 'bot'" src="/bot-image.png" alt="Bot Avatar" class="avatar"/>
           <img v-if="message.sender === 'user'" src="https://cdn-icons-png.flaticon.com/512/1946/1946429.png" alt="User Avatar" class="avatar"/>
           <div class="message">
-            <span v-if="message.text">{{ message.text }}</span>
-            <!-- 显示消息文本 -->
+            <span v-if="message.text" v-html="message.text"></span>
+            <!-- 显示消息文本并解析 Markdown -->
             <img v-if="message.image" :src="message.image" alt="Message Image" class="message-image"/>
-            <!-- 如果消息包含图片，显示图片，图片的类为 message-image -->
           </div>
         </div>
       </div>
@@ -52,9 +51,9 @@
 import { defineComponent, ref, watch } from 'vue';
 import { useDraggable } from './Draggable';
 import { useChat } from './useChat';
+import { useMarkdown } from '../utils/useMarkdown';
 import { ElIcon } from 'element-plus';
 import { Close } from '@element-plus/icons-vue';
-
 
 export default defineComponent({
   name: 'BotComponent',
@@ -64,19 +63,24 @@ export default defineComponent({
   },
   setup() {
     const { element, startDrag } = useDraggable();
-    const { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage  } = useChat();
+    const { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage } = useChat();
+    const { renderMarkdown } = useMarkdown();
 
-    // 监听聊天框显示状态变化
-    watch(isChatOpen, (newVal) => {
-      console.log("Chat Open State Changed:", newVal);
-    });
+    // 用于存储渲染后的消息
+    const renderedMessages = ref([]);
 
-    // 监听消息列表的变化
-    watch(messages, (newVal) => {
-      console.log("Messages Updated:", newVal);
-    }, { deep: true });
+    // 监听消息列表的变化并更新渲染后的消息
+    watch(messages, async (newVal) => {
+      const rendered = await Promise.all(newVal.map(async message => {
+        if (message.text) {
+          message.text = await renderMarkdown(message.text);
+        }
+        return message;
+      }));
+      renderedMessages.value = rendered;
+    }, { deep: true, immediate: true });
 
-    return { element, startDrag, isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage };
+    return { element, startDrag, isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage, renderedMessages };
   }
 });
 </script>

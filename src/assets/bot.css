@@ -60,7 +60,7 @@
 
 #chat-content {
   flex: 1;
-  padding: 10px;
+  padding: 5px;
   overflow-y: auto;
   display: flex;
   flex-direction: column; /* 让最新消息显示在底部 */
@@ -84,7 +84,8 @@
 #chat-content .user .message {
   background-color: #007bff;
   color: white;
-  padding: 8px;
+  padding-top: 0px;
+  padding-bottom: 0px;
   border-radius: 15px;
   margin-left: 10px;
   font-size: 12px; /* 调整消息字体大小 */
@@ -92,7 +93,8 @@
 
 #chat-content .bot .message {
   background-color: #f1f1f1;
-  padding: 8px;
+  padding-top: 0px;
+  padding-bottom: 0px;
   border-radius: 15px;
   margin-right: 10px;
   font-size: 12px; /* 调整消息字体大小 */
