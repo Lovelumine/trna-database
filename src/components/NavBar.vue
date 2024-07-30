@@ -18,9 +18,9 @@
     </nav>
     <nav class="site--header__right">
       <ul class="topNav-items right">
-        <li><router-link to="/download" active-class="active-link">Download</router-link></li>
-        <li><router-link to="/help" active-class="active-link">Help</router-link></li>
-        <li><router-link to="/about" active-class="active-link">About</router-link></li>
+        <li><router-link to="/download" active-class="active-link"><font-awesome-icon :icon="['fas', 'download']" title="Download" /></router-link></li>
+        <li><router-link to="/help" active-class="active-link"><font-awesome-icon :icon="['fas', 'book']" title="Help" /></router-link></li>
+        <li><router-link to="/about" active-class="active-link"><font-awesome-icon :icon="['fas', 'info-circle']" title="About" /></router-link></li>
       </ul>
     </nav>
   </header>
