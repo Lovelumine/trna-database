@@ -241,7 +241,7 @@ export default defineComponent({
             { text: 'Cys', value: 'Cys' },
             { text: 'Pyl', value: 'Pyl' },
           ],
-          onFilter: (value, record) => value.includes(record.Noncanonical_charged_amino_acids)
+          onFilter: (value, record) => value.includes(record['Noncanonical charged amino acids'])
         } },
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },

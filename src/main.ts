@@ -16,6 +16,13 @@ import * as ElIcons from '@element-plus/icons-vue'; // 引入 Element Plus 图�
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css'; // 引入 NProgress 样式
 
+// FontAwesome 图标库配置
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+
+// 导入图标
+import './utils/icons';
+
 // 引入组件
 const Home = () => import('./views/Home.vue');
 const CodingVariationDisease = () => import('./views/Coding Variation Disease/Coding Variation Disease.vue');
@@ -78,6 +85,8 @@ const app = createApp(App);
 for (const name in ElIcons) {
   app.component(name, (ElIcons as any)[name]);
 }
+
+app.component('font-awesome-icon', FontAwesomeIcon);
 
 app.use(STable);
 app.use(VXETable);
