@@ -2,7 +2,6 @@
   <div class="blast-search">
     <h1>BLAST Search</h1>
     <form @submit.prevent="runBlast">
-      <!-- 表单内容保持不变 -->
       <div class="form-group">
         <label for="expect">Expect</label>
         <input type="number" id="expect" v-model="formData.expect" step="0.01" />
@@ -15,19 +14,21 @@
         <label for="database">Database</label>
         <select id="database" v-model="formData.database">
           <option value="All eukaryotic tRNAs">All eukaryotic tRNAs</option>
-          <!-- 添加其他数据库选项 -->
         </select>
       </div>
       <div class="form-group">
+        <label for="sequenceFormat">Query Sequence Format</label>
+        <select id="sequenceFormat" v-model="formData.sequenceFormat">
+          <option value="formatted">Formatted (FASTA, GenBank)</option>
+          <option value="unformatted">Unformatted</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>Query Sequence</label>
-        <div>
-          <input type="radio" id="formatted" value="formatted" v-model="formData.sequenceFormat" />
-          <label for="formatted">Formatted (FASTA, GenBank)</label>
-        </div>
-        <div>
-          <input type="radio" id="unformatted" value="unformatted" v-model="formData.sequenceFormat" />
-          <label for="unformatted">Unformatted</label>
-        </div>
+        <div class="form-group">
+        <button type="button" @click="addExampleSequences">Example</button>
+      </div>
         <textarea v-model="formData.querySequence" placeholder="Enter your sequence here"></textarea>
       </div>
       <div class="form-group">
@@ -38,7 +39,7 @@
       <button type="reset" @click="clearForm">Clear Form</button>
     </form>
   </div>
-  <div v-if="blastResult" >
+  <div v-if="blastResult">
     <BlastResults :blastResult="blastResult" />
   </div>
 </template>
@@ -82,7 +83,7 @@ export default {
       this.formData = {
         expect: 0.01,
         wordSize: 11,
-        database: 'All tRNAs',
+        database: 'All eukaryotic tRNAs',
         sequenceFormat: 'formatted',
         querySequence: ''
       };
@@ -95,6 +96,12 @@ export default {
         this.formData.querySequence = e.target.result;
       };
       reader.readAsText(file);
+    },
+    addExampleSequences() {
+      this.formData.querySequence = `>sequence_A
+GTAGTCGTGGCCGAGTGGTTAAGGCGGCAGGCTTTAAACCTGTTGGGGTTTCCCCGCACGGGTTCGAATCCCGTCGACTACGCCA
+>sequence_B
+GTAGTCGTGGCCGAGTGGTTAAGGCGGCAGGCTTTAAACCTGTTGGGGTTTCCCCGCACGGGTTCGAATCCCGTCGACTACGCCA`;
     }
   }
 };
@@ -147,6 +154,4 @@ form button[type="reset"] {
   color: #fff;
   margin-left: 0.5rem;
 }
-
-
 </style>
