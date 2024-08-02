@@ -65,6 +65,14 @@
                 </ElTag>
               </ElSpace>
             </template>
+            <template v-else-if="column.key === 'PMID of references'">
+              <ElSpace>
+                <span v-for="(pmid, index) in getPmidList(record['PMID of references'])" :key="index">
+                  <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + pmid.trim()" target="_blank" class="bracket-links">{{ pmid.trim() }}</a>
+                  <span v-if="index < getPmidList(record['PMID of references']).length - 1">, </span>
+                </span>
+              </ElSpace>
+            </template>
             <template v-else>
               <span>{{ text }}</span>
             </template>
@@ -115,8 +123,12 @@
                 </ElSpace>
               </p>
               <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
-              <p><b>PMID of references:</b> <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record['PMID of references']"
-                  target="_blank" class="tilt-hover">{{ record['PMID of references'] }}</a></p>
+              <p><b>PMID of references:</b> 
+                <span v-for="(pmid, index) in getPmidList(record['PMID of references'])" :key="index">
+                  <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + pmid.trim()" target="_blank" class="tilt-hover">{{ pmid.trim() }}</a>
+                  <span v-if="index < getPmidList(record['PMID of references']).length - 1">, </span>
+                </span>
+              </p>
               <p><b>Notes:</b> {{ record['Notes'] }}</p>
             </div>
           </template>
@@ -128,9 +140,9 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed, nextTick } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption } from 'element-plus';
-import { STableProvider, STableProps } from '@shene/table';
+import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import VueEasyLightbox from 'vue-easy-lightbox';
@@ -138,7 +150,6 @@ import { highlightMutation } from '../../utils/highlightMutation.js'
 import { getTagType } from '../../utils/tag.js'
 import { processCSVData } from '../../utils/processCSVData.js'
 import { sortData } from '../../utils/sort.js';
-import axios from 'axios';
 
 type DataType = {
   [key: string]: string | string[];
@@ -185,11 +196,6 @@ export default defineComponent({
       await loadData();
       dataSource.value = originalFilteredDataSource.value;
       sortedDataSource.value = originalFilteredDataSource.value;
-      const style = document.createElement('style');
-      style.innerHTML = `
-    `;
-      document.head.appendChild(style);
-
     });
 
     const visible = ref(false);
@@ -247,12 +253,35 @@ export default defineComponent({
     }}
       },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
-      { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>), resizable: true }];
+      { title: 'PMID of references', 
+  dataIndex: 'PMID of references', 
+  key: 'PMID of references', 
+  resizable: true,
+  width: 250, 
+  align: 'center',
+  ellipsis: true, 
+  customRender: ({ text, record }) => {
+    const reference = String(record['PMID of references']); // 确保 Reference 是字符串类型
+    return (
+        <div>
+            {reference.split('、').map((pmid, index, array) => (
+                <span key={pmid.trim()}>
+                    <a href={`https://pubmed.ncbi.nlm.nih.gov/${pmid.trim()}`} target="_blank" class="bracket-links">{pmid.trim()}</a>
+                    {index < array.length - 1 && '、'}
+                </span>
+            ))}
+        </div>
+    );
+}}
+];
 
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
+    const getPmidList = (pmidString) => {
+      return String(pmidString).split('、');
+    };
 
     const onSorterChange = (params: any) => {
       let sorter: { field?: string, order?: 'ascend' | 'descend' } = {};
@@ -301,6 +330,7 @@ export default defineComponent({
       hideLightbox,
       getTagType, // 获取标签类型
       onSorterChange,
+      getPmidList, // 添加getPmidList方法
       loading
     };
   }
