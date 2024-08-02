@@ -65,6 +65,14 @@
                 </ElTag>
               </ElSpace>
             </template>
+            <template v-else-if="column.key === 'PMID of references'">
+              <ElSpace>
+                <span v-for="(pmid, index) in getPmidList(record['PMID of references'])" :key="index">
+                  <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + pmid.trim()" target="_blank" class="bracket-links">{{ pmid.trim() }}</a>
+                  <span v-if="index < getPmidList(record['PMID of references']).length - 1">, </span>
+                </span>
+              </ElSpace>
+            </template>
             <template v-else>
               <span>{{ text }}</span>
             </template>
@@ -115,8 +123,12 @@
                 </ElSpace>
               </p>
               <p><b>Mutational position of sup-tRNA:</b> {{ record['Mutational position of sup-tRNA'] }}</p>
-              <p><b>PMID of references:</b> <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record['PMID of references']"
-                  target="_blank" class="tilt-hover">{{ record['PMID of references'] }}</a></p>
+              <p><b>PMID of references:</b> 
+                <span v-for="(pmid, index) in getPmidList(record['PMID of references'])" :key="index">
+                  <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + pmid.trim()" target="_blank" class="tilt-hover">{{ pmid.trim() }}</a>
+                  <span v-if="index < getPmidList(record['PMID of references']).length - 1">, </span>
+                </span>
+              </p>
               <p><b>Notes:</b> {{ record['Notes'] }}</p>
             </div>
           </template>
@@ -263,9 +275,13 @@ export default defineComponent({
         }
       },
       { title: 'Mutational position of sup-tRNA', dataIndex: 'Mutational position of sup-tRNA', width: 250, ellipsis: true, key: 'Mutational position of sup-tRNA', resizable: true },
-      { title: 'PMID of references', dataIndex: 'PMID', width: 150, ellipsis: true, key: 'PMID', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>), resizable: true },
+      { title: 'PMID of references', dataIndex: 'PMID of references', width: 150, ellipsis: true, key: 'PMID of references', customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record['PMID of references'] || '#'} target="_blank" class="bracket-links">{record['PMID of references']}</a></div>), resizable: true },
       { title: 'Notes', dataIndex: 'Notes', width: 150, ellipsis: true, key: 'Notes', resizable: true }
     ];
+
+    const getPmidList = (pmidString) => {
+      return String(pmidString).split('、');
+    };
 
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
@@ -319,7 +335,8 @@ export default defineComponent({
       hideLightbox,
       getTagType, // 获取标签类型
       onSorterChange,
-      loading
+      loading,
+      getPmidList
     };
   }
 });
