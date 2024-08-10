@@ -61,6 +61,10 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      '/chat': {
+        target: 'http://localhost:8080/api',
+        changeOrigin: true,
+      },
       '/run-blast': {
         target: 'http://localhost:3945',
         changeOrigin: true,
