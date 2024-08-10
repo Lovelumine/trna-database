@@ -1,4 +1,3 @@
-//src/bot/BotComponent.vue
 <template>
   <div id="bot-container" ref="element" >
     <div id="bot-icon" @click="toggleChat" @mousedown="startDrag">
@@ -46,7 +45,7 @@
 <script lang="ts">
 import { defineComponent, ref, watch, nextTick } from 'vue';
 import { useDraggable } from './Draggable';
-import { useChat } from './useChat';
+import { useChat } from '../utils/useChat';
 import { useMarkdown } from '../utils/useMarkdown';
 import { ElIcon } from 'element-plus';
 import { Close } from '@element-plus/icons-vue';
@@ -58,8 +57,11 @@ export default defineComponent({
     Close
   },
   setup() {
+    // 从 .env 文件中读取 API Key
+    const apiKey = import.meta.env.VITE_API_KEY;
+
     const { element, startDrag } = useDraggable();
-    const { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage } = useChat();
+    const { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage } = useChat(apiKey);
     const { renderMarkdown } = useMarkdown();
 
     const renderedMessages = ref([]);
@@ -85,4 +87,3 @@ export default defineComponent({
   }
 });
 </script>
-
