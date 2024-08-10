@@ -11,7 +11,7 @@
           <el-icon><close /></el-icon>
         </button>
       </div>
-      <div id="chat-content">
+      <div id="chat-content" ref="chatContent">
         <div v-for="message in renderedMessages" :key="message.id" :class="['message-container', message.sender]">
           <img v-if="message.sender === 'bot'" src="/bot-image.png" alt="Bot Avatar" class="avatar"/>
           <img v-if="message.sender === 'user'" src="https://cdn-icons-png.flaticon.com/512/1946/1946429.png" alt="User Avatar" class="avatar"/>
@@ -44,7 +44,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent, ref, watch, nextTick } from 'vue';
 import { useDraggable } from './Draggable';
 import { useChat } from './useChat';
 import { useMarkdown } from '../utils/useMarkdown';
@@ -63,6 +63,7 @@ export default defineComponent({
     const { renderMarkdown } = useMarkdown();
 
     const renderedMessages = ref([]);
+    const chatContent = ref<HTMLDivElement | null>(null);
 
     watch(messages, async (newVal) => {
       const rendered = await Promise.all(newVal.map(async message => {
@@ -72,9 +73,16 @@ export default defineComponent({
         return message;
       }));
       renderedMessages.value = rendered;
+
+      // 在渲染完成后将消息框滚动到底部
+      await nextTick(); // 等待 DOM 更新
+      if (chatContent.value) {
+        chatContent.value.scrollTop = chatContent.value.scrollHeight;
+      }
     }, { deep: true, immediate: true });
 
-    return { element, startDrag, isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage, renderedMessages };
+    return { element, startDrag, isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage, renderedMessages, chatContent };
   }
 });
 </script>
+
