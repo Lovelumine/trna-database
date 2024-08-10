@@ -1,11 +1,11 @@
 //src/bot/BotComponent.vue
 <template>
-  <div id="bot-container" ref="element" @mousedown="startDrag">
-    <div id="bot-icon" @click="toggleChat">
+  <div id="bot-container" ref="element" >
+    <div id="bot-icon" @click="toggleChat" @mousedown="startDrag">
       <img src="/bot-image.png" alt="Bot Icon" @dragstart.prevent />
     </div>
     <div id="chat-box" v-if="isChatOpen">
-      <div id="chat-header">
+      <div id="chat-header" @mousedown="startDrag">
         <span>Smart Web Navigator</span>
         <button @click="toggleChat" class="close-button">
           <el-icon><close /></el-icon>

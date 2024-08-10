@@ -1,9 +1,10 @@
 #bot-container {
   position: fixed;
+  width: 80px;
+  height: 80px;
   bottom: 10px;
   right: 10px;
   z-index: 1000;
-  cursor: move; /* 鼠标悬停时显示移动光标，允许用户拖动聊天框 */
   user-select: none; /* 禁止用户选择文本，避免拖动时选中文本 */
 }
 
@@ -44,6 +45,7 @@
   color: white;
   padding: 10px;
   display: flex;
+  cursor: move;
   justify-content: space-between;
   align-items: center;
   border-top-left-radius: 8px; /* 圆角边框 */
@@ -64,6 +66,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column; /* 让最新消息显示在底部 */
+  user-select: text; /* 允许用户选择消息文本 */
 }
 
 #chat-content .user, #chat-content .bot {
