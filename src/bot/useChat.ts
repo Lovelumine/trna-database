@@ -1,21 +1,17 @@
 //src/bot/useChat.ts
 import { ref } from 'vue';
-import axios from 'axios';
-import { systemInformation, projectBackground, projectObjectives, projectContent,QA } from './presetInformation';
-import {modomicsnatural} from './modomicsnatural'
-
+import { systemInformation, projectBackground, projectObjectives, projectContent, QA } from './presetInformation';
+import { modomicsnatural } from './modomicsnatural';
 
 export function useChat() {
-
-
   const isChatOpen = ref(false);
-const messages = ref<Array<{ id: number; text: string; sender: string; image?: string }>>([
-  { id: 1, text: 'Hello, I am your virtual assistant Yingying. How can I assist you today?', sender: 'bot' }
-]);
+  const messages = ref<Array<{ id: number; text: string; sender: string; image?: string }>>([
+    { id: 1, text: 'Hello, I am your virtual assistant Yingying. How can I assist you today?', sender: 'bot' }
+  ]);
 
   const newMessage = ref('');
-  const newImage = ref(null); // 新增，存储上传的图片
-  const imagePreview = ref(''); // 新增，存储图片预览的 URL
+  const newImage = ref(null);
+  const imagePreview = ref('');
 
   const presetInformation = `
     ${systemInformation}
@@ -26,12 +22,10 @@ const messages = ref<Array<{ id: number; text: string; sender: string; image?: s
     ${modomicsnatural}
   `;
 
-  // 切换聊天窗口的显示状态
   const toggleChat = () => {
     isChatOpen.value = !isChatOpen.value;
   };
 
-  // 发送消息
   const sendMessage = async () => {
     if (newMessage.value.trim() !== '' || newImage.value) {
       const textContent = newMessage.value.trim();
@@ -44,10 +38,9 @@ const messages = ref<Array<{ id: number; text: string; sender: string; image?: s
         image: imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null
       });
       newMessage.value = '';
-      newImage.value = null; // 发送后清空图片
-      imagePreview.value = ''; // 清空预览
+      newImage.value = null;
+      imagePreview.value = '';
 
-      // 准备对话上下文
       const conversation = messages.value.map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'assistant',
         content: [
@@ -56,68 +49,96 @@ const messages = ref<Array<{ id: number; text: string; sender: string; image?: s
         ].filter(content => content !== null)
       }));
 
-      // 确保所有消息的 content 字段都是字符串数组并且不是空
-      conversation.forEach(msg => {
-        msg.content.forEach(contentItem => {
-          if (typeof contentItem.text !== 'string' || contentItem.text.trim() === '') {
-            contentItem.text = '无内容'; // 使用默认值替换空内容
-          }
-        });
-      });
-
-      // 在对话上下文中添加预设信息
       conversation.unshift({
         role: 'system',
         content: [{ type: "text", text: presetInformation }]
       });
 
-      console.log('Sending conversation:', conversation); // 调试信息
+      console.log('Sending conversation:', conversation);
 
-      // 使用 OpenAI 生成回答
       try {
-        const response = await axios.post(
-          '/api/openai', // 代理服务器的地址
-          {
-            messages: conversation
-          }
-        );
+        const response = await fetch('/api/openai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            messages: conversation,
+            stream: true
+          })
+        });
 
-        // 检查 API 响应，确保 content 存在
-        const botMessage = response.data.choices[0].message.content;
-        if (typeof botMessage === 'string') {
-          messages.value.push({ id: Date.now(), text: botMessage.trim(), sender: 'bot' });
-        } else {
-          messages.value.push({ id: Date.now(), text: '抱歉，我无法处理您的请求。', sender: 'bot' });
+        if (!response.body) {
+          throw new Error('ReadableStream not supported in this environment.');
         }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let completeMessage = '';
+        let buffer = ''; // 用于存储未完成的JSON数据
+        const botMessageId = Date.now();
+
+        // 首次添加一条空消息，用于更新
+        messages.value.push({ id: botMessageId, text: '', sender: 'bot' });
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+
+          let lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // 保留最后一行作为未完成部分
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const jsonStr = line.replace('data: ', '');
+              if (jsonStr !== '[DONE]') {
+                try {
+                  const parsed = JSON.parse(jsonStr);
+                  const content = parsed.choices[0]?.delta?.content;
+                  if (content) {
+                    completeMessage += content;
+                    const botMessage = messages.value.find(msg => msg.id === botMessageId);
+                    if (botMessage) {
+                      botMessage.text = completeMessage.trim();
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error parsing stream chunk:', error);
+                }
+              }
+            }
+          }
+        }
+
+        console.log('Stream ended');
+
       } catch (error) {
-        console.error('Error communicating with OpenAI API:', error.response ? error.response.data : error.message);
-        messages.value.push({ id: Date.now(), text: '抱歉，我无法处理您的请求。', sender: 'bot' });
+        console.error('Error communicating with OpenAI API:', error.message);
+        messages.value.push({ id: Date.now(), text: 'Sorry, I could not process your request.', sender: 'bot' });
       }
     }
   };
 
-// 将图片转换为 Base64 编码
-const toBase64 = (file) => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.readAsDataURL(file);
-  reader.onload = () => {
-    const result = reader.result;
-    if (typeof result === 'string') {
-      resolve(result.split(',')[1]);
-    } else {
-      reject(new Error('FileReader result is not a string'));
-    }
-  };
-  reader.onerror = error => reject(error);
-});
+  const toBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        resolve(result.split(',')[1]);
+      } else {
+        reject(new Error('FileReader result is not a string'));
+      }
+    };
+    reader.onerror = error => reject(error);
+  });
 
-
-  // 触发图片上传
   const triggerImageUpload = () => {
     document.getElementById('image-input').click();
   };
 
-  // 预览图片
   const previewImage = (event: Event) => {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] || null;

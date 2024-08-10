@@ -38,54 +38,32 @@ const logger = winston.createLogger({
 logger.info('OpenAI API Key: ' + OPENAI_API_KEY);
 logger.info('API Base URL: ' + API_BASE_URL);
 
-// 处理文本与图片请求
+// 处理文本与图片请求，支持流式传输
 app.post('/api/openai', async (req, res) => {
   logger.info('Received request body: ' + JSON.stringify(req.body)); // 增加控制台输出，查看请求体
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}/chat/completions`,
-      {
+    const response = await axios({
+      method: 'post',
+      url: `${API_BASE_URL}/chat/completions`,
+      data: {
         model: 'gpt-4o',
         messages: req.body.messages,
         max_tokens: 1000,
+        stream: true, // 启用流式传输
       },
-      {
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        }
-      }
-    );
-    res.json(response.data);
-  } catch (error) {
-    logger.error('Error communicating with OpenAI API: ' + (error.response ? JSON.stringify(error.response.data) : error.message));
-    res.status(500).json({ error: 'Error communicating with OpenAI API' });
-  }
-});
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      responseType: 'stream' // 设置响应类型为流
+    });
 
-// 处理图片生成请求
-app.post('/api/openai/image-generation', async (req, res) => {
-  const data = {
-    model: "dall-e-3",
-    prompt: req.body.prompt, // 使用请求体中的 prompt
-    n: req.body.n || 1,
-    size: req.body.size || "1024x1024"
-  };
+    // 直接将流输出到响应中
+    response.data.pipe(res);
 
-  const config = {
-    method: 'post',
-    url: `${API_BASE_URL}/images/generations`,
-    headers: {
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
-      'Content-Type': 'application/json'
-    },
-    data: data
-  };
-
-  try {
-    const response = await axios(config);
-    res.json(response.data);
+    response.data.on('end', () => {
+      logger.info('Stream ended');
+    });
   } catch (error) {
     logger.error('Error communicating with OpenAI API: ' + (error.response ? JSON.stringify(error.response.data) : error.message));
     res.status(500).json({ error: 'Error communicating with OpenAI API' });
