@@ -1,3 +1,4 @@
+//src/views/AIYingying/AIYingying.vue
 <template>
     <div id="ai-app">
       <Sidebar @menu-selected="handleMenuSelected" />

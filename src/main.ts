@@ -23,6 +23,10 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 // 导入图标
 import './utils/icons';
 
+//动态美化效果
+import VWave from 'v-wave';
+
+
 // 引入组件
 const Home = () => import('./views/Home.vue');
 const CodingVariationDisease = () => import('./views/Coding Variation Disease/Coding Variation Disease.vue');
@@ -93,6 +97,7 @@ app.component('font-awesome-icon', FontAwesomeIcon);
 app.use(STable);
 app.use(VXETable);
 app.use(router);
+app.use(VWave, {});
 app.use(ElementPlus);
 app.use(VueSidebarMenu);
 

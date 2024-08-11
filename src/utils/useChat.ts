@@ -1,7 +1,6 @@
-//src/utils/useChat.ts
 import { ref } from 'vue';
 
-export function useChat(apiKey: string) { // 接受 apiKey 作为参数
+export function useChat(apiKey: string) { 
   const isChatOpen = ref(false);
   const messages = ref<Array<{ id: number; text: string; sender: string; image?: string }>>([
     { id: 1, text: 'Hello, I am your virtual assistant YingYing. How can I assist you today?', sender: 'bot' }
@@ -25,7 +24,7 @@ export function useChat(apiKey: string) { // 接受 apiKey 作为参数
         method: 'GET',
         headers: {
           'accept': 'application/json',
-          'AUTHORIZATION': apiKey, // 使用传入的 apiKey
+          'AUTHORIZATION': apiKey, 
         }
       });
 
@@ -47,7 +46,7 @@ export function useChat(apiKey: string) { // 接受 apiKey 作为参数
         method: 'GET',
         headers: {
           'accept': 'application/json',
-          'AUTHORIZATION': apiKey, // 使用传入的 apiKey
+          'AUTHORIZATION': apiKey, 
         }
       });
 
@@ -90,7 +89,7 @@ export function useChat(apiKey: string) { // 接受 apiKey 作为参数
           method: 'POST',
           headers: {
             'accept': 'application/json',
-            'AUTHORIZATION': apiKey, // 使用传入的 apiKey
+            'AUTHORIZATION': apiKey,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -120,7 +119,7 @@ export function useChat(apiKey: string) { // 接受 apiKey 作为参数
           buffer += chunk;
 
           let lines = buffer.split('\n');
-          buffer = lines.pop() || ''; // Keep the last incomplete line in buffer
+          buffer = lines.pop() || ''; 
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
@@ -186,14 +185,32 @@ export function useChat(apiKey: string) { // 接受 apiKey 作为参数
     }
   };
 
-  // 初始化函数
   const initializeChat = async () => {
     await fetchApplicationProfile();
     await openChatSession();
   };
 
-  // 在组件初始化时调用
+  const resetChat = async (newApiKey: string) => {
+    apiKey = newApiKey; 
+    messages.value = []; 
+    await fetchApplicationProfile(); 
+    await openChatSession(); 
+    messages.value.push({ id: 1, text: 'Hello, I am your virtual assistant YingYing. How can I assist you today?', sender: 'bot' });
+  };
+
   initializeChat();
 
-  return { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage };
+  return { 
+    isChatOpen, 
+    messages, 
+    newMessage, 
+    newImage, 
+    imagePreview, 
+    toggleChat, 
+    sendMessage, 
+    triggerImageUpload, 
+    previewImage,
+    resetChat 
+  };
 }
+

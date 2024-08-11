@@ -1,3 +1,4 @@
+//src/views/AIYingying/AISidebar.vue
 <template>
   <div class="sidebar">
     <div class="sidebar-header">
