@@ -75,3 +75,7 @@ body {
     height: 400px;
   }
   
+  img {
+    max-width: 100% !important;
+  }
+  

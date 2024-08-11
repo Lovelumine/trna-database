@@ -253,3 +253,10 @@
 .bot .avatar {
   margin-right: 10px;
 }
+
+#chat-content .message img {
+  max-width: 100%; /* 限制图片宽度为聊天框的宽度 */
+  height: auto; /* 自动调整高度以保持纵横比 */
+  border-radius: 8px; /* 圆角效果 */
+  margin-top: 5px;
+}
