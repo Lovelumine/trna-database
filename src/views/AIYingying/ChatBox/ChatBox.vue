@@ -1,4 +1,3 @@
-//src/views/AIYingying/ChatBox/ChatBox.vue
 <template>
   <div class="chat-container">
     <div class="chat-box" ref="chatBox">
@@ -14,6 +13,16 @@
         <div class="content">
           <div class="name">{{ message.sender === 'user' ? 'You' : 'YingYing' }}</div>
           <div class="text" v-html="message.text"></div>
+        </div>
+      </div>
+      <!-- 显示省略号 -->
+      <div v-if="loading" class="message loading-message">
+        <div class="avatar">
+          <img :src="botAvatar" alt="avatar" />
+        </div>
+        <div class="content">
+          <div class="name">YingYing</div>
+          <div class="text">...</div>
         </div>
       </div>
     </div>
@@ -94,10 +103,11 @@ export default defineComponent({
     };
 
     const apiKey = ref(getApiKey());
-    const { messages, newMessage, sendMessage, resetChat } = useChat(apiKey.value);
+    const { messages, newMessage, sendMessage: sendChatMessage, resetChat } = useChat(apiKey.value);
     const isFullscreen = ref(false);
     const chatBox = ref(null);
     const dialogVisible = ref(false);
+    const loading = ref(false);  // 用于管理省略号状态
 
     const botAvatar = 'https://framerusercontent.com/images/p0mVMX1aJictMR1RM9fE1PrTrRQ.png';
     const userAvatar = 'https://framerusercontent.com/images/JnbQ2qAMPu3VRXkbzDhwoMnHpk.png';
@@ -127,6 +137,17 @@ export default defineComponent({
       isFullscreen.value = !isFullscreen.value;
     };
 
+    const sendMessage = async () => {
+      if (!newMessage.value.trim()) return;
+
+      loading.value = true;  // 开始显示省略号
+
+      // 发送消息
+      await sendChatMessage();
+
+      loading.value = false;  // 停止显示省略号
+    };
+
     watch([() => props.selectedMenuId, () => props.selectedSceneId], async () => {
       apiKey.value = getApiKey(); // 更新 apiKey
       await resetChat(apiKey.value); // 重置聊天会话
@@ -142,19 +163,16 @@ export default defineComponent({
       dialogVisible,
       botAvatar,
       userAvatar,
+      loading,  // 添加到返回值
     };
   },
 });
 </script>
 
-
-
 <style scoped>
-
 * {
   box-sizing: border-box;
 }
-
 
 .chat-container {
   display: flex;
@@ -176,7 +194,6 @@ export default defineComponent({
   z-index: 2;
   scroll-behavior: smooth; /* 添加平滑滚动 */
 }
-
 
 .message {
   display: flex;
@@ -216,7 +233,6 @@ export default defineComponent({
   border-radius: 8px;
   max-width: 120%;
 }
-
 
 img {
   max-width: 100% !important;
@@ -354,5 +370,14 @@ img {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+/* 新增的loading-message样式 */
+.loading-message {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  max-width: 60%;
+  animation: bubbleUp 0.5s ease-out;
 }
 </style>
