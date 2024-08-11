@@ -19,6 +19,13 @@
             <img v-if="message.image" :src="message.image" alt="Message Image" class="message-image"/>
           </div>
         </div>
+        <!-- 显示省略号 -->
+        <div v-if="loading" class="message-container bot">
+          <img src="/bot-image.png" alt="Bot Avatar" class="avatar"/>
+          <div class="message">
+            <span>...</span>
+          </div>
+        </div>
       </div>
       <div id="chat-input-container">
         <input
@@ -61,9 +68,10 @@ export default defineComponent({
     const apiKey = import.meta.env.VITE_API_KEY;
 
     const { element, startDrag } = useDraggable();
-    const { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage } = useChat(apiKey);
+    const { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage: sendChatMessage, triggerImageUpload, previewImage } = useChat(apiKey);
     const { renderMarkdown } = useMarkdown();
 
+    const loading = ref(false);  // 用于管理省略号状态
     const renderedMessages = ref([]);
     const chatContent = ref<HTMLDivElement | null>(null);
 
@@ -83,7 +91,18 @@ export default defineComponent({
       }
     }, { deep: true, immediate: true });
 
-    return { element, startDrag, isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage, renderedMessages, chatContent };
+    const sendMessage = async () => {
+      if (!newMessage.value.trim()) return;
+
+      loading.value = true;  // 开始显示省略号
+
+      // 发送消息
+      await sendChatMessage();
+
+      loading.value = false;  // 停止显示省略号
+    };
+
+    return { element, startDrag, isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage, renderedMessages, chatContent, loading };
   }
 });
 </script>
