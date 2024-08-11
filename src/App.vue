@@ -17,14 +17,15 @@
         <nav-bar />
         <router-view />
         <footer-comp />
-        <bot-component />
+        <bot-component v-if="!isAIYingyingRoute" />
       </div>
     </transition>
   </div>
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import NavBar from './components/NavBar.vue';
 import FooterComp from './components/Footer.vue';
 import BotComponent from './bot/BotComponent.vue';
@@ -36,7 +37,10 @@ export default defineComponent({
     BotComponent
   },
   setup() {
+    const route = useRoute();
     const loading = ref(true);
+    const isAIYingyingRoute = ref(route.path === '/AIYingying');
+
 
     onMounted(() => {
       // 强制加载动画至少显示两秒
@@ -45,7 +49,14 @@ export default defineComponent({
       }, 500);
     });
 
-    return { loading };
+    watch(
+      () => route.path,
+      (newPath) => {
+        isAIYingyingRoute.value = newPath === '/AIYingying';
+      }
+    );
+
+    return { loading, isAIYingyingRoute  };
   }
 });
 </script>

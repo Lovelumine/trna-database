@@ -57,11 +57,11 @@ export default defineConfig({
         target: 'http://localhost:3457',
         changeOrigin: true,
       },      
-      '/api': {
+      '/chat': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
-      '/chat': {
+      '/api': {
         target: 'http://localhost:8080/api',
         changeOrigin: true,
       },
