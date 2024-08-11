@@ -1,3 +1,4 @@
+//src/views/AIYingying/ChatBox/ChatBox.vue
 <template>
   <div class="chat-container">
     <div class="chat-box" ref="chatBox">
@@ -85,12 +86,15 @@ export default defineComponent({
     }
   },
   setup(props) {
-    let apiKey = import.meta.env.VITE_API_KEY_DEFAULT; 
-    if (props.selectedMenuId === 1 && props.selectedSceneId === 1) {
-      apiKey = import.meta.env.VITE_API_KEY_11;
-    }
+    const getApiKey = () => {
+      if (props.selectedMenuId === 1 && props.selectedSceneId === 1) {
+        return import.meta.env.VITE_API_KEY_11;
+      }
+      return import.meta.env.VITE_API_KEY_DEFAULT;
+    };
 
-    const { messages, newMessage, sendMessage } = useChat(apiKey);
+    const apiKey = ref(getApiKey());
+    const { messages, newMessage, sendMessage, resetChat } = useChat(apiKey.value);
     const isFullscreen = ref(false);
     const chatBox = ref(null);
     const dialogVisible = ref(false);
@@ -109,7 +113,7 @@ export default defineComponent({
     };
 
     watch(messages, async (newVal) => {
-      const rendered = await Promise.all(newVal.map(async message => {
+      const rendered = await Promise.all(newVal.map(async (message) => {
         if (message.text) {
           message.text = await renderMarkdown(message.text);
         }
@@ -122,6 +126,11 @@ export default defineComponent({
     const toggleFullscreen = () => {
       isFullscreen.value = !isFullscreen.value;
     };
+
+    watch([() => props.selectedMenuId, () => props.selectedSceneId], async () => {
+      apiKey.value = getApiKey(); // 更新 apiKey
+      await resetChat(apiKey.value); // 重置聊天会话
+    });
 
     return {
       newMessage,
@@ -137,6 +146,7 @@ export default defineComponent({
   },
 });
 </script>
+
 
 
 <style scoped>

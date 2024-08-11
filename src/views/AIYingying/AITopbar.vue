@@ -1,3 +1,4 @@
+//src/views/AIYingying/AITopbar.vue
 <template>
   <div class="topbar">
     <div class="scenes">

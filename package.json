@@ -39,6 +39,7 @@
     "papaparse": "^5.4.1",
     "rnautils": "^0.8.2",
     "typescript": "^5.4.5",
+    "v-wave": "^2.0.0",
     "vue": "^3.4.27",
     "vue-easy-lightbox": "^1.19.0",
     "vue-matomo": "^4.2.0",
