@@ -40,6 +40,7 @@ const Help = () => import('./views/help/help.vue');
 const Download = () => import('./views/download/download.vue');
 const AIYingying = () => import('./views/AIYingying/AIYingying.vue');
 const BlastSearch = () => import('./views/blast/BlastSearch.vue'); // 新添加的 BLAST 搜索组件
+const audio = () => import('./views/audio/audio.vue');
 
 // 引入表格组件
 import STable from '@shene/table';
@@ -64,6 +65,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/help', name: 'help', component: Help },
   { path: '/download', name: 'download', component: Download },
   { path: '/AIYingying', name: 'AIYingying', component: AIYingying },
+  { path: '/audio', name: 'audio', component: audio },
   { path: '/blast', name: 'blast', component: BlastSearch }, // 新添加的 BLAST 搜索路由
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
 ];

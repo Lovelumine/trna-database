@@ -38,8 +38,7 @@ export default {
     return {
       menuItems: [
         { id: 1, text: 'Intelligent Document', icon: 'book-open' },
-        { id: 6, text: 'Session History', icon: 'history' }
-      ],
+],
       selectedMenuId: 1 // 默认选中的菜单项 ID
     };
   },
