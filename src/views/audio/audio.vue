@@ -5,14 +5,18 @@
 
     <div class="content-container">
       <!-- 视频播放区域 -->
-      <VideoPlayer :videoOptions="options" :poster="currentPoster" />
+      <div class="video-area">
+        <VideoPlayer :videoOptions="options" :poster="currentPoster" />
+      </div>
 
-      <!-- 右侧的列表和AI组件 -->
+      <!-- 右侧的列表 -->
       <div class="sidebar">
         <VideoList :videoList="videoList" @selectVideo="handleSelectVideo" />
-        <AiAssistant />
       </div>
     </div>
+
+    <!-- AI Assistant 在视频下方 -->
+    <AiAssistant class="ai-assistant-fullwidth" />
   </div>
 </template>
 
@@ -69,10 +73,24 @@ const handleSelectVideo = (video) => {
   display: flex;
 }
 
+.video-area {
+  flex: 1;
+}
+
 .sidebar {
   margin-left: 20px;
+  width: 300px;
+  max-height: calc(100vh - 100px); /* 减去可能的其他空间 */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
 }
+
+.ai-assistant-fullwidth {
+  padding: 20px;
+  background-color: #f0f4f8;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
 </style>

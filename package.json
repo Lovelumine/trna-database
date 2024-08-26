@@ -38,6 +38,7 @@
     "openai": "^4.48.2",
     "papaparse": "^5.4.1",
     "rnautils": "^0.8.2",
+    "srt-parser-2": "^1.2.3",
     "typescript": "^5.4.5",
     "v-wave": "^2.0.0",
     "vue": "^3.4.27",
