@@ -1,9 +1,10 @@
 <template>
   <div class="video-player-wrapper">
-    <videoPlay v-bind="videoOptions" :poster="poster">
-      <!-- 添加字幕 -->
+    <videoPlay ref="videoPlayerRef" v-bind="videoOptions" :poster="poster">
+      <!-- 动态加载字幕 -->
       <track
-        src="/src/views/audio/audio/氨酰-tRNA的合成.srt"
+        v-if="subtitles"
+        :src="subtitles"
         kind="subtitles"
         srclang="zh"
         label="Chinese"
@@ -14,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { PropType } from 'vue';
+import { PropType, provide, ref } from 'vue';
 import 'vue3-video-play/dist/style.css'; // 引入样式
 import { videoPlay } from 'vue3-video-play'; // 引入组件
 
@@ -45,8 +46,17 @@ const props = defineProps({
   poster: {
     type: String,
     required: true
+  },
+  subtitles: {
+    type: String,  // 接收字幕文件路径
+    required: false
   }
 });
+
+const videoPlayerRef = ref(null);
+
+// 将播放器引用提供给其他组件
+provide('videoPlayer', videoPlayerRef);
 </script>
 
 <style scoped>
