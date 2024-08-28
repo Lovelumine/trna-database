@@ -14,8 +14,9 @@
         </button>
       </div>
   
-      <div v-if="loading">
-        加载中...
+      <div v-if="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>AI分析中...</p>
       </div>
   
       <div v-else>
@@ -54,9 +55,10 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, onMounted, watch, inject } from 'vue';
+  import { ref, onMounted, watch } from 'vue';
   import { fetchOpenAIResponse } from './useOpenAI';
   
+  // 定义组件 props
   const props = defineProps({
     subtitles: {
       type: String,
@@ -72,6 +74,7 @@
     }
   });
   
+  // 定义状态变量
   const loading = ref(true);
   const summary = ref('');
   const keyPoints = ref([]);
@@ -79,11 +82,25 @@
   const currentTab = ref('概览'); // 当前显示的分页
   const tabs = ['概览', '要点', '问题']; // 分页选项
   
-  // 获取 video 元素的引用
-  const videoElement = ref<HTMLVideoElement | null>(null);
+  // 加载 .srt 文件内容
+  const loadSrtContent = async () => {
+    try {
+      const response = await fetch(props.subtitles);
+      if (!response.ok) {
+        throw new Error(`Failed to load subtitles: ${response.statusText}`);
+      }
+      return await response.text();
+    } catch (error) {
+      console.error('Error loading SRT file:', error);
+      return '';
+    }
+  };
   
   const generateSummary = async () => {
     loading.value = true;
+  
+    // 加载 .srt 文件内容
+    const subtitlesContent = await loadSrtContent();
   
     const summaryPrompt = `
       You are a helpful assistant that summarize video subtitle.
@@ -94,7 +111,7 @@
       The video's subtitles:
   
       '''
-      ${props.subtitles}
+      ${subtitlesContent}
       '''
     `;
   
@@ -123,7 +140,7 @@
       The video's subtitles:
   
       '''
-      ${props.subtitles}
+      ${subtitlesContent}
       '''
     `;
   
@@ -137,7 +154,7 @@
       The video's subtitles:
   
       '''
-      ${props.subtitles}
+      ${subtitlesContent}
       '''
     `;
   
@@ -180,8 +197,23 @@
   
   // 跳转到指定的播放时间
   function seekTo(time: string) {
-    const [minutes, seconds] = time.split(':').map(Number);
-    const seekTime = minutes * 60 + seconds;
+    const timeParts = time.split(':').map(Number);
+    let seekTime = 0;
+  
+    if (timeParts.length === 3) {
+      // 如果格式是 "小时:分钟:秒"
+      const [hours, minutes, seconds] = timeParts;
+      seekTime = hours * 3600 + minutes * 60 + seconds;
+    } else if (timeParts.length === 2) {
+      // 如果格式是 "分钟:秒"
+      const [minutes, seconds] = timeParts;
+      seekTime = minutes * 60 + seconds;
+    } else if (timeParts.length === 1) {
+      // 如果格式是 "秒"
+      const [seconds] = timeParts;
+      seekTime = seconds;
+    }
+  
     const video = document.querySelector('video');
     if (video) {
       video.currentTime = seekTime;
@@ -200,6 +232,30 @@
     background-color: #f9f9f9;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .loading-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: #409eff;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
   
   .loading {

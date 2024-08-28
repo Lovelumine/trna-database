@@ -5,11 +5,11 @@ export const videoList = [
     poster: "/src/views/audio/audio/蛋白质的合成.png",
     subtitles: "/src/views/audio/audio/氨酰-tRNA的合成.srt",
   },
-  {
-    title: '起始、延伸与终止-原核生物',
-    src: "/src/views/audio/audio/起始、延伸与终止-原核生物.mp4",
-    poster: "/src/views/audio/audio/蛋白质的合成.png",
-    subtitles: "/src/views/audio/audio/起始、延伸与终止-原核生物.srt",
-  },
+  // {
+  //   title: '起始、延伸与终止-原核生物',
+  //   src: "/src/views/audio/audio/起始、延伸与终止-原核生物.mp4",
+  //   poster: "/src/views/audio/audio/蛋白质的合成.png",
+  //   subtitles: "/src/views/audio/audio/起始、延伸与终止-原核生物.srt",
+  // },
   // 未来可以在此处添加更多视频
 ];
