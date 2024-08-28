@@ -6,7 +6,7 @@
     <div class="content-container">
       <!-- 视频播放区域 -->
       <div class="video-area">
-        <VideoPlayer :videoOptions="options" :poster="currentPoster" />
+        <VideoPlayer :videoOptions="options" :poster="currentPoster" :subtitles="currentSubtitles" />
       </div>
 
       <!-- 右侧的列表 -->
@@ -16,7 +16,7 @@
     </div>
 
     <!-- AI Assistant 在视频下方 -->
-    <AiAssistant class="ai-assistant-fullwidth" />
+    <AiAssistant :subtitles="currentSubtitles" class="ai-assistant-fullwidth" />
   </div>
 </template>
 
@@ -24,7 +24,7 @@
 import { ref, reactive } from 'vue';
 import VideoPlayer from './VideoPlayer.vue';
 import VideoList from './VideoList.vue';
-import AiAssistant from './AiAssistant.vue';
+import AiAssistant from './AiAssistant/AiAssistant.vue';
 import { videoList as initialVideoList } from './VideoResources';
 
 // 当前视频标题
@@ -52,14 +52,16 @@ const options = reactive({
   controlBtns: ['audioTrack', 'quality', 'speedRate', 'volume', 'setting', 'pip', 'pageFullScreen', 'fullScreen']
 });
 
-// 当前视频的海报
+// 当前视频的海报和字幕
 const currentPoster = ref(videoList.value[0].poster);
+const currentSubtitles = ref(videoList.value[0].subtitles);
 
 // 处理选择视频的事件
 const handleSelectVideo = (video) => {
   options.src = video.src;
   options.title = video.title;
   currentPoster.value = video.poster;
+  currentSubtitles.value = video.subtitles;
   title.value = `蛋白质的合成 - ${video.title}`;
 }
 </script>
@@ -92,5 +94,4 @@ const handleSelectVideo = (video) => {
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
-
 </style>
