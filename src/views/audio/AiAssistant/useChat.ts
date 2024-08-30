@@ -63,27 +63,28 @@ export function useChat(apiKey: string) {
     }
   };
 
-  const sendMessage = async () => {
-    if (newMessage.value.trim() !== '' || newImage.value) {
+  const sendMessage = async (userMessage: string, messageWithContext: string) => {
+    if (messageWithContext.trim() !== '' || newImage.value) {
       if (!chatId) {
         console.error('Chat ID is not available. Unable to send message.');
         return;
       }
 
-      const textContent = newMessage.value.trim();
       const imageBase64 = newImage.value ? await toBase64(newImage.value) : null;
 
+      // 首先显示用户的原始消息
       messages.value.push({
         id: Date.now(),
         sender: 'user',
-        text: textContent,
+        text: userMessage,
         image: imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null
       });
+
       newMessage.value = '';
       newImage.value = null;
       imagePreview.value = '';
 
-      console.log('Sending message:', textContent);
+      console.log('Sending message with context:', messageWithContext);
 
       try {
         const response = await fetch(`${apiBaseURL}/application/chat_message/${chatId}`, {
@@ -94,7 +95,7 @@ export function useChat(apiKey: string) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            message: textContent,
+            message: messageWithContext,
             re_chat: false,
             stream: true
           })

@@ -1,16 +1,16 @@
 <template>
   <div class="ai-assistant">
     <h3>智慧工作台</h3>
-    
+
     <div class="navbar">
       <button :class="{ active: currentTab === 'subtitles' }" @click="currentTab = 'subtitles'">智能字幕</button>
       <button :class="{ active: currentTab === 'chat' }" @click="currentTab = 'chat'">实时提问</button>
     </div>
-    
+
     <div v-if="currentTab === 'subtitles'">
       <SubtitlesTab :subtitles="subtitlesPath" />
     </div>
-    
+
     <div v-if="currentTab === 'chat'">
       <ChatTab />
     </div>
@@ -23,7 +23,7 @@ import SubtitlesTab from './SubtitlesTab.vue';
 import ChatTab from './ChatTab.vue';
 
 const currentTab = ref('subtitles');  // 控制当前显示的功能
-const subtitlesPath = ref('/src/views/audio/audio/氨酰-tRNA的合成.srt');
+const subtitlesPath = ref('/src/views/audio/audio/双序列比对工具的介绍.srt');
 </script>
 
 <style scoped>
