@@ -28,7 +28,7 @@ import AiAssistant from './AiAssistant/AiAssistant.vue';
 import { videoList as initialVideoList } from './VideoResources';
 
 // 当前视频标题
-const title = ref('蛋白质的合成');
+const title = ref('双序列比对工具的介绍');
 
 // 视频列表
 const videoList = ref(initialVideoList);
@@ -62,7 +62,7 @@ const handleSelectVideo = (video) => {
   options.title = video.title;
   currentPoster.value = video.poster;
   currentSubtitles.value = video.subtitles;
-  title.value = `蛋白质的合成 - ${video.title}`;
+  title.value = `${video.title}`;
 }
 </script>
 

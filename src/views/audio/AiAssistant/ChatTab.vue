@@ -18,9 +18,9 @@
     </div>
     <div class="input-area">
       <textarea
-        v-model="newMessage"
+        v-model="userMessage"
         @keyup.enter.exact.prevent="sendMessage"
-        @keyup.enter.shift="newMessage += '\n'"  
+        @keyup.enter.shift="userMessage += '\n'"  
         placeholder="Send your messages, Shift+Enter line break"
       ></textarea>
       <div class="input-icons">
@@ -40,17 +40,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue';
+import { ref, onMounted, nextTick, watch } from 'vue';
 import { useChat } from './useChat';
 import { marked } from 'marked';
+import axios from 'axios';
+import SrtParser from 'srt-parser-2';
 
 const apiKey = 'application-cbeb6f30b865f5c392edf44131f82fed'; // Replace with your actual API key
-const { messages, newMessage, sendMessage: sendChatMessage } = useChat(apiKey);
+const { messages, sendMessage: sendChatMessage } = useChat(apiKey);
 
 const botAvatar = 'src/views/audio/AiAssistant/默认头像.jpg';
 const userAvatar = 'https://framerusercontent.com/images/JnbQ2qAMPu3VRXkbzDhwoMnHpk.png';
 
 const chatBox = ref<HTMLElement | null>(null);
+
+// 字幕数据
+const subtitles = ref<Array<{ startTime: number; text: string }>>([]);
+const videoElement = ref<HTMLVideoElement | null>(null);
 
 const scrollToBottom = async () => {
   await nextTick();
@@ -59,11 +65,60 @@ const scrollToBottom = async () => {
   }
 };
 
-watch(messages, scrollToBottom, { deep: true, immediate: true });
+// 加载并解析 .srt 文件
+const loadSubtitles = async (srtPath: string) => {
+  try {
+    const response = await axios.get(srtPath);
+    const parser = new SrtParser();
+    const parsedSubtitles = parser.fromSrt(response.data);
+    subtitles.value = parsedSubtitles.map((subtitle) => ({
+      startTime: parseTime(subtitle.startTime),
+      text: subtitle.text,
+    }));
+  } catch (error) {
+    console.error('Failed to load subtitles:', error);
+  }
+};
+
+// 解析时间字符串为秒数
+const parseTime = (timeString: string): number => {
+  const [hours, minutes, seconds] = timeString.split(':');
+  const [secs, ms] = seconds.split(',').map(Number);
+  return (
+    Number(hours) * 3600 +
+    Number(minutes) * 60 +
+    secs +
+    ms / 1000
+  );
+};
+
+// 获取最近的三条字幕
+const getRecentSubtitles = (currentTime: number) => {
+  const recentSubtitles = subtitles.value
+    .filter(sub => sub.startTime <= currentTime)
+    .slice(-3)
+    .map(sub => sub.text);
+  return recentSubtitles.join('\n');
+};
+
+const userMessage = ref('');
 
 const sendMessage = async () => {
-  if (newMessage.value.trim()) {
-    await sendChatMessage();
+  if (userMessage.value.trim() && videoElement.value) {
+    const currentTime = videoElement.value.currentTime;
+    const timeString = `${Math.floor(currentTime / 60)}:${Math.floor(currentTime % 60)
+      .toString()
+      .padStart(2, '0')}`;
+    
+    const recentSubtitles = getRecentSubtitles(currentTime);
+
+    // 仅将播放时间和字幕发送给AI，但不显示给用户
+    const messageWithContext = `播放时间: ${timeString}\n最近的字幕:\n${recentSubtitles}\n\n${userMessage.value}`;
+
+    // 发送消息给AI，并立即显示用户的原始消息
+    await sendChatMessage(userMessage.value, messageWithContext);
+
+    userMessage.value = ''; // 清空输入框
     scrollToBottom();
   }
 };
@@ -71,9 +126,19 @@ const sendMessage = async () => {
 const renderMarkdown = (text: string) => {
   return marked(text);
 };
+
+// 组件挂载后加载字幕
+onMounted(() => {
+  const srtPath = '/src/views/audio/audio/双序列比对工具的介绍.srt';
+  loadSubtitles(srtPath);
+  videoElement.value = document.querySelector('video');
+});
+
+watch(messages, scrollToBottom, { deep: true, immediate: true });
 </script>
 
 <style scoped>
+/* 样式代码保持不变 */
 * {
   box-sizing: border-box;
 }
