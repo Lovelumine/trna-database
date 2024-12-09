@@ -53,7 +53,7 @@
       </table>
     </div>
     <div class="section">
-      <h2>Sup-tRNA Treatment</h2>
+      <h2>Engineered Sup-tRNA</h2>
       <table>
         <tr>
           <td><b>ENSURE ID of sup-tRNA:</b></td>
@@ -111,19 +111,19 @@
         </tr>
         <tr>
           <td><b>Gene sequence:</b></td>
-          <td>{{ record['sup-tRNA_gene']}}</td>
+          <td style="font-family: monospace;">{{ record['sup-tRNA_gene']}}</td>
         </tr>
         <tr>
           <td><b>tRNA sequence:</b></td>
-          <td>{{ record['Sequence_of_sup-tRNA']}}</td>
+          <td style="font-family: monospace;">{{ record['Sequence_of_sup-tRNA']}}</td>
+        </tr>
+        <tr>
+          <td><b>Secondary structure:</b></td>
+          <td style="font-family: monospace;">{{ record['Secondary structure of sup-trna']}}</td>
         </tr>
         <tr>
           <td><b>Modification:</b></td>
           <td>{{ record.Modification}}</td>
-        </tr>
-        <tr>
-          <td><b>Secondary structure:</b></td>
-          <td>{{ record['Secondary structure of sup-trna']}}</td>
         </tr>
       </table>
       <h3>origin tRNA</h3>
@@ -146,11 +146,11 @@
         </tr>
         <tr>
           <td><b>tRNA sequence:</b></td>
-          <td>{{ record.Sequence_of_origin_tRNA}}</td>
+          <td style="font-family: monospace;">{{ record.Sequence_of_origin_tRNA}}</td>
         </tr>
         <tr>
           <td><b>Secondary structure:</b></td>
-          <td>{{ record['Secondary structure']}}</td>
+          <td style="font-family: monospace;">{{ record['Secondary structure']}}</td>
         </tr>
       </table>
       <h3>Engineered site</h3>

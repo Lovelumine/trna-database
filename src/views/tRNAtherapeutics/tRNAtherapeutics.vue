@@ -1,6 +1,6 @@
 <template>
     <div class="site--main">
-      <h2>tRNA Therapeutics</h2>
+      <h2>Engineered Sup-tRNA</h2>
   
       <div class="table-section">
         <tRNAtherapeutics1 />
