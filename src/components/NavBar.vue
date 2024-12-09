@@ -8,7 +8,7 @@
         <li><router-link to="/" active-class="active-link">Home</router-link></li>
         <li><router-link to="/CodingVariationDisease" active-class="active-link">Coding Variation Disease</router-link></li>
         <li><router-link to="/naturalsuptRNA" active-class="active-link">Natural Sup-tRNA</router-link></li>
-        <li><router-link to="/tRNAtherapeutics" active-class="active-link">tRNA Therapeutics</router-link></li>
+        <li><router-link to="/tRNAtherapeutics" active-class="active-link">Engineered Sup-tRNA</router-link></li>
         <li><router-link to="/tRNAElements" active-class="active-link">tRNA elements</router-link></li>
         <li><router-link to="/blast" active-class="active-link">Blast Search</router-link></li>
         <li><router-link to="/AIyingying" active-class="active-link">AI Assistant</router-link></li>

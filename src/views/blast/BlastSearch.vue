@@ -13,7 +13,7 @@
       <div class="form-group">
         <label for="database">Database</label>
         <select id="database" v-model="formData.database">
-          <option value="All eukaryotic tRNAs">All eukaryotic tRNAs</option>
+          <option value="All eukaryotic tRNAs">ENSURE tRNAs</option>
         </select>
       </div>
       <div class="form-group">
