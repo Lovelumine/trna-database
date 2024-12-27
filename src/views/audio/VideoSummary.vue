@@ -106,9 +106,19 @@
       You are a helpful assistant that summarize video subtitle.
       Summarize in language '${props.language}'.
       Answer in markdown json format.
+
+            example output format:
+      {
+       "内容概述": "简要的内容概述。",
+       "summary": "简要的总结。"
+       }
+       
+      End of response.
   
       The video's title: '''${props.title}'''.
       The video's subtitles:
+
+
   
       '''
       ${subtitlesContent}
@@ -149,6 +159,21 @@
       Accurately extract key questions and their corresponding answers from the video subtitles based on the actual content provided.
       Answer in language '${props.language}'.
       Format the output in markdown json format.
+
+      example output format:
+      {
+      "questions": [
+      {
+      "question": "问题1？",
+      "answer": "答案1。"
+    },
+    {
+      "question": "问题2？",
+      "answer": "答案2。"
+    }
+  ]
+}
+  End of response.
   
       The video's title: '''${props.title}'''.
       The video's subtitles:
