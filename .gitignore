@@ -5,6 +5,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
 lerna-debug.log*
 
 node_modules
@@ -32,6 +33,9 @@ uploads
 *.fasta
 *.txt
 query.fasta
+
+*.pdb
+pdb
 
 data/tmp/*
 updated_tRNAtherapeutics.csv
