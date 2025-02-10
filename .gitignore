@@ -36,6 +36,7 @@ query.fasta
 
 *.pdb
 pdb
+*.tar.gz
 
 data/tmp/*
 updated_tRNAtherapeutics.csv
