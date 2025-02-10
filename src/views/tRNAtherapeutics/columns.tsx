@@ -71,5 +71,5 @@ export const allColumns: STableColumnsType<DataType> = [
     ],
     onFilter: (value, record) => String(record.PMID).includes(value),
   }, resizable: true },
-  { title: 'View Details', dataIndex: 'pre_ENSURE_ID', width: 100, ellipsis: true, key: 'pre_ENSURE_ID', customRender: ({ text, record }) => (<div><a href={'/expanded/' + record.pre_ENSURE_ID || '#'} target="_blank" class="bracket-links">View Details</a></div>),resizable: true },
+  { title: 'View Details', dataIndex: 'ENSURE_ID', width: 100, ellipsis: true, key: 'pre_ENSURE_ID', customRender: ({ text, record }) => (<div><a href={'/expanded/' + record.ENSURE_ID || '#'} target="_blank" class="bracket-links">View Details</a></div>),resizable: true },
 ];
