@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export async function fetchOpenAIResponse(apiKey: string, prompt: string) {
     try {
-      const response = await axios.post(`${import.meta.env.VITE_OPENAI_API_BASE_URL}/chat/completions`, {
+      const response = await axios.post(`https://api.lqqq.ltd/v1/chat/completions`, {
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 500,

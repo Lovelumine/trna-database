@@ -227,7 +227,7 @@ export default defineComponent({
     const route = useRoute(); // 获取当前路由信息
     const id = route.params.key; // 获取key参数
 
-    const { searchText, filteredDataSource, loadData } = useTableData('/src/assets/data/tRNAtherapeutics.csv');
+    const { searchText, filteredDataSource, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv');
     const loading = ref(true);
 
     const filteredRecords = computed(() => {
@@ -261,7 +261,7 @@ export default defineComponent({
      * @param {string} containerId - 用于在 DOM 中查找容器的标识（例如 record.ENSURE_ID）
      */
     const loadPDBFile = (fileId: string, containerId: string) => {
-      const pdbFilePath = `/src/assets/data/pdb/ensure-${fileId}.pdb`;
+      const pdbFilePath = `https://minio.lumoxuan.cn/ensure/pdb/ensure-${fileId}.pdb`;
       console.log(`尝试加载 PDB 文件: ${pdbFilePath}`);
       console.log('检查 3Dmol 对象:', $3Dmol);
 

@@ -35,7 +35,7 @@ export default {
       { category: 'Coding Variation Disease', name: 'Coding Variation in Genetic Disease', link: '/src/assets/data/Coding Variation in Genetic Disease.csv' },
       { category: 'Natural Sup-tRNA', name: 'Nonsense Sup-RNA', link: '/src/assets/data/Nonsense Sup-RNA.csv' },
       { category: 'Natural Sup-tRNA', name: 'Frameshift sup-tRNA', link: '/src/assets/data/Frameshift sup-tRNA.csv' },
-      { category: 'Engineered Sup-tRNA', name: 'Engineered Sup-tRNA', link: '/src/assets/data/tRNAtherapeutics.csv' },
+      { category: 'Engineered Sup-tRNA', name: 'Engineered Sup-tRNA', link: 'https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv' },
       { category: 'tRNA elements', name: 'Function and Modification', link: '/src/assets/data/Function and Modification.csv' },
       { category: 'tRNA elements', name: 'aaRS Recognition', link: '/src/assets/data/aaRS Recognition.csv' }
     ]);
