@@ -78,7 +78,7 @@
               <td><b>Dose:</b></td>
               <td>{{ record.Delivery_as_vector_or_IVT_tRNA }}</td>
             </tr>
-            <tr v-if="record.Delivery_as_vector_or_IVT_tRNA === 'IVT_tRNA'">
+            <!-- <tr v-if="record.Delivery_as_vector_or_IVT_tRNA === 'IVT_tRNA'">
               <td><b>Dose_for_IVT_tRNA_delivery:</b></td>
               <td>{{ record.Dose_for_IVT_tRNA_delivery }}</td>
             </tr>
@@ -93,7 +93,7 @@
             <tr v-if="record.Delivery_as_vector_or_IVT_tRNA === 'vector'">
               <td><b>Promoter Per Copy:</b></td>
               <td>{{ record.Promoter_for_vector_delivery }}</td>
-            </tr>
+            </tr> -->
           </table>
         </div>
         <div class="section">

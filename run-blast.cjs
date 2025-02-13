@@ -40,7 +40,7 @@ app.post('/run-blast', (req, res) => {
   }
 
   // 运行 BLAST 命令
-  const blastCommand = `blastn -query ${queryFile} -db /home/yingying/Webproject/trna-database/src/assets/data/blast_db/all_db -out ${resultFileTmp} -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq stitle"`;
+  const blastCommand = `blastn -query ${queryFile} -db /home/yingying/Documents/trna-database/src/assets/data/blast_db/all_db -out ${resultFileTmp} -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qseq sseq stitle"`;
   console.log(`[INFO] Executing BLAST command: ${blastCommand}`);
 
   exec(blastCommand, (error, stdout, stderr) => {

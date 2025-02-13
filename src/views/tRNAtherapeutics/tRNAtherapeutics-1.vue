@@ -82,7 +82,10 @@ export default defineComponent({
     ElOption,
     TranStructure
   },
-  setup() {
+  props: {
+    selectedPmids: { type: Array, default: () => [] }, // 接收父组件传递的selectedPmids
+  },
+  setup(props) {
     const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv');
 
     const tableSize = ref('default');
@@ -101,6 +104,26 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
+        // 根据selectedPmids过滤数据
+const filteredDataSourceWithPmid = computed(() => {
+  if (props.selectedPmids.length > 0) {
+    return filteredDataSource.value.filter((record) => {
+      return props.selectedPmids.includes(String(record.PMID)); // 确保类型匹配
+    });
+  }
+  return filteredDataSource.value;
+});
+
+// 在子组件的setup函数中添加
+watch(() => props.selectedPmids, (newPmids) => {
+  console.log('Selected PMIDs:', newPmids);
+  console.log('Filtered Data:', filteredDataSourceWithPmid.value);
+});
+
+watch(filteredDataSource, (newData) => {
+  console.log('Loaded Data:', newData);
+});
+
     onMounted(async() => {
       await loadData();
       triggerColumnChange();
@@ -117,7 +140,7 @@ export default defineComponent({
 
     return {
       columns: displayedColumns,
-      filteredDataSource,
+      filteredDataSource: filteredDataSourceWithPmid,
       tableSize,
       searchText,
       searchColumn,
