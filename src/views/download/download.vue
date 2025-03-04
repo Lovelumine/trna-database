@@ -37,7 +37,7 @@ export default {
       { category: 'Natural Sup-tRNA', name: 'Frameshift sup-tRNA', link: '/src/assets/data/Frameshift sup-tRNA.csv' },
       { category: 'Engineered Sup-tRNA', name: 'Engineered Sup-tRNA', link: 'https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv' },
       { category: 'tRNA elements', name: 'Function and Modification', link: '/src/assets/data/Function and Modification.csv' },
-      { category: 'tRNA elements', name: 'aaRS Recognition', link: '/src/assets/data/aaRS Recognition.csv' }
+      { category: 'tRNA elements', name: 'aaRS Recognition', link: 'https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv' }
     ]);
 
     const percentage = ref(0);

@@ -90,7 +90,7 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('/src/assets/data/aaRS Recognition.csv');
+    const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv');
     const tableSize = ref('default'); // 表格尺寸状态
     const selectedColumns = ref<string[]>([
       'aaRS',
