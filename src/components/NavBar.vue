@@ -1,7 +1,7 @@
 <template>
   <header class="site--header">
     <router-link to="/" class="site--url" aria-label="18-tRNA therapeutics database">
-      <img src="/logo.webp" class="avatar" alt="18-tRNA therapeutics database">
+      <img src="https://minio.lumoxuan.cn/ensure/bot/logo.webp" class="avatar" alt="18-tRNA therapeutics database">
     </router-link>
     <nav class="site--header__center">
       <ul class="topNav-items">

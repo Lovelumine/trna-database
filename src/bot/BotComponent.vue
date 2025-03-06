@@ -1,7 +1,7 @@
 <template>
   <div id="bot-container" ref="element" >
     <div id="bot-icon" @click="toggleChat" @mousedown="startDrag">
-      <img src="/bot-image.png" alt="Bot Icon" @dragstart.prevent />
+      <img src="https://minio.lumoxuan.cn/ensure/bot/bot-image.png" alt="Bot Icon" @dragstart.prevent />
     </div>
     <div id="chat-box" v-if="isChatOpen">
       <div id="chat-header" @mousedown="startDrag">
@@ -12,7 +12,7 @@
       </div>
       <div id="chat-content" ref="chatContent">
         <div v-for="message in renderedMessages" :key="message.id" :class="['message-container', message.sender]">
-          <img v-if="message.sender === 'bot'" src="/bot-image.png" alt="Bot Avatar" class="avatar"/>
+          <img v-if="message.sender === 'bot'" src="https://minio.lumoxuan.cn/ensure/bot/bot-image.png" alt="Bot Avatar" class="avatar"/>
           <img v-if="message.sender === 'user'" src="https://cdn-icons-png.flaticon.com/512/1946/1946429.png" alt="User Avatar" class="avatar"/>
           <div class="message">
             <span v-if="message.text" v-html="message.text"></span>
@@ -21,7 +21,7 @@
         </div>
         <!-- 显示省略号 -->
         <div v-if="loading" class="message-container bot">
-          <img src="/bot-image.png" alt="Bot Avatar" class="avatar"/>
+          <img src="https://minio.lumoxuan.cn/ensure/bot/bot-image.png" alt="Bot Avatar" class="avatar"/>
           <div class="message">
             <span>...</span>
           </div>
