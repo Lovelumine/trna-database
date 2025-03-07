@@ -5,32 +5,34 @@
 
     <!-- PMID选择表格 -->
     <div class="table-section">
-      <s-table-provider :hover="true" :locale="locale">
-        <s-table
-          :columns="pmidColumns"
-          :data-source="paginatedPmidData"
-          :row-key="record => record.PMID"
-          :row-selection="rowSelection"
-          :pagination="pagination"
-          :stripe="true"
-          :show-sorter-tooltip="true"
-          @change="handleTableChange"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'PMID'">
-              <a :href="`https://pubmed.ncbi.nlm.nih.gov/${record.PMID}`" target="_blank">
-                {{ record.PMID }}
-              </a>
-            </template>
-          </template>
-        </s-table>
-      </s-table-provider>
+      <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
+  <s-table
+    :columns="pmidColumns"
+    :data-source="paginatedPmidData"
+    :row-key="record => record.PMID"
+    :expand-row-by-click="true"
+    @change="handleTableChange"
+  >
+    <template #expandedRowRender="{ record }">
+      <!-- ✅ 根据PMID动态加载tRNAtherapeutics1组件 -->
+      <tRNAtherapeutics1 :selectedPmids="[record.PMID]" />
+    </template>
+
+    <!-- 正常单元格渲染 -->
+    <template #default="{ text, column, record }">
+      <span v-if="column.dataIndex === 'PMID'">
+        <a :href="'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID" target="_blank">{{ text }}</a>
+      </span>
+      <span v-else>{{ text }}</span>
+    </template>
+  </s-table>
+</s-table-provider>
     </div>
 
     <!-- 根据选择PMID展示的表格 -->
-    <div class="table-section">
+    <!-- <div class="table-section">
       <tRNAtherapeutics1 :selectedPmids="selectedPmids" />
-    </div>
+    </div> -->
   </div>
 </template>
 
