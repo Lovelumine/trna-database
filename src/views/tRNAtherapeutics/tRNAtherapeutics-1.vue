@@ -94,7 +94,7 @@ export default defineComponent({
       'Species_source_of_origin_tRNA',
       'aa_and_anticodon_of_sup-tRNA',
       'Reaction_system',
-      'PMID',
+
       'pre_ENSURE_ID'
     ]);
     

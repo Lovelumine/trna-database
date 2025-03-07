@@ -47,7 +47,7 @@ export const allColumns: STableColumnsType<DataType> = [
   { title: 'Reading Through Efficiency', dataIndex: 'Reading_through_efficiency', width: 200, ellipsis: true, key: 'Reading_through_efficiency', resizable: true },
   { title: 'Measuring of Efficiency', dataIndex: 'Measuring_of_efficiency', width: 200, ellipsis: true, key: 'Measuring_of_efficiency', resizable: true },
   { title: 'Supplementary Information of Measurement', dataIndex: 'Supplenmentary_information_of_Measurement', width: 300, ellipsis: true, key: 'Supplenmentary_information_of_Measurement', resizable: true },
-  { title: 'Reaction System', dataIndex: 'Reaction_system', width: 150, ellipsis: true, key: 'Reaction_system', resizable: true },
+  { title: 'Reaction System', dataIndex: 'Reaction_system', width: 250, ellipsis: true, key: 'Reaction_system', resizable: true },
   { title: 'Dose for IVT tRNA Delivery', dataIndex: 'Dose_for_IVT_tRNA_delivery', width: 150, ellipsis: true, key: 'Dose_for_IVT_tRNA_delivery', resizable: true },
   { title: 'Dose for Vector Delivery', dataIndex: 'Dose_for_IVT_tRNA_delivery', width: 150, ellipsis: true, key: 'Dose_for_IVT_tRNA_delivery', resizable: true },
   { title: 'tRNA Gene Copy Number for Vector Delivery', dataIndex: 'tRNA_gene_copy_number_for_vector_delivery', width: 150, ellipsis: true, key: 'tRNA_gene_copy_number_for_vector_delivery', resizable: true },

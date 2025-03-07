@@ -115,7 +115,6 @@
 }
 
 #chat-input-container {
-  display: flex;
   align-items: center;
   padding: 10px;
   border-top: 1px solid #ccc;
