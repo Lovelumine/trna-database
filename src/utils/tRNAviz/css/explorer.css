@@ -1,0 +1,402 @@
+html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    counter-reset: footnotecounter;
+  }
+  main {
+    flex: 1;
+  }
+  
+  div.tooltip {
+    position: absolute;
+    padding: 0.1em;
+    font: 1em sans-serif;
+    /*background: lightsteelblue;*/
+    border: 0.1em;
+    border-radius: 0.5em;
+    pointer-events: none;
+  }
+  div.tooltip-cloverleaf {
+    padding: 0.5em;
+    font: 1em sans-serif;
+    background: lightsteelblue;
+  }
+  div.tooltip-compare {
+    position: fixed;
+    zIndex: 5000;
+    whiteSpace: nowrap;
+    display: inline-block;
+  }
+  div.tooltip table {
+    margin-bottom: 0;
+  }
+  div.tooltip th {
+    text-align: left;
+  }
+  
+  .cloverleaf-circle {
+    stroke: #777777;
+    stroke-width: 2;
+    fill-opacity: 0.7;
+  }
+  .cloverleaf-near-consensus {
+    opacity: 0.5;
+  }
+  .distro-rect {
+    stroke: #444444;
+    stroke-width: 1;
+  }
+  .bitchart-rect {
+    stroke-width: 0;
+  }
+  .cloverleaf-highlight, .distro-rect-highlight, .bitchart-rect-highlight {
+    stroke: #ff0000;
+    stroke-width: 3;
+  }
+  .tooltip-cloverleaf-circle {
+    stroke: gray;
+    fill: gray;
+  }
+  .tooltip-cloverleaf-highlight {
+    stroke: #ff4444;
+    fill: #ff4444;
+  }
+  h2.display-title {
+    height: 10em;
+    display: block;
+    vertical-align: middle;
+    padding: 1em;
+  }
+  div.vertical-align {
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: center;
+  }
+  div.data-select-bar {
+    background: #eeeeee;
+  }
+  div.reference-select-bar, .clade-select-bar {
+    background: #dddddd;
+  }
+  
+  div.cloverleaf-svg {
+    background: #eeeeee;
+  }
+  
+  div.tilemap-svg {
+    background: #dddddd;
+  
+  }
+  
+  text.axis-text {
+    font-size: 1.2em;
+    fill: #000000;
+  }
+  
+  text.yaxis-label {
+    font-size: 1.4em;
+    fill: #000000;
+  }
+  
+  text.axis-focus {
+    font-size: 1.5em;
+    font-weight: bold;
+    fill: #ff0000;
+  }
+  
+  div.loading-overlay {
+    margin: 5em;
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 10em;
+    height: 10em;
+    animation: spin 2s linear infinite;
+  }
+  
+  @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+  }
+  
+  p.lead {
+    margin: 0;
+  }
+  
+  button.remove-form-row {
+    height: 50%;
+  }
+  
+  div.form-row {
+    margin: 0;
+    display: block;
+  }
+  
+  textarea.fasta-input {
+    height: 49px;
+  }
+  
+  span.btn-default {
+    background: #ffffff;
+  }
+  
+  label.spoof-button {
+    pointer-events: none;
+  }
+  
+  div.sticky-top {
+    background: #ffffff;
+    width: 100%;
+  }
+  div.sticky-table, div.summary-sticky-bar {
+    position: sticky;
+    position: -webkit-sticky;
+    position: -moz-sticky;
+    position: -ms-sticky;
+    position: -o-sticky;
+    background: #ffffff;
+    width: 100%;
+  }
+  div.sticky-table {
+    top: 0;
+  }
+  
+  div.summary-sticky-bar {
+    top: 77px;
+    z-index: 99;
+  }
+  div.free-scroll {
+    overflow: auto;
+  }
+  
+  div.filter-box {
+    padding-left: 3em;
+    padding-right: 3em;
+  }
+  div.plotbox-row-title {
+    padding-top: 1em;
+    padding-bottom: 0.5em;
+    color: white;
+    background: #777777;
+  }
+  
+  div.flex-margin {
+    margin: 0 auto;
+  }
+  
+  div.plotbox-row {
+    padding-top: 2em;
+    padding-bottom: 2em;
+    padding-left: 1em;
+    overflow: scroll;
+  }
+  
+  .plotbox-row:nth-of-type(4n) {
+    background: #eeeeee;
+  }
+  
+  .plotbox-row-title:nth-of-type(4n-1) {
+    background: #555555;
+  }
+  div.plotbox-outer, .table-outer {
+    border: 1px solid;
+    border-color: #aaaaaa;
+    background: #dddddd;
+    display: inline-block;
+    vertical-align: top;
+    height: intrinsic;
+    margin: 1em;
+  }
+  
+  div.plotbox-inner, .table-inner {
+    border: 0;
+    background: #ffffff;
+    margin: 1em;
+    padding: 1em;
+    overflow: auto;
+  }
+  
+  div.table-inner {
+    max-height: 25em;
+  }
+  
+  div.table-inner > table {
+    table-layout: auto;
+  }
+  
+  div.data-select-table {
+    padding: 10px;
+  }
+  
+  .table {
+    margin: 0 auto;
+    width: auto;
+  }
+  
+  .table > thead > tr > th {
+    border-top: 0;
+  }
+  
+  .table-sm td, .table-sm th {
+    padding-left: 1em;
+    padding-right: 1em;
+  }
+  
+  .summary-table {
+    table-layout: fixed;
+  
+  }
+  
+  div.plotbox-header {
+    margin: 1em;
+  }
+  
+  .plotbox-header > h5 {
+    display: inline;
+  }
+  
+  div.download-box {
+    float: right;
+  }
+  
+  td.cons-match {
+    color: green;
+  }
+  
+  td.cons-mismatch {
+    color: red;
+  }
+  
+  td.cons-specific {
+    color: blue;
+  }
+  
+  .dropdown:hover .dropdown-menu {
+    min-width: 100%;
+    display: block;
+    margin: 0;
+  }
+  
+  .dropdown.show .dropdown-menu {
+    min-width: 100%;
+    display: block;
+    margin: 0;
+  }
+  
+  .dropdown-menu {
+    margin: 0;
+  }
+  
+  .gradient-axis {
+    font-size: 12px;
+  }
+  
+  .gradient-title {
+    font-size: 15px;
+  }
+  
+  .legend-rect {
+    stroke: #666666;
+    stroke-width: 1px;
+  }
+  
+  .legend-label {
+    font-size: 12px;
+  }
+  /*.focus-score-slider {
+    align-items: center;
+    display: flex;
+  }
+  .focus-score-slider > .ui-slider {
+    width: 10em;
+  }*/
+  
+  .ui-slider {
+    width: 99%;
+    left: 10px;
+  }
+  
+  .score-slider {
+    border: 0;
+    margin: 0;
+    background-color: transparent;
+    width: auto;
+  }
+  .footer {
+    margin-top: 10em;
+    background-color: #333333;
+    color: #eeeeee;
+    vertical-align: middle
+  }
+  .footer-link {
+    color: #eeeeee;
+    font-weight: bold;
+  
+  }
+  .about-row {
+    padding: 2em;
+    margin: 0;
+  }
+  
+  .text-lightgray {
+    color: #d7d7d7;
+  }
+  
+  span.footnote:before {
+    counter-increment: footnotecounter;
+    content: counter(footnotecounter);
+    position: relative;
+    top: -0.4em;
+  }
+  div.footnotes {
+    margin-top: auto;
+    font-size: 8pt;
+    color: gray;
+  }
+  
+  .content-with-footnote {
+    flex-direction: column;
+    margin-bottom: 3em;
+  }
+  
+  .cloverleaf-about {
+    overflow: hidden;
+  }
+  .hotlink {
+    padding-top: 72px;
+    margin-top: -72px;
+  }
+  
+  .card-body {
+    padding: 0;
+  }
+  
+  .card-header {
+    padding: 0em;
+  }
+  .tax-button {
+    white-space: normal;
+    text-align: left;
+    cursor: pointer;
+  }
+  
+  .tax-card {
+    margin-right: -1px;
+  }
+  .itol-button {
+    -moz-transform: rotate(180deg);
+    -ms-transform: rotate(180deg);
+    -o-transform: rotate(180deg);
+    -webkit-transform: rotate(180deg);
+    transform: rotate(180deg);
+    padding-left: 5px;
+  }
+  .tax-display-button {
+    padding-left: 0;
+  }
