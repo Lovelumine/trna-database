@@ -94,7 +94,7 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource, loadData ,searchColumn} = useTableData('/src/assets/data/Coding Variation in Genetic Disease.csv');
+    const { searchText, filteredDataSource, loadData ,searchColumn} = useTableData('https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv');
     const tableSize = ref('default'); // 表格尺寸状态
 
     onMounted(async() => {
