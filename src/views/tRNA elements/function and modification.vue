@@ -89,7 +89,7 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource,  searchColumn,loadData } = useTableData('/src/assets/data/Function and Modification.csv');
+    const { searchText, filteredDataSource,  searchColumn,loadData } = useTableData('https://minio.lumoxuan.cn/ensure/Function and Modification.csv');
     const tableSize = ref('default'); // 表格尺寸状态
     const selectedColumns = ref<string[]>([
       'Modification_Type',

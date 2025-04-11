@@ -110,7 +110,7 @@
 
               <div>
                 <b>Structure of sup-tRNA:</b>
-                <img :src="`https://trna.lumoxuan.cn/src/assets/data/picture/${record.pictureid}.png`"
+                <img :src="`https://minio.lumoxuan.cn/ensure/picture/${record.pictureid}.png`"
                   @click="showLightbox(record.pictureid)" style="width: 100px; cursor: pointer;" />
               </div>
               <p><b>Readthrough mechanism:</b>
@@ -183,7 +183,7 @@ export default defineComponent({
     VueEasyLightbox,
   },
   setup() {
-    const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('/src/assets/data/Nonsense Sup-RNA.csv', (data) => {
+    const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv', (data) => {
       return processCSVData(data, ['Stop codon for readthrough', 'Noncanonical charged amino acids', 'Readthrough mechanism']);
     });
 
@@ -204,7 +204,7 @@ export default defineComponent({
     const lightboxKey = ref(0);
 
     const showLightbox = (pictureid: string) => {
-      const imgUrl = `https://trna.lumoxuan.cn/src/assets/data/picture/${pictureid}.png`;
+      const imgUrl = `https://minio.lumoxuan.cn/ensure/picture/${pictureid}.png`;
       lightboxImgs.value = [imgUrl];
       lightboxKey.value += 1;  // 更新key以重新渲染组件
       visible.value = true;
