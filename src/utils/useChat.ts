@@ -10,7 +10,7 @@ export function useChat(apiKey: string) {
   const newImage = ref(null);
   const imagePreview = ref('');
 
-  const apiBaseURL = 'https://speedtest.lumoxuan.cn/api';
+  const apiBaseURL = '/api';
   let applicationId = '';
   let chatId = '';
 

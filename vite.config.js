@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import vueJsx from '@vitejs/plugin-vue-jsx'
-import path from 'path'
-import terser from '@rollup/plugin-terser' // 引入 terser 插件
-import { viteStaticCopy } from 'vite-plugin-static-copy' // 引入 vite-plugin-static-copy 插件
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import vueJsx from '@vitejs/plugin-vue-jsx';
+import path from 'path';
+import terser from '@rollup/plugin-terser'; // 引入 terser 插件
+import { viteStaticCopy } from 'vite-plugin-static-copy'; // 引入 vite-plugin-static-copy 插件
 
 // 允许的来源站点
 const allowedOrigin = 'https://trna.lumoxuan.cn/';
@@ -17,8 +17,8 @@ export default defineConfig({
         comments: false, // 移除注释
       },
       compress: {
-        drop_console: true, // 移除 console
-        drop_debugger: true // 移除 debugger
+        drop_console: false, // 移除 console
+        drop_debugger: false // 移除 debugger
       },
       // mangle: { // 混淆配置
       //   properties: {
@@ -45,6 +45,18 @@ export default defineConfig({
     cssCodeSplit: false, // 确保 CSS 分割到单独的文件中
     assetsInlineLimit: 4096, // 将小于 4KB 的文件内联到 JavaScript 中
     outDir: 'dist', // 设置构建输出目录
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor';  // 将第三方库拆分到单独的 vendor 文件
+          }
+          if (id.includes('views')) {
+            return 'views';  // 页面级组件放到一个 views chunk
+          }
+        }
+      }
+    }
   },
   assetsInclude: ['**/*.txt'], // 确保处理 .txt 文件
   server: {
@@ -65,7 +77,7 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://localhost:8080/api',
+        target: 'https://speedtest.lumoxuan.cn',
         changeOrigin: true,
       },
       '/run-blast': {

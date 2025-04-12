@@ -57,7 +57,7 @@ body {
 .site--main {
     max-width: 1200px; 
     margin: 0 auto; 
-    padding: 50px 80px; 
+    /* padding: 50px 80px;  */
   }
   
   /* 媒体查询针对移动设备 */
