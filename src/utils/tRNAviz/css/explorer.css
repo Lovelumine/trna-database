@@ -28,8 +28,8 @@ html, body {
   }
   div.tooltip-compare {
     position: fixed;
-    zIndex: 5000;
-    whiteSpace: nowrap;
+    z-index: 5000;
+    white-space: nowrap;
     display: inline-block;
   }
   div.tooltip table {

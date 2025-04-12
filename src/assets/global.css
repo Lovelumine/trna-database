@@ -37,8 +37,7 @@ body {
     background-color: var(--farallon-background-white);
     min-height: 100vh;
     position: relative;
-    margin-left: auto;
-    margin-right: auto;
+
 }
 
 .main:after {

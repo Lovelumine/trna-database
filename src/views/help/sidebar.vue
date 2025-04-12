@@ -131,7 +131,7 @@ const handleHeadingClick = (id) => {
   text-align: left !important; /* 二级标题左对齐 */
 }
 
-::v-deep .el-sub-menu__title {
+:deep(.el-sub-menu__title) {
   background-color: #3498db;
   color: #ffffff;
 }

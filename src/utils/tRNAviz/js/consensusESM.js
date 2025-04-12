@@ -153,8 +153,8 @@ export function draw_cloverleaf(cloverleaf_data, isotype, coordsUrl) {
       })
       .on('mousemove', function(d) {
         if (!cloverleaf.attr('locked')) {
-          tooltip.style('left', d3.event.pageX + 'px')
-                 .style('top', d3.event.pageY + 'px');
+          // tooltip.style('left', d3.event.pageX + 'px')
+          //        .style('top', d3.event.pageY + 'px');
         }
       })
       .on('mouseout', (d) => {
@@ -189,8 +189,8 @@ export function draw_cloverleaf(cloverleaf_data, isotype, coordsUrl) {
     d3.select('.tooltip-cloverleaf').transition()
       .duration(100)
       .style('opacity', 0.95)
-      .style('left', d3.event.pageX + 'px')
-      .style('top', d3.event.pageY + 'px');
+      // .style('left', d3.event.pageX + 'px')
+      // .style('top', d3.event.pageY + 'px');
 
     d3.select('#circle' + d.position)
       .classed('cloverleaf-highlight', true);
@@ -371,7 +371,7 @@ update_base_distro = (coord, plot_type, isotype) => {
     .attr('transform', 'translate(70, 10)');
 
   rectGroup.selectAll('rect')
-    .data(d3.entries(coord.freqs))
+    // .data(d3.entries(coord.freqs))
     .enter()
     .append('rect')
     .attr('x', d => base_feature_scale(d.key))
