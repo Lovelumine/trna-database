@@ -8,6 +8,7 @@ import './assets/global.css';
 import './assets/herf.css';
 import './assets/bot.css';
 import './assets/search.css';
+// import 'vue-easy-lightbox/dist/vue-easy-lightbox.css';
 
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';

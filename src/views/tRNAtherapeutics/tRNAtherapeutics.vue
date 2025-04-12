@@ -187,16 +187,16 @@ export default {
   padding: 16px;
 }
 
-::v-deep .s-table {
+:deep(.s-table) {
   border-radius: 8px;
   overflow: hidden;
 }
 
-::v-deep .s-table-header {
+:deep(.s-table-header) {
   background: #fafafa;
 }
 
-::v-deep .s-table-row:hover {
+:deep(.s-table-row:hover) {
   background: #f5f7fa !important;
 }
 </style>

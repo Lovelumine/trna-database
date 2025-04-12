@@ -4,11 +4,11 @@
     <p>Welcome to ENSURE! Our platform offers extensive data and tools to advance the field of tRNA-therapeutics.</p>
     
     <div class="image-container">
-      <img :src="structureImage" @click="openLightbox(0)" class="centered-image" alt="Structure">
+      <img :src="'https://minio.lumoxuan.cn/ensure/picture/structure.png'" @click="openLightbox(0)" class="centered-image" alt="Structure">
     </div>
     
     <div class="image-container">
-      <img :src="flowchartImage" @click="openLightbox(1)" class="centered-image" alt="Flowchart ENSURE">
+      <img :src="'https://minio.lumoxuan.cn/ensure/picture/flowchart-ENSURE.png'" @click="openLightbox(1)" class="centered-image" alt="Flowchart ENSURE">
     </div>
     
     <h2>Key Features</h2>
@@ -37,7 +37,7 @@
     
     <vue-easy-lightbox
       :visible="showViewer"
-      :imgs="[structureImage, flowchartImage]"
+      :imgs="['https://minio.lumoxuan.cn/ensure/picture/structure.png', 'https://minio.lumoxuan.cn/ensure/picture/flowchart-ENSURE.png']"
       :index="currentIndex"
       @hide="showViewer = false"
     />
@@ -46,8 +46,6 @@
 
 <script>
 import VueEasyLightbox from 'vue-easy-lightbox';
-import structureImage from 'https://minio.lumoxuan.cn/ensure/picture/structure.png';
-import flowchartImage from 'https://minio.lumoxuan.cn/ensure/picture/flowchart-ENSURE.png'; 
 
 export default {
   name: 'Home',
@@ -58,8 +56,6 @@ export default {
     return {
       showViewer: false,
       currentIndex: 0,
-      structureImage: structureImage,
-      flowchartImage: flowchartImage,
       geneticVariationUrl: '/CodingVariationDisease',
       naturalSupTRNACatalogUrl: '/naturalsuptRNA',
       tRNATherapeuticsDataUrl: '/tRNAtherapeutics',
