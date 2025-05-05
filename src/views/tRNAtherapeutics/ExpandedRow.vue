@@ -213,6 +213,9 @@
   <div id="cloverleaf-area" style="border: 1px solid #ccc; margin-top: 20px;"></div>
 </div> -->
     </div>
+  <div>
+    <TrnaRadial />
+  </div>
   </div>
 </template>
 
@@ -231,11 +234,13 @@ import {
   formatAlignment,
   loadPDBFile
 } from './expandedRowLogic';
+import TrnaRadial from '@/components/TrnaRadial.vue'
 
 export default defineComponent({
   name: 'TRNATherapeutics-1',
   components: {
-    TranStructure
+    TranStructure,
+    TrnaRadial
   },
   setup() {
     console.log("[ExpandedRow] setup() invoked.");
