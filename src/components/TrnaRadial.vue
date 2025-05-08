@@ -1,10 +1,7 @@
 <template>
   <div class="trna-container" style="position: relative;">
-    <!-- Error message -->
-    <div v-if="error" class="error">{{ error }}</div>
-
     <!-- Main SVG chart -->
-    <svg v-else :width="width" :height="height">
+    <svg :width="width" :height="height">
       <g font-size="12" text-anchor="middle" stroke="#333" stroke-width="1">
         <g
           v-for="node in nodes"
@@ -17,7 +14,10 @@
             :cx="node.x"
             :cy="node.y"
             :r="r"
-            :class="{ 'base-hovered': hoverNode && hoverNode.id === node.id }"
+            :class="{
+              'base-hovered': hoverNode && hoverNode.id === node.id,
+              'overflow-node': node.isOverflow
+            }"
             fill="#fff"
           />
           <text
@@ -32,7 +32,7 @@
     <div
       v-if="hoverNode"
       class="tooltip"
-      :style="{ top: hoverNode.y + 10 + 'px', left: hoverNode.x + 10 + 'px' }"
+      :style="{ top: hoverNode.y  -40+ 'px', left: hoverNode.x +160 + 'px' }"
     >
       <div><strong>Position:</strong> {{ hoverNode.id }}</div>
       <div><strong>Base:</strong> {{ hoverNode.base }}</div>
@@ -43,122 +43,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 
-
-
-// 全量 mock 数据（99 个编号，碱基 A/C/G/U 循环）
-const mockData = [
-    { id: '-1', base: 'A' },
-    { id: '1', base: 'C' },
-    { id: '2', base: 'G' },
-    { id: '3', base: 'U' },
-    { id: '4', base: 'A' },
-    { id: '5', base: 'C' },
-    { id: '6', base: 'G' },
-    { id: '7', base: 'U' },
-    { id: '8', base: 'A' },
-    { id: '9', base: 'C' },
-    { id: '10', base: 'G' },
-    { id: '11', base: 'U' },
-    { id: '12', base: 'A' },
-    { id: '13', base: 'C' },
-    { id: '14', base: 'G' },
-    { id: '15', base: 'U' },
-    { id: '16', base: 'A' },
-    { id: '17', base: 'C' },
-    { id: '17a', base: 'G' },
-    { id: '18', base: 'U' },
-    { id: '19', base: 'A' },
-    { id: '20', base: 'C' },
-    { id: '20a', base: 'G' },
-    { id: '20b', base: 'U' },
-    { id: '21', base: 'A' },
-    { id: '22', base: 'C' },
-    { id: '23', base: 'G' },
-    { id: '24', base: 'U' },
-    { id: '25', base: 'A' },
-    { id: '26', base: 'C' },
-    { id: '27', base: 'G' },
-    { id: '28', base: 'U' },
-    { id: '29', base: 'A' },
-    { id: '30', base: 'C' },
-    { id: '31', base: 'G' },
-    { id: '32', base: 'U' },
-    { id: '33', base: 'A' },
-    { id: '34', base: 'C' },
-    { id: '35', base: 'G' },
-    { id: '36', base: 'U' },
-    { id: '37', base: 'A' },
-    { id: '38', base: 'C' },
-    { id: '39', base: 'G' },
-    { id: '40', base: 'U' },
-    { id: '41', base: 'A' },
-    { id: '42', base: 'C' },
-    { id: '43', base: 'G' },
-    { id: '44', base: 'U' },
-    { id: '45', base: 'A' },
-    { id: 'V11', base: 'C' },
-    { id: 'V12', base: 'G' },
-    { id: 'V13', base: 'U' },
-    { id: 'V14', base: 'A' },
-    { id: 'V15', base: 'C' },
-    { id: 'V16', base: 'G' },
-    { id: 'V17', base: 'U' },
-    { id: 'V1', base: 'A' },
-    { id: 'V2', base: 'C' },
-    { id: 'V3', base: 'G' },
-    { id: 'V4', base: 'U' },
-    { id: 'V5', base: 'A' },
-    { id: 'V27', base: 'C' },
-    { id: 'V26', base: 'G' },
-    { id: 'V25', base: 'U' },
-    { id: 'V24', base: 'A' },
-    { id: 'V23', base: 'C' },
-    { id: 'V22', base: 'G' },
-    { id: 'V21', base: 'U' },
-    { id: '46', base: 'A' },
-    { id: '47', base: 'C' },
-    { id: '48', base: 'G' },
-    { id: '49', base: 'U' },
-    { id: '50', base: 'A' },
-    { id: '51', base: 'C' },
-    { id: '52', base: 'G' },
-    { id: '53', base: 'U' },
-    { id: '54', base: 'A' },
-    { id: '55', base: 'C' },
-    { id: '56', base: 'G' },
-    { id: '57', base: 'U' },
-    { id: '58', base: 'A' },
-    { id: '59', base: 'C' },
-    { id: '60', base: 'G' },
-    { id: '61', base: 'U' },
-    { id: '62', base: 'A' },
-    { id: '63', base: 'C' },
-    { id: '64', base: 'G' },
-    { id: '65', base: 'U' },
-    { id: '66', base: 'A' },
-    { id: '67', base: 'C' },
-    { id: '68', base: 'G' },
-    { id: '69', base: 'U' },
-    { id: '70', base: 'A' },
-    { id: '71', base: 'C' },
-    { id: '72', base: 'G' },
-    { id: '73', base: 'U' },
-    { id: '74', base: 'A' },
-    { id: '75', base: 'C' },
-    { id: '76', base: 'G' }
-]
-
-
-const props = defineProps({
-  data: { type: Array, default: null},
-  width: { type: Number, default: 520 },
-  height: { type: Number, default: 900 },
-  r: { type: Number, default: 12 }
-})
-// 2. 列出“必须出现”的所有位点 ID
-const requiredIds = mockData.map(n => n.id)
-
-// 3. 静态坐标表（圆周均匀分布，仅示例）
+// 3. 静态坐标表
 const positions = {
   '-1':  { x: 220.0, y: 20.0 },
   '1':   { x: 245.0, y: 20.0 },
@@ -260,38 +145,445 @@ const positions = {
   '75':  { x: 373, y: 20 },
   '76':  { x: 398, y: 20 }
 }
+// 全量 mock 数据
+const mockData = [
+  {
+    "id": "1",
+    "base": "G"
+  },
+  {
+    "id": "2",
+    "base": "G"
+  },
+  {
+    "id": "3",
+    "base": "G"
+  },
+  {
+    "id": "4",
+    "base": "G"
+  },
+  {
+    "id": "5",
+    "base": "C"
+  },
+  {
+    "id": "6",
+    "base": "U"
+  },
+  {
+    "id": "7",
+    "base": "A"
+  },
+  {
+    "id": "8",
+    "base": "U"
+  },
+  {
+    "id": "9",
+    "base": "-"
+  },
+  {
+    "id": "10",
+    "base": "A"
+  },
+  {
+    "id": "11",
+    "base": "G"
+  },
+  {
+    "id": "12",
+    "base": "C"
+  },
+  {
+    "id": "13",
+    "base": "U"
+  },
+  {
+    "id": "14",
+    "base": "C"
+  },
+  {
+    "id": "15",
+    "base": "A"
+  },
+  {
+    "id": "16",
+    "base": "G"
+  },
+  {
+    "id": "17",
+    "base": "C"
+  },
+  {
+    "id": "17a",
+    "base": "U"
+  },
+  {
+    "id": "18",
+    "base": "G"
+  },
+  {
+    "id": "19",
+    "base": "G"
+  },
+  {
+    "id": "20",
+    "base": "G"
+  },
+  {
+    "id": "20a",
+    "base": "A"
+  },
+  {
+    "id": "20b",
+    "base": "G"
+  },
+  {
+    "id": "21",
+    "base": "A"
+  },
+  {
+    "id": "22",
+    "base": "-"
+  },
+  {
+    "id": "23",
+    "base": "-"
+  },
+  {
+    "id": "24",
+    "base": "-"
+  },
+  {
+    "id": "25",
+    "base": "-"
+  },
+  {
+    "id": "26",
+    "base": "G"
+  },
+  {
+    "id": "27",
+    "base": "C"
+  },
+  {
+    "id": "28",
+    "base": "G"
+  },
+  {
+    "id": "29",
+    "base": "C"
+  },
+  {
+    "id": "30",
+    "base": "C"
+  },
+  {
+    "id": "31",
+    "base": "U"
+  },
+  {
+    "id": "32",
+    "base": "G"
+  },
+  {
+    "id": "33",
+    "base": "C"
+  },
+  {
+    "id": "34",
+    "base": "U"
+  },
+  {
+    "id": "35",
+    "base": "U"
+  },
+  {
+    "id": "36",
+    "base": "U"
+  },
+  {
+    "id": "37",
+    "base": "G"
+  },
+  {
+    "id": "38",
+    "base": "C"
+  },
+  {
+    "id": "39",
+    "base": "A"
+  },
+  {
+    "id": "40",
+    "base": "C"
+  },
+  {
+    "id": "41",
+    "base": "G"
+  },
+  {
+    "id": "42",
+    "base": "C"
+  },
+  {
+    "id": "43",
+    "base": "-"
+  },
+  {
+    "id": "44",
+    "base": "-"
+  },
+  {
+    "id": "45",
+    "base": "A"
+  },
+  {
+    "id": "V1",
+    "base": "G"
+  },
+  {
+    "id": "46",
+    "base": "G"
+  },
+  {
+    "id": "47",
+    "base": "A"
+  },
+  {
+    "id": "48",
+    "base": "G"
+  },
+  {
+    "id": "49",
+    "base": "G"
+  },
+  {
+    "id": "50",
+    "base": "U"
+  },
+  {
+    "id": "51",
+    "base": "C"
+  },
+  {
+    "id": "52",
+    "base": "U"
+  },
+  {
+    "id": "53",
+    "base": "G"
+  },
+  {
+    "id": "54",
+    "base": "C"
+  },
+  {
+    "id": "55",
+    "base": "G"
+  },
+  {
+    "id": "56",
+    "base": "G"
+  },
+  {
+    "id": "57",
+    "base": "U"
+  },
+  {
+    "id": "58",
+    "base": "U"
+  },
+  {
+    "id": "59",
+    "base": "C"
+  },
+  {
+    "id": "60",
+    "base": "G"
+  },
+  {
+    "id": "61",
+    "base": "A"
+  },
+  {
+    "id": "62",
+    "base": "U"
+  },
+  {
+    "id": "63",
+    "base": "C"
+  },
+  {
+    "id": "64",
+    "base": "C"
+  },
+  {
+    "id": "65",
+    "base": "C"
+  },
+  {
+    "id": "66",
+    "base": "G"
+  },
+  {
+    "id": "67",
+    "base": "C"
+  },
+  {
+    "id": "68",
+    "base": "A"
+  },
+  {
+    "id": "69",
+    "base": "U"
+  },
+  {
+    "id": "70",
+    "base": "A"
+  },
+  {
+    "id": "71",
+    "base": "G"
+  },
+  {
+    "id": "72",
+    "base": "C"
+  },
+  {
+    "id": "73",
+    "base": "U"
+  },
+  {
+    "id": "74",
+    "base": "C"
+  },
+  {
+    "id": "75",
+    "base": "C"
+  },
+  {
+    "id": "76",
+    "base": "A"
+  },
+  {
+    "id": "76i1",
+    "base": "C"
+  },
+  {
+    "id": "76i2",
+    "base": "C"
+  },
+  {
+    "id": "76i3",
+    "base": "A"
+  }
+];
+
+// 1. 引入 Vue 的响应式 API
+const props = defineProps({
+  data:    { type: Array,  default: () => [] },
+  width:   { type: Number, default: 520 },
+  height:  { type: Number, default: 900 },
+  r:       { type: Number, default: 12 }
+})
+// 2. 列出“必须出现”的所有位点 ID
+const requiredIds = Object.keys(positions)
+
+
 
 // 4. 校验：必需的位点如果有缺，就在页面和控制台报错
-const error = ref('')
+// const error = ref('')
+// watch(
+//   () => props.data,
+//   arr => {
+//     const src = Array.isArray(arr) ? arr : mockData
+//     const got = src.map(n => n.id.toString())
+//     const miss = requiredIds.filter(id => !got.includes(id))
+//     error.value = miss.length ? `Missing positions: ${miss.join(', ')}` : ''
+//   },
+//   { immediate: true }
+// )
 
-watch(
-  () => props.data,
-  (arr) => {
-    const src   = Array.isArray(arr) ? arr : mockData
-    const got   = src.map(n => n.id.toString())
-    const miss  = requiredIds.filter(id => !got.includes(id))
-    error.value = miss.length
-      ? `Missing positions: ${miss.join(', ')}`
-      : ''
-  },
-  { immediate: true }
-)
+// watch(
+//   () => props.data,
+//   (arr) => {
+//     const src   = Array.isArray(arr) ? arr : mockData
+//     const got   = src.map(n => n.id.toString())
+//     const miss  = requiredIds.filter(id => !got.includes(id))
+//     error.value = miss.length
+//       ? `Missing positions: ${miss.join(', ')}`
+//       : ''
+//   },
+//   { immediate: true }
+// )
 
 // 5. 过滤：只画在 positions 里定义过的
 const nodes = computed(() => {
-  const src = Array.isArray(props.data) && props.data.length
-    ? props.data
-    : mockData
+  // 4.1 合并 props.data 与 mockData
+  const map = new Map()
+  mockData.forEach(i => map.set(i.id, i.base))
+  if (Array.isArray(props.data)) {
+    props.data.forEach(i => map.set(i.id, i.base))
+  }
 
-  return src
-    .filter(n => positions.hasOwnProperty(n.id.toString()))
-    .map(n => ({
-      id:   n.id,
-      base: n.base,
-      x:    positions[n.id.toString()].x,
-      y:    positions[n.id.toString()].y
-    }))
+  const list = []
+  // 4.2 遍历所有 positions，缺失时 base = '-'
+  for (const [key, pos] of Object.entries(positions)) {
+    list.push({
+      id:         key,
+      base:       map.get(key) || '-',
+      x:          pos.x,
+      y:          pos.y,
+      isOverflow: false
+    })
+  }
+
+  // 4.3 再把所有 overflow id（\d+i\d+）也加上
+  const overflowSrc = (Array.isArray(props.data) ? props.data : mockData)
+    .filter(i => /^\d+i\d+$/.test(i.id))
+
+  overflowSrc.forEach(item => {
+    const [, numStr, idxStr] = item.id.match(/^(\d+)i(\d+)$/) || []
+    const idx = +idxStr
+    const p1  = positions[numStr]
+    let p2   = positions[(+numStr + 1).toString()]
+
+    // 计算连线中点 + 垂直偏移
+    let dx, dy, mx, my
+    if (p1 && p2) {
+      dx = p2.x - p1.x; dy = p2.y - p1.y
+      mx = (p1.x + p2.x)/2; my = (p1.y + p2.y)/2
+    } else if (p1) {
+      const p0 = positions[(+numStr - 1).toString()]
+      if (p0) {
+        dx = p1.x - p0.x; dy = p1.y - p0.y
+        mx = p1.x; my = p1.y
+      } else {
+        dx = 0; dy = -1; mx = p1.x; my = p1.y
+      }
+    } else {
+      return
+    }
+
+    const dist   = Math.hypot(dx, dy) || 1
+    const ux     = -dy / dist
+    const uy     = dx / dist
+    const offset = 20 * idx
+
+    list.push({
+      id:         item.id,
+      base:       item.base,
+      x:          mx + ux * offset,
+      y:          my + uy * offset,
+      isOverflow: true
+    })
+  })
+
+  return list
 })
+
 
 // —— 7. Hover 状态 ——
 const hoverNode = ref(null)
@@ -318,6 +610,13 @@ svg {
   stroke-width: 2;
   fill: #fff5e6;
 }
+
+.overflow-node {
+  fill: yellow;
+  stroke: goldenrod;
+  stroke-width: 1.5;
+}
+
 .tooltip {
   position: absolute;
   background: rgba(0, 0, 0, 0.7);
