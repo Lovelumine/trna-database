@@ -6,7 +6,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 加载 CSV 文件
-file_path = 'data/tRNAtherapeutics.csv'
+file_path = 'src/assets/data/tRNAtherapeutics.csv'
 df = pd.read_csv(file_path)
 print(f"Loaded CSV file with {len(df)} rows.")
 
@@ -147,6 +147,6 @@ with ThreadPoolExecutor(max_workers=4) as executor:
         df.at[result['index'], 'Gaps'] = result['Gaps']
         print(f"Processed row {result['index'] + 1}/{len(df)}")
 
-updated_file_path = 'updated_tRNAtherapeutics.csv'
+updated_file_path = 'src/assets/data/updated_tRNAtherapeutics.csv'
 df.to_csv(updated_file_path, index=False)
 print(f"Saved updated DataFrame to {updated_file_path}")

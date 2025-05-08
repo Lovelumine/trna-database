@@ -39,9 +39,9 @@
               <td><b>Species Source:</b></td>
               <td>{{ record.Species_source_of_PTC_gene }}</td>
             </tr>
-            <tr>
-              <td><b>NCBI ref ID:</b></td>
-              <td>{{ record.NCBI_ref_ID }}</td>
+            <tr v-if="record.NCBI_ref_ID">
+          <td><b>NCBI ref ID:</b></td>
+          <td>{{ record.NCBI_ref_ID }}</td>
             </tr>
             <tr>
               <td><b>PMID:</b></td>
@@ -94,7 +94,7 @@
               <td><b>Promoter Per Copy:</b></td>
               <td>{{ record.Promoter_for_vector_delivery }}</td>
             </tr> -->
-          </table>
+           <!-- </table>
         </div>
         <div class="section">
           <h2>Sup-tRNA Information</h2>
@@ -105,11 +105,11 @@
               <td>
                 <a :href="record.ENSURE_ID_link" target="_blank" class="tilt-hover">{{ record.ENSURE_ID }}</a>
               </td>
-            </tr>
-            <tr>
+            </tr> -->
+            <!-- <tr>
               <td><b>AA and Anticodon:</b></td>
               <td>{{ record['aa_and_anticodon_of_sup-tRNA'] }}</td>
-            </tr>
+            </tr> -->
             <tr>
               <td><b>Gene sequence:</b></td>
               <td style="font-family: monospace;">{{ record['sup-tRNA_gene'] }}</td>
@@ -175,7 +175,7 @@
               <td>{{ record.Gaps }}</td>
             </tr>
             <tr v-if="record['Secondary structure']">
-              <td><b>Secondary Structure Diagram:</b></td>
+              <td><b>Secondary Structure Comparison:</b></td>
               <td>
                 <!-- 调试输出 -->
                 <!-- {{ console.log('Record key:', record.key, 'Secondary structure:', record['Secondary structure'], 'Sup-tRNA sequence:', record['Sequence_of_sup-tRNA']) }} -->
@@ -201,7 +201,14 @@
                   style="height: 400px; width: 400px; position: relative"
                   class="viewer_3Dmoljs"
                 ></div>
-              </td>
+              </td></tr><tr>
+              <td><b>3D Structure:</b></td>
+              <td><TrnaRadial
+            :data="JSON.parse(record.js_origin_tRNA)"
+            :width="760"
+            :height="560"
+            :r="10"
+              /></td>
             </tr>
           </table>
         </div>
@@ -213,9 +220,9 @@
   <div id="cloverleaf-area" style="border: 1px solid #ccc; margin-top: 20px;"></div>
 </div> -->
     </div>
-  <div>
+  <!-- <div>
     <TrnaRadial />
-  </div>
+  </div> -->
   </div>
 </template>
 
@@ -250,7 +257,7 @@ export default defineComponent({
     console.log("[ExpandedRow] route param id =>", id);
 
     // 加载 CSV 数据的自定义逻辑
-    const { filteredDataSource, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv');
+    const { filteredDataSource, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics_with_js_sup_tRNA.csv');
     const loading = ref(true);
 
     // 过滤出与当前 id 匹配的记录
