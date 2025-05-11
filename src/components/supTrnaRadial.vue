@@ -16,11 +16,14 @@
             :r="r"
             :class="{
               'base-hovered': hoverNode && hoverNode.id === node.id,
-              'overflow-node': node.isOverflow
+              'overflow-node': node.isOverflow,
+              'insertion-node': node.type === 'insertion',
+              'deletion-node':  node.type === 'deletion',
+              'mismatch-node':  node.type === 'mismatch'
             }"
             fill="#fff"
           />
-          <text :x="node.x" :y="node.y + 4">{{ node.base }}</text>
+          <text :x="node.x" :y="node.y + 4">{{ node.sup_base }}</text>
         </g>
       </g>
     </svg>
@@ -31,8 +34,9 @@
       class="tooltip"
       :style="{ top: hoverNode.y - 40 + 'px', left: hoverNode.x + 160 + 'px' }"
     >
-      <div><strong>Position:</strong> {{ hoverNode.id }}</div>
-      <div><strong>Base:</strong> {{ hoverNode.base }}</div>
+    <div><strong>Position:</strong> {{ hoverNode.id }}</div>
+      <div><strong>Type:</strong> {{ hoverNode.type }}</div>
+      <div><strong>Mapping:</strong> {{ hoverNode.base }} → {{ hoverNode.sup_base }}</div>
     </div>
   </div>
 </template>
@@ -159,9 +163,23 @@ const nodes = computed(() => {
   // canonical
   for (const [id, pos] of Object.entries(positions)) {
     const entry = props.data.find(d => d.id === id)
+    const sup = entry ? entry.sup_base : '-';
+    const type = entry
+      ? entry.base === '-' && entry.sup_base === '-'
+        ? 'gap'
+        :entry.base === entry.sup_base
+          ? 'match'
+          : entry.base === '-' && entry.sup_base !== '-'
+            ? 'insertion'
+            : entry.base !== '-' && entry.sup_base === '-'
+              ? 'deletion'
+              : 'mismatch'
+      : 'match';
     list.push({
       id,
       base:       entry ? entry.base : '-',
+      sup_base:   sup,
+      type:       type,
       x:          pos.x,
       y:          pos.y,
       isOverflow: false
@@ -189,9 +207,18 @@ const nodes = computed(() => {
       const ux     = -dy / dist
       const uy     = dx / dist
       const offset = 20 * +idx
+      const type = item.base === '-' && item.sup_base !== '-'
+        ? 'insertion'
+        : item.base !== '-' && item.sup_base === '-'
+          ? 'deletion'
+          : item.base === item.sup_base
+            ? 'match'
+            : 'mismatch';
       list.push({
         id:         item.id,
         base:       item.base,
+        sup_base:   item.sup_base,
+        type:       type,
         x:          mx + ux * offset,
         y:          my + uy * offset,
         isOverflow: true
@@ -234,4 +261,17 @@ svg {
   white-space: nowrap;
   z-index: 10;
 }
+.insertion-node {
+  fill: #dcedc8;
+  stroke: #388e3c;
+}
+.deletion-node {
+  fill: #ffcdd2;
+  stroke: #d32f2f;
+}
+.mismatch-node {
+  fill: #fff9c4;
+  stroke: #fbc02d;
+}
 </style>
+
