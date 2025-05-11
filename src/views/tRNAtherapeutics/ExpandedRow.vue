@@ -198,21 +198,52 @@
               <td>
                 <div
                   :id="'pdb-container-' + record.ENSURE_ID"
-                  style="height: 400px; width: 400px; position: relative"
+                  style="height: 400px; width: 600px; position: relative"
                   class="viewer_3Dmoljs"
                 ></div>
-              </td></tr><tr>
-              <td><b>3D Structure:</b></td>
-              <td><TrnaRadial
-            :data="JSON.parse(record.js_origin_tRNA)"
-            :width="760"
-            :height="560"
-            :r="10"
-              /></td>
+              </td>
             </tr>
-          </table>
-        </div>
+            </table>
+          <tr class="toggle-row">
+              <td><b>Sprinzl–Vassilenko:</b>
+      <!-- 切换按钮 -->
+      <div class="toggle-group">
+        <button
+          class="toggle-btn"
+          :class="{ active: showSup }"
+          @click="showSup = true">
+          Sup Numbering
+        </button>
+        <button
+          class="toggle-btn"
+          :class="{ active: !showSup }"
+          @click="showSup = false"
+        >
+          Original Numbering
+        </button>
       </div>
+              </td>
+<td>      
+
+  <div class="radial-container">
+      <supTrnaRadial
+        v-if="showSup"
+        :data="JSON.parse(record.js_sup_tRNA)"
+        :width="775"
+        :height="560"
+        :r="12"
+      />
+      <TrnaRadial
+        v-else
+        :data="JSON.parse(record.js_origin_tRNA)"
+        :width="775"
+        :height="560"
+        :r="12"
+      />
+    </div>
+      </td></tr>
+        </div>
+
             <!-- 添加主图展示区域 -->
 <!-- Cloverleaf Chart -->
 <!-- <div class="section">
@@ -223,6 +254,7 @@
   <!-- <div>
     <TrnaRadial />
   </div> -->
+  </div>
   </div>
 </template>
 
@@ -242,12 +274,14 @@ import {
   loadPDBFile
 } from './expandedRowLogic';
 import TrnaRadial from '@/components/TrnaRadial.vue'
+import supTrnaRadial from '@/components/supTrnaRadial.vue'
 
 export default defineComponent({
   name: 'TRNATherapeutics-1',
   components: {
     TranStructure,
-    TrnaRadial
+    TrnaRadial,
+    supTrnaRadial
   },
   setup() {
     console.log("[ExpandedRow] setup() invoked.");
@@ -257,8 +291,10 @@ export default defineComponent({
     console.log("[ExpandedRow] route param id =>", id);
 
     // 加载 CSV 数据的自定义逻辑
-    const { filteredDataSource, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics_with_js_sup_tRNA.csv');
+    const { filteredDataSource, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv');
     const loading = ref(true);
+
+    const showSup = ref(true);
 
     // 过滤出与当前 id 匹配的记录
     const filteredRecords = computed(() => {
@@ -318,7 +354,8 @@ export default defineComponent({
       filteredRecords,
       loading,
       id,
-      TranStructure
+      TranStructure,
+      showSup,  
     };
   }
 });
@@ -390,4 +427,39 @@ a {
   color: #9E9E9E !important;
 }
 
+/* 按钮组 */
+.toggle-group {
+  margin-bottom: 12px;
+  display: inline-flex;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* 切换按钮 */
+.toggle-btn {
+  padding: 6px 14px;
+  border: none;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color .2s, color .2s;
+}
+.toggle-btn:not(.active):hover {
+  background: #eee;
+}
+.toggle-btn.active {
+  background: #1976d2;
+  color: #fff;
+}
+
+.toggle-row td {
+  vertical-align: middle;
+}
+
+.radial-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 </style>
