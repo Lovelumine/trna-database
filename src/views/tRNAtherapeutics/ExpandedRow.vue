@@ -156,55 +156,7 @@
           </table>
           <h3>Engineered site</h3>
           <table>
-            <tr>
-              <td><b>Alignment:</b></td>
-              <td>
-                <pre v-html="record.formattedAlignment"></pre>
-              </td>
-            </tr>
-            <tr>
-              <td><b>E-Value:</b></td>
-              <td>{{ record['E-Value'] }}</td>
-            </tr>
-            <tr>
-              <td><b>Score:</b></td>
-              <td>{{ record.Score }}</td>
-            </tr>
-            <tr>
-              <td><b>Gaps:</b></td>
-              <td>{{ record.Gaps }}</td>
-            </tr>
-            <tr v-if="record['Secondary structure']">
-              <td><b>Secondary Structure Comparison:</b></td>
-              <td>
-                <!-- 调试输出 -->
-                <!-- {{ console.log('Record key:', record.key, 'Secondary structure:', record['Secondary structure'], 'Sup-tRNA sequence:', record['Sequence_of_sup-tRNA']) }} -->
-                <div style="max-height: 420px; max-width: 360px; overflow: auto; margin: auto">
-                  <TranStructure
-                    :titleA="'Origin-tRNA'"
-                    :titleB="'Sup-tRNA'"
-                    :initialName="record.NCBI_ref_ID"
-                    :initialStructure="record['Secondary structure']"
-                    :supStructure="record['Secondary structure of sup-trna']"
-                    :initialSequence="record.Sequence_of_origin_tRNA"
-                    :initialModifiedSequence="record['Sequence_of_sup-tRNA']"
-                  />
-                </div>
-              </td>
-            </tr>
-            <!-- New PDB Viewer Row -->
-            <tr>
-              <td><b>3D Structure:</b></td>
-              <td>
-                <div
-                  :id="'pdb-container-' + record.ENSURE_ID"
-                  style="height: 400px; width: 600px; position: relative"
-                  class="viewer_3Dmoljs"
-                ></div>
-              </td>
-            </tr>
-            </table>
-          <tr class="toggle-row">
+            <tr class="toggle-row">
               <td><b>Sprinzl–Vassilenko:</b>
       <!-- 切换按钮 -->
       <div class="toggle-group">
@@ -242,6 +194,69 @@
       />
     </div>
       </td></tr>
+            <tr>
+              <td><b>Alignment:</b></td>
+              <td>
+                <AlignmentTable
+    :alignmentData="parseSup(record.js_sup_tRNA)" :chunkSize="36" />
+              </td>
+            </tr>
+            <!-- <tr>
+              <td><b>E-Value:</b></td>
+              <td>{{ record['E-Value'] }}</td>
+            </tr> -->
+            <tr>
+  <td><b>Score:</b></td>
+  <td>
+    <span class="tooltip">
+      {{ record.pairwise_score }}
+      <span class="tooltip-text">
+        Scoring：
+        <ul>
+          <li>match = +2</li>
+          <li>mismatch = −0.5</li>
+          <li>gap open = −2</li>
+          <li>gap extend = −1</li>
+        </ul>
+      </span>
+    </span>
+  </td>
+</tr>
+            <!-- <tr>
+              <td><b>Gaps:</b></td>
+              <td>{{ record.Gaps }}</td>
+            </tr> -->
+            <tr v-if="record['Secondary structure']">
+              <td><b>Secondary Structure Comparison:</b></td>
+              <td>
+                <!-- 调试输出 -->
+                <!-- {{ console.log('Record key:', record.key, 'Secondary structure:', record['Secondary structure'], 'Sup-tRNA sequence:', record['Sequence_of_sup-tRNA']) }} -->
+                <div style="max-height: 420px; max-width: 360px; overflow: auto; margin: auto">
+                  <TranStructure
+                    :titleA="'Origin-tRNA'"
+                    :titleB="'Sup-tRNA'"
+                    :initialName="record.NCBI_ref_ID"
+                    :initialStructure="record['Secondary structure']"
+                    :supStructure="record['Secondary structure of sup-trna']"
+                    :initialSequence="record.Sequence_of_origin_tRNA"
+                    :initialModifiedSequence="record['Sequence_of_sup-tRNA']"
+                  />
+                </div>
+              </td>
+            </tr>
+            <!-- New PDB Viewer Row -->
+            <tr>
+              <td><b>3D Structure:</b></td>
+              <td>
+                <div
+                  :id="'pdb-container-' + record.ENSURE_ID"
+                  style="height: 400px; width: 600px; position: relative"
+                  class="viewer_3Dmoljs"
+                ></div>
+              </td>
+            </tr>
+            </table>
+
         </div>
 
             <!-- 添加主图展示区域 -->
@@ -275,13 +290,15 @@ import {
 } from './expandedRowLogic';
 import TrnaRadial from '@/components/TrnaRadial.vue'
 import supTrnaRadial from '@/components/supTrnaRadial.vue'
+import AlignmentTable from '@/components/AlignmentTable.vue';
 
 export default defineComponent({
   name: 'TRNATherapeutics-1',
   components: {
     TranStructure,
     TrnaRadial,
-    supTrnaRadial
+    supTrnaRadial,
+    AlignmentTable,
   },
   setup() {
     console.log("[ExpandedRow] setup() invoked.");
@@ -302,6 +319,14 @@ export default defineComponent({
       console.log("[ExpandedRow] computed filteredRecords =>", result);
       return result;
     });
+
+    const parseSup = (str: string) => {
+      try {
+        return JSON.parse(str);
+      } catch {
+        return [];
+      }
+    };
 
     onMounted(async () => {
       console.log("[ExpandedRow] onMounted() start...");
@@ -356,6 +381,8 @@ export default defineComponent({
       id,
       TranStructure,
       showSup,  
+      AlignmentTable,
+      parseSup
     };
   }
 });
@@ -461,5 +488,50 @@ a {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* Tooltip 容器 */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+/* 默认隐藏的提示框内容 */
+.tooltip-text {
+  visibility: hidden;
+  width: 220px;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  text-align: left;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  position: absolute;
+  bottom: 125%;      /* 提示框在文字上方 */
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 10;
+}
+
+/* 箭头小三角 */
+.tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;         /* 在提示框底部画三角 */
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.75) transparent transparent transparent;
+}
+
+/* Hover 时显示 */
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
 }
 </style>

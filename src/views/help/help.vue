@@ -12,9 +12,13 @@
           </div>
         </el-col>
         <el-col :span="18">
-          <div v-if="loading" class="loading-container">
-            <el-spinner type="circle"></el-spinner>
-          </div>
+          <div
+    class="markdown-body"
+    v-loading="loading"
+    element-loading-text="加载中..."
+    @click="handleImageClick"
+    v-html="content"
+  ></div>
           <transition name="fade">
             <div v-html="content" class="markdown-body" @click="handleImageClick" v-show="!loading"></div>
           </transition>
@@ -98,7 +102,8 @@ const loadMarkdown = async (file) => {
   try {
     loading.value = true;
     content.value = '';
-    const response = await axios.get(`/src/views/help/docs/${file}`);
+    const encoded = encodeURIComponent(file);
+    const response = await axios.get(`/docs/${encoded}`);
     const markdownContent = response.data;
     const processedContent = extractHeadings(markdownContent);
     content.value = md.render(processedContent);
