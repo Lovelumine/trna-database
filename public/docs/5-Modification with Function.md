@@ -18,24 +18,28 @@ This part summarizes the key sites and bases for the mutual recognition of tRNA 
 
 Users can click tRNA elements to enter the page, and in the tRNA Function and Modification section, they can use the search function to retrieve the required information such as modification types \(symbols mentioned in modomics\), functions, research cells, etc\. Users can also use the filter function to streamline the information in the database and keep only the parts of interest such as modifications and functions\. Or users can directly use the FILTER function to streamline the database information and keep only the parts of interest such as modifications, functions, etc\. The intelligent assistant "yingying" is always there to help users\.
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/modeification%20with%20function/Step%201-%20Search%20for%20tRNA%20modifications%20or%20corresponding%20functions%20of%20interest%20and%20study%20cells,%20etc.png)
+![](https://trna.lumoxuan.cn/docs/modeification%20with%20function/Step%201-%20Search%20for%20tRNA%20modifications%20or%20corresponding%20functions%20of%20interest%20and%20study%20cells,%20etc.png)
+
 #### Step 2: Look further into the relevant details
 
 Users can click on the “\+” sign in front of the index entry to expand the entry and view the details, including the function corresponding to the modification, the cells in which the function was studied, and the corresponding primary literature\. By clicking on the links, it is also possible to jump to references as well as data sources\. Alternatively, The intelligent assistant "yingying" is always there to help users\.
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/modeification%20with%20function/Step%202-%20Look%20further%20into%20the%20relevant%20detail.png)
+![](https://trna.lumoxuan.cn/docs/modeification%20with%20function/Step%202-%20Look%20further%20into%20the%20relevant%20detail.png)
+
 #### Step3： View a map of the key physiological functions of tRNAs in protein synthesis
 
 Users can click on the tRNA binding site diagram, the part of interest, such as type1 type aaRS recognition label, will link the tRNA site correspondingly, which makes it easy for the user to view the recognition site characteristics of this type of aminoacyl tRNA synthetase, different types are labeled using different colors\.
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/modeification%20with%20function/Step3：%20View%20a%20map%20of%20the%20key%20physiological%20functions%20of%20tRNAs%20in%20protein%20synthesis.png)
+![](https://trna.lumoxuan.cn/docs/modeification%20with%20function/Step3：%20View%20a%20map%20of%20the%20key%20physiological%20functions%20of%20tRNAs%20in%20protein%20synthesis.png)
+
 #### step4: Selection of tRNA entry or secondary structure of interest
 
 Under the tRNA element page, users can select the tRNA with the orthologous amino acid of interest through the aaRS Recognition section, and they can also select the secondary structure of interest\. This section displays the key bases paired with the sites and corresponds them to the tRNA secondary structure, and users can directly click on the name of the amino acid to get the related key bases, the corresponding sites As well as the secondary structure in which it is located, the same amino acid represents more than one orthologous tRNA\.
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/modeification%20with%20function/step4-%20Selection%20of%20tRNA%20entry%20or%20secondary%20structure%20of%20interest.png)
+![](https://trna.lumoxuan.cn/docs/modeification%20with%20function/step4-%20Selection%20of%20tRNA%20entry%20or%20secondary%20structure%20of%20interest.png)
+
 #### step5: expand and view details
 
 Users can click on the "\+" sign before the selected entry to expand the information of the entry, where they can see more clearly the tRNA set corresponding to the amino acid and the corresponding details\. You can also click the corresponding PMID to jump to Pubmed and get the original literature\.
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/modeification%20with%20function/step5-%20expand%20and%20view%20details.png)
+![](https://trna.lumoxuan.cn/docs/modeification%20with%20function/step5-%20expand%20and%20view%20details.png)

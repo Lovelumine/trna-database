@@ -20,11 +20,12 @@ Example: Search for entries with an anticodon after mutation of CUA on the Nonse
 
 #### Step 1：Search
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/Search%20for%20entries%20with%20an%20anticodon%20after%20mutation%20of%20CUA%20on%20the%20Nonsense%20Sup-tRNA%20module-1.png)
+![](https://trna.lumoxuan.cn/docs/Search%20for%20entries%20with%20an%20anticodon%20after%20mutation%20of%20CUA%20on%20the%20Nonsense%20Sup-tRNA%20module-1.png)
 
 Enter the Nonsense Sup\-tRNA module, input the search term "CUA" in the search bar, select " anticodon after mutation" in the drop\-down menu to limit the search scope and achieve accurate search\.  
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/Search%20for%20entries%20with%20an%20anticodon%20after%20mutation%20of%20CUA%20on%20the%20Nonsense%20Sup-tRNA%20module-2.png)
+![](https://trna.lumoxuan.cn/docs/Search%20for%20entries%20with%20an%20anticodon%20after%20mutation%20of%20CUA%20on%20the%20Nonsense%20Sup-tRNA%20module-2.png)
+
 #### Step 2：View the results
 
 The Nonsense Sup\-tRNA module displays 4 columns by default\. Users can click on the drop\-down menu and check the information they want to view, such as "anticodon after mutation"\. 
@@ -33,4 +34,4 @@ The three columns of "Stop codon for readthrough", "Noncanonical charged amino a
 
 Click on the line of the entry to see all the information\. If users want to know more, they can click on the ID of the reference to jump to the reference page\.
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/Smart%20Web%20Navigator.png)
+![](https://trna.lumoxuan.cn/docs/Smart%20Web%20Navigator.png)
