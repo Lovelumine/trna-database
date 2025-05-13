@@ -6,16 +6,16 @@ Suppressor tRNAs \(sup\-tRNAs\) are natural or engineered tRNAs capable of trans
 
 Users can click on tRNA Therapeutic to jump to the page, where they can select the disease for research purposes, the relevant model, or retrieve the information quickly through the search function\. Users can also independently select the information they want to display for research purposes\. Users can view the contents of each column individually to quickly get the information they need，Also, ask the artificial intelligence assistant "yingying" can also help to complete the search quickly\.
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/Step%201%20Select%20the%20target%20disease,%20model%20and%20presentation%20details.png)
+![](https://trna.lumoxuan.cn/docs/Step%201%20Select%20the%20target%20disease,%20model%20and%20presentation%20details.png)
 
 #### Step 2 Use the filter function to obtain the target disease
 
 The user selects the desired line of information and clicks on the "\+" sign in front of the line of information to jump to the page with the relevant information, which contains information about the disease, including information about the disease mutation, sup\-tRNA treatment information, and we have specifically numbered each of the different sup\-tRNAs to differentiate the sup\-tRNA entries\.
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/Step%202%20Use%20the%20filter%20function%20to%20obtain%20the%20target%20disease.png)
+![](https://trna.lumoxuan.cn/docs/Step%202%20Use%20the%20filter%20function%20to%20obtain%20the%20target%20disease.png)
 
 Tools are used to present the original sequence, and the modified sequence in a secondary as well as tertiary structure to show the rationality of the modification, and the user can directly click on the desired information to get the relevant details and provide the user with new ideas\.
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/more%20details%20of%20sup-trna.png)
+![](https://trna.lumoxuan.cn/docs/more%20details%20of%20sup-trna.png)
 
-![](https://trna.lumoxuan.cn/src/views/help/docs/Aligment、secondary%20structure、3d%20structure.png)
+![](https://trna.lumoxuan.cn/docs/Aligment、secondary%20structure、3d%20structure.png)

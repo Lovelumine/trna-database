@@ -70,6 +70,25 @@
       </s-table>
     </s-table-provider>
   </div>
+  <!-- 图表区最外层：允许横向滚动 -->
+  <section class="chart-section-wrapper">
+    <div class="chart-row">
+      <div class="chart-col">
+        <h3>① Gene Frequency Treemap</h3>
+        <VChart :option="treemapOption" autoresize style="height:400px;" />
+      </div>
+
+      <div class="chart-col">
+        <h3>② Inheritance Mode & Zygosity</h3>
+        <VChart :option="stackedBarOption" autoresize style="height:350px;" />
+      </div>
+
+      <div class="chart-col">
+        <h3>③ Stop Codon Change Heatmap</h3>
+        <VChart :option="heatmapOption" autoresize style="height:450px;" />
+      </div>
+    </div>
+  </section>
 </template>
 
 <script lang="tsx">
@@ -78,6 +97,7 @@ import { ElTag, ElSpace, ElSelect, ElOption  } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
+import type { EChartsOption } from 'echarts';
 
 // 定义数据类型
 type DataType = { [key: string]: string };
@@ -196,6 +216,155 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
+
+
+// —— 1. Treemap 配置
+    const treemapOption = computed<EChartsOption>(() => {
+      // 统计每个 gene 出现次数
+      const counts: Record<string, number> = {};
+      filteredDataSource.value.forEach((row: any) => {
+        const g = row.gene || 'Unknown';
+        counts[g] = (counts[g] || 0) + 1;
+      });
+      // 排序取前20，剩余归 Others
+      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const top20 = entries.slice(0, 20);
+      const othersSum = entries.slice(20).reduce((s, e) => s + e[1], 0);
+      const data = top20.map(([name, value]) => ({ name, value }));
+      data.push({ name: 'Others', value: othersSum });
+      return {
+        title: { text: 'Treemap of Gene Record Distribution', left: 'center' },
+        tooltip: { trigger: 'item' },
+        series: [
+          {
+            type: 'treemap',
+            data,
+            leafDepth: 1,
+            label: { show: true, formatter: '{b}: {c}' }
+          }
+        ]
+      };
+    });
+
+// —— 2. Stacked Bar 配置
+    const stackedBarOption = computed<EChartsOption>(() => {
+      // 取两列： denovoinherited, zygosity
+      const modes = new Set<string>();
+      const zygos = new Set<string>();
+      const counter: Record<string, Record<string, number>> = {};
+
+      filteredDataSource.value.forEach((row: any) => {
+        const m = row.denovoinherited || 'Unknown';
+        const z = row.zygosity || 'Unknown';
+        modes.add(m);
+        zygos.add(z);
+        counter[m] = counter[m] || {};
+        counter[m][z] = (counter[m][z] || 0) + 1;
+      });
+
+      const modeList = Array.from(modes);
+      const zygoList = Array.from(zygos);
+
+      return {
+        title: { text: 'Inheritance Mode and Zygosity Distribution', left: 'center' },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: zygoList, top: 30 },
+        xAxis: { type: 'category', data: modeList },
+        yAxis: { type: 'value' },
+        series: zygoList.map(z => ({
+          name: z,
+          type: 'bar',
+          stack: 'total',
+          data: modeList.map(m => counter[m]?.[z] || 0)
+        }))
+      };
+    });
+
+// —— 3. Heatmap 配置
+const heatmapOption = computed<EChartsOption>(() => {
+      // 原始 stop vs 突变 stop 频次统计
+      const combo: Record<string, Record<string, number>> = {}
+      const originalStops = new Set<string>()
+      const mutatedStops = new Set<string>()
+
+      filteredDataSource.value.forEach((row: any) => {
+        const codon = String(row['Codon Change'] || '').trim()
+        // 解构时加默认值，防止 split 结果不完整
+        const [orig = '', mut = ''] = codon.split('-')
+        // 如果格式不对，跳过
+        if (!orig || !mut) return
+
+        originalStops.add(orig)
+        mutatedStops.add(mut)
+
+        combo[orig] = combo[orig] || {}
+        combo[orig][mut] = (combo[orig][mut] || 0) + 1
+      })
+
+      // 对类别排序，保证可重复渲染时顺序一致
+      const yList = Array.from(originalStops).sort()
+      const xList = Array.from(mutatedStops).sort()
+
+      // 构造 heatmap 数据 [xIndex, yIndex, value]
+      const heatData: [number, number, number][] = []
+      yList.forEach((o, i) => {
+        xList.forEach((m, j) => {
+          heatData.push([j, i, combo[o]?.[m] || 0])
+        })
+      })
+
+      // 计算 visualMap 的最大值，避免空数组时报错
+      const values = heatData.map(d => d[2])
+      const maxCount = values.length > 0 ? Math.max(...values) : 0
+
+      return {
+        title: {
+          text: 'Stop Codon Changes Frequency Heatmap',
+          left: 'center',
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: params => {
+            const [xIdx, yIdx, v] = params.value as number[]
+            return [
+              `Original Stop: ${yList[yIdx]}`,
+              `Mutated Stop: ${xList[xIdx]}`,
+              `Count: ${v}`,
+            ].join('<br/>')
+          },
+        },
+        xAxis: {
+          type: 'category',
+          data: xList,
+          name: 'Mutated Stop',
+          axisLabel: {
+            rotate: 45,
+            interval: 0,
+          },
+        },
+        yAxis: {
+          type: 'category',
+          data: yList,
+          name: 'Original Stop',
+        },
+        visualMap: {
+          min: 0,
+          max: maxCount,
+          calculable: true,
+          orient: 'horizontal',
+          left: 'center',
+          bottom: '-1%',
+        },
+        series: [
+          {
+            type: 'heatmap',
+            data: heatData,
+            label: { show: false },
+          },
+        ],
+      }
+    })
+
     return {
       columns: displayedColumns,
       filteredDataSource,
@@ -206,7 +375,10 @@ export default defineComponent({
       searchColumn,
       displayedColumns,
       allColumns, // 列选择控件
-      triggerColumnChange
+      triggerColumnChange,
+      treemapOption,
+      stackedBarOption,
+      heatmapOption
     };
   }
 });
@@ -236,5 +408,18 @@ export default defineComponent({
 .column-select {
   margin-left: 10px;
   width: 200px; /* 设置选择框的宽度 */
+}
+.chart-section-wrapper {
+  overflow-x: auto;      /* 横向滚动 */
+  padding: 10px 0;
+}
+.chart-row {
+  display: flex;
+  flex-wrap: nowrap;     /* 禁止换行 */
+  gap: 20px;             /* 各图间距 */
+}
+.chart-col {
+  flex: 0 0 auto;        /* 列宽固定为内部内容宽度 */
+  width: 1000px;          /* 或者你原来每个图表的宽度 */
 }
 </style>

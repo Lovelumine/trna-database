@@ -27,6 +27,29 @@ import './utils/icons';
 //动态美化效果
 import VWave from 'v-wave';
 
+import * as echarts from 'echarts/core'
+import { BarChart } from 'echarts/charts'
+import {
+  TitleComponent,
+  TooltipComponent,
+  GridComponent
+} from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import VChart from 'vue-echarts'
+import { TreemapChart, HeatmapChart } from 'echarts/charts'
+import { LegendComponent, VisualMapComponent } from 'echarts/components'
+
+echarts.use([
+  TitleComponent,
+  TooltipComponent,
+  GridComponent,
+  BarChart,
+  CanvasRenderer,
+  LegendComponent,
+  VisualMapComponent,
+  TreemapChart,
+  HeatmapChart
+])
 
 // 引入组件
 const Home = () => import('./views/Home.vue');
@@ -89,6 +112,9 @@ router.afterEach(() => {
 
 // 创建 Vue 应用实例
 const app = createApp(App);
+
+app.component('VChart', VChart)
+
 
 // 注册所有图标组件
 for (const name in ElIcons) {
