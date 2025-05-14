@@ -53,6 +53,9 @@ importers:
       echarts:
         specifier: ^5.6.0
         version: 5.6.0
+      echarts-wordcloud:
+        specifier: ^2.1.0
+        version: 2.1.0(echarts@5.6.0)
       element-plus:
         specifier: ^2.7.4
         version: 2.7.4(vue@3.4.27(typescript@5.4.5))
@@ -2429,6 +2432,11 @@ packages:
   dotenv@16.4.5:
     resolution: {integrity: sha512-ZmdL2rui+eB2YwhsWzjInR8LldtZHGDoQ1ugH85ppHKwpUHL7j7rN0Ti9NCnGiQbhaZ11FpR+7ao1dNsmduNUg==}
     engines: {node: '>=12'}
+
+  echarts-wordcloud@2.1.0:
+    resolution: {integrity: sha512-Kt1JmbcROgb+3IMI48KZECK2AP5lG6bSsOEs+AsuwaWJxQom31RTNd6NFYI01E/YaI1PFZeueaupjlmzSQasjQ==}
+    peerDependencies:
+      echarts: ^5.0.1
 
   echarts@5.6.0:
     resolution: {integrity: sha512-oTbVTsXfKuEhxftHqL5xprgLoc0k7uScAwtryCgWF6hPYFLRwOUHiFmHGCBKP5NPFNkDVopOieyUqYGH8Fa3kA==}
@@ -6713,6 +6721,10 @@ snapshots:
       tslib: 2.6.3
 
   dotenv@16.4.5: {}
+
+  echarts-wordcloud@2.1.0(echarts@5.6.0):
+    dependencies:
+      echarts: 5.6.0
 
   echarts@5.6.0:
     dependencies:

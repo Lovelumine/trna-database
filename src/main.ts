@@ -38,6 +38,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import VChart from 'vue-echarts'
 import { TreemapChart, HeatmapChart } from 'echarts/charts'
 import { LegendComponent, VisualMapComponent } from 'echarts/components'
+import 'echarts-wordcloud';
 
 echarts.use([
   TitleComponent,

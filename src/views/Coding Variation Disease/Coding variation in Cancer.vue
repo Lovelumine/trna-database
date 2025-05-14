@@ -79,6 +79,29 @@
         </template>
       </s-table>
     </s-table-provider>
+    <section class="chart-section-wrapper">
+    <div class="chart-row">
+      <!-- 1. Ref→Mut Heatmap -->
+      <div class="chart-col">
+        <h3>④ Ref→Mut Allele Heatmap</h3>
+        <VChart
+          :option="alleleHeatmapOption"
+          autoresize
+          style="height:400px;"
+        />
+      </div>
+
+      <!-- 2. Disease Word Cloud -->
+      <div class="chart-col">
+        <h3>⑤ Cancer Disease Word Cloud</h3>
+        <VChart
+          :option="diseaseWordcloudOption"
+          autoresize
+          style="height:400px;"
+        />
+      </div>
+    </div>
+  </section>
   </div>
 </template>
 
@@ -89,6 +112,7 @@ import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import {getTagType} from '../../utils/tag.js'
+import type { EChartsOption } from 'echarts'
 
 // 定义数据类型
 type DataType = {
@@ -190,6 +214,114 @@ export default defineComponent({
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
+    const alleleHeatmapOption = computed<EChartsOption>(() => {
+      const combo: Record<string, Record<string, number>> = {}
+      const refSet = new Set<string>()
+      const mutSet = new Set<string>()
+
+      filteredDataSource.value.forEach((r: any) => {
+        const ref = r.GENOMIC_REF_ALLELE || ''
+        const mut = r.GENOMIC_MUT_ALLELE || ''
+        if (!ref || !mut) return
+        refSet.add(ref)
+        mutSet.add(mut)
+        combo[ref] = combo[ref] || {}
+        combo[ref][mut] = (combo[ref][mut] || 0) + 1
+      })
+
+      const refList = Array.from(refSet).sort()
+      const mutList = Array.from(mutSet).sort()
+      const data: [number, number, number][] = []
+
+      refList.forEach((ref, i) => {
+        mutList.forEach((mut, j) => {
+          data.push([j, i, combo[ref]?.[mut] || 0])
+        })
+      })
+
+      const allCounts = data.map(d => d[2])
+      const maxCount = allCounts.length ? Math.max(...allCounts) : 0
+
+      return {
+        tooltip: {
+          position: 'top',
+          formatter: ([x, y, v]: any) => 
+            `Ref:${refList[y]} → Mut:${mutList[x]}<br/>Count: ${v}`
+        },
+        xAxis: {
+          type: 'category',
+          data: mutList,
+          axisLabel: { rotate: 0 }
+        },
+        yAxis: {
+          type: 'category',
+          data: refList
+        },
+        visualMap: {
+          min: 0,
+          max: maxCount,
+          calculable: true,
+          orient: 'horizontal',
+          left: 'center',
+          bottom: '-5%'
+        },
+        series: [{
+          type: 'heatmap',
+          data,
+          emphasis: {
+            itemStyle: { borderColor: '#333', borderWidth: 1 }
+          }
+        }]
+      }
+    })
+
+    // —— 新增 2：Disease Word Cloud 配置
+    const diseaseWordcloudOption = computed<EChartsOption>(() => {
+      // 统计每个 disease 的出现次数
+      const counter: Record<string, number> = {}
+      filteredDataSource.value.forEach((r: any) => {
+        const arr = Array.isArray(r.DISEASE) 
+          ? r.DISEASE 
+          : String(r.DISEASE)
+      .split(/[;/]/)           // 同时以 ; 和 / 作为分隔符
+      .map(str => str.trim())
+      .filter(Boolean)         // 去掉空串
+        arr.forEach(d => {
+          if (!d) return
+          counter[d] = (counter[d] || 0) + 1
+        })
+      })
+      // 转成 ECharts 要求的格式
+      const wordData = Object.entries(counter).map(([name, value]) => ({ name, value }))
+
+      return {
+        tooltip: { show: false },
+        series: [{
+          type: 'wordCloud',
+          shape: 'circle',
+          gridSize: 1,
+          sizeRange: [12, 60],
+          rotationRange: [-90, 90],
+          rotationStep: 45,
+          left: 'center',
+          top: 'center',
+          width: '100%',
+          height: '100%',
+          textStyle: {
+            // 随机颜色
+            color: () => {
+              const r = Math.round(Math.random() * 160)
+              const g = Math.round(Math.random() * 160)
+              const b = Math.round(Math.random() * 160)
+              return `rgb(${r},${g},${b})`
+            }
+          },
+          data: wordData
+        }]
+      }
+    })
+
+
     return {
       columns: displayedColumns,
       filteredDataSource,
@@ -200,7 +332,9 @@ export default defineComponent({
       searchColumn,
       selectedColumns,
       allColumns, // 列选择控件
-      getTagType // 获取标签类型
+      getTagType, // 获取标签类型
+      alleleHeatmapOption,
+      diseaseWordcloudOption
     };
   }
 });
@@ -230,5 +364,19 @@ export default defineComponent({
 .column-select {
   margin-left: 10px;
   width: 200px; /* 设置选择框的宽度 */
+}
+
+.chart-section-wrapper {
+  overflow-x: auto;
+  padding: 10px 0;
+}
+.chart-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 20px;
+}
+.chart-col {
+  flex: 0 0 auto;
+  width: 1000px; /* 或者你想要的宽度 */
 }
 </style>
