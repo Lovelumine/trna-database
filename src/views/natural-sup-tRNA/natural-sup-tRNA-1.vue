@@ -136,6 +136,49 @@
       </s-table-provider>
       <vue-easy-lightbox :key="lightboxKey" :visible="visible" :imgs="lightboxImgs" :index="0" @hide="hideLightbox" />
     </div>
+    <section class="chart-section-wrapper">
+      <div class="chart-row">
+        <!-- 1. Stop Codon 分布 -->
+        <div class="chart-col">
+          <h3>① Stop Codon Readthrough Distribution</h3>
+          <VChart
+            :option="stopCodonOption"
+            autoresize
+            style="height:300px;"
+          />
+        </div>
+
+        <!-- 2. Noncanonical Amino Acids 分布 -->
+        <div class="chart-col">
+          <h3>② Noncanonical Amino Acids Distribution</h3>
+          <VChart
+            :option="aaOption"
+            autoresize
+            style="height:300px;"
+          />
+        </div>
+
+        <!-- 3. Tissue/Organelle 分布 -->
+        <div class="chart-col">
+          <h3>③ Tissue/Organelle of Origin</h3>
+          <VChart
+            :option="tissueOption"
+            autoresize
+            style="height:300px;"
+          />
+        </div>
+
+        <!-- 4. Anticodon 突变 Heatmap -->
+        <div class="chart-col">
+          <h3>④ Anticodon Mutation Heatmap</h3>
+          <VChart
+            :option="anticodonHeatmapOption"
+            autoresize
+            style="height:300px;"
+          />
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -151,6 +194,10 @@ import { getTagType } from '../../utils/tag.js'
 import { processCSVData } from '../../utils/processCSVData.js'
 import { sortData } from '../../utils/sort.js';
 import axios from 'axios';
+import VChart from 'vue-echarts'; 
+import type { EChartsOption } from 'echarts';
+import 'echarts/lib/chart/bar';
+import 'echarts/lib/chart/heatmap';
 
 type DataType = {
   [key: string]: string | string[];
@@ -318,7 +365,163 @@ export default defineComponent({
 
     const secondaryStructures = ref<{ [key: string]: string }>({});
 
+// —— 1. Stop Codon for Readthrough 分布
+const stopCodonOption = computed<EChartsOption>(() => {
+  const counts: Record<string, number> = {}
+  filteredDataSource.value.forEach((r: any) => {
+    // 兜底转换：如果它本身是数组就用它，否则按分号/逗号/斜杠拆成数组
+    const list = Array.isArray(r['Stop codon for readthrough'])
+      ? r['Stop codon for readthrough']
+      : String(r['Stop codon for readthrough'])
+          .split(/[;,/]/)
+          .map(s => s.trim())
+          .filter(Boolean)
+
+    list.forEach(code => {
+      counts[code] = (counts[code] || 0) + 1
+    })
+  })
+
+  const categories = Object.keys(counts)
+  const data = categories.map(cat => counts[cat])
+
+  return {
+    title: { text: 'Stop Codon Readthrough', left: 'center' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: categories },
+    yAxis: { type: 'value' },
+    series: [{
+      type: 'bar',
+      data,
+      itemStyle: { borderRadius: 4 }
+    }]
+  }
+})
+
+// —— 2. Noncanonical Amino Acids 分布
+const aaOption = computed<EChartsOption>(() => {
+  const counts: Record<string, number> = {}
+  filteredDataSource.value.forEach((r: any) => {
+    const list = Array.isArray(r['Noncanonical charged amino acids'])
+      ? r['Noncanonical charged amino acids']
+      : String(r['Noncanonical charged amino acids'])
+          .split(/[;,/]/)
+          .map(s => s.trim())
+          .filter(Boolean)
+
+    list.forEach(aa => {
+      counts[aa] = (counts[aa] || 0) + 1
+    })
+  })
+
+  const categories = Object.keys(counts)
+  const data = categories.map(cat => counts[cat])
+
+  return {
+    title: { text: 'Noncanonical Amino Acids', left: 'center' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: categories },
+    yAxis: { type: 'value' },
+    series: [{
+      type: 'bar',
+      data,
+      itemStyle: { borderRadius: 4 }
+    }]
+  }
+})
+
+    // —— 3. Tissue/Organelle 分布
+    const tissueOption = computed<EChartsOption>(() => {
+      const counts: Record<string, number> = {};
+      filteredDataSource.value.forEach((r: any) => {
+        const org = r['Tissue/Organelle of Origin'] || 'Unknown';
+        counts[org] = (counts[org] || 0) + 1;
+      });
+      const categories = Object.keys(counts);
+      const data = categories.map(cat => counts[cat]);
+      return {
+        xAxis: { type: 'category', data: categories },
+        yAxis: { type: 'value' },
+        series: [{
+          type: 'bar',
+          data,
+          itemStyle: { borderRadius: 4 }
+        }],
+        tooltip: { trigger: 'axis' },
+        title: { text: 'Tissue/Organelle of Origin', left: 'center' }
+      };
+    });
+
+    // —— 4. Anticodon Before→After Heatmap
+    const anticodonHeatmapOption = computed<EChartsOption>(() => {
+  const beforeList = new Set<string>()
+  const afterList  = new Set<string>()
+  const matrix: Record<string, Record<string, number>> = {}
+
+  filteredDataSource.value.forEach((r: any) => {
+    const b = r['Anticodon before mutation']
+    const a = r['Anticodon after mutation']
+    if (!b || !a) return
+    beforeList.add(b)
+    afterList.add(a)
+    matrix[b] = matrix[b] || {}
+    matrix[b][a] = (matrix[b][a] || 0) + 1
+  })
+
+  const bs = Array.from(beforeList).sort()
+  const as_ = Array.from(afterList).sort()
+  if (!bs.length || !as_.length) {
     return {
+      title: { text: 'Anticodon Mutation Heatmap', left: 'center' },
+      xAxis: { type: 'category', data: [] },
+      yAxis: { type: 'category', data: [] },
+      series: [{ type: 'heatmap', data: [] }],
+      visualMap: { min: 0, max: 0 },
+    }
+  }
+
+  const data: [number, number, number][] = []
+  bs.forEach((b, i) =>
+    as_.forEach((a, j) =>
+      data.push([j, i, matrix[b]?.[a] || 0])
+    )
+  )
+
+  const maxVal = data.length ? Math.max(...data.map(d => d[2])) : 0
+
+  return {
+    title: { text: 'Anticodon Mutation Heatmap', left: 'center' },
+    tooltip: {
+      trigger: 'item',
+      formatter: params => {
+        // params.value 就是 [xIndex, yIndex, count]
+        const [x, y, v] = params.value as [number, number, number]
+        return `Before: ${bs[y]}<br/>After: ${as_[x]}<br/>Count: ${v}`
+      }
+    },
+    xAxis: { type: 'category', data: as_, axisLabel: { rotate: 45 } },
+    yAxis: { type: 'category', data: bs },
+    visualMap: {
+      min: 0,
+      max: maxVal,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '5%'
+    },
+    series: [{
+      type: 'heatmap',
+      data,
+      emphasis: { itemStyle: { borderColor: '#000', borderWidth: 1 } }
+    }]
+  }
+})
+
+    return {
+      stopCodonOption,
+      aaOption,
+      tissueOption,
+      anticodonHeatmapOption,
       allColumns,
       displayedColumns,
       filteredDataSource,
@@ -378,5 +581,19 @@ export default defineComponent({
     --el-tag-border-color: var(--el-color-info-light-8);
     --el-tag-hover-color: var(--el-color-info);
     --el-tag-text-color:#ed8afc
+}
+
+.chart-section-wrapper {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+.chart-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 20px;
+}
+.chart-col {
+  flex: 0 0 auto;
+  width: 400px; /* 你可以根据需要调整宽度 */
 }
 </style>
