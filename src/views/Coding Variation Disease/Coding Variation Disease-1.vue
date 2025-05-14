@@ -83,8 +83,6 @@
         <VChart :option="treemapOption" autoresize style="height:400px;" />
       </div>
 
-
-
       <div class="chart-col">
         <h3>③ Stop Codon Change Heatmap</h3>
         <VChart :option="heatmapOption" autoresize style="height:450px;" />

@@ -28,16 +28,16 @@ import './utils/icons';
 import VWave from 'v-wave';
 
 import * as echarts from 'echarts/core'
-import { BarChart } from 'echarts/charts'
 import {
   TitleComponent,
   TooltipComponent,
-  GridComponent
+  GridComponent,
+  LegendComponent,
+  VisualMapComponent
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import VChart from 'vue-echarts'
-import { TreemapChart, HeatmapChart } from 'echarts/charts'
-import { LegendComponent, VisualMapComponent } from 'echarts/components'
+import { BarChart,TreemapChart, HeatmapChart } from 'echarts/charts'
 import 'echarts-wordcloud';
 
 echarts.use([
