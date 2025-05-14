@@ -74,14 +74,16 @@
   <section class="chart-section-wrapper">
     <div class="chart-row">
       <div class="chart-col">
-        <h3>① Gene Frequency Treemap</h3>
-        <VChart :option="treemapOption" autoresize style="height:400px;" />
+        <h3>① Inheritance Mode & Zygosity</h3>
+        <VChart :option="stackedBarOption" autoresize style="height:350px;" />
       </div>
 
       <div class="chart-col">
-        <h3>② Inheritance Mode & Zygosity</h3>
-        <VChart :option="stackedBarOption" autoresize style="height:350px;" />
+        <h3>② Gene Frequency Treemap</h3>
+        <VChart :option="treemapOption" autoresize style="height:400px;" />
       </div>
+
+
 
       <div class="chart-col">
         <h3>③ Stop Codon Change Heatmap</h3>
