@@ -136,6 +136,39 @@
       </s-table-provider>
       <vue-easy-lightbox :key="lightboxKey" :visible="visible" :imgs="lightboxImgs" :index="0" @hide="hideLightbox" />
     </div>
+    <section class="chart-section-wrapper">
+      <div class="chart-row">
+        <!-- 1. Species Distribution -->
+        <div class="chart-col">
+          <h3>① Species Distribution</h3>
+          <VChart :option="speciesOption" autoresize style="height:300px; width: 800px;" />
+        </div>
+
+        <!-- 2. Codon for Readthrough -->
+        <div class="chart-col">
+          <h3>② Codon-for-Readthrough Distribution</h3>
+          <VChart :option="codonOption" autoresize style="height:300px;width: 600px;" />
+        </div>
+
+        <!-- 3. Noncanonical Amino Acids -->
+        <div class="chart-col">
+          <h3>③ Noncanonical Charged Amino Acids</h3>
+          <VChart :option="aaOption" autoresize style="height:300px;" />
+        </div>
+
+        <!-- 4. Readthrough Mechanism -->
+        <div class="chart-col">
+          <h3>④ Readthrough Mechanism Distribution</h3>
+          <VChart :option="mechOption" autoresize style="height:300px;width: 400px;" />
+        </div>
+
+        <!-- 5. Anticodon Mutation Heatmap -->
+        <div class="chart-col">
+          <h3>⑤ Anticodon Mutation Heatmap</h3>
+          <VChart :option="anticodonHeatmapOption" autoresize style="height:300px;width: 400px;" />
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -171,6 +204,9 @@ type DataType = {
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
+
+import type { EChartsOption } from 'echarts';
+
 
 export default defineComponent({
   name: 'NaturalSupTRNA',
@@ -312,6 +348,141 @@ export default defineComponent({
     });
 
     const secondaryStructures = ref<{ [key: string]: string }>({});
+    
+
+    // 1. Species Distribution
+const speciesOption = computed<EChartsOption>(() => {
+  const counts: Record<string, number> = {};
+  filteredDataSource.value.forEach((r: any) => {
+    const sp = r.Species || 'Unknown';
+    counts[sp] = (counts[sp] || 0) + 1;
+  });
+  const cats = Object.keys(counts);
+  return {
+    title: { text: 'Species Distribution', left: 'center' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: cats },
+    yAxis: { type: 'value' },
+    series: [{ type: 'bar', data: cats.map(c => counts[c]) }],
+    itemStyle: { borderRadius: 4 }
+  };
+});
+
+// 2. Codon-for-Readthrough Distribution
+const codonOption = computed<EChartsOption>(() => {
+  const counts: Record<string, number> = {};
+  filteredDataSource.value.forEach((r: any) => {
+    const list = Array.isArray(r['Codon for readthrough'])
+      ? r['Codon for readthrough']
+      : String(r['Codon for readthrough'])
+          .split(';')
+          .map(s => s.trim())
+          .filter(Boolean);
+    list.forEach(cod => counts[cod] = (counts[cod] || 0) + 1);
+  });
+  const cats = Object.keys(counts);
+  return {
+    title: { text: 'Codon-for-Readthrough', left: 'center' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: cats , axisLabel: { rotate: 45 } },
+    yAxis: { type: 'value' },
+    series: [{ type: 'bar', data: cats.map(c => counts[c]) }],
+    itemStyle: { borderRadius: 4 }
+  };
+});
+
+// 3. Noncanonical Charged Amino Acids
+const aaOption = computed<EChartsOption>(() => {
+  const counts: Record<string, number> = {};
+  filteredDataSource.value.forEach((r: any) => {
+    const list = Array.isArray(r['Noncanonical charged amino acids'])
+      ? r['Noncanonical charged amino acids']
+      : String(r['Noncanonical charged amino acids'])
+          .split(';')
+          .map(s => s.trim())
+          .filter(Boolean);
+    list.forEach(aa => counts[aa] = (counts[aa] || 0) + 1);
+  });
+  const cats = Object.keys(counts);
+  return {
+    title: { text: 'Noncanonical Charged Amino Acids', left: 'center' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: cats },
+    yAxis: { type: 'value' },
+    series: [{ type: 'bar', data: cats.map(c => counts[c]) }],
+    itemStyle: { borderRadius: 4 }
+  };
+});
+
+// 4. Readthrough Mechanism Distribution
+const mechOption = computed<EChartsOption>(() => {
+  const counts: Record<string, number> = {};
+  filteredDataSource.value.forEach((r: any) => {
+    const list = Array.isArray(r['Readthrough mechanism'])
+      ? r['Readthrough mechanism']
+      : String(r['Readthrough mechanism'])
+          .split(';')
+          .map(s => s.trim())
+          .filter(Boolean);
+    list.forEach(m => counts[m] = (counts[m] || 0) + 1);
+  });
+  const cats = Object.keys(counts);
+  return {
+    title: { text: 'Readthrough Mechanism', left: 'center' },
+    tooltip: { trigger: 'axis' },
+    grid: {
+      top: 50,
+      bottom: 10,      // ← 给底部留出足够空间
+      left: 80,
+      right: 20,
+      containLabel: true
+    },
+    xAxis: { type: 'category', data: cats , axisLabel: { rotate: 30 } ,margin: 50},
+    yAxis: { type: 'value' },
+    series: [{ type: 'bar', data: cats.map(c => counts[c]) }],
+    itemStyle: { borderRadius: 4 }
+  };
+});
+
+// 5. Anticodon Mutation Heatmap
+const anticodonHeatmapOption = computed<EChartsOption>(() => {
+  const beforeSet = new Set<string>();
+  const afterSet  = new Set<string>();
+  const matrix: Record<string, Record<string, number>> = {};
+  filteredDataSource.value.forEach((r: any) => {
+    const b = r['Anticodon before mutation'];
+    const a = r['Anticodon after mutation'];
+    if (!b || !a) return;
+    beforeSet.add(b);
+    afterSet.add(a);
+    matrix[b] = matrix[b] || {};
+    matrix[b][a] = (matrix[b][a] || 0) + 1;
+  });
+  const bs = Array.from(beforeSet).sort();
+  const as_ = Array.from(afterSet).sort();
+  // 构造 [xIdx, yIdx, count]
+  const data: [number,number,number][] = [];
+  bs.forEach((b, i) =>
+    as_.forEach((a, j) =>
+      data.push([j, i, matrix[b]?.[a] || 0])
+    )
+  );
+  const maxVal = data.length ? Math.max(...data.map(d=>d[2])) : 0;
+  return {
+    title: { text: 'Anticodon Mutation Heatmap', left: 'center' },
+    tooltip: {
+      trigger: 'item',
+      formatter: params => {
+        const [x,y,v] = params.value as [number,number,number];
+        return `Before: ${bs[y]}<br/>After: ${as_[x]}<br/>Count: ${v}`;
+      }
+    },
+    xAxis: { type: 'category', data: as_, axisLabel: { rotate: 45 } },
+    yAxis: { type: 'category', data: bs },
+    visualMap: { min: 0, max: maxVal, calculable: true, orient: 'horizontal', left: 'center', bottom: '5%' },
+    series: [{ type: 'heatmap', data }]
+  };
+});
 
     return {
       allColumns,
@@ -331,7 +502,12 @@ export default defineComponent({
       getTagType, // 获取标签类型
       onSorterChange,
       getPmidList, // 添加getPmidList方法
-      loading
+      loading,
+      speciesOption,
+  codonOption,
+  aaOption,
+  mechOption,
+  anticodonHeatmapOption
     };
   }
 });
@@ -362,5 +538,19 @@ export default defineComponent({
 .column-select {
   margin-left: 10px;
   width: 200px;
+}
+
+.chart-section-wrapper {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+.chart-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 20px;
+}
+.chart-col {
+  flex: 0 0 auto;
+  width: auto;
 }
 </style>
