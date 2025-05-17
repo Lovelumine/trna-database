@@ -144,13 +144,13 @@
         <!-- 1. Species Distribution -->
         <div class="chart-col">
           <h3>① Species Distribution</h3>
-          <VChart :option="speciesOption" autoresize style="height:300px; width: 800px;" />
+          <VChart :option="speciesOption" autoresize style="height:300px;" />
         </div>
 
         <!-- 2. Codon for Readthrough -->
         <div class="chart-col">
           <h3>② Codon-for-Readthrough Distribution</h3>
-          <VChart :option="codonOption" autoresize style="height:300px;width: 600px;" />
+          <VChart :option="codonOption" autoresize style="height:300px;" />
         </div>
 
         <!-- 3. Noncanonical Amino Acids -->
@@ -162,13 +162,13 @@
         <!-- 4. Readthrough Mechanism -->
         <div class="chart-col">
           <h3>④ Readthrough Mechanism Distribution</h3>
-          <VChart :option="mechOption" autoresize style="height:300px;width: 400px;" />
+          <VChart :option="mechOption" autoresize style="height:300px;" />
         </div>
 
         <!-- 5. Anticodon Mutation Heatmap -->
         <div class="chart-col">
           <h3>⑤ Anticodon Mutation Heatmap</h3>
-          <VChart :option="anticodonHeatmapOption" autoresize style="height:300px;width: 400px;" />
+          <VChart :option="anticodonHeatmapOption" autoresize style="height:300px;" />
         </div>
       </div>
     </section>
@@ -362,7 +362,7 @@ const speciesOption = computed<EChartsOption>(() => {
   });
   const cats = Object.keys(counts);
   return {
-    title: { text: 'Species Distribution', left: 'center' },
+    // title: { text: 'Species Distribution', left: 'center' },
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: cats },
     yAxis: { type: 'value' },
@@ -385,7 +385,7 @@ const codonOption = computed<EChartsOption>(() => {
   });
   const cats = Object.keys(counts);
   return {
-    title: { text: 'Codon-for-Readthrough', left: 'center' },
+    // title: { text: 'Codon-for-Readthrough', left: 'center' },
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: cats , axisLabel: { rotate: 45 } },
     yAxis: { type: 'value' },
@@ -408,7 +408,7 @@ const aaOption = computed<EChartsOption>(() => {
   });
   const cats = Object.keys(counts);
   return {
-    title: { text: 'Noncanonical Charged Amino Acids', left: 'center' },
+    // title: { text: 'Noncanonical Charged Amino Acids', left: 'center' },
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: cats },
     yAxis: { type: 'value' },
@@ -431,7 +431,7 @@ const mechOption = computed<EChartsOption>(() => {
   });
   const cats = Object.keys(counts);
   return {
-    title: { text: 'Readthrough Mechanism', left: 'center' },
+    // title: { text: 'Readthrough Mechanism', left: 'center' },
     tooltip: { trigger: 'axis' },
     grid: {
       top: 50,
@@ -472,7 +472,7 @@ const anticodonHeatmapOption = computed<EChartsOption>(() => {
   );
   const maxVal = data.length ? Math.max(...data.map(d=>d[2])) : 0;
   return {
-    title: { text: 'Anticodon Mutation Heatmap', left: 'center' },
+    // title: { text: 'Anticodon Mutation Heatmap', left: 'center' },
     tooltip: {
       trigger: 'item',
       formatter: params => {
@@ -482,7 +482,7 @@ const anticodonHeatmapOption = computed<EChartsOption>(() => {
     },
     xAxis: { type: 'category', data: as_, axisLabel: { rotate: 45 } },
     yAxis: { type: 'category', data: bs },
-    visualMap: { min: 0, max: maxVal, calculable: true, orient: 'horizontal', left: 'center', bottom: '5%' },
+    visualMap: { min: 0, max: maxVal, calculable: true, orient: 'horizontal', left: 'center', bottom: '-5%' },
     series: [{ type: 'heatmap', data }]
   };
 });
@@ -544,16 +544,24 @@ const anticodonHeatmapOption = computed<EChartsOption>(() => {
 }
 
 .chart-section-wrapper {
+  /* 横向滚动的外层不用改 */
   overflow-x: auto;
-  margin-top: 20px;
+  padding: 10px 0;
 }
+
+/* 把原来的横向 flex 换成纵向 flex */
 .chart-row {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 20px;
+  flex-direction: column;  /* 改成纵向堆叠 */
+  gap: 20px;               /* 每行间距 */
 }
+
+/* 每个图表占满整行 */
 .chart-col {
-  flex: 0 0 auto;
-  width: auto;
+  width: 100%;             /* 撑满父容器宽度 */
+  /* 删除或注释掉原来的 flex 相关设置：
+     flex: 0 0 auto;
+     width: 1000px;
+  */
 }
 </style>
