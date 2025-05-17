@@ -165,7 +165,7 @@ export default {
 
     // 3. Build & cast the option
     const option = {
-      title:    { text: 'Per-Position Alignment Variation', left: 'center' },
+      // title:    { text: 'Per-Position Alignment Variation', left: 'center' },
       tooltip:  { trigger: 'axis' },
       legend:   { data: mutableTypes, top: 30 },
       xAxis:    { type: 'category', data: positions, name: 'position', axisLabel: { rotate: 45 } },

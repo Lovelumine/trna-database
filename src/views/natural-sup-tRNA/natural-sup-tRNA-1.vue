@@ -36,8 +36,8 @@
           @sorter-change="onSorterChange" :loading="loading">
           <template #bodyCell="{ text, column, record }">
             <template v-if="column.key === 'Species'">
-    <em>{{ text }}</em>
-  </template>
+              <em>{{ text }}</em>
+            </template>
             <template v-else-if="column.key === 'Structure of sup-tRNA'">
               <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
             </template>
@@ -389,7 +389,7 @@ const stopCodonOption = computed<EChartsOption>(() => {
   const data = categories.map(cat => counts[cat])
 
   return {
-    title: { text: 'Stop Codon Readthrough', left: 'center' },
+    // title: { text: 'Stop Codon Readthrough', left: 'center' },
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: categories },
     yAxis: { type: 'value' },
@@ -421,7 +421,7 @@ const aaOption = computed<EChartsOption>(() => {
   const data = categories.map(cat => counts[cat])
 
   return {
-    title: { text: 'Noncanonical Amino Acids', left: 'center' },
+    // title: { text: 'Noncanonical Amino Acids', left: 'center' },
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: categories },
     yAxis: { type: 'value' },
@@ -451,7 +451,7 @@ const aaOption = computed<EChartsOption>(() => {
           itemStyle: { borderRadius: 4 }
         }],
         tooltip: { trigger: 'axis' },
-        title: { text: 'Tissue/Organelle of Origin', left: 'center' }
+        // title: { text: 'Tissue/Organelle of Origin', left: 'center' }
       };
     });
 
@@ -475,7 +475,7 @@ const aaOption = computed<EChartsOption>(() => {
   const as_ = Array.from(afterList).sort()
   if (!bs.length || !as_.length) {
     return {
-      title: { text: 'Anticodon Mutation Heatmap', left: 'center' },
+      // title: { text: 'Anticodon Mutation Heatmap', left: 'center' },
       xAxis: { type: 'category', data: [] },
       yAxis: { type: 'category', data: [] },
       series: [{ type: 'heatmap', data: [] }],
@@ -493,7 +493,7 @@ const aaOption = computed<EChartsOption>(() => {
   const maxVal = data.length ? Math.max(...data.map(d => d[2])) : 0
 
   return {
-    title: { text: 'Anticodon Mutation Heatmap', left: 'center' },
+    // title: { text: 'Anticodon Mutation Heatmap', left: 'center' },
     tooltip: {
       trigger: 'item',
       formatter: params => {
@@ -587,16 +587,24 @@ const aaOption = computed<EChartsOption>(() => {
 }
 
 .chart-section-wrapper {
+  /* 横向滚动的外层不用改 */
   overflow-x: auto;
-  margin-top: 20px;
+  padding: 10px 0;
 }
+
+/* 把原来的横向 flex 换成纵向 flex */
 .chart-row {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 20px;
+  flex-direction: column;  /* 改成纵向堆叠 */
+  gap: 20px;               /* 每行间距 */
 }
+
+/* 每个图表占满整行 */
 .chart-col {
-  flex: 0 0 auto;
-  width: 400px; /* 你可以根据需要调整宽度 */
+  width: 100%;             /* 撑满父容器宽度 */
+  /* 删除或注释掉原来的 flex 相关设置：
+     flex: 0 0 auto;
+     width: 1000px;
+  */
 }
 </style>
