@@ -215,65 +215,78 @@ export default defineComponent({
     );
 
     const alleleHeatmapOption = computed<EChartsOption>(() => {
-      const combo: Record<string, Record<string, number>> = {}
-      const refSet = new Set<string>()
-      const mutSet = new Set<string>()
+  // 1. 构建 ref vs mut 计数矩阵
+  const combo: Record<string, Record<string, number>> = {};
+  const refSet = new Set<string>();
+  const mutSet = new Set<string>();
 
-      filteredDataSource.value.forEach((r: any) => {
-        const ref = r.GENOMIC_REF_ALLELE || ''
-        const mut = r.GENOMIC_MUT_ALLELE || ''
-        if (!ref || !mut) return
-        refSet.add(ref)
-        mutSet.add(mut)
-        combo[ref] = combo[ref] || {}
-        combo[ref][mut] = (combo[ref][mut] || 0) + 1
-      })
+  filteredDataSource.value.forEach((r: any) => {
+    const ref = r.GENOMIC_REF_ALLELE || '';
+    const mut = r.GENOMIC_MUT_ALLELE || '';
+    if (!ref || !mut) return;
 
-      const refList = Array.from(refSet).sort()
-      const mutList = Array.from(mutSet).sort()
-      const data: [number, number, number][] = []
+    refSet.add(ref);
+    mutSet.add(mut);
+    combo[ref] = combo[ref] || {};
+    combo[ref][mut] = (combo[ref][mut] || 0) + 1;
+  });
 
-      refList.forEach((ref, i) => {
-        mutList.forEach((mut, j) => {
-          data.push([j, i, combo[ref]?.[mut] || 0])
-        })
-      })
+  // 2. 排序列与行
+  const refList = Array.from(refSet).sort();
+  const mutList = Array.from(mutSet).sort();
 
-      const allCounts = data.map(d => d[2])
-      const maxCount = allCounts.length ? Math.max(...allCounts) : 0
+  // 3. 将矩阵展开为 heatmap 格式的 [x, y, value]
+  const data: [number, number, number][] = [];
+  refList.forEach((ref, i) => {
+    mutList.forEach((mut, j) => {
+      data.push([j, i, combo[ref]?.[mut] || 0]);
+    });
+  });
 
-      return {
-        tooltip: {
-          position: 'top',
-          formatter: ([x, y, v]: any) => 
-            `Ref:${refList[y]} → Mut:${mutList[x]}<br/>Count: ${v}`
-        },
-        xAxis: {
-          type: 'category',
-          data: mutList,
-          axisLabel: { rotate: 0 }
-        },
-        yAxis: {
-          type: 'category',
-          data: refList
-        },
-        visualMap: {
-          min: 0,
-          max: maxCount,
-          calculable: true,
-          orient: 'horizontal',
-          left: 'center',
-          bottom: '-5%'
-        },
-        series: [{
-          type: 'heatmap',
-          data,
-          emphasis: {
-            itemStyle: { borderColor: '#333', borderWidth: 1 }
-          }
-        }]
+  // 4. 计算 visualMap 的最大值
+  const allCounts = data.map(d => d[2]);
+  const maxCount = allCounts.length > 0 ? Math.max(...allCounts) : 0;
+
+  // 5. 返回 ECharts 配置
+  return {
+    tooltip: {
+      position: 'top',
+      // ←—— 这里修改：从 params.value 解构
+      formatter: (params: any) => {
+        const [x, y, v] = params.value as [number, number, number];
+        return `Ref: ${refList[y]} → Mut: ${mutList[x]}<br/>Count: ${v}`;
       }
-    })
+    },
+    xAxis: {
+      type: 'category',
+      data: mutList,
+      axisLabel: { rotate: 0 },
+      name: 'Mutated Allele'
+    },
+    yAxis: {
+      type: 'category',
+      data: refList,
+      name: 'Reference Allele'
+    },
+    visualMap: {
+      min: 0,
+      max: maxCount,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '-5%'
+    },
+    series: [
+      {
+        type: 'heatmap',
+        data,
+        emphasis: {
+          itemStyle: { borderColor: '#333', borderWidth: 1 }
+        }
+      }
+    ]
+  };
+});
 
     // —— 新增 2：Disease Word Cloud 配置
     const diseaseWordcloudOption = computed<EChartsOption>(() => {
@@ -367,16 +380,24 @@ export default defineComponent({
 }
 
 .chart-section-wrapper {
+  /* 横向滚动的外层不用改 */
   overflow-x: auto;
   padding: 10px 0;
 }
+
+/* 把原来的横向 flex 换成纵向 flex */
 .chart-row {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 20px;
+  flex-direction: column;  /* 改成纵向堆叠 */
+  gap: 20px;               /* 每行间距 */
 }
+
+/* 每个图表占满整行 */
 .chart-col {
-  flex: 0 0 auto;
-  width: 1000px; /* 或者你想要的宽度 */
+  width: 100%;             /* 撑满父容器宽度 */
+  /* 删除或注释掉原来的 flex 相关设置：
+     flex: 0 0 auto;
+     width: 1000px;
+  */
 }
 </style>

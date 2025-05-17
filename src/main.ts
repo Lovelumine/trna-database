@@ -37,7 +37,7 @@ import {
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import VChart from 'vue-echarts'
-import { BarChart,TreemapChart, HeatmapChart } from 'echarts/charts'
+import { BarChart, LineChart,TreemapChart, HeatmapChart } from 'echarts/charts'
 import 'echarts-wordcloud';
 
 echarts.use([
@@ -49,6 +49,7 @@ echarts.use([
   LegendComponent,
   VisualMapComponent,
   TreemapChart,
+  LineChart,
   HeatmapChart
 ])
 
