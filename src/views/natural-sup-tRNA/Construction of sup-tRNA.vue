@@ -38,7 +38,7 @@
         </template>
         <template #expandedRowRender="{ record }">
           <div>
-            <p><b>Species:</b> {{ record.Species }}</p>
+            <p><b>Species:</b> <em>{{ record.Species }}</em></p>
             <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
             <p><b>Anticodon after mutation:</b> {{ record['Anticodon after mutation'] }}</p>
             <p><b>Stop codon for readthrough:</b> {{ record['Stop codon for readthrough'] }}</p>

@@ -80,7 +80,7 @@
 
       <div class="chart-col">
         <h3>② Gene Frequency Treemap</h3>
-        <VChart :option="treemapOption" autoresize style="height:400px;" />
+        <VChart :option="treemapOption" autoresize style="height:400px;border:2px solid #ccc; padding:8px; border-radius:4px;" />
       </div>
 
       <div class="chart-col">
@@ -228,12 +228,12 @@ export default defineComponent({
       });
       // 排序取前20，剩余归 Others
       const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-      const top20 = entries.slice(0, 20);
-      const othersSum = entries.slice(20).reduce((s, e) => s + e[1], 0);
+      const top20 = entries.slice(0, 40);
+      const othersSum = entries.slice(40).reduce((s, e) => s + e[1], 0);
       const data = top20.map(([name, value]) => ({ name, value }));
       data.push({ name: 'Others', value: othersSum });
       return {
-        title: { text: 'Treemap of Gene Record Distribution', left: 'center' },
+        // title: { text: 'Treemap of Gene Record Distribution', left: 'center' },
         tooltip: { trigger: 'item' },
         series: [
           {
@@ -266,7 +266,7 @@ export default defineComponent({
       const zygoList = Array.from(zygos);
 
       return {
-        title: { text: 'Inheritance Mode and Zygosity Distribution', left: 'center' },
+        // title: { text: 'Inheritance Mode and Zygosity Distribution', left: 'center' },
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
         legend: { data: zygoList, top: 30 },
         xAxis: { type: 'category', data: modeList },
@@ -410,16 +410,24 @@ const heatmapOption = computed<EChartsOption>(() => {
   width: 200px; /* 设置选择框的宽度 */
 }
 .chart-section-wrapper {
-  overflow-x: auto;      /* 横向滚动 */
+  /* 横向滚动的外层不用改 */
+  overflow-x: auto;
   padding: 10px 0;
 }
+
+/* 把原来的横向 flex 换成纵向 flex */
 .chart-row {
   display: flex;
-  flex-wrap: nowrap;     /* 禁止换行 */
-  gap: 20px;             /* 各图间距 */
+  flex-direction: column;  /* 改成纵向堆叠 */
+  gap: 20px;               /* 每行间距 */
 }
+
+/* 每个图表占满整行 */
 .chart-col {
-  flex: 0 0 auto;        /* 列宽固定为内部内容宽度 */
-  width: 1000px;          /* 或者你原来每个图表的宽度 */
+  width: 100%;             /* 撑满父容器宽度 */
+  /* 删除或注释掉原来的 flex 相关设置：
+     flex: 0 0 auto;
+     width: 1000px;
+  */
 }
 </style>

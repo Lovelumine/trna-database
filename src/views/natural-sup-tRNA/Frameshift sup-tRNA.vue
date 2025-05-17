@@ -35,7 +35,10 @@
           :stripe="true" :show-sorter-tooltip="true" :size="tableSize" :expand-row-by-click="true"
           @sorter-change="onSorterChange" :loading="loading">
           <template #bodyCell="{ text, column, record }">
-            <template v-if="column.key === 'Structure of sup-tRNA'">
+            <template v-if="column.key === 'Species'">
+    <em>{{ text }}</em>
+  </template>
+            <template v-else-if="column.key === 'Structure of sup-tRNA'">
               <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
             </template>
             <template v-else-if="column.key === 'Codon for readthrough'">
@@ -80,7 +83,7 @@
 
           <template #expandedRowRender="{ record }">
             <div>
-              <p><b>Species:</b> {{ record.Species }}</p>
+              <p><b>Species:</b> <em>{{ record.Species }}</em></p>
               <p><b>Species ID:</b> {{ record['Species ID'] }}</p>
               <p><b>Tissue/Organelle of Origin:</b> {{ record['Tissue/Organelle of Origin'] }}</p>
               <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>

@@ -33,17 +33,34 @@
     <!-- <div class="table-section">
       <tRNAtherapeutics1 :selectedPmids="selectedPmids" />
     </div> -->
+    <section style="margin: 24px 0">
+      <h3>Per-Position Alignment Variation</h3>
+      <VChart
+        :option="perPositionOption"
+        autoresize
+        style="height: 400px;"
+      />
+    </section>
   </div>
+
 </template>
 
-<script>
+<script lang="tsx">
 import { ref, computed, onMounted } from 'vue';
 import { STableProvider } from '@shene/table';
 import Papa from 'papaparse';
 import tRNAtherapeutics1 from './tRNAtherapeutics-1.vue';
-
+import { useTableData } from '../../assets/js/useTableData.js';
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
+
+import type { EChartsOption, ECElementEvent } from 'echarts';
+
+interface AlignmentItem {
+    id: string;
+    base: string;
+    sup_base: string;
+  }
 
 export default {
   name: 'tRNAtherapeutics',
@@ -52,6 +69,111 @@ export default {
     STableProvider
   },
   setup() {
+
+  const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv');
+
+  const getType = (item: AlignmentItem): 'match'|'mismatch'|'insertion'|'deletion' => {
+      return item.base === '-' && item.sup_base !== '-' ? 'insertion'
+           : item.base !== '-' && item.sup_base === '-' ? 'deletion'
+           : item.base === item.sup_base               ? 'match'
+           : 'mismatch';
+    };
+      // —— 1. Overall 统计
+      const alignmentCounts = computed(() => {
+      const cnt = { match:0, mismatch:0, insertion:0, deletion:0 };
+      filteredDataSource.value.forEach((rec: any) => {
+        let arr: AlignmentItem[] = [];
+        try { arr = JSON.parse(String(rec.js_sup_tRNA)); } catch { return; }
+        arr.forEach(item => { cnt[getType(item)]++; });
+      });
+      return cnt;
+    });
+
+    const alignmentOption = computed<EChartsOption>(() => {
+      const cats = ['match','mismatch','insertion','deletion'];
+      const data = cats.map(c => alignmentCounts.value[c]);
+      return {
+        title: { text: 'Alignment Variation', left: 'center' },
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: cats, axisLabel: { rotate: 45 } },
+        yAxis: { type: 'value' },
+        series: [
+          {
+            type: 'bar',
+            data,
+            itemStyle: { borderRadius: 8 }
+          }
+        ]
+      };
+    });
+
+    // —— 2. 点击 mismatch 展示明细
+    const mismatchDetails = ref<{from:string,to:string,count:number}[]>([]);
+    const onChartClick = (params: ECElementEvent) => {
+      if (params.name !== 'mismatch') {
+        mismatchDetails.value = [];
+        return;
+      }
+      const pairCnt: Record<string,Record<string,number>> = {};
+      filteredDataSource.value.forEach((rec: any) => {
+        let arr: AlignmentItem[] = [];
+        try { arr = JSON.parse(String(rec.js_sup_tRNA)); } catch { return; }
+        arr.forEach(item => {
+          if (getType(item) === 'mismatch') {
+            pairCnt[item.base] = pairCnt[item.base] || {};
+            pairCnt[item.base][item.sup_base] = (pairCnt[item.base][item.sup_base]||0)+1;
+          }
+        });
+      });
+      const details: typeof mismatchDetails.value = [];
+      for (const from in pairCnt)
+        for (const to in pairCnt[from])
+          details.push({ from, to, count: pairCnt[from][to] });
+      mismatchDetails.value = details;
+    };
+
+    // —— 3. Per-position 统计
+    const perPositionCounts = computed(() => {
+      const M: Record<string,Record<'match'|'mismatch'|'insertion'|'deletion',number>> = {};
+      filteredDataSource.value.forEach((rec: any) => {
+        let arr: AlignmentItem[] = [];
+        try { arr = JSON.parse(String(rec.js_sup_tRNA)); } catch { return; }
+        arr.forEach(item => {
+          const pos = item.id;
+          if (!M[pos]) M[pos] = { match:0, mismatch:0, insertion:0, deletion:0 };
+          M[pos][ getType(item) ]++;
+        });
+      });
+      return M;
+    });
+
+      const perPositionOption = computed(() => {
+    // 1. 按数字排序所有位置
+    const positions = Object.keys(perPositionCounts.value)
+      .sort((a, b) => Number(a) - Number(b));
+
+    // 2. 构造每一种类型的堆积柱状系列
+    const types = ['match','mismatch','insertion','deletion'] as const;
+    const mutableTypes = [...types]; // now a mutable string[]
+    const series = mutableTypes.map(type => ({
+      name: type,
+      type: 'bar' as const,
+      stack: 'all' as const,
+      data: positions.map(p => perPositionCounts.value[p][type]),
+      itemStyle: { borderRadius: 4 }
+    }));
+
+    // 3. Build & cast the option
+    const option = {
+      title:    { text: 'Per-Position Alignment Variation', left: 'center' },
+      tooltip:  { trigger: 'axis' },
+      legend:   { data: mutableTypes, top: 30 },
+      xAxis:    { type: 'category', data: positions, name: 'position', axisLabel: { rotate: 45 } },
+      yAxis:    { type: 'value', name: 'count' },
+      series
+    };
+    return option as EChartsOption;
+  });
 
     // PMID表格配置
     const pmidColumns = ref([
@@ -124,7 +246,9 @@ export default {
 
     // 加载CSV数据
     onMounted(async () => {
+      
       const response = await fetch('https://minio.lumoxuan.cn/ensure/pmid_article_info_extended.csv');
+      await loadData()
       const csvText = await response.text();
 
       Papa.parse(csvText, {
@@ -168,7 +292,11 @@ export default {
       pagination,
       rowSelection,
       selectedPmids,
-      handleTableChange
+      handleTableChange,
+      alignmentOption,
+      onChartClick,
+      mismatchDetails,
+      perPositionOption
     };
   }
 };

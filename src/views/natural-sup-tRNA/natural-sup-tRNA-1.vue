@@ -35,7 +35,10 @@
           :stripe="true" :show-sorter-tooltip="true" :size="tableSize" :expand-row-by-click="true"
           @sorter-change="onSorterChange" :loading="loading">
           <template #bodyCell="{ text, column, record }">
-            <template v-if="column.key === 'Structure of sup-tRNA'">
+            <template v-if="column.key === 'Species'">
+    <em>{{ text }}</em>
+  </template>
+            <template v-else-if="column.key === 'Structure of sup-tRNA'">
               <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
             </template>
             <template v-else-if="column.key === 'Stop codon for readthrough'">
@@ -80,7 +83,7 @@
 
           <template #expandedRowRender="{ record }">
             <div>
-              <p><b>Species:</b> {{ record.Species }}</p>
+              <p><b>Species:</b> <em>{{ record.Species }}</em></p>
               <p><b>Species ID:</b> {{ record['Species ID'] }}</p>
               <p><b>Tissue/Organelle of Origin:</b> {{ record['Tissue/Organelle of Origin'] }}</p>
               <p><b>Anticodon before mutation:</b> {{ record['Anticodon before mutation'] }}</p>
@@ -262,7 +265,7 @@ export default defineComponent({
     };
 
     const allColumns: STableColumnsType<DataType> = [
-      { title: 'Species', dataIndex: 'Species', width: 280, ellipsis: true, key: 'Species', resizable: true, sorter: true },
+      { title: 'Species', dataIndex: 'Species', width: 280, ellipsis: true, key: 'Species', resizable: true, sorter: true ,customRender: ({ text }) => <em>{text}</em>,},
       { title: 'Species ID', dataIndex: 'Species ID', width: 280, ellipsis: true, key: 'Species ID', resizable: true, sorter: true },
       { title: 'Tissue/Organelle of Origin', dataIndex: 'Tissue/Organelle of Origin', width: 280, ellipsis: true, key: 'Tissue/Organelle of Origin', resizable: true, sorter: true },
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
