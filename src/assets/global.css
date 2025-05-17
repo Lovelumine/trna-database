@@ -27,7 +27,7 @@ body {
     font-size: 16px;
     line-height: 1.8;
     color: var(--farallon-text-color);
-    background-color: var(--farallon-background-gray);
+    /* background-color: var(--farallon-background-gray); */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
