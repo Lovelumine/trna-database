@@ -246,39 +246,73 @@ export default defineComponent({
       };
     });
 
-// —— 2. Stacked Bar 配置
-    const stackedBarOption = computed<EChartsOption>(() => {
-      // 取两列： denovoinherited, zygosity
-      const modes = new Set<string>();
-      const zygos = new Set<string>();
-      const counter: Record<string, Record<string, number>> = {};
+// —— 2. Stacked Bar 配置（按各模式总数降序；各合子类型按其总数降序）
+const stackedBarOption = computed<EChartsOption>(() => {
+  // 收集所有模式和合子情况，以及计数
+  const modeTotals: Record<string, number> = {};
+  const zygoTotals: Record<string, number> = {};
+  const counter: Record<string, Record<string, number>> = {};
 
-      filteredDataSource.value.forEach((row: any) => {
-        const m = row.denovoinherited || 'Unknown';
-        const z = row.zygosity || 'Unknown';
-        modes.add(m);
-        zygos.add(z);
-        counter[m] = counter[m] || {};
-        counter[m][z] = (counter[m][z] || 0) + 1;
-      });
+  filteredDataSource.value.forEach((row: any) => {
+    const mode = row.denovoinherited || 'Unknown';
+    const zygo = row.zygosity || 'Unknown';
 
-      const modeList = Array.from(modes);
-      const zygoList = Array.from(zygos);
+    // 初始化
+    counter[mode] = counter[mode] || {};
+    counter[mode][zygo] = (counter[mode][zygo] || 0) + 1;
 
-      return {
-        // title: { text: 'Inheritance Mode and Zygosity Distribution', left: 'center' },
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-        legend: { data: zygoList, top: 30 },
-        xAxis: { type: 'category', data: modeList },
-        yAxis: { type: 'value' },
-        series: zygoList.map(z => ({
-          name: z,
-          type: 'bar',
-          stack: 'total',
-          data: modeList.map(m => counter[m]?.[z] || 0)
-        }))
-      };
-    });
+    // 累加模式和合子总数
+    modeTotals[mode] = (modeTotals[mode] || 0) + 1;
+    zygoTotals[zygo] = (zygoTotals[zygo] || 0) + 1;
+  });
+
+  // 按总数降序排序模式列表
+  const modeList = Object.entries(modeTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([mode]) => mode);
+
+  // 按总数降序排序合子类型列表
+  const zygoList = Object.entries(zygoTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([zygo]) => zygo);
+
+  return {
+    // title: { text: 'Inheritance Mode & Zygosity (sorted)', left: 'center' },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    legend: {
+      data: zygoList,
+      top: 30
+    },
+    grid: {
+      top: 60,
+      bottom: 40,
+      left: 80,
+      right: 20,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: modeList,
+      axisLabel: { rotate: 30 }
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: zygoList.map(zygo => ({
+      name: zygo,
+      type: 'bar',
+      stack: 'total',
+      data: modeList.map(mode => counter[mode]?.[zygo] || 0),
+      emphasis: {
+        itemStyle: { borderColor: '#333', borderWidth: 1 }
+      },
+      itemStyle: { borderRadius: 4 }
+    }))
+  };
+});
 
 // —— 3. Heatmap 配置
 const heatmapOption = computed<EChartsOption>(() => {

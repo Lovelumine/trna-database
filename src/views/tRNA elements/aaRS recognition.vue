@@ -11,9 +11,9 @@
       </div>
       <div class="size-controls" style="margin-bottom: 10px">
         <el-radio-group v-model="tableSize">
-          <el-radio-button label="small">Small Size</el-radio-button>
-          <el-radio-button label="default">Default Size</el-radio-button>
-          <el-radio-button label="large">Large Size</el-radio-button>
+          <el-radio-button value="small">Small Size</el-radio-button>
+          <el-radio-button value="default">Default Size</el-radio-button>
+          <el-radio-button value="large">Large Size</el-radio-button>
         </el-radio-group>
       </div>
       <div class="column-controls" style="margin-bottom: 10px">
