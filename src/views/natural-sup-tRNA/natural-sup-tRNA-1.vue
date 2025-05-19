@@ -368,9 +368,10 @@ export default defineComponent({
 
     const secondaryStructures = ref<{ [key: string]: string }>({});
 
-// —— 1. Stop Codon for Readthrough 分布
+// —— 1. Stop Codon for Readthrough 分布（按频次从高到低排序）
 const stopCodonOption = computed<EChartsOption>(() => {
-  const counts: Record<string, number> = {}
+  const counts: Record<string, number> = {};
+
   filteredDataSource.value.forEach((r: any) => {
     // 兜底转换：如果它本身是数组就用它，否则按分号/逗号/斜杠拆成数组
     const list = Array.isArray(r['Stop codon for readthrough'])
@@ -378,50 +379,66 @@ const stopCodonOption = computed<EChartsOption>(() => {
       : String(r['Stop codon for readthrough'])
           .split(/[;,/]/)
           .map(s => s.trim())
-          .filter(Boolean)
+          .filter(Boolean);
 
     list.forEach(code => {
-      counts[code] = (counts[code] || 0) + 1
-    })
-  })
+      counts[code] = (counts[code] || 0) + 1;
+    });
+  });
 
-  const categories = Object.keys(counts)
-  const data = categories.map(cat => counts[cat])
+  // 转为 [codon, count] 数组并按 count 倒序排序
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  // 拆分成 categories（codon）和 data（频次）
+  const categories = entries.map(([codon]) => codon);
+  const data = entries.map(([, cnt]) => cnt);
 
   return {
-    // title: { text: 'Stop Codon Readthrough', left: 'center' },
+    // 如果需要标题，可以取消注释下一行
+    // title: { text: 'Stop Codon Readthrough (sorted)', left: 'center' },
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: categories },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLabel: { rotate: 0 }
+    },
     yAxis: { type: 'value' },
-    series: [{
-      type: 'bar',
-      data,
-      itemStyle: { borderRadius: 4 }
-    }]
-  }
-})
+    series: [
+      {
+        type: 'bar',
+        data,
+        itemStyle: { borderRadius: 4 }
+      }
+    ]
+  };
+});
 
 // —— 2. Noncanonical Amino Acids 分布
 const aaOption = computed<EChartsOption>(() => {
-  const counts: Record<string, number> = {}
+  const counts: Record<string, number> = {};
   filteredDataSource.value.forEach((r: any) => {
     const list = Array.isArray(r['Noncanonical charged amino acids'])
       ? r['Noncanonical charged amino acids']
       : String(r['Noncanonical charged amino acids'])
           .split(/[;,/]/)
           .map(s => s.trim())
-          .filter(Boolean)
+          .filter(Boolean);
 
     list.forEach(aa => {
-      counts[aa] = (counts[aa] || 0) + 1
-    })
-  })
+      counts[aa] = (counts[aa] || 0) + 1;
+    });
+  });
 
-  const categories = Object.keys(counts)
-  const data = categories.map(cat => counts[cat])
+  // 将 counts 转为 [name, value]，并按 value 倒序排序
+  const entries = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1]);
+
+  // 再拆分成 categories 和 data
+  const categories = entries.map(e => e[0]);
+  const data = entries.map(e => e[1]);
 
   return {
-    // title: { text: 'Noncanonical Amino Acids', left: 'center' },
+    // title: { text: 'Noncanonical Amino Acids (sorted)', left: 'center' },
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: categories },
     yAxis: { type: 'value' },
@@ -430,31 +447,38 @@ const aaOption = computed<EChartsOption>(() => {
       data,
       itemStyle: { borderRadius: 4 }
     }]
-  }
-})
+  };
+});
 
-    // —— 3. Tissue/Organelle 分布
-    const tissueOption = computed<EChartsOption>(() => {
-      const counts: Record<string, number> = {};
-      filteredDataSource.value.forEach((r: any) => {
-        const org = r['Tissue/Organelle of Origin'] || 'Unknown';
-        counts[org] = (counts[org] || 0) + 1;
-      });
-      const categories = Object.keys(counts);
-      const data = categories.map(cat => counts[cat]);
-      return {
-        xAxis: { type: 'category', data: categories },
-        yAxis: { type: 'value' },
-        series: [{
-          type: 'bar',
-          data,
-          itemStyle: { borderRadius: 4 }
-        }],
-        tooltip: { trigger: 'axis' },
-        // title: { text: 'Tissue/Organelle of Origin', left: 'center' }
-      };
-    });
+// —— 3. Tissue/Organelle 分布（按频次从高到低排序）
+const tissueOption = computed<EChartsOption>(() => {
+  const counts: Record<string, number> = {};
+  filteredDataSource.value.forEach((r: any) => {
+    const org = r['Tissue/Organelle of Origin'] || 'Unknown';
+    counts[org] = (counts[org] || 0) + 1;
+  });
 
+  // 转成 [org, count] 数组并按 count 倒序排序
+  const entries = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1]);
+
+  // 拆分成 categories 和 data
+  const categories = entries.map(([org]) => org);
+  const data = entries.map(([, count]) => count);
+
+  return {
+    // 如果需要标题，可以打开下面这一行
+    // title: { text: 'Tissue/Organelle of Origin (sorted)', left: 'center' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: categories },
+    yAxis: { type: 'value' },
+    series: [{
+      type: 'bar',
+      data,
+      itemStyle: { borderRadius: 4 }
+    }]
+  };
+});
     // —— 4. Anticodon Before→After Heatmap
     const anticodonHeatmapOption = computed<EChartsOption>(() => {
   const beforeList = new Set<string>()
@@ -510,7 +534,7 @@ const aaOption = computed<EChartsOption>(() => {
       calculable: true,
       orient: 'horizontal',
       left: 'center',
-      bottom: '5%'
+      bottom: '-2%'
     },
     series: [{
       type: 'heatmap',

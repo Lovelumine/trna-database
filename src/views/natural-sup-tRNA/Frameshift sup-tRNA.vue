@@ -253,12 +253,12 @@ export default defineComponent({
     };
 
     const allColumns: STableColumnsType<DataType> = [
-      { title: 'Species', dataIndex: 'Species', width: 240, ellipsis: true, key: 'Species', resizable: true, sorter: true },
+      { title: 'Species', dataIndex: 'Species', width: 180, ellipsis: true, key: 'Species', resizable: true, sorter: true },
       { title: 'Species ID', dataIndex: 'Species ID', width: 280, ellipsis: true, key: 'Species ID', resizable: true, sorter: true },
       { title: 'Anticodon before mutation', dataIndex: 'Anticodon before mutation', width: 180, ellipsis: true, key: 'Anticodon before mutation', resizable: true },
       { title: 'Anticodon after mutation', dataIndex: 'Anticodon after mutation', width: 180, ellipsis: true, key: 'Anticodon after mutation', resizable: true },
       {
-        title: 'Codon for readthrough', dataIndex: 'Codon for readthrough', width: 240, ellipsis: true, key: 'Codon for readthrough', resizable: true
+        title: 'Codon for readthrough', dataIndex: 'Codon for readthrough', width: 180, ellipsis: true, key: 'Codon for readthrough', resizable: true
       },
       {
         title: 'Noncanonical charged amino acids', dataIndex: 'Noncanonical charged amino acids', width: 260, ellipsis: true, key: 'Noncanonical charged amino acids', resizable: true,
@@ -278,7 +278,7 @@ export default defineComponent({
       { title: 'tRNA sequence before mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
       { title: 'tRNA sequence after mutation', dataIndex: 'tRNA sequence after mutation', width: 200, ellipsis: true, key: 'tRNA sequence after mutation', resizable: true },
       {
-        title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 280, ellipsis: true, key: 'Readthrough mechanism', resizable: true, filter: {
+        title: 'Readthrough mechanism', dataIndex: 'Readthrough mechanism', width: 260, ellipsis: true, key: 'Readthrough mechanism', resizable: true, filter: {
           type: 'multiple',
           list: [
             { text: 'mutations in the anticodon', value: 'mutations in the anticodon' },
@@ -353,27 +353,40 @@ export default defineComponent({
     const secondaryStructures = ref<{ [key: string]: string }>({});
     
 
-    // 1. Species Distribution
+// 1. Species Distribution (sorted by count descending)
 const speciesOption = computed<EChartsOption>(() => {
   const counts: Record<string, number> = {};
   filteredDataSource.value.forEach((r: any) => {
     const sp = r.Species || 'Unknown';
     counts[sp] = (counts[sp] || 0) + 1;
   });
-  const cats = Object.keys(counts);
+
+  // 转为 [species, count] 数组并按 count 倒序排序
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  // 拆分成 categories（species 名）和 data（对应的频次）
+  const categories = entries.map(([sp]) => sp);
+  const data = entries.map(([, count]) => count);
+
   return {
-    // title: { text: 'Species Distribution', left: 'center' },
+    // title: { text: 'Species Distribution (sorted)', left: 'center' },
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: cats },
+    xAxis: { type: 'category', data: categories },
     yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: cats.map(c => counts[c]) }],
-    itemStyle: { borderRadius: 4 }
+    series: [
+      {
+        type: 'bar',
+        data,
+        itemStyle: { borderRadius: 4 }
+      }
+    ]
   };
 });
 
-// 2. Codon-for-Readthrough Distribution
+// 2. Codon-for-Readthrough Distribution (sorted by count descending)
 const codonOption = computed<EChartsOption>(() => {
   const counts: Record<string, number> = {};
+
   filteredDataSource.value.forEach((r: any) => {
     const list = Array.isArray(r['Codon for readthrough'])
       ? r['Codon for readthrough']
@@ -381,69 +394,129 @@ const codonOption = computed<EChartsOption>(() => {
           .split(';')
           .map(s => s.trim())
           .filter(Boolean);
-    list.forEach(cod => counts[cod] = (counts[cod] || 0) + 1);
+    list.forEach(cod => {
+      counts[cod] = (counts[cod] || 0) + 1;
+    });
   });
-  const cats = Object.keys(counts);
+
+  // 将 counts 转为 [codon, count] 数组并按 count 倒序排序
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  // 拆分成 categories（codon）和 data（频次）
+  const categories = entries.map(([cod]) => cod);
+  const data = entries.map(([, count]) => count);
+
   return {
-    // title: { text: 'Codon-for-Readthrough', left: 'center' },
+    // title: { text: 'Codon-for-Readthrough Distribution (sorted)', left: 'center' },
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: cats , axisLabel: { rotate: 45 } },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLabel: { rotate: 45 }
+    },
     yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: cats.map(c => counts[c]) }],
-    itemStyle: { borderRadius: 4 }
+    series: [
+      {
+        type: 'bar',
+        data,
+        itemStyle: { borderRadius: 4 }
+      }
+    ]
   };
 });
 
-// 3. Noncanonical Charged Amino Acids
+// 3. Noncanonical Charged Amino Acids (sorted by count descending)
 const aaOption = computed<EChartsOption>(() => {
   const counts: Record<string, number> = {};
+
   filteredDataSource.value.forEach((r: any) => {
     const list = Array.isArray(r['Noncanonical charged amino acids'])
       ? r['Noncanonical charged amino acids']
       : String(r['Noncanonical charged amino acids'])
-          .split(';')
+          .split(/[;,/]/)
           .map(s => s.trim())
           .filter(Boolean);
-    list.forEach(aa => counts[aa] = (counts[aa] || 0) + 1);
+
+    list.forEach(aa => {
+      counts[aa] = (counts[aa] || 0) + 1;
+    });
   });
-  const cats = Object.keys(counts);
+
+  // 转为 [aminoAcid, count] 数组并按 count 倒序排序
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  // 拆分成 categories 和 data
+  const categories = entries.map(([aa]) => aa);
+  const data = entries.map(([, count]) => count);
+
   return {
-    // title: { text: 'Noncanonical Charged Amino Acids', left: 'center' },
+    // 如果需要标题，可以取消下一行注释
+    // title: { text: 'Noncanonical Charged Amino Acids (sorted)', left: 'center' },
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: cats },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLabel: { rotate: 45 } // 如果需要旋转标签
+    },
     yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: cats.map(c => counts[c]) }],
-    itemStyle: { borderRadius: 4 }
+    series: [
+      {
+        type: 'bar',
+        data,
+        itemStyle: { borderRadius: 4 }
+      }
+    ]
   };
 });
 
-// 4. Readthrough Mechanism Distribution
+// 4. Readthrough Mechanism Distribution (sorted by count descending)
 const mechOption = computed<EChartsOption>(() => {
+  // 1. 统计各 mechanism 出现次数
   const counts: Record<string, number> = {};
   filteredDataSource.value.forEach((r: any) => {
     const list = Array.isArray(r['Readthrough mechanism'])
       ? r['Readthrough mechanism']
       : String(r['Readthrough mechanism'])
-          .split(';')
+          .split(/[;,/]/)
           .map(s => s.trim())
           .filter(Boolean);
-    list.forEach(m => counts[m] = (counts[m] || 0) + 1);
+    list.forEach(m => {
+      counts[m] = (counts[m] || 0) + 1;
+    });
   });
-  const cats = Object.keys(counts);
+
+  // 2. 转为 [mechanism, count] 数组并按 count 倒序排序
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+  // 3. 拆分成 categories（机制名）和 data（频次）
+  const categories = entries.map(([m]) => m);
+  const data = entries.map(([, cnt]) => cnt);
+
+  // 4. 返回 ECharts 配置
   return {
-    // title: { text: 'Readthrough Mechanism', left: 'center' },
+    // 如果需要标题，可取消下一行
+    // title: { text: 'Readthrough Mechanism (sorted)', left: 'center' },
     tooltip: { trigger: 'axis' },
     grid: {
       top: 50,
-      bottom: 10,      // ← 给底部留出足够空间
+      bottom: 10,
       left: 80,
       right: 20,
       containLabel: true
     },
-    xAxis: { type: 'category', data: cats , axisLabel: { rotate: 30 } ,margin: 50},
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLabel: { rotate: 30 }
+    },
     yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: cats.map(c => counts[c]) }],
-    itemStyle: { borderRadius: 4 }
+    series: [
+      {
+        type: 'bar',
+        data,
+        itemStyle: { borderRadius: 4 }
+      }
+    ]
   };
 });
 
