@@ -30,7 +30,7 @@ export const allColumns: STableColumnsType<DataType> = [
   { title: 'AA and Anticodon of sup-tRNA', dataIndex: 'aa_and_anticodon_of_sup-tRNA', width: 250, ellipsis: true, key: 'aa_and_anticodon_of_sup-tRNA', resizable: true },
   { title: 'Rnacentral ID of Origin tRNA', dataIndex: 'rnacentral_ID_of_origin_tRNA', width: 100, ellipsis: true, key: 'rnacentral_ID_of_origin_tRNA', resizable: true },
   { title: 'tRNAscan-SE ID of origin tRNA', dataIndex: 'tRNAscan_SE_ID_of_origin_tRNA', width: 300, ellipsis: true, key: 'tRNAscan_SE_ID_of_origin_tRNA', resizable: true },
-  { title: 'Species Source of Origin tRNA', dataIndex: 'Species_source_of_origin_tRNA', width: 250, ellipsis: true, key: 'Species_source_of_origin_tRNA', resizable: true },
+  { title: 'Species Source of Origin tRNA', dataIndex: 'Species_source_of_origin_tRNA', width: 250, ellipsis: true, key: 'Species_source_of_origin_tRNA', resizable: true ,customRender: ({ text }) => <em>{text}</em>,},
   { title: 'ENSURE ID', dataIndex: 'ENSURE_ID', width: 300, ellipsis: true, key: 'ENSURE_ID', resizable: true },
   { title: 'Sequence of Origin tRNA', dataIndex: 'Sequence_of_origin_tRNA', width: 300, ellipsis: true, key: 'Sequence_of_origin_tRNA', resizable: true },
   { title: 'Sequence of Sup-tRNA', dataIndex: 'Sequence_of_sup-tRNA', width: 350, ellipsis: true, key: 'Sequence_of_sup-tRNA', resizable: true },

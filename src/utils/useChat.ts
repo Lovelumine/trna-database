@@ -42,8 +42,9 @@ export function useChat(apiKey: string) {
 
   const openChatSession = async () => {
     try {
-      const response = await fetch(`${apiBaseURL}/application/${applicationId}/chat/open`, {
+      const response = await fetch(`${apiBaseURL}/application/${applicationId}/chat/open?ts=${Date.now()}`, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
           'accept': 'application/json',
           'AUTHORIZATION': apiKey, 
