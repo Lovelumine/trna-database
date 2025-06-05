@@ -8,23 +8,29 @@
       <el-row>
         <el-col :span="6">
           <div class="sidebar-container">
-            <Sidebar :headings="headings" :files="files" :activeFile="activeFile" :activeHeading="activeHeading" @navigateToHeading="navigateToHeading" @fileSelected="handleFileSelected" />
+            <Sidebar
+              :headings="headings"
+              :files="files"
+              :activeFile="activeFile"
+              :activeHeading="activeHeading"
+              @navigateToHeading="navigateToHeading"
+              @fileSelected="handleFileSelected"
+            />
           </div>
         </el-col>
         <el-col :span="18">
+          <!-- 只保留这一处 v-html，同时让 v-loading 在同一个元素上控制“加载中”遮罩 -->
           <div
-    class="markdown-body"
-    v-loading="loading"
-    element-loading-text="加载中..."
-    @click="handleImageClick"
-    v-html="content"
-  ></div>
-          <transition name="fade">
-            <div v-html="content" class="markdown-body" @click="handleImageClick" v-show="!loading"></div>
-          </transition>
+            class="markdown-body"
+            v-loading="loading"
+            element-loading-text="加载中..."
+            @click="handleImageClick"
+            v-html="content"
+          ></div>
         </el-col>
       </el-row>
     </div>
+
     <vue-easy-lightbox
       :visible="showViewer"
       :imgs="images"
