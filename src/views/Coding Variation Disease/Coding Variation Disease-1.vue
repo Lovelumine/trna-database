@@ -45,6 +45,7 @@
         :show-sorter-tooltip="true"
         :size="tableSize"
         :expand-row-by-click="true"
+        :pagination="pagination"
       >
         <template #expandedRowRender="{ record }">
           <div>
@@ -98,6 +99,8 @@ import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import type { EChartsOption } from 'echarts';
+import {pagination} from '../../utils/table'
+import {allColumns,selectedColumns} from './CodingVariation1Columns'
 
 // 定义数据类型
 type DataType = { [key: string]: string };
@@ -128,276 +131,192 @@ export default defineComponent({
     };
 
 
-
-    const selectedColumns = ref<string[]>([
-      'mutationType',
-      'diseaseName',
-      'gene',
-      'Protein Alteration',
-      'Codon Change',
-
-  ])
-    const allColumns: STableColumnsType<DataType> = [
-      {
-        title: 'Mutation Type',
-        dataIndex: 'mutationType',
-        width: 140, ellipsis: true,
-        key: 'mutationType',
-        resizable: true,
-        filter: {
-          type: 'multiple',
-          list: [
-            { text: 'Missense', value: 'Missense' },
-            { text: 'Nonsense', value: 'Nonsense' },
-            {text:'Frameshift',value:'Frameshift'}
-          ],
-          onFilter: (value, record) => value.includes(record.mutationType)
-        }
-      },
-      { title: 'Disease Name', dataIndex: 'diseaseName', width: 360, ellipsis: true, key: 'diseaseName', resizable: true },
-      { title: 'Phenotype MIM Number', dataIndex: 'Phenotype', width: 200, ellipsis: true, key: 'Phenotype', resizable: true },
-      { title: 'GenBank Accession Number', dataIndex: 'GenBank Accession Number', width: 200, ellipsis: true, key: 'GenBank Accession Number', resizable: true },
-      { title: 'Gene', dataIndex: 'gene', width: 120, ellipsis: true, key: 'gene', resizable: true },
-      { title: 'Gene/Locus MIM Number', dataIndex: 'Locus', width: 200, ellipsis: true, key: 'Locus', resizable: true },
-      { title: 'Mutation Site', dataIndex: 'mutationSite', width: 120, ellipsis: true, key: 'mutationSite', resizable: true },
-      { title: 'Protein Alteration', dataIndex: 'Protein Alteration', width: 240, ellipsis: true, key: 'Protein Alteration', resizable: true },
-      { title: 'Codon Change', dataIndex: 'Codon Change', width: 240, ellipsis: true, key: 'Codon Change', resizable: true },
-      { title: 'Chromosome', dataIndex: 'chromosome', width: 120, ellipsis: true, key: 'chromosome', resizable: true },
-      { title: 'Genome Position', dataIndex: 'Genomeposition', width: 220, ellipsis: true, key: 'Genomeposition', resizable: true },
-      {
-        title: 'De Novo / Inherited',
-        dataIndex: 'denovoinherited',
-        width: 180, ellipsis: true,
-        key: 'denovoinherited',
-        resizable: true,
-        filter: {
-          type: 'multiple',
-          list: [
-            { text: 'de novo', value: 'de novo' },
-            { text: 'inherited', value: 'inherited' },
-            { text: 'de novo / inherited', value: 'de novo / inherited' },
-            { text: 'uncertain', value: 'uncertain' },
-          ],
-          onFilter: (value, record) => value.includes(record.denovoinherited)
-        }
-      },
-      { title: 'Zygosity', dataIndex: 'zygosity', width: 140, ellipsis: true, key: 'zygosity', resizable: true,
-        filter: {
-          type: 'multiple',
-          list: [
-            { text: 'heterozygous', value: 'heterozygous' },
-            { text: 'hemizygous', value: 'hemizygous' },
-            { text: 'homozygous', value: 'homozygous' },
-          ],
-          onFilter: (value, record) => value.includes(record.zygosity)
-        } },
-      {
-        title: 'Incidence Rate',
-        dataIndex: 'incidenceRate',
-        width: 320, ellipsis: true,
-        key: 'incidenceRate',
-        resizable: true,
-        sorter: (a, b) => parseFloat(a.incidenceRate) - parseFloat(b.incidenceRate)
-      },
-      { title: 'Diagnostic Method', dataIndex: 'DiagnosticMethod', width: 320, ellipsis: true, key: 'DiagnosticMethod', resizable: true },
-      {
-        title: 'References', width: 120, ellipsis: true, key: 'References', dataIndex: 'References',
-        customRender: ({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">References</a></div>),
-        resizable: true
-      },
-      {
-        title: 'Source', width: 120, ellipsis: true, key: 'source', dataIndex: 'source',
-        customRender: ({ text, record }) => (<div><a href={text || '#'} target="_blank" class="bracket-links">Link</a></div>),
-        resizable: true
-      }
-    ];
-
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
 
 
-// —— 1. Treemap 配置
+    // —— 1. Treemap 配置
     const treemapOption = computed<EChartsOption>(() => {
-      // 统计每个 gene 出现次数
-      const counts: Record<string, number> = {};
+          // 统计每个 gene 出现次数
+          const counts: Record<string, number> = {};
+          filteredDataSource.value.forEach((row: any) => {
+            const g = row.gene || 'Unknown';
+            counts[g] = (counts[g] || 0) + 1;
+          });
+          // 排序取前20，剩余归 Others
+          const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+          const top20 = entries.slice(0, 40);
+          const othersSum = entries.slice(40).reduce((s, e) => s + e[1], 0);
+          const data = top20.map(([name, value]) => ({ name, value }));
+          data.push({ name: 'Others', value: othersSum });
+          return {
+            // title: { text: 'Treemap of Gene Record Distribution', left: 'center' },
+            tooltip: { trigger: 'item' },
+            series: [
+              {
+                type: 'treemap',
+                data,
+                leafDepth: 1,
+                label: { show: true, formatter: '{b}: {c}' }
+              }
+            ]
+          };
+        });
+
+    // —— 2. Stacked Bar 配置（按各模式总数降序；各合子类型按其总数降序）
+    const stackedBarOption = computed<EChartsOption>(() => {
+      // 收集所有模式和合子情况，以及计数
+      const modeTotals: Record<string, number> = {};
+      const zygoTotals: Record<string, number> = {};
+      const counter: Record<string, Record<string, number>> = {};
+
       filteredDataSource.value.forEach((row: any) => {
-        const g = row.gene || 'Unknown';
-        counts[g] = (counts[g] || 0) + 1;
+        const mode = row.denovoinherited || 'Unknown';
+        const zygo = row.zygosity || 'Unknown';
+
+        // 初始化
+        counter[mode] = counter[mode] || {};
+        counter[mode][zygo] = (counter[mode][zygo] || 0) + 1;
+
+        // 累加模式和合子总数
+        modeTotals[mode] = (modeTotals[mode] || 0) + 1;
+        zygoTotals[zygo] = (zygoTotals[zygo] || 0) + 1;
       });
-      // 排序取前20，剩余归 Others
-      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-      const top20 = entries.slice(0, 40);
-      const othersSum = entries.slice(40).reduce((s, e) => s + e[1], 0);
-      const data = top20.map(([name, value]) => ({ name, value }));
-      data.push({ name: 'Others', value: othersSum });
-      return {
-        // title: { text: 'Treemap of Gene Record Distribution', left: 'center' },
-        tooltip: { trigger: 'item' },
-        series: [
-          {
-            type: 'treemap',
-            data,
-            leafDepth: 1,
-            label: { show: true, formatter: '{b}: {c}' }
-          }
-        ]
-      };
-    });
 
-// —— 2. Stacked Bar 配置（按各模式总数降序；各合子类型按其总数降序）
-const stackedBarOption = computed<EChartsOption>(() => {
-  // 收集所有模式和合子情况，以及计数
-  const modeTotals: Record<string, number> = {};
-  const zygoTotals: Record<string, number> = {};
-  const counter: Record<string, Record<string, number>> = {};
+      // 按总数降序排序模式列表
+      const modeList = Object.entries(modeTotals)
+        .sort((a, b) => b[1] - a[1])
+        .map(([mode]) => mode);
 
-  filteredDataSource.value.forEach((row: any) => {
-    const mode = row.denovoinherited || 'Unknown';
-    const zygo = row.zygosity || 'Unknown';
-
-    // 初始化
-    counter[mode] = counter[mode] || {};
-    counter[mode][zygo] = (counter[mode][zygo] || 0) + 1;
-
-    // 累加模式和合子总数
-    modeTotals[mode] = (modeTotals[mode] || 0) + 1;
-    zygoTotals[zygo] = (zygoTotals[zygo] || 0) + 1;
-  });
-
-  // 按总数降序排序模式列表
-  const modeList = Object.entries(modeTotals)
-    .sort((a, b) => b[1] - a[1])
-    .map(([mode]) => mode);
-
-  // 按总数降序排序合子类型列表
-  const zygoList = Object.entries(zygoTotals)
-    .sort((a, b) => b[1] - a[1])
-    .map(([zygo]) => zygo);
-
-  return {
-    // title: { text: 'Inheritance Mode & Zygosity (sorted)', left: 'center' },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' }
-    },
-    legend: {
-      data: zygoList,
-      top: 30
-    },
-    grid: {
-      top: 60,
-      bottom: 40,
-      left: 80,
-      right: 20,
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      data: modeList,
-      axisLabel: { rotate: 30 }
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: zygoList.map(zygo => ({
-      name: zygo,
-      type: 'bar',
-      stack: 'total',
-      data: modeList.map(mode => counter[mode]?.[zygo] || 0),
-      emphasis: {
-        itemStyle: { borderColor: '#333', borderWidth: 1 }
-      },
-      itemStyle: { borderRadius: 4 }
-    }))
-  };
-});
-
-// —— 3. Heatmap 配置
-const heatmapOption = computed<EChartsOption>(() => {
-      // 原始 stop vs 突变 stop 频次统计
-      const combo: Record<string, Record<string, number>> = {}
-      const originalStops = new Set<string>()
-      const mutatedStops = new Set<string>()
-
-      filteredDataSource.value.forEach((row: any) => {
-        const codon = String(row['Codon Change'] || '').trim()
-        // 解构时加默认值，防止 split 结果不完整
-        const [orig = '', mut = ''] = codon.split('-')
-        // 如果格式不对，跳过
-        if (!orig || !mut) return
-
-        originalStops.add(orig)
-        mutatedStops.add(mut)
-
-        combo[orig] = combo[orig] || {}
-        combo[orig][mut] = (combo[orig][mut] || 0) + 1
-      })
-
-      // 对类别排序，保证可重复渲染时顺序一致
-      const yList = Array.from(originalStops).sort()
-      const xList = Array.from(mutatedStops).sort()
-
-      // 构造 heatmap 数据 [xIndex, yIndex, value]
-      const heatData: [number, number, number][] = []
-      yList.forEach((o, i) => {
-        xList.forEach((m, j) => {
-          heatData.push([j, i, combo[o]?.[m] || 0])
-        })
-      })
-
-      // 计算 visualMap 的最大值，避免空数组时报错
-      const values = heatData.map(d => d[2])
-      const maxCount = values.length > 0 ? Math.max(...values) : 0
+      // 按总数降序排序合子类型列表
+      const zygoList = Object.entries(zygoTotals)
+        .sort((a, b) => b[1] - a[1])
+        .map(([zygo]) => zygo);
 
       return {
-        title: {
-          text: 'Stop Codon Changes Frequency Heatmap',
-          left: 'center',
-        },
+        // title: { text: 'Inheritance Mode & Zygosity (sorted)', left: 'center' },
         tooltip: {
-          trigger: 'item',
-          formatter: params => {
-            const [xIdx, yIdx, v] = params.value as number[]
-            return [
-              `Original Stop: ${yList[yIdx]}`,
-              `Mutated Stop: ${xList[xIdx]}`,
-              `Count: ${v}`,
-            ].join('<br/>')
-          },
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' }
+        },
+        legend: {
+          data: zygoList,
+          top: 30
+        },
+        grid: {
+          top: 60,
+          bottom: 40,
+          left: 80,
+          right: 20,
+          containLabel: true
         },
         xAxis: {
           type: 'category',
-          data: xList,
-          name: 'Mutated Stop',
-          axisLabel: {
-            rotate: 45,
-            interval: 0,
-          },
+          data: modeList,
+          axisLabel: { rotate: 30 }
         },
         yAxis: {
-          type: 'category',
-          data: yList,
-          name: 'Original Stop',
+          type: 'value'
         },
-        visualMap: {
-          min: 0,
-          max: maxCount,
-          calculable: true,
-          orient: 'horizontal',
-          left: 'center',
-          bottom: '-1%',
-        },
-        series: [
-          {
-            type: 'heatmap',
-            data: heatData,
-            label: { show: false },
+        series: zygoList.map(zygo => ({
+          name: zygo,
+          type: 'bar',
+          stack: 'total',
+          data: modeList.map(mode => counter[mode]?.[zygo] || 0),
+          emphasis: {
+            itemStyle: { borderColor: '#333', borderWidth: 1 }
           },
-        ],
-      }
-    })
+          itemStyle: { borderRadius: 4 }
+        }))
+      };
+    });
+
+    // —— 3. Heatmap 配置
+    const heatmapOption = computed<EChartsOption>(() => {
+          // 原始 stop vs 突变 stop 频次统计
+          const combo: Record<string, Record<string, number>> = {}
+          const originalStops = new Set<string>()
+          const mutatedStops = new Set<string>()
+
+          filteredDataSource.value.forEach((row: any) => {
+            const codon = String(row['Codon Change'] || '').trim()
+            // 解构时加默认值，防止 split 结果不完整
+            const [orig = '', mut = ''] = codon.split('-')
+            // 如果格式不对，跳过
+            if (!orig || !mut) return
+
+            originalStops.add(orig)
+            mutatedStops.add(mut)
+
+            combo[orig] = combo[orig] || {}
+            combo[orig][mut] = (combo[orig][mut] || 0) + 1
+          })
+
+          // 对类别排序，保证可重复渲染时顺序一致
+          const yList = Array.from(originalStops).sort()
+          const xList = Array.from(mutatedStops).sort()
+
+          // 构造 heatmap 数据 [xIndex, yIndex, value]
+          const heatData: [number, number, number][] = []
+          yList.forEach((o, i) => {
+            xList.forEach((m, j) => {
+              heatData.push([j, i, combo[o]?.[m] || 0])
+            })
+          })
+
+          // 计算 visualMap 的最大值，避免空数组时报错
+          const values = heatData.map(d => d[2])
+          const maxCount = values.length > 0 ? Math.max(...values) : 0
+
+          return {
+            title: {
+              text: 'Stop Codon Changes Frequency Heatmap',
+              left: 'center',
+            },
+            tooltip: {
+              trigger: 'item',
+              formatter: params => {
+                const [xIdx, yIdx, v] = params.value as number[]
+                return [
+                  `Original Stop: ${yList[yIdx]}`,
+                  `Mutated Stop: ${xList[xIdx]}`,
+                  `Count: ${v}`,
+                ].join('<br/>')
+              },
+            },
+            xAxis: {
+              type: 'category',
+              data: xList,
+              name: 'Mutated Stop',
+              axisLabel: {
+                rotate: 45,
+                interval: 0,
+              },
+            },
+            yAxis: {
+              type: 'category',
+              data: yList,
+              name: 'Original Stop',
+            },
+            visualMap: {
+              min: 0,
+              max: maxCount,
+              calculable: true,
+              orient: 'horizontal',
+              left: 'center',
+              bottom: '-1%',
+            },
+            series: [
+              {
+                type: 'heatmap',
+                data: heatData,
+                label: { show: false },
+              },
+            ],
+          }
+        })
 
     return {
       columns: displayedColumns,
@@ -412,7 +331,8 @@ const heatmapOption = computed<EChartsOption>(() => {
       triggerColumnChange,
       treemapOption,
       stackedBarOption,
-      heatmapOption
+      heatmapOption,
+      pagination,
     };
   }
 });
