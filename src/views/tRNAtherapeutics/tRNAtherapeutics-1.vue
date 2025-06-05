@@ -186,8 +186,8 @@ export default defineComponent({
 }
 
 .content-wrapper {
-  /* 可根据需要调整 */
-}
+  display: flex;
+  flex-direction: column;}
 
 .top-controls {
   display: flex;
