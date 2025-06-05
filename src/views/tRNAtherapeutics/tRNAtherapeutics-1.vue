@@ -213,15 +213,23 @@ export default defineComponent({
 }
 
 .search-input {
-  width: 200px;
-  padding: 4px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: 2px solid #007cf07d;
+  border-radius: 25px;
+  width: 150px; /* 设置初始宽度 */
+  transition: all 0.4s ease-in-out; /* 平滑过渡效果 */
+}
+
+.search-input:focus {
+  width: 300px; /* 聚焦时扩展宽度 */
+  outline: none;
+  border-color: #0056b3;
 }
 
 .search-column-select {
-  margin-left: 8px;
-  width: 160px;
+  margin-left: 10px; /* 与搜索框之间的间距 */
+  width: 150px; /* 设置选择框的宽度 */
 }
 
 .expanded-row {
