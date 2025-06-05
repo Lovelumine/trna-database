@@ -27,6 +27,7 @@
           <s-table
             :columns="pmidColumns"
             :data-source="paginatedPmidData"
+            :pagination="pagination"
             :row-key="record => record.PMID"
             :expand-row-by-click="true"
             @change="handleTableChange"

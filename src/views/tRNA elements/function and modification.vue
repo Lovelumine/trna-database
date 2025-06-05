@@ -45,6 +45,7 @@
         :show-sorter-tooltip="true"
         :size="tableSize"
         :expand-row-by-click="true"
+        :pagination="pagination"
       >
       <template #bodyCell="{ text, column, record }">
           <template v-if="column.key === 'species'">
@@ -76,6 +77,8 @@ import { ElSelect, ElOption } from 'element-plus';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import {highlightModification} from '../../utils/highlightModification.js'
+import {pagination} from '../../utils/table'
+import { allColumns ,selectedColumns} from './FunctionAndModificationColumns';
 
 // 定义数据类型
 type DataType = { [key: string]: string };
@@ -91,12 +94,7 @@ export default defineComponent({
   setup() {
     const { searchText, filteredDataSource,  searchColumn,loadData } = useTableData('https://minio.lumoxuan.cn/ensure/Function and Modification.csv');
     const tableSize = ref('default'); // 表格尺寸状态
-    const selectedColumns = ref<string[]>([
-      'Modification_Type',
-      'Function_of_Modification',
-      'tissue_or_cell_line',
-      'PMID'
-    ]);
+
 
     onMounted(async() => {
       await loadData();
@@ -112,21 +110,7 @@ export default defineComponent({
       await loadData();
     });
 
-    const allColumns: STableColumnsType<DataType> = [
-      { title: 'Modification Type', dataIndex: 'Modification_Type', width: 140, ellipsis: true, key: 'Modification_Type', resizable: true },
-      { title: 'Modomics CODE', dataIndex: 'Modomics_CODE', width: 140, ellipsis: true, key: 'Modomics_CODE', resizable: true },
-      { title: 'Modification site', dataIndex: 'Modification_site', width: 500, ellipsis: true, key: 'Modification_site', resizable: true },
-      { title: 'tRNA TYPE', dataIndex: 'tRNA_TYPE', width: 500, ellipsis: true, key: 'tRNA_TYPE', resizable: true },
-      { title: 'Function of Modification', dataIndex: 'Function_of_Modification', width: 560, ellipsis: true, key: 'Function_of_Modification', resizable: true },
-      { title: 'species', dataIndex: 'species', width: 200, ellipsis: true, key: 'species', resizable: true, customRender: ({ text, record }) => (<span className="latin-name">{record.species}</span>)},
-      { title: 'tissue or cell line', dataIndex: 'tissue_or_cell_line', width: 240, ellipsis: true, key: 'tissue_or_cell_line', resizable: true },
-      { title: 'condition', dataIndex: 'condition', width: 200, ellipsis: true, key: 'condition', resizable: true },      
-      {
-        title: 'PMID', width: 112, ellipsis: true, key: 'PMID', dataIndex: 'PMID',
-        customRender: ({ text, record }) => (<div><a href={'https://pubmed.ncbi.nlm.nih.gov/' + record.PMID || '#'} target="_blank" class="bracket-links">{record.PMID}</a></div>),
-        resizable: true
-      }
-    ];
+
 
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
@@ -143,7 +127,8 @@ export default defineComponent({
       searchColumn, // 添加搜索列
       allColumns, // 列选择控件
       highlightModification,
-      triggerColumnChange
+      triggerColumnChange,
+      pagination
     };
   }
 });

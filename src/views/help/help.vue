@@ -80,7 +80,7 @@ const files = [
   { name: 'Introduction', file: '1-introduction.md' },
   { name: 'Coding Variation Disease', file: '2-Coding Variation Disease.md' },
   { name: 'Natural Sup-tRNA', file: '3-Natural Sup-tRNA.md' },
-  { name: 'tRNA Therapeutics', file: '4-tRNA Therapeutics.md' },
+  { name: 'Engineered Sup-tRNA', file: '4-Engineered Sup-tRNA.md' },
   { name: 'Modification with Function', file: '5-Modification with Function.md' }
 ];
 

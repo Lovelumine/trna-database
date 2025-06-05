@@ -17,6 +17,6 @@
     "experimentalDecorators": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/vue-shims.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx","src/**/**/*.tsx", "src/**/*.vue", "src/vue-shims.d.ts"],
   "exclude": ["node_modules"]
 }

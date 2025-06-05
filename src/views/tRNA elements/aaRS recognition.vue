@@ -31,6 +31,7 @@
         :show-sorter-tooltip="true"
         :size="tableSize"
         :expand-row-by-click="true"
+        :pagination="pagination"
       >
         <template #expandedRowRender="{ record }">
           <div>
@@ -58,10 +59,11 @@
 
 <script lang="tsx">
 import { defineComponent, ref, onMounted, watch, computed } from 'vue';
-import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
+import {pagination} from '../../utils/table'
+import { allColumns,selectedColumns } from './aaRScolumns';
 
 // 定义数据类型
 type DataType = {
@@ -76,13 +78,6 @@ type DataType = {
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
 
-// 判断是否为PMID格式
-function isPMID(reference) {
-  // 将输入转换为字符串再进行判断
-  const referenceStr = String(reference);
-  return /^\d+(,\s*\d+)*$/.test(referenceStr);
-}
-
 export default defineComponent({
   name: 'TrnaElements3',
   components: {
@@ -92,14 +87,7 @@ export default defineComponent({
   setup() {
     const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv');
     const tableSize = ref('default'); // 表格尺寸状态
-    const selectedColumns = ref<string[]>([
-      'aaRS',
-      'AcceptorStem',
-      'AnticodonArm',
-      'OtherLocation',
-      'OtherDomains',
-      'Reference'
-    ]);
+
 
     onMounted(async() => {
       await loadData();
@@ -115,89 +103,7 @@ export default defineComponent({
       await loadData();
     });
 
-    const allColumns: STableColumnsType<DataType> = [
-      {
-        title: 'AARS',
-        ellipsis: true,
-        dataIndex: 'aaRS',
-        resizable: true,
-        key: 'aaRS',
-        width: 120,
-        fixed: true,
-        align: 'center'
-      },
-      {
-        title: 'Identity Element Location',
-        key: 'IdentityElementLocation',
-        align: 'center',
-        ellipsis: true,
-        resizable: true,
-        children: [
-          {
-            title: 'Acceptor stem',
-            dataIndex: 'AcceptorStem',
-            key: 'AcceptorStem',
-            resizable: true,
-            ellipsis: true,
-            width: 200,
-            align: 'center'
-          },
-          {
-            title: 'Anticodon arm',
-            dataIndex: 'AnticodonArm',
-            ellipsis: true,
-            resizable: true,
-            key: 'AnticodonArm',
-            width: 200,
-            align: 'center'
-          },
-          {
-            title: 'Other location',
-            dataIndex: 'OtherLocation',
-            resizable: true,
-            ellipsis: true,
-            key: 'OtherLocation',
-            width: 160,
-            align: 'center'
-          },
-          {
-            title: 'Other domains (d-arm/T-arm/variable arm)',
-            dataIndex: 'OtherDomains',
-            key: 'OtherDomains',
-            resizable: true,
-            ellipsis: true,
-            width: 300,
-            align: 'center'
-          }
-        ]
-      },
-      {
-        title: 'Reference/PMID',
-        dataIndex: 'Reference',
-        key: 'Reference',
-        resizable: true,
-        width: 200,
-        align: 'center',
-        ellipsis: true,
-        customRender: ({ text, record }) => {
-          const reference = String(record.Reference); // 确保 Reference 是字符串类型
-          if (isPMID(reference)) {
-            return (
-              <div>
-                {reference.split(',').map((pmid, index, array) => (
-                  <span key={pmid}>
-                    <a href={`https://pubmed.ncbi.nlm.nih.gov/${pmid.trim()}`} target="_blank" class="bracket-links">{pmid.trim()}</a>
-                    {index < array.length - 1 && ','}
-                  </span>
-                ))}
-              </div>
-            );
-          } else {
-            return <div>{reference}</div>;
-          }
-        }
-      }
-    ];
+
 
     const displayedColumns = computed(() =>
       allColumns.flatMap(column => {
@@ -224,10 +130,10 @@ export default defineComponent({
       searchText,
       locale,
       selectedColumns,
+      pagination,
       displayedColumns,
       searchColumn,
       allColumns, // 列选择控件
-      isPMID, // 添加isPMID函数
       triggerColumnChange
     };
   }
