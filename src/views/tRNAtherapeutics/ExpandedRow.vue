@@ -35,11 +35,11 @@
               <td><b>PTC Model Sequence:</b></td>
               <td>{{ record['PTC(mutation_site)'] }}</td>
             </tr>
-            <tr>
+            <tr v-if="record.Species_source_of_PTC_gene && record.Species_source_of_PTC_gene.trim() !== ''">
               <td><b>Species Source:</b></td>
               <td>{{ record.Species_source_of_PTC_gene }}</td>
             </tr>
-            <tr v-if="record.NCBI_ref_ID">
+            <tr v-if="record.NCBI_ref_ID && record.NCBI_ref_ID.trim() !== ''">
           <td><b>NCBI ref ID:</b></td>
           <td>{{ record.NCBI_ref_ID }}</td>
             </tr>
@@ -70,9 +70,13 @@
               <td><b>AA and Anticodon of sup-tRNA:</b></td>
               <td>{{ record['aa_and_anticodon_of_sup-tRNA'] }}</td>
             </tr>
-            <tr>
+            <tr v-if="String(record.Reading_through_efficiency).trim() !== ''">
               <td><b>Reading Through Efficiency:</b></td>
-              <td>{{ record['Reading_through_efficiency'] }}</td>
+              <td>{{ record.Reading_through_efficiency }}</td>
+            </tr>
+            <tr v-if="String(record.Measuring_of_efficiency).trim() !== ''">
+              <td><b>Measuring of Efficiency:</b></td>
+              <td>{{ record.Measuring_of_efficiency}}</td>
             </tr>
             <tr>
               <td><b>Dose:</b></td>
@@ -110,7 +114,9 @@
               <td><b>AA and Anticodon:</b></td>
               <td>{{ record['aa_and_anticodon_of_sup-tRNA'] }}</td>
             </tr> -->
-            <tr>
+            <tr
+              v-if='record["sup-tRNA_gene"] && String(record["sup-tRNA_gene"]).trim() !== ""'
+            >
               <td><b>Gene sequence:</b></td>
               <td style="font-family: monospace;">{{ record['sup-tRNA_gene'] }}</td>
             </tr>
@@ -129,11 +135,16 @@
           </table>
           <h3>origin tRNA</h3>
           <table>
-            <tr>
+            <tr v-if="record.rnacentral_ID_of_origin_tRNA && String(record.rnacentral_ID_of_origin_tRNA).trim() !== ''">
               <td><b>Rnacentral ID:</b></td>
               <td>{{ record.rnacentral_ID_of_origin_tRNA }}</td>
             </tr>
-            <tr>
+            <tr
+              v-if="
+                record['tRNAscan-SE_ID_of_origin_tRNA'] &&
+                String(record['tRNAscan-SE_ID_of_origin_tRNA']).trim() !== ''
+              "
+            >
               <td><b>tRNAscan-SE ID:</b></td>
               <td>{{ record['tRNAscan-SE_ID_of_origin_tRNA'] }}</td>
             </tr>
