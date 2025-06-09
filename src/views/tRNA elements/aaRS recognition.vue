@@ -16,11 +16,11 @@
           <el-radio-button value="large">Large Size</el-radio-button>
         </el-radio-group>
       </div>
-      <div class="column-controls" style="margin-bottom: 10px">
+      <!-- <div class="column-controls" style="margin-bottom: 10px">
         <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
           <el-option v-for="column in allColumns" :key="column.key" :value="column.key" />
         </el-select>
-      </div>
+      </div> -->
     </div>
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
       <s-table
@@ -35,11 +35,11 @@
       >
         <template #expandedRowRender="{ record }">
           <div>
-            <p><b>AARS:</b> {{ record.aaRS }}</p>
-            <p><b>Acceptor stem:</b> {{ record.AcceptorStem }}</p>
-            <p><b>Anticodon arm:</b> {{ record.AnticodonArm }}</p>
-            <p><b>Other location:</b> {{ record.OtherLocation }}</p>
-            <p><b>Other domains:</b> {{ record.OtherDomains }}</p>
+            <p v-if="record.aaRS"><b>AARS:</b> {{ record.aaRS }}</p>
+            <p v-if="record.AcceptorStem"><b>Acceptor stem:</b> {{ record.AcceptorStem }}</p>
+            <p v-if="record.AnticodonArm"><b>Anticodon arm:</b> {{ record.AnticodonArm }}</p>
+            <p v-if="record.OtherLocation"><b>Other location:</b> {{ record.OtherLocation }}</p>
+            <p v-if="record.OtherDomains"><b>Other domains:</b> {{ record.OtherDomains }}</p>
             <p><b>Reference/PMID:</b>
               <span v-if="isPMID(record.Reference)">
                 <span v-for="(pmid, index) in String(record.Reference).split(',')" :key="index">
@@ -62,8 +62,8 @@ import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { ElSelect, ElOption } from 'element-plus';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
-import {pagination} from '../../utils/table'
-import { allColumns,selectedColumns } from './aaRScolumns';
+
+import { allColumns,selectedColumns,isPMID } from './aaRScolumns';
 
 // 定义数据类型
 type DataType = {
@@ -87,6 +87,14 @@ export default defineComponent({
   setup() {
     const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv');
     const tableSize = ref('default'); // 表格尺寸状态
+
+    const pagination = ref({
+      current: 1,
+      pageSize: 10,
+      total: 0,
+      showSizeChanger: true,
+      showQuickJumper: true,
+    });
 
 
     onMounted(async() => {
@@ -134,7 +142,8 @@ export default defineComponent({
       displayedColumns,
       searchColumn,
       allColumns, // 列选择控件
-      triggerColumnChange
+      triggerColumnChange,
+      isPMID
     };
   }
 });
