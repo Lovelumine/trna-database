@@ -32,8 +32,11 @@ import requests
 import pandas as pd
 from flask import Flask, request, jsonify
 from Bio.Align import PairwiseAligner
+from typing import Tuple
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 def load_csv(path_or_url: str) -> pd.DataFrame:
     """加载 CSV：支持本地路径或 HTTP/HTTPS URL"""
@@ -48,19 +51,23 @@ def alignment_score_and_str(
     seq1: str, seq2: str,
     match: float, mismatch: float,
     gap_open: float, gap_extend: float
-) -> (float, str):
+) -> Tuple[float, str]:
     """使用 PairwiseAligner 做全局对齐；返回 (score, flattened_alignment)."""
     aligner = PairwiseAligner()
     aligner.mode = 'global'
-    aligner.match_score     = match
-    aligner.mismatch_score  = mismatch
-    aligner.open_gap_score  = gap_open
-    aligner.extend_gap_score= gap_extend
+    aligner.match_score      = match
+    aligner.mismatch_score   = mismatch
+    aligner.open_gap_score   = gap_open
+    aligner.extend_gap_score = gap_extend
 
+    # 获取对齐结果，不要用 `if not alns` 来判断空集合
     alns = aligner.align(seq1, seq2)
-    if not alns:
+    try:
+        best = alns[0]
+    except IndexError:
+        # 没有任何对齐结果
         return 0.0, ''
-    best = alns[0]
+
     score = best.score
     raw   = best.format()
 
@@ -88,11 +95,11 @@ def search():
     data = request.json or {}
     query_seq = data.get('query_seq', '')
     csv_paths = data.get('csv_paths', [])
-    number    = int(data.get('number', 5))
-    match     = float(data.get('match', 2.0))
-    mismatch  = float(data.get('mismatch', -0.5))
-    gap_open  = float(data.get('gap_open', -2.0))
-    gap_extend= float(data.get('gap_extend', -1.0))
+    number     = int(data.get('number', 5))
+    match      = float(data.get('match', 2.0))
+    mismatch   = float(data.get('mismatch', -0.5))
+    gap_open   = float(data.get('gap_open', -2.0))
+    gap_extend = float(data.get('gap_extend', -1.0))
 
     results = []
     for path in csv_paths:
@@ -107,7 +114,7 @@ def search():
             best_score = None
             best_col   = None
             best_align = ''
-            for ci, col in enumerate(cols, start=1):
+            for col in cols:
                 cell = row[col]
                 if not isinstance(cell, str) or not cell:
                     continue
@@ -137,4 +144,4 @@ def search():
 
 if __name__ == '__main__':
     # 开发模式多线程；生产请使用 Gunicorn 等 WSGI 容器
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    app.run(host='0.0.0.0', port=8000, threaded=True)

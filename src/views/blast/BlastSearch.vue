@@ -1,157 +1,137 @@
 <template>
-  <div class="blast-search">
-    <h1>BLAST Search</h1>
-    <form @submit.prevent="runBlast">
-      <div class="form-group">
-        <label for="expect">Expect</label>
-        <input type="number" id="expect" v-model="formData.expect" step="0.01" />
-      </div>
-      <div class="form-group">
-        <label for="wordSize">Word Size</label>
-        <input type="number" id="wordSize" v-model="formData.wordSize" />
-      </div>
-      <div class="form-group">
-        <label for="database">Database</label>
-        <select id="database" v-model="formData.database">
-          <option value="All eukaryotic tRNAs">ENSURE tRNAs</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="sequenceFormat">Query Sequence Format</label>
-        <select id="sequenceFormat" v-model="formData.sequenceFormat">
-          <option value="formatted">Formatted (FASTA, GenBank)</option>
-          <option value="unformatted">Unformatted</option>
-        </select>
-      </div>
+  <div class="search-service">
+    <h2>tRNA Search Service</h2>
+    <div class="form">
+      <label>
+        Query Sequence:
+        <textarea v-model="querySeq" rows="4" />
+      </label>
+      <button @click="runSearch" :disabled="loading">
+        {{ loading ? 'Searching…' : 'Run Search' }}
+      </button>
+    </div>
 
-      <div class="form-group">
-        <label>Query Sequence</label>
-        <div class="form-group">
-        <button type="button" @click="addExampleSequences">Example</button>
-      </div>
-        <textarea v-model="formData.querySequence" placeholder="Enter your sequence here"></textarea>
-      </div>
-      <div class="form-group">
-        <label for="sequenceFile">OR Load query from file:</label>
-        <input type="file" id="sequenceFile" @change="handleFileUpload" />
-      </div>
-      <button type="submit">Run BLAST</button>
-      <button type="reset" @click="clearForm">Clear Form</button>
-    </form>
-  </div>
-  <div v-if="blastResult">
-    <BlastResults :blastResult="blastResult" />
+    <div v-if="error" class="error">
+      {{ error }}
+    </div>
+
+    <table v-if="results.length" class="results-table">
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Row</th>
+          <th>Column</th>
+          <th>Score</th>
+          <th>Alignment</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(r, i) in results" :key="i">
+          <td>{{ r.file }}</td>
+          <td>{{ r.row }}</td>
+          <td>{{ r.column }}</td>
+          <td>{{ r.score.toFixed(1) }}</td>
+          <td>
+            <pre class="alignment">{{ r.alignment.replace(/\\n/g, '\n') }}</pre>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div v-else-if="!loading" class="no-results">
+      No results yet.
+    </div>
   </div>
 </template>
 
-<script>
-import BlastResults from './BlastResults.vue';
+<script setup lang="ts">
+import { ref } from 'vue';
+import axios from 'axios';
 
-export default {
-  components: {
-    BlastResults
-  },
-  data() {
-    return {
-      formData: {
-        expect: 0.01,
-        wordSize: 11,
-        database: 'All eukaryotic tRNAs',
-        sequenceFormat: 'formatted',
-        querySequence: ''
-      },
-      blastResult: null
+const SERVICE_URL = 'http://223.82.75.76:8000/search';
+
+const querySeq = ref(`GUCCCGCUGGUGUAAU#GADAGCAUACGAUCCUNCUAAGPUUGCGGUCCUGGTPCGAUCCCAGGGCGGGAUACCA`);
+const loading  = ref(false);
+const error    = ref<string | null>(null);
+const results  = ref<any[]>([]);
+
+// 固定的 CSV 列表
+const csvLinks = [
+  'https://minio.lumoxuan.cn/ensure/Coding Variation in Cancer.csv',
+  'https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv',
+  'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv',
+  'https://minio.lumoxuan.cn/ensure/Frameshift sup-tRNA.csv',
+  'https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv',
+  'https://minio.lumoxuan.cn/ensure/Function and Modification.csv',
+  'https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv'
+];
+
+async function runSearch() {
+  loading.value = true;
+  error.value   = null;
+  results.value = [];
+
+  try {
+    const payload = {
+      query_seq: querySeq.value,
+      csv_paths: csvLinks,
+      number:    5,
+      match:     2.0,
+      mismatch:  -0.5,
+      gap_open:  -2.0,
+      gap_extend:-1.0
     };
-  },
-  methods: {
-    async runBlast() {
-      try {
-        const response = await fetch('/run-blast', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(this.formData)
-        });
-        const result = await response.text();
-        this.blastResult = result;
-      } catch (error) {
-        console.error('Error running BLAST:', error);
-      }
-    },
-    clearForm() {
-      this.formData = {
-        expect: 0.01,
-        wordSize: 11,
-        database: 'All eukaryotic tRNAs',
-        sequenceFormat: 'formatted',
-        querySequence: ''
-      };
-      this.blastResult = null;
-    },
-    handleFileUpload(event) {
-      const file = event.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.formData.querySequence = e.target.result;
-      };
-      reader.readAsText(file);
-    },
-    addExampleSequences() {
-      this.formData.querySequence = `>sequence_A
-GTAGTCGTGGCCGAGTGGTTAAGGCGGCAGGCTTTAAACCTGTTGGGGTTTCCCCGCACGGGTTCGAATCCCGTCGACTACGCCA
->sequence_B
-GTAGTCGTGGCCGAGTGGTTAAGGCGGCAGGCTTTAAACCTGTTGGGGTTTCCCCGCACGGGTTCGAATCCCGTCGACTACGCCA`;
-    }
+    const resp = await axios.post(SERVICE_URL, payload, { timeout: 60_000 });
+    results.value = resp.data;
+  } catch (e: any) {
+    error.value = e.response?.data || e.message || 'Unknown error';
+  } finally {
+    loading.value = false;
   }
-};
+}
 </script>
 
 <style scoped>
-.blast-search {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 1rem;
-  background: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+.search-service {
+  max-width: 800px;
+  margin: auto;
+  font-family: sans-serif;
 }
-
-.form-group {
-  margin-bottom: 1rem;
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
 }
-
-form label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-form input,
-form select,
-form textarea {
+textarea {
   width: 100%;
-  padding: 0.5rem;
-  margin-top: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  font-family: monospace;
 }
-
-form button {
-  padding: 0.5rem 1rem;
-  margin-top: 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+button {
+  align-self: flex-start;
+  padding: 6px 12px;
 }
-
-form button[type="submit"] {
-  background: #007bff;
-  color: #fff;
+.error {
+  color: #c00;
+  margin-bottom: 16px;
 }
-
-form button[type="reset"] {
-  background: #6c757d;
-  color: #fff;
-  margin-left: 0.5rem;
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.results-table th,
+.results-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  vertical-align: top;
+}
+.alignment {
+  margin: 0;
+  font-family: monospace;
+  white-space: pre-wrap;
+}
+.no-results {
+  color: #666;
+  font-style: italic;
 }
 </style>
