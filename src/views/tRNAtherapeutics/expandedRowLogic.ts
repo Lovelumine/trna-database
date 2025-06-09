@@ -1,5 +1,4 @@
 import axios from 'axios';
-// import * as $3Dmol from '3dmol';
 import * as NGL from 'ngl';
 
 /**
@@ -7,51 +6,49 @@ import * as NGL from 'ngl';
  * @param alignment 比对的字符串，包含用 <br> 分割的多行
  * @returns 格式化后的 HTML 字符串
  */
-export function formatAlignment(alignment: string): string {
-//   console.log('原始比对数据：', alignment);
-  const lines = alignment.split('<br>')
+export function formatAlignment(alignment?: string): string {
+  // 如果没有 alignment，直接返回空串
+  if (!alignment) {
+    return '';
+  }
+
+  // 把 <br> 当行分隔符
+  const lines = alignment
+    .split('<br>')
     .map(line => line.trim())
     .filter(line => line.length > 0);
-//   console.log('分行后的数据：', lines);
 
-  let html = '';
   if (lines.length % 3 !== 0) {
     console.error("比对数据格式不符合预期！行数不是 3 的倍数");
     return '';
   }
 
-  const labelWidth = 12; // 固定标签宽度
+  const labelWidth = 12;
   const originLabel = "origin-tRNA ".padEnd(labelWidth, ' ');
-  const supLabel = "Sup-tRNA ".padEnd(labelWidth, ' ');
-  const blankLabel = ' '.repeat(labelWidth);
+  const supLabel    = "Sup-tRNA    ".padEnd(labelWidth, ' ');
+  const blankLabel  = ' '.repeat(labelWidth);
 
+  let html = '';
   for (let i = 0; i < lines.length; i += 3) {
     const queryLine = lines[i];
     const matchLine = lines[i + 1];
     const sbjctLine = lines[i + 2];
 
-    // console.log(`处理第 ${i / 3 + 1} 组数据：`);
-    // console.log('Query Line:', queryLine);
-    // console.log('Match Line:', matchLine);
-    // console.log('Sbjct Line:', sbjctLine);
-
-    const querySeq = extractSequence(queryLine);
-    const sbjctSeq = extractSequence(sbjctLine);
+    const querySeq    = extractSequence(queryLine);
+    const sbjctSeq    = extractSequence(sbjctLine);
     const matchSymbols = matchLine.trim().split('');
-
-    // console.log('Query 序列：', querySeq);
-    // console.log('Sbjct 序列：', sbjctSeq);
-    // console.log('符号行：', matchSymbols);
 
     const highlightedHTML = generateHighlightedHTML(querySeq, matchSymbols, sbjctSeq);
     const highlightedLines = highlightedHTML.split('\n');
-    if (highlightedLines.length >= 3) {
-      highlightedLines[0] = originLabel + highlightedLines[0];
-      highlightedLines[1] = blankLabel + highlightedLines[1];
-      highlightedLines[2] = supLabel + highlightedLines[2];
-    }
+
+    // 添加行首标签
+    highlightedLines[0] = originLabel + highlightedLines[0];
+    highlightedLines[1] = blankLabel  + highlightedLines[1];
+    highlightedLines[2] = supLabel    + highlightedLines[2];
+
     html += highlightedLines.join('\n');
   }
+
   return html;
 }
 
@@ -133,45 +130,12 @@ export function getSymbolClass(symbol: string): string {
   return 'mismatch-symbol';
 }
 
-// /**
-//  * 加载指定 PDB 文件，并在对应 DOM 容器中创建 3Dmol viewer
-//  * @param fileId 用于构造 PDB 文件路径的标识
-//  * @param containerId 用于查找 DOM 容器的 id 后缀
-//  */
-// export async function loadPDBFile(fileId: string, containerId: string): Promise<void> {
-//   const pdbFilePath = `https://minio.lumoxuan.cn/ensure/pdb/ensure-${fileId}.pdb`;
-//   try {
-//     const response = await axios.get(pdbFilePath);
-//     const elementId = 'pdb-container-' + containerId;
-//     const element = document.getElementById(elementId);
-//     if (element) {
-//       if ($3Dmol.createViewer) {
-//         try {
-//           const viewer = $3Dmol.createViewer(element, { backgroundColor: 'white' });
-//           viewer.addModel(response.data, 'pdb');
-//           viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
-//           viewer.zoomTo();
-//           viewer.render();
-//         } catch (viewerError) {
-//           console.error('创建 viewer 或渲染过程中出错:', viewerError);
-//         }
-//       } else {
-//         console.error('错误: 3Dmol.createViewer 不可用');
-//       }
-//     } else {
-//       console.error(`错误: 未找到 id 为 ${elementId} 的 DOM 元素`);
-//     }
-//   } catch (error) {
-//     console.error(`加载 PDB 文件失败, fileId: ${fileId}`, error);
-//   }
-// }
-
 interface StageMap { [containerId: string]: NGL.Stage; }
 const stageMap: StageMap = {};
 
 /**
  * 加载指定 CIF 文件，并在对应 DOM 容器中创建 NGL viewer
- * @param fileId    之前 CSV 的 pdbid 列
+ * @param fileId     CSV 里的 pdbid 列
  * @param containerId  ENSURE_ID
  * @param sampleIndex 样本索引 (0–4)
  */
@@ -187,10 +151,11 @@ export async function loadCIFFile(
   const elementId = 'pdb-container-' + containerId;
   const element = document.getElementById(elementId);
   if (!element) {
-    console.error(`未找到 id 为 ${elementId} 的 DOM 容器`);
+    console.error(`❌ 未找到 id 为 ${elementId} 的 DOM 容器`);
     return;
   }
 
+  // 如果已经有 Stage，就复用；否则新建一个
   let stage = stageMap[containerId];
   if (!stage) {
     stage = new NGL.Stage(element, { backgroundColor: 'white' });
@@ -201,36 +166,47 @@ export async function loadCIFFile(
   }
 
   try {
-const comp = await stage.loadFile(cifUrl, { ext: 'cif' }) as NGL.StructureComponent;
-if (comp) {
-  // 1. 彩带，用链名上色
-  comp.addRepresentation('cartoon', {
-    color: 'chainname',
-    sele: 'nucleic',
-    colorScheme: 'nucleotide',
-    aspectRatio: 3,
-    quality: 'high'
-  });
+    const comp = await stage.loadFile(cifUrl, { ext: 'cif' }) as NGL.StructureComponent | undefined;
 
-  // 2.  半透明分子表
+    // —— 空值保护 —— 
+    if (!comp || !comp.structure) {
+      console.warn(`⚠️ 加载后没有获得组件或结构，文件可能不存在：${cifUrl}`);
+      return;
+    }
 
-  // 3. 骨架细条
-  comp.addRepresentation('ball+stick', {
-    sele: 'backbone',
-    color: 'element',
-    radius: 0.15
-  });
+    // 1. 彩带：按链 ID 上色，取 NGL 自带的 nucleotide 方案
+    comp.addRepresentation('cartoon', {
+      sele: 'nucleic',
+      color: 'chainname',
+      colorScheme: 'nucleotide',
+      aspectRatio: 3,
+      quality: 'high',
+    });
 
-  // 4. DNA/RNA 碱基平面
-  comp.addRepresentation('base', {
-    sele: 'nucleic',
-    colorScheme: 'nucleotide'
-  });
+    // 2. 半透明分子表面（如果你不想要，就注释掉或者删掉下面这块）
+    // comp.addRepresentation('surface', {
+    //   sele: 'nucleic',
+    //   opacity: 0.4,
+    //   color: 'element',
+    // });
 
-  // 让相机自动居中并适当拉远
-  stage.autoView();
-}
+    // 3. 骨架细条：backbone 用 ball+stick 强调
+    comp.addRepresentation('ball+stick', {
+      sele: 'backbone',
+      color: 'element',
+      radius: 0.15,
+    });
+
+    // 4. 碱基平面：base 表示碱基平面
+    comp.addRepresentation('base', {
+      sele: 'nucleic',
+      colorScheme: 'nucleotide',
+    });
+
+    // 调整视角
+    stage.autoView();
+
   } catch (e) {
-    console.error(`加载 CIF 失败: ${cifUrl}`, e);
+    console.error(`🔴 加载 CIF 失败: ${cifUrl}`, e);
   }
 }

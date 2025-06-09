@@ -152,22 +152,22 @@
               <td><b>Species source:</b></td>
               <td>{{ record.Species_source_of_origin_tRNA }}</td>
             </tr>
-            <tr>
+            <tr v-if="Array.isArray(parseSup(record.aa_and_anticodon_of_origin_tRNA))">
               <td><b>AA and Anticodon:</b></td>
               <td>{{ record.aa_and_anticodon_of_origin_tRNA }}</td>
             </tr>
-            <tr>
+            <tr v-if="Array.isArray(parseSup(record.Sequence_of_origin_tRNA))">
               <td><b>Origin-tRNA sequence:</b></td>
               <td style="font-family: monospace;">{{ record.Sequence_of_origin_tRNA }}</td>
             </tr>
-            <tr>
+            <tr v-if="Array.isArray(parseSup(record['Secondary structure']))">
               <td><b>Secondary structure:</b></td>
               <td style="font-family: monospace;">{{ record['Secondary structure'] }}</td>
             </tr>
           </table>
           <h3>Engineered site</h3>
           <table>
-            <tr class="toggle-row">
+            <tr class="toggle-row" v-if="Array.isArray(parseSup(record.js_sup_tRNA)) && parseSup(record.js_sup_tRNA).length > 5">
               <td><b>Sprinzl–Vassilenko:</b>
       <!-- 切换按钮 -->
       <div class="toggle-group">
@@ -188,35 +188,40 @@
               </td>
 <td>      
 
-  <div class="radial-container">
-      <supTrnaRadial
-        v-if="showSup"
-        :data="JSON.parse(record.js_sup_tRNA)"
-        :width="775"
-        :height="560"
-        :r="12"
-      />
-      <TrnaRadial
-        v-else
-        :data="JSON.parse(record.js_origin_tRNA)"
-        :width="775"
-        :height="560"
-        :r="12"
-      />
-    </div>
+      <div
+        class="radial-container"
+        v-if="
+          // 只要 Sup 模式就展示
+          showSup
+          // 或者 Origin 模式下，且 origin 数组长度 ≥ 5 才展示
+          || (!showSup && parseSup(record.js_origin_tRNA).length >= 5)
+        "
+      >
+        <supTrnaRadial
+          v-if="showSup"
+          :data="parseSup(record.js_sup_tRNA)"
+          :width="775"
+          :height="560"
+          :r="12"
+        />
+        <TrnaRadial
+          v-else
+          :data="parseSup(record.js_origin_tRNA)"
+          :width="775"
+          :height="560"
+          :r="12"
+        />
+      </div> 
       </td></tr>
-            <tr>
+            <tr v-if="Array.isArray(parseSup(record.js_sup_tRNA)) && parseSup(record.js_sup_tRNA).length > 5">
               <td><b>Alignment:</b></td>
               <td>
                 <AlignmentTable
     :alignmentData="parseSup(record.js_sup_tRNA)" :chunkSize="36" />
               </td>
             </tr>
-            <!-- <tr>
-              <td><b>E-Value:</b></td>
-              <td>{{ record['E-Value'] }}</td>
-            </tr> -->
-            <tr>
+
+    <tr v-if="Array.isArray(parseSup(record.pairwise_score)) && parseSup(record.pairwise_score).length > 5">
   <td><b>Score:</b></td>
   <td>
     <span class="tooltip">
