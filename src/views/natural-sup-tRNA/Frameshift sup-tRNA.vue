@@ -106,7 +106,6 @@
                   </ElTag>
                 </ElSpace>
               </p>
-              <p><b>RNA central ID of tRNA:</b> {{ record['RNA central ID of tRNA'] }}</p>
               <p><b>tRNA sequence before mutation:</b> {{ record['tRNA sequence before mutation'] }}</p>
               <p><b>tRNA sequence after mutation:</b> <span
                   v-html="highlightMutation(record['tRNA sequence after mutation'])"></span></p>
@@ -132,7 +131,11 @@
                   <span v-if="index < getPmidList(record['PMID of references']).length - 1">, </span>
                 </span>
               </p>
-              <p><b>Notes:</b> {{ record['Notes'] }}</p>
+              <p v-if="record.Notes">
+                <b>Notes:</b>
+                <img :src="`https://minio.lumoxuan.cn/ensure/picture/${record.Notes}.png`"
+                @click="showLightbox(record.Notes)" style="width: 100px; cursor: pointer;" />      
+              </p>
             </div>
           </template>
         </s-table>
@@ -199,7 +202,6 @@ type DataType = {
   'Noncanonical charged amino acids': string[];
   'tRNA_sequence_before_mutation': string;
   'tRNA_sequence_after_mutation': string;
-  'RNA central ID of tRNA': string;
   'Structure of sup-tRNA': string;
   'Readthrough mechanism': string;
   'Mutational position of sup-tRNA': string;

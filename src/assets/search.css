@@ -1,8 +1,4 @@
-.top-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr; /* 将顶部控制区域分为两个等宽的列 */
-  gap: 20px; /* 列与列之间的间隙 */
-}
+
 
 .search-box {
   display: flex;
