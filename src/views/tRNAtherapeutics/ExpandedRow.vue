@@ -256,16 +256,26 @@
               </td>
             </tr>
             <!-- New PDB Viewer Row -->
-            <tr>
-              <td><b>3D Structure:</b></td>
-              <td>
-                <div
-                  :id="'pdb-container-' + record.ENSURE_ID"
-                  style="height: 400px; width: 600px; position: relative"
-                  class="viewer_3Dmoljs"
-                ></div>
-              </td>
-            </tr>
+<!-- template 里对每个 record 增加 sample 切换按钮 -->
+<tr>
+  <td><b>3D Structure:</b></td>
+  <td>
+    <div class="sample-switcher">
+      <button
+        v-for="i in 5"
+        :key="i"
+        :class="{ active: record._selectedSample === (i-1) }"
+        @click="switchSample(record, i-1)"
+      >
+        Sample {{ i-1 }}
+      </button>
+    </div>
+    <div
+      :id="'pdb-container-' + record.ENSURE_ID"
+      style="height: 400px; width: 600px;"
+    ></div>
+  </td>
+</tr>
             </table>
 
         </div>
@@ -297,7 +307,7 @@ import "@/utils/tRNAviz/css/explorer.css";
 // 从同目录下导入提取出的逻辑函数
 import {
   formatAlignment,
-  loadPDBFile
+  loadCIFFile
 } from './expandedRowLogic';
 import TrnaRadial from '@/components/TrnaRadial.vue'
 import supTrnaRadial from '@/components/supTrnaRadial.vue'
@@ -351,10 +361,11 @@ export default defineComponent({
 
         filteredRecords.value.forEach(record => {
           console.log("[ExpandedRow] handle record =>", record);
+          record._selectedSample = 0;
           // 加载 PDB 文件
-          loadPDBFile(record.Index, record.ENSURE_ID);
+          loadCIFFile(record.pdbid, record.ENSURE_ID, 0);
 
-          // 格式化 Alignment
+          // 格式化 Alignment·
           record.formattedAlignment = formatAlignment(record.Alignment);
         });
 
@@ -386,12 +397,18 @@ export default defineComponent({
       }
     });
 
+    function switchSample(record: any, sampleIdx: number) {
+      record._selectedSample = sampleIdx;
+      loadCIFFile(record.pdbid, record.ENSURE_ID, sampleIdx);
+    }
+
     return {
       filteredRecords,
       loading,
       id,
       TranStructure,
       showSup,  
+      switchSample,
       AlignmentTable,
       parseSup
     };

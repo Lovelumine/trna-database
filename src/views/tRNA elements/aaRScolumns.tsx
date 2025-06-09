@@ -3,7 +3,7 @@ import { ref } from "vue";
 export type DataType = { [key: string]: string };
 
 // 判断是否为PMID格式
-function isPMID(reference) {
+export function isPMID(reference) {
   // 将输入转换为字符串再进行判断
   const referenceStr = String(reference);
   return /^\d+(,\s*\d+)*$/.test(referenceStr);

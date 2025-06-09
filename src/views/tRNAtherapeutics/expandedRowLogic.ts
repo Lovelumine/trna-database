@@ -1,5 +1,6 @@
 import axios from 'axios';
-import * as $3Dmol from '3dmol';
+// import * as $3Dmol from '3dmol';
+import * as NGL from 'ngl';
 
 /**
  * 按照换行符分割比对字符串，生成高亮的 HTML
@@ -132,35 +133,81 @@ export function getSymbolClass(symbol: string): string {
   return 'mismatch-symbol';
 }
 
+// /**
+//  * 加载指定 PDB 文件，并在对应 DOM 容器中创建 3Dmol viewer
+//  * @param fileId 用于构造 PDB 文件路径的标识
+//  * @param containerId 用于查找 DOM 容器的 id 后缀
+//  */
+// export async function loadPDBFile(fileId: string, containerId: string): Promise<void> {
+//   const pdbFilePath = `https://minio.lumoxuan.cn/ensure/pdb/ensure-${fileId}.pdb`;
+//   try {
+//     const response = await axios.get(pdbFilePath);
+//     const elementId = 'pdb-container-' + containerId;
+//     const element = document.getElementById(elementId);
+//     if (element) {
+//       if ($3Dmol.createViewer) {
+//         try {
+//           const viewer = $3Dmol.createViewer(element, { backgroundColor: 'white' });
+//           viewer.addModel(response.data, 'pdb');
+//           viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+//           viewer.zoomTo();
+//           viewer.render();
+//         } catch (viewerError) {
+//           console.error('创建 viewer 或渲染过程中出错:', viewerError);
+//         }
+//       } else {
+//         console.error('错误: 3Dmol.createViewer 不可用');
+//       }
+//     } else {
+//       console.error(`错误: 未找到 id 为 ${elementId} 的 DOM 元素`);
+//     }
+//   } catch (error) {
+//     console.error(`加载 PDB 文件失败, fileId: ${fileId}`, error);
+//   }
+// }
+
+interface StageMap { [containerId: string]: NGL.Stage; }
+const stageMap: StageMap = {};
+
 /**
- * 加载指定 PDB 文件，并在对应 DOM 容器中创建 3Dmol viewer
- * @param fileId 用于构造 PDB 文件路径的标识
- * @param containerId 用于查找 DOM 容器的 id 后缀
+ * 加载指定 CIF 文件，并在对应 DOM 容器中创建 NGL viewer
+ * @param fileId    之前 CSV 的 pdbid 列
+ * @param containerId  ENSURE_ID
+ * @param sampleIndex 样本索引 (0–4)
  */
-export async function loadPDBFile(fileId: string, containerId: string): Promise<void> {
-  const pdbFilePath = `https://minio.lumoxuan.cn/ensure/pdb/ensure-${fileId}.pdb`;
+export async function loadCIFFile(
+  fileId: string,
+  containerId: string,
+  sampleIndex: number = 0
+): Promise<void> {
+  const lowerId = fileId.toLowerCase();
+  const baseUrl = `https://minio.lumoxuan.cn/ensure/ensure-af3/${lowerId}fold`;
+  const cifUrl  = `${baseUrl}/seed-1_sample-${sampleIndex}/model.cif`;
+
+  const elementId = 'pdb-container-' + containerId;
+  const element = document.getElementById(elementId);
+  if (!element) {
+    console.error(`未找到 id 为 ${elementId} 的 DOM 容器`);
+    return;
+  }
+
+  let stage = stageMap[containerId];
+  if (!stage) {
+    stage = new NGL.Stage(element, { backgroundColor: 'white' });
+    stageMap[containerId] = stage;
+    window.addEventListener('resize', () => stage.handleResize());
+  } else {
+    stage.removeAllComponents();
+  }
+
   try {
-    const response = await axios.get(pdbFilePath);
-    const elementId = 'pdb-container-' + containerId;
-    const element = document.getElementById(elementId);
-    if (element) {
-      if ($3Dmol.createViewer) {
-        try {
-          const viewer = $3Dmol.createViewer(element, { backgroundColor: 'white' });
-          viewer.addModel(response.data, 'pdb');
-          viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
-          viewer.zoomTo();
-          viewer.render();
-        } catch (viewerError) {
-          console.error('创建 viewer 或渲染过程中出错:', viewerError);
-        }
-      } else {
-        console.error('错误: 3Dmol.createViewer 不可用');
-      }
-    } else {
-      console.error(`错误: 未找到 id 为 ${elementId} 的 DOM 元素`);
+    const comp = await stage.loadFile(cifUrl, { ext: 'cif' }) as NGL.StructureComponent;
+    if (comp) {
+      // NGL 不支持 spectrum，改为 rainbow
+      comp.addRepresentation('cartoon', { color: 'rainbow' });
+      stage.autoView();
     }
-  } catch (error) {
-    console.error(`加载 PDB 文件失败, fileId: ${fileId}`, error);
+  } catch (e) {
+    console.error(`加载 CIF 失败: ${cifUrl}`, e);
   }
 }
