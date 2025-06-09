@@ -201,12 +201,35 @@ export async function loadCIFFile(
   }
 
   try {
-    const comp = await stage.loadFile(cifUrl, { ext: 'cif' }) as NGL.StructureComponent;
-    if (comp) {
-      // NGL 不支持 spectrum，改为 rainbow
-      comp.addRepresentation('cartoon', { color: 'rainbow' });
-      stage.autoView();
-    }
+const comp = await stage.loadFile(cifUrl, { ext: 'cif' }) as NGL.StructureComponent;
+if (comp) {
+  // 1. 彩带，用链名上色
+  comp.addRepresentation('cartoon', {
+    color: 'chainname',
+    sele: 'nucleic',
+    colorScheme: 'nucleotide',
+    aspectRatio: 3,
+    quality: 'high'
+  });
+
+  // 2.  半透明分子表
+
+  // 3. 骨架细条
+  comp.addRepresentation('ball+stick', {
+    sele: 'backbone',
+    color: 'element',
+    radius: 0.15
+  });
+
+  // 4. DNA/RNA 碱基平面
+  comp.addRepresentation('base', {
+    sele: 'nucleic',
+    colorScheme: 'nucleotide'
+  });
+
+  // 让相机自动居中并适当拉远
+  stage.autoView();
+}
   } catch (e) {
     console.error(`加载 CIF 失败: ${cifUrl}`, e);
   }

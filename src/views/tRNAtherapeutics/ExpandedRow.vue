@@ -260,16 +260,17 @@
 <tr>
   <td><b>3D Structure:</b></td>
   <td>
-    <div class="sample-switcher">
-      <button
-        v-for="i in 5"
-        :key="i"
-        :class="{ active: record._selectedSample === (i-1) }"
-        @click="switchSample(record, i-1)"
-      >
-        Sample {{ i-1 }}
-      </button>
-    </div>
+<div class="sample-switcher">
+  <div
+    v-for="i in 5"
+    :key="i"
+    class="seg-btn"
+    :class="{ active: record._selectedSample === (i-1) }"
+    @click="switchSample(record, i-1)"
+  >
+    {{ i-1 }}
+  </div>
+</div>
     <div
       :id="'pdb-container-' + record.ENSURE_ID"
       style="height: 400px; width: 600px;"
@@ -561,5 +562,32 @@ a {
 .tooltip:hover .tooltip-text {
   visibility: visible;
   opacity: 1;
+}
+.sample-switcher {
+  display: inline-flex;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  overflow: hidden;
+  font-size: 0.875rem;
+}
+
+.sample-switcher .seg-btn {
+  padding: 4px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s, color 0.2s;
+  color: #555;
+}
+.sample-switcher .seg-btn:not(:last-child) {
+  border-right: 1px solid #ccc;
+}
+
+.sample-switcher .seg-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.sample-switcher .seg-btn.active {
+  background-color: #1976d2;
+  color: #fff;
 }
 </style>
