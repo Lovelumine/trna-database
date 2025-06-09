@@ -90,9 +90,10 @@ export default {
     const { searchText, filteredDataSource, searchColumn, loadData } =
       useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv');
 
+    const safeRecords = computed(() => filteredDataSource.value ?? []);
+
     // 2. 加载 PMID 表格 CSV 所需状态
     const rawPmidData = ref<any[]>([]);
-    const selectedPmids = ref<string[]>([]);
     const pagination = ref({
       current: 1,
       pageSize: 10,
@@ -169,69 +170,49 @@ export default {
     // 7. 计算每种类型的总数
     const alignmentCounts = computed(() => {
       const cnt = { match: 0, mismatch: 0, insertion: 0, deletion: 0 };
-      filteredDataSource.value.forEach((rec: any) => {
+      safeRecords.value.forEach(rec => {
         let arr: AlignmentItem[] = [];
-        try {
-          arr = JSON.parse(String(rec.js_sup_tRNA));
-        } catch {
-          return;
-        }
-        arr.forEach((item) => {
-          cnt[getType(item)]++;
-        });
+        try { arr = JSON.parse(rec.js_sup_tRNA || '[]'); } catch {}
+        arr.forEach(it => cnt[getType(it)]++);
       });
       return cnt;
     });
 
     // 8. 点击 mismatch 时展示明细（可扩展，目前暂不需要使用）
-    const mismatchDetails = ref<
-      { from: string; to: string; count: number }[]
-    >([]);
+    const mismatchDetails = ref<{ from: string; to: string; count: number }[]>([]);
     const onChartClick = (params: ECElementEvent) => {
       if (params.name !== 'mismatch') {
         mismatchDetails.value = [];
         return;
       }
-      const pairCnt: Record<string, Record<string, number>> = {};
-      filteredDataSource.value.forEach((rec: any) => {
+      const map: Record<string, Record<string, number>> = {};
+      safeRecords.value.forEach(rec => {
         let arr: AlignmentItem[] = [];
-        try {
-          arr = JSON.parse(String(rec.js_sup_tRNA));
-        } catch {
-          return;
-        }
-        arr.forEach((item) => {
-          if (getType(item) === 'mismatch') {
-            pairCnt[item.base] = pairCnt[item.base] || {};
-            pairCnt[item.base][item.sup_base] =
-              (pairCnt[item.base][item.sup_base] || 0) + 1;
+        try { arr = JSON.parse(rec.js_sup_tRNA || '[]'); } catch {}
+        arr.forEach(it => {
+          if (getType(it) === 'mismatch') {
+            map[it.base] = map[it.base] || {};
+            map[it.base][it.sup_base] = (map[it.base][it.sup_base] || 0) + 1;
           }
         });
       });
       const details: typeof mismatchDetails.value = [];
-      for (const from in pairCnt)
-        for (const to in pairCnt[from])
-          details.push({ from, to, count: pairCnt[from][to] });
+      Object.entries(map).forEach(([from, toMap]) =>
+        Object.entries(toMap).forEach(([to, c]) => details.push({ from, to, count: c }))
+      );
       mismatchDetails.value = details;
     };
 
     // 9. 计算每个位点的各类型堆积柱状数据
     const perPositionCounts = computed(() => {
-      const M: Record<
-        string,
-        Record<'match' | 'mismatch' | 'insertion' | 'deletion', number>
-      > = {};
-      filteredDataSource.value.forEach((rec: any) => {
+      const M: Record<string, typeof alignmentCounts.value> = {};
+      safeRecords.value.forEach(rec => {
         let arr: AlignmentItem[] = [];
-        try {
-          arr = JSON.parse(String(rec.js_sup_tRNA));
-        } catch {
-          return;
-        }
-        arr.forEach((item) => {
-          const pos = item.id;
-          if (!M[pos]) M[pos] = { match: 0, mismatch: 0, insertion: 0, deletion: 0 };
-          M[pos][getType(item)]++;
+        try { arr = JSON.parse(rec.js_sup_tRNA || '[]'); } catch {}
+        arr.forEach(it => {
+          const p = it.id;
+          if (!M[p]) M[p] = { match: 0, mismatch: 0, insertion: 0, deletion: 0 };
+          M[p][getType(it)]++;
         });
       });
       return M;
@@ -407,5 +388,4 @@ h3 {
   background-color: #f0f2f5;
 }
 
-/* 美化 SVG 图表区 */
 </style>
