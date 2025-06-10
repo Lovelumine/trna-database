@@ -67,6 +67,9 @@ export default defineConfig({
       '/scan': {
         target: 'http://localhost:3456',
         changeOrigin: true,
+      },      '/search': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
       },
       '/align': {
         target: 'http://localhost:3457',
