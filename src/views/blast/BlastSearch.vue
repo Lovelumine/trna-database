@@ -53,6 +53,10 @@
             class="number-input"
             :disabled="loading"
           />
+          <!-- Reset 按钮 -->
+          <button class="reset-button" @click="resetDefaults" :disabled="loading">
+            Reset
+          </button>
         </div>
       </div>
 
@@ -115,16 +119,44 @@ const match      = ref(2.0);
 const mismatch   = ref(-0.5);
 const gapOpen    = ref(-2.0);
 const gapExtend  = ref(-1.0);
+// 默认值常量
+const DEFAULT_QUERY = `GUCCCGCUGGUGUAAU#GADAGCAUACGAUCCUNCUAAGPUUGCGGUCCUGGTPCGAUCCCAGGGCGGGAUACCA`;
+const DEFAULT_NUM = 5;
+const DEFAULT_MATCH = 2.0;
+const DEFAULT_MISMATCH = -0.5;
+const DEFAULT_GAP_OPEN = -2.0;
+const DEFAULT_GAP_EXTEND = -1.0;
+const DEFAULT_DBS = [
+  'Coding Variation in Cancer',
+  'Coding Variation in Genetic Disease',
+  'Nonsense Sup-RNA',
+  'Frameshift sup-tRNA',
+  'Engineered Sup-tRNA',
+  'Function and Modification',
+  'aaRS Recognition'
+];
+function resetDefaults() {
+  querySeq.value  = DEFAULT_QUERY;
+  numResults.value = DEFAULT_NUM;
+  match.value      = DEFAULT_MATCH;
+  mismatch.value   = DEFAULT_MISMATCH;
+  gapOpen.value    = DEFAULT_GAP_OPEN;
+  gapExtend.value  = DEFAULT_GAP_EXTEND;
+  selectedDbs.value = [...DEFAULT_DBS];
+  progress.value   = 0;
+  error.value      = null;
+  results.value    = [];
+}
 
 // 数据库 Pills
 const databases = [
-  { name: 'Cancer', url: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Cancer.csv' },
-  { name: 'Genetic Disease', url: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv' },
-  { name: 'Nonsense', url: 'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv' },
-  { name: 'Frameshift', url: 'https://minio.lumoxuan.cn/ensure/Frameshift sup-tRNA.csv' },
-  { name: 'Engineered', url: 'https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv' },
-  { name: 'Function&Mod', url: 'https://minio.lumoxuan.cn/ensure/Function and Modification.csv' },
-  { name: 'aaRS', url: 'https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv' },
+  { name: 'Coding Variation in Cancer', url: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Cancer.csv' },
+  { name: 'Coding Variation in Genetic Disease', url: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv' },
+  { name: 'Nonsense Sup-RNA', url: 'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv' },
+  { name: 'Frameshift sup-tRNA', url: 'https://minio.lumoxuan.cn/ensure/Frameshift sup-tRNA.csv' },
+  { name: 'Engineered Sup-tRNA', url: 'https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv' },
+  { name: 'Function and Modification', url: 'https://minio.lumoxuan.cn/ensure/Function and Modification.csv' },
+  { name: 'aaRS Recognition', url: 'https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv' },
 ];
 const selectedDbs = ref(databases.map(d=>d.name));
 const toggleDb = (n: string) => {
@@ -322,5 +354,22 @@ h2 {
   margin: 0;
   font-family: monospace;
   white-space: pre-wrap;
+}
+
+.inline .reset-button {
+  margin-left: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  background: #ccc;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.inline .reset-button:hover:not(:disabled) {
+  background: #999;
+}
+.reset-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

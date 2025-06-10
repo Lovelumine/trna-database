@@ -14,6 +14,7 @@
       <template #bodyCell="{ column, text }">
         <span v-if="column.dataIndex === 'file'">{{ mapFileToDb(text) }}</span>
         <span v-else-if="column.dataIndex === 'score'">{{ (text as number).toFixed(1) }}</span>
+        <span v-else-if="column.dataIndex === 'column'">{{ cleanString(text) }}</span>
         <span v-else>{{ text }}</span>
       </template>
 
@@ -27,9 +28,7 @@
                 v-for="(ch, i) in parseAlignment(record.alignment).targetChars"
                 :key="i"
               >
-                <span :class="cellClass(i, record.alignment)">
-                  {{ ch }}
-                </span>
+                <span :class="cellClass(i, record.alignment)">{{ ch }}</span>
               </template>
             </div>
             <div class="align-row">
@@ -37,9 +36,7 @@
                 v-for="(ch, i) in parseAlignment(record.alignment).queryChars"
                 :key="i"
               >
-                <span :class="cellClass(i, record.alignment)">
-                  {{ ch }}
-                </span>
+                <span :class="cellClass(i, record.alignment)">{{ ch }}</span>
               </template>
             </div>
           </div>
@@ -53,14 +50,22 @@
                 :class="{ highlighted: key === record.column }"
               >
                 <td class="key-cell">{{ cleanString(key) }}</td>
+                <td class="val-cell">
+                  <!-- 图片显示 -->
                   <template v-if="cleanString(key) === 'pictureid'">
-                    <button @click="showLightbox(val)">
+                    <button @click="showLightbox(cleanString(val))">
                       View Image
                     </button>
                   </template>
+                  <!-- Species 名称斜体 -->
+                  <template v-else-if="/specie/i.test(cleanString(key))">
+                    <i>{{ cleanString(val) }}</i>
+                  </template>
+                  <!-- 其他情况清洗显示 -->
                   <template v-else>
                     {{ cleanString(val) }}
                   </template>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -68,7 +73,8 @@
       </template>
     </s-table>
     <div v-else-if="!loading" class="no-results">No results yet.</div>
-        <!-- Lightbox 弹窗 -->
+
+    <!-- Lightbox 弹窗 -->
     <vue-easy-lightbox
       :visible="visible"
       :imgs="lightboxImgs"
@@ -115,21 +121,21 @@ watch(() => props.results.length, len => {
 
 // 列定义
 const columns = [
-  { title: 'Database', dataIndex: 'file',    key: 'file',    width: 120 },
-  { title: 'Row',      dataIndex: 'row',     key: 'row',     width:  60 },
-  { title: 'Column',   dataIndex: 'column',  key: 'column',  width: 150 },
-  { title: 'Score',    dataIndex: 'score',   key: 'score',   width:  80, sorter: (a,b)=>a.score-b.score }
+  { title: 'Database', dataIndex: 'file', key: 'file', width: 120 },
+  { title: 'Row', dataIndex: 'row', key: 'row', width: 60 },
+  { title: 'Column', dataIndex: 'column', key: 'column', width: 150 },
+  { title: 'Score', dataIndex: 'score', key: 'score', width: 80, sorter: (a,b) => a.score - b.score }
 ] as STableColumnsType<any>;
 
 // 文件名到数据库名的映射
 const fileToDbMap: Record<string,string> = {
-  'Coding Variation in Cancer.csv':           'Cancer',
-  'Coding Variation in Genetic Disease.csv':  'Genetic Disease',
-  'Nonsense Sup-RNA.csv':                     'Nonsense Suppressors',
-  'Frameshift sup-tRNA.csv':                  'Frameshift sup-tRNA',
-  'tRNAtherapeutics.csv':                     'Engineered Sup-tRNA',
-  'Function and Modification.csv':            'Function & Modification',
-  'aaRS Recognition.csv':                     'aaRS Recognition'
+  'Coding Variation in Cancer.csv': 'Cancer',
+  'Coding Variation in Genetic Disease.csv': 'Genetic Disease',
+  'Nonsense Sup-RNA.csv': 'Nonsense Suppressors',
+  'Frameshift sup-tRNA.csv': 'Frameshift sup-tRNA',
+  'tRNAtherapeutics.csv': 'Engineered Sup-tRNA',
+  'Function and Modification.csv': 'Function & Modification',
+  'aaRS Recognition.csv': 'aaRS Recognition'
 };
 function mapFileToDb(file: string): string {
   const clean = file.replace(/^\ufeff/, '');
@@ -137,18 +143,18 @@ function mapFileToDb(file: string): string {
 }
 
 // 清理字符串，去除 BOM 和特殊字符
-function cleanString(x:unknown):string{
+function cleanString(x: unknown): string {
   if (typeof x !== 'string') return String(x);
-  return x.replace(/^\ufeff/, '').replace(/ï»¿/g,'');
+  return x.replace(/^\ufeff/, '').replace(/ï»¿/g, '');
 }
 
 // 解析 alignment，提取 target/query 行和匹配符
 function parseAlignment(text: string) {
-  const real = (text as string).replace(/\\n/g, '\n');
+  const real = text.replace(/\\n/g, '\n');
   const parts = real.split('\n');
   const targetLine = parts[0].replace(/^target\s*/, '');
-  const matchLine  = parts[1] || '';
-  const queryLine  = (parts[2] || '').replace(/^query\s*/, '');
+  const matchLine = parts[1] || '';
+  const queryLine = (parts[2] || '').replace(/^query\s*/, '');
   return {
     targetChars: Array.from(targetLine),
     matchLine,
