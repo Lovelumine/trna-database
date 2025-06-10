@@ -52,8 +52,15 @@
                 :key="key"
                 :class="{ highlighted: key === record.column }"
               >
-                <td class="key-cell">{{ key }}</td>
-                <td class="val-cell">{{ val }}</td>
+                <td class="key-cell">{{ cleanString(key) }}</td>
+                  <template v-if="cleanString(key) === 'pictureid'">
+                    <button @click="showLightbox(val)">
+                      View Image
+                    </button>
+                  </template>
+                  <template v-else>
+                    {{ cleanString(val) }}
+                  </template>
               </tr>
             </tbody>
           </table>
@@ -61,6 +68,14 @@
       </template>
     </s-table>
     <div v-else-if="!loading" class="no-results">No results yet.</div>
+        <!-- Lightbox 弹窗 -->
+    <vue-easy-lightbox
+      :visible="visible"
+      :imgs="lightboxImgs"
+      :index="0"
+      @hide="visible = false"
+      :key="lightboxKey"
+    />
   </s-table-provider>
 </template>
 
@@ -70,6 +85,13 @@ import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import en from '@shene/table/dist/locale/en';
 import { pagination } from '../../utils/table';
+import VueEasyLightbox from 'vue-easy-lightbox';
+import {
+  visible,
+  lightboxImgs,
+  lightboxKey,
+  showLightbox
+} from './keycell';
 
 interface ResultRow {
   file: string;
@@ -112,6 +134,12 @@ const fileToDbMap: Record<string,string> = {
 function mapFileToDb(file: string): string {
   const clean = file.replace(/^\ufeff/, '');
   return fileToDbMap[clean] || clean;
+}
+
+// 清理字符串，去除 BOM 和特殊字符
+function cleanString(x:unknown):string{
+  if (typeof x !== 'string') return String(x);
+  return x.replace(/^\ufeff/, '').replace(/ï»¿/g,'');
 }
 
 // 解析 alignment，提取 target/query 行和匹配符

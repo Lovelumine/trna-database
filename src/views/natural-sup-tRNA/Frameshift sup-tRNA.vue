@@ -502,7 +502,7 @@ const anticodonHeatmapOption = computed<EChartsOption>(() => {
   };
 });
 
-    return {
+return {
       allColumns,
       displayedColumns,
       filteredDataSource,
