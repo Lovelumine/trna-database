@@ -100,7 +100,7 @@ import { ref, computed, watch } from 'vue';
 import axios from 'axios';
 import BlastResults from './BlastResults.vue';
 
-const SERVICE_URL = 'http://223.82.75.76:8000/search';
+const SERVICE_URL = '/search';
 
 const querySeq = ref(`GUCCCGCUGGUGUAAU#GADAGCAUACGAUCCUNCUAAGPUUGCGGUCCUGGTPCGAUCCCAGGGCGGGAUACCA`);
 const loading  = ref(false);
