@@ -1,159 +1,129 @@
 <template>
-  <div class="blast-results-container">
-    <div class="blast-results">
-      <h2>BLAST Results</h2>
-      <s-table
-        :columns="columns"
-        :data-source="filteredDataSource"
-        :expand-icon-column-index="expandIconColumnIndex"
-        :expand-row-by-click="expandRowByClick"
-        @expand="onExpand"
-        @expandedRowsChange="onExpandedRowsChange"
-      >
-        <template #bodyCell="{ text, column, record }">
-          <template v-if="column.key === 'title'">
-            <div v-for="(line, i) in record.stitleLines" :key="i">
-              <strong>{{ line.key }}:</strong> {{ line.value }}
-            </div>
+  <s-table-provider :hover="true" :locale="locale">
+    <s-table
+      v-if="results.length"
+      :columns="columns"
+      :data-source="results"
+      :row-key="r => r.file + '-' + r.row + '-' + r.column"
+      :stripe="true"
+      :pagination="pagination"
+      size="default"
+      :expand-row-by-click="true"
+    >
+      <template #bodyCell="{ column, text }">
+        <!-- 自定义 alignment 列 -->
+        <div v-if="column.dataIndex === 'alignment'" class="alignment">
+          <template v-for="(base, idx) in parseAlignment(text).queryChars" :key="idx">
+            <span :class="{ match: parseAlignment(text).matchLine[idx] === '|' }">
+              {{ base }}
+            </span>
           </template>
-          <template v-else>
-            {{ text }}
-          </template>
+        </div>
+        <!-- file 列映射到数据库名 -->
+        <span v-else-if="column.dataIndex === 'file'">
+          {{ mapFileToDb(text as string) }}
+        </span>
+        <!-- 其他列 -->
+        <span v-else>{{ text }}</span>
+        
+      </template>
+              <template #expandedRowRender="{ record }">
+Under development
         </template>
-        <template #expandedRowRender="{ record }">
-          <div class="more-detail">
-            <p class="title"><b>Query Sequence:</b></p>
-            <p class="content">{{ record.qseq }}</p>
-            <br />
-            <p class="title"><b>Subject Sequence:</b></p>
-            <p class="content">{{ record.sseq }}</p>
-            <br />
-            <p class="title"><b>Title:</b></p>
-            <div v-for="(line, i) in record.stitleLines" :key="i">
-              <strong>{{ line.key }}:</strong> {{ line.value }}
-            </div>
-          </div>
-        </template>
-      </s-table>
-    </div>
-  </div>
+    </s-table>
+    <div v-else-if="!loading" class="no-results">No results yet.</div>
+  </s-table-provider>
 </template>
 
-<script setup>
-import { ref, computed, defineProps, watch } from 'vue';
+<script setup lang="ts">
+import { defineProps, ref, watch } from 'vue';
+import { STableProvider } from '@shene/table';
+import type { STableColumnsType } from '@shene/table';
+import en from '@shene/table/dist/locale/en';
+import {pagination} from '../../utils/table'
 
-const props = defineProps({
-  blastResult: {
-    type: String,
-    required: true
-  }
-});
+interface ResultRow {
+  file: string;
+  row: number;
+  column: string;
+  score: number;
+  alignment: string;
+}
 
+const props = defineProps<{
+  results: ResultRow[];
+  loading: boolean;
+}>();
+
+// 国际化 & 分页
+const locale = ref(en);
+
+// 列定义
 const columns = [
-  { title: 'Query ID', dataIndex: 'qseqid', key: 'qseqid', width: 120 },
-  { title: 'Subject ID', dataIndex: 'sseqid', key: 'sseqid', width: 120 },
-  { title: 'Percent Identity', dataIndex: 'pident', key: 'pident', width: 150 },
-  { title: 'Alignment Length', dataIndex: 'length', key: 'length', width: 150 },
-  { title: 'Mismatches', dataIndex: 'mismatch', key: 'mismatch', width: 120 },
-  { title: 'Gap Openings', dataIndex: 'gapopen', key: 'gapopen', width: 120 },
-  { title: 'Query Start', dataIndex: 'qstart', key: 'qstart', width: 120 },
-  { title: 'Query End', dataIndex: 'qend', key: 'qend', width: 120 },
-  { title: 'Subject Start', dataIndex: 'sstart', key: 'sstart', width: 120 },
-  { title: 'Subject End', dataIndex: 'send', key: 'send', width: 120 },
-  { title: 'E-value', dataIndex: 'evalue', key: 'evalue', width: 120 },
-  { title: 'Bit Score', dataIndex: 'bitscore', key: 'bitscore', width: 120 }
-];
+  { title: 'Database',      dataIndex: 'file',      key: 'file',                resizable: true,  width: 120 },
+  { title: 'Row',       dataIndex: 'row',       key: 'row',                 resizable: true,  width:  60 },
+  { title: 'Column',    dataIndex: 'column',    key: 'column',               resizable: true, width: 150 },
+  { title: 'Score',     dataIndex: 'score',     key: 'score',                resizable: true, width:  80,
+    sorter: (a: ResultRow, b: ResultRow) => a.score - b.score
+  },
+  { title: 'Alignment', dataIndex: 'alignment', key: 'alignment', ellipsis: false }
+] as STableColumnsType<ResultRow>;
 
-const dataSource = computed(() => {
-  if (!props.blastResult) return [];
-  return props.blastResult.split('\n').filter(line => line.trim()).map((line, index) => {
-    const fields = line.split('\t');
-    const stitle = fields[14] || '';
-    const stitleLines = stitle.split(' ').reduce((acc, part) => {
-      const [key, ...values] = part.split(':');
-      if (values.length > 0) {
-        acc.push({ key, value: values.join(':') });
-      } else if (acc.length > 0) {
-        acc[acc.length - 1].value += ` ${part}`;
-      }
-      return acc;
-    }, []);
-
-    return {
-      key: index.toString(),
-      qseqid: fields[0],
-      sseqid: fields[1],
-      pident: fields[2],
-      length: fields[3],
-      mismatch: fields[4],
-      gapopen: fields[5],
-      qstart: fields[6],
-      qend: fields[7],
-      sstart: fields[8],
-      send: fields[9],
-      evalue: fields[10],
-      bitscore: fields[11],
-      qseq: fields[12],
-      sseq: fields[13],
-      stitle,
-      stitleLines
-    };
-  });
+// 当结果变更时更新分页 total
+watch(() => props.results.length, len => {
+  pagination.value.total = len;
 });
 
-const filteredDataSource = computed(() => {
-  // 忽略第一行
-  return dataSource.value.slice(1);
-});
-
-const hideExpandIcon = ref(false);
-const expandRowByClick = ref(true);
-const expandIconColumnIndex = ref(0);
-
-watch(hideExpandIcon, newValue => {
-  expandIconColumnIndex.value = newValue ? -1 : 0;
-});
-
-const onExpand = (expanded, record) => {
-  console.log('expanded', expanded);
-  console.log('record', record);
+// 文件名到数据库名的映射
+const fileToDbMap: Record<string,string> = {
+  'Coding Variation in Cancer.csv':           'Cancer',
+  'Coding Variation in Genetic Disease.csv':  'Genetic Disease',
+  'Nonsense Sup-RNA.csv':                     'Nonsense Suppressors',
+  'Frameshift sup-tRNA.csv':                  'Frameshift sup-tRNA',
+  'tRNAtherapeutics.csv':                     'Engineered Sup-tRNA',
+  'Function and Modification.csv':            'Function & Modification',
+  'aaRS Recognition.csv':                     'aaRS Recognition'
 };
+function mapFileToDb(fileName: string): string {
+  const clean = fileName.replace(/^\ufeff/, '');
+  return fileToDbMap[clean] || clean;
+}
 
-const onExpandedRowsChange = keys => {
-  console.log('keys', keys);
-};
+/**
+ * 解析 alignment 文本，只提取中间的 matchLine 和 query 行
+ * @param text 完整 alignment（含换行）
+ */
+function parseAlignment(text: string): { matchLine: string; queryChars: string[] } {
+  // 将 JSON 中的 "\n" 转成真正换行
+  const real = (text as string).replace(/\\n/g, '\n');
+  const parts = real.split('\n');
+  // parts[0] = "target ...."
+  // parts[1] = "||||.."
+  // parts[2] = "query  XXXXXXXXX"
+  const matchLine = parts[1] || '';
+  const queryLine = parts[2] || '';
+  // 去掉前缀 "query  "
+  const querySeq = queryLine.replace(/^query\s*/, '');
+  return {
+    matchLine,
+    queryChars: Array.from(querySeq)
+  };
+}
 </script>
 
 <style scoped>
-.blast-results-container {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
+.alignment {
+  font-family: monospace;
+  white-space: nowrap;
+  line-height: 1.4;
 }
-
-.blast-results {
-  width: 60%;
-  background: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  overflow: hidden; /* 移除滚动条 */
-  padding: 20px;
+.alignment .match {
+  color: #4CAF50;
+  font-weight: bold;
 }
-
-.more-detail {
-  line-height: 22px;
-}
-.more-detail > p {
-  display: inline-block;
-  margin: 4px 0;
-}
-.more-detail > p.title {
-  width: 120px;
-}
-
-@media (max-width: 600px) {
-  .blast-results {
-    max-width: 80vw;
-  }
+.no-results {
+  text-align: center;
+  padding: 1rem;
+  color: #666;
 }
 </style>
