@@ -17,6 +17,8 @@ Endpoints:
   Response JSON: List of best-matching rows with 'alignment' 字段包含 target/match/query 三行。
 """
 import os, io, requests, pandas as pd
+import threading
+import sys
 from flask          import Flask, request, jsonify
 from Bio.Align      import PairwiseAligner
 from typing         import Tuple
@@ -119,6 +121,18 @@ def search():
     topn = sorted(results, key=lambda x: x['score'], reverse=True)[:number]
     return jsonify(topn)
 
+def schedule_restart(interval_sec: float = 1800):
+    """在 interval_sec 秒后重启当前进程。"""
+    def _restart():
+        # 重新执行当前 Python 解释器和脚本
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+    t = threading.Timer(interval_sec, _restart)
+    t.setDaemon(True)
+    t.start()
+    
 if __name__ == '__main__':
+    # 启动重启定时器：每 1800 秒（半小时）触发一次
+    # schedule_restart(10)
+
     # 单线程下跑，避免多线程下 Biopython 崩溃
     app.run(host='0.0.0.0', port=8000, threaded=False)
