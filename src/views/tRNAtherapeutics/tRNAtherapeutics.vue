@@ -46,6 +46,9 @@
                   >{{ text }}</a
                 >
               </span>
+              <span v-else-if="column.dataIndex === 'Source'">
+                <em>{{ text }}</em>
+              </span>
               <span v-else>{{ text }}</span>
             </template>
           </s-table>
@@ -118,26 +121,25 @@ export default {
         title: 'PMID',
         dataIndex: 'PMID',
         key: 'PMID',
-        width: 40,
+        width: 100,
+        resizable: true
       },
       {
         title: 'Title',
         dataIndex: 'Title',
         key: 'Title',
-        width: 300,
+        width: 500,
         ellipsis: true,
+        resizable: true,
+        
       },
       {
         title: 'Source',
         dataIndex: 'Source',
         key: 'Source',
         width: 150,
-        filters: [
-          { text: 'Nature', value: 'Nature' },
-          { text: 'Science', value: 'Science' },
-          { text: 'Cell', value: 'Cell' },
-        ],
-        onFilter: (value: string, record: any) => record.Source.includes(value),
+        resizable: true,
+        customRender: ({ text }) => <em>{text}</em>
       },
       {
         title: 'Author',
@@ -145,11 +147,13 @@ export default {
         key: 'Author',
         width: 200,
         ellipsis: true,
+        resizable: true
       },
       {
         title: 'PubDate',
         dataIndex: 'PubDate',
         key: 'PubDate',
+        resizable: true,
         width: 120,
       },
     ]);
