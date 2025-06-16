@@ -15,7 +15,7 @@
         <span v-if="column.dataIndex === 'file'">{{ mapFileToDb(text) }}</span>
         <span v-else-if="column.dataIndex === 'score'">{{ (text as number).toFixed(1) }}</span>
         <span v-else-if="column.dataIndex === 'column'">{{ cleanString(text) }}</span>
-        <span v-else>{{ text }}</span>
+        <span v-else>{{ cleanString(text) }}</span>
       </template>
 
       <!-- 展开行渲染 -->
@@ -44,29 +44,30 @@
           <!-- row_data 表格 -->
           <table class="row-data-table">
             <tbody>
-              <tr
-                v-for="(val, key) in record.row_data"
-                :key="key"
-                :class="{ highlighted: key === record.column }"
-              >
-                <td class="key-cell">{{ cleanString(key) }}</td>
-                <td class="val-cell">
-                  <!-- 图片显示 -->
-                  <template v-if="cleanString(key) === 'pictureid'">
-                    <button @click="showLightbox(cleanString(val))">
-                      View Image
-                    </button>
-                  </template>
-                  <!-- Species 名称斜体 -->
-                  <template v-else-if="/specie/i.test(cleanString(key))">
-                    <i>{{ cleanString(val) }}</i>
-                  </template>
-                  <!-- 其他情况清洗显示 -->
-                  <template v-else>
-                    {{ cleanString(val) }}
-                  </template>
-                </td>
-              </tr>
+              <template v-for="entry in Object.entries(record.row_data)" :key="entry[0]">
+                <tr
+                  v-if="filterRow(entry[0], entry[1])"
+                  :class="{ highlighted: entry[0] === record.column }"
+                >
+                  <td class="key-cell">{{ cleanString(entry[0]) }}</td>
+                  <td class="val-cell">
+                    <!-- 图片显示 -->
+                    <template v-if="cleanString(entry[0]) === 'pictureid'">
+                      <button @click="showLightbox(cleanString(entry[1]))">
+                        View Image
+                      </button>
+                    </template>
+                    <!-- Species 名称斜体 -->
+                    <template v-else-if="/specie/i.test(cleanString(entry[0]))">
+                      <i>{{ cleanString(entry[1]) }}</i>
+                    </template>
+                    <!-- 其他情况清洗显示 -->
+                    <template v-else>
+                      {{ cleanString(entry[1]) }}
+                    </template>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -124,11 +125,21 @@ const columns = [
   { title: 'Database', dataIndex: 'file', key: 'file', width: 120 },
   { title: 'Row', dataIndex: 'row', key: 'row', width: 60 },
   { title: 'Column', dataIndex: 'column', key: 'column', width: 150 },
-  { title: 'Score', dataIndex: 'score', key: 'score', width: 80, sorter: (a,b) => a.score - b.score }
+  { title: 'Score', dataIndex: 'score', key: 'score', width: 80, sorter: (a, b) => a.score - b.score }
 ] as STableColumnsType<any>;
 
+// 排除的字段名列表
+const excludeKeys = [
+  'js_origin_tRNA',
+  'js_sup_tRNA',
+  'Unnamed: 17',
+  'incidenceRate',
+  'PMID of references'
+  // 可继续添加其它要排除的字段
+];
+
 // 文件名到数据库名的映射
-const fileToDbMap: Record<string,string> = {
+const fileToDbMap: Record<string, string> = {
   'Coding Variation in Cancer.csv': 'Cancer',
   'Coding Variation in Genetic Disease.csv': 'Genetic Disease',
   'Nonsense Sup-RNA.csv': 'Nonsense Suppressors',
@@ -146,6 +157,14 @@ function mapFileToDb(file: string): string {
 function cleanString(x: unknown): string {
   if (typeof x !== 'string') return String(x);
   return x.replace(/^\ufeff/, '').replace(/ï»¿/g, '');
+}
+
+// 过滤空值和排除字段
+function filterRow(key: unknown, val: unknown): boolean {
+  const k = cleanString(key);
+  if (excludeKeys.includes(k)) return false;
+  const v = val == null ? '' : cleanString(val);
+  return v.trim().length > 0;
 }
 
 // 解析 alignment，提取 target/query 行和匹配符
