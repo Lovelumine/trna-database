@@ -151,9 +151,9 @@
           />
         </div>
 
-        <!-- 2. Noncanonical Amino Acids 分布 -->
+        <!-- 2. Distribution of Amino Acids chared on sup-tRNA分布 -->
         <div class="chart-col">
-          <h3>② Noncanonical Amino Acids Distribution</h3>
+          <h3>② Distribution of Amino Acids chared on sup-tRNA</h3>
           <VChart
             :option="aaOption"
             autoresize
