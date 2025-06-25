@@ -138,34 +138,67 @@ export default defineComponent({
 
 
     // —— 1. Treemap 配置
-    const treemapOption = computed<EChartsOption>(() => {
-          // 统计每个 gene 出现次数
-          const counts: Record<string, number> = {};
-          filteredDataSource.value.forEach((row: any) => {
-            const g = row.gene || 'Unknown';
-            counts[g] = (counts[g] || 0) + 1;
-          });
-          // 排序取前20，剩余归 Others
-          const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-          const top20 = entries.slice(0, 40);
-          const othersSum = entries.slice(40).reduce((s, e) => s + e[1], 0);
-          const data = top20.map(([name, value]) => ({ name, value }));
-          data.push({ name: 'Others', value: othersSum });
-          return {
-            // title: { text: 'Treemap of Gene Record Distribution', left: 'center' },
-            tooltip: { trigger: 'item' },
-            series: [
-              {
-                type: 'treemap',
-                data,
-                leafDepth: 1,
-                label: { show: true, formatter: '{b}: {c}' }
-              }
-            ]
-          };
-        });
+// —— 1. Treemap 配置（按 mutationType -> gene 层级） 
+const treemapOption = computed<EChartsOption>(() => {
+  // 构造 type → gene → count
+  const nested: Record<string, Record<string, number>> = {};
+  filteredDataSource.value.forEach((row: any) => {
+    const type = row.mutationType || 'Unknown';
+    const gene = row.gene         || 'Unknown';
+    nested[type] = nested[type] || {};
+    nested[type][gene] = (nested[type][gene] || 0) + 1;
+  });
 
-    // —— 2. Stacked Bar 配置（按各模式总数降序；各合子类型按其总数降序）
+  // 转成两层数据
+  const data = Object.entries(nested).map(([type, geneCounts]) => {
+    const sorted = Object.entries(geneCounts).sort((a, b) => b[1] - a[1]);
+    const top10  = sorted.slice(0, 10);
+    const others = sorted.slice(10).reduce((s, [,c]) => s + c, 0);
+    const children = top10.map(([gene, cnt]) => ({ name: gene, value: cnt }));
+    if (others) children.push({ name: 'Others', value: others });
+    return { name: type, children };
+  });
+
+  return {
+    tooltip: {
+      trigger: 'item',
+      formatter: (info: any) => `${info.name}: ${info.value}`
+    },
+    series: [{
+      type: 'treemap',
+      data,
+      leafDepth: 2,  // 展示到 gene 这一层
+      // === 新增 upperLabel ===
+      upperLabel: {
+        show: true,
+        height: 30,
+          formatter: (info: any) => {
+            const depth = info.treePathInfo.length;
+            // depth===1 是 root，不显示
+            // depth===2 才是 mutationType 层，显示 “Type: count”
+            return depth === 2 ? `${info.name}: ${info.value}` : '';
+          },
+        textStyle: {
+            fontSize: 14,
+            fontWeight: 'bold'
+          }
+        },
+      label: {
+        show: true,
+        // gene 层也显示 name: value
+        formatter: (info: any) => `${info.name}: ${info.value}`,
+        position: 'inside'
+      },
+      breadcrumb: {
+        show: true,
+        left: 'center',
+        top: '5px'
+      }
+    }]
+  };
+});
+        
+// —— 2. Stacked Bar 配置（按各模式总数降序；各合子类型按其总数降序）
     const stackedBarOption = computed<EChartsOption>(() => {
       // 收集所有模式和合子情况，以及计数
       const modeTotals: Record<string, number> = {};
