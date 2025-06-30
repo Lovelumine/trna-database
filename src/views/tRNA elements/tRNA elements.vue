@@ -13,12 +13,16 @@
       <div class="table-section">
         <trna-elements-1 />
       </div>
+            <div class="table-section">
+        <trna-elements-3 />
+      </div>
     </div>
   </template>
   
   <script>
   import TrnaElements1 from './function and modification.vue';
   import TrnaElements2 from './aaRS recognition.vue';
+  import TrnaElements3 from './EFTU.vue';
   import ConceptMap from '../../components/ConceptMap.vue'
   
   export default {
@@ -26,6 +30,7 @@
     components: {
       TrnaElements1,
       TrnaElements2,
+      TrnaElements3,
       ConceptMap
     },
   };
