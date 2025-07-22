@@ -85,7 +85,7 @@
       </div>
 
       <div class="chart-col">
-        <h3>③ Stop Codon Change Heatmap</h3>
+        <h3>③ Stop Codon Change Heatmap（Nonsense）</h3>
         <VChart :option="heatmapOption" autoresize style="height:450px;" />
       </div>
     </div>
@@ -273,7 +273,9 @@ const treemapOption = computed<EChartsOption>(() => {
           const originalStops = new Set<string>()
           const mutatedStops = new Set<string>()
 
-          filteredDataSource.value.forEach((row: any) => {
+          filteredDataSource.value
+          .filter((row: any) => row.mutationType === 'Nonsense')
+          .forEach((row: any) => {
             const codon = String(row['Codon Change'] || '').trim()
             // 解构时加默认值，防止 split 结果不完整
             const [orig = '', mut = ''] = codon.split('-')
