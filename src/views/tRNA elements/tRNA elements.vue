@@ -10,12 +10,13 @@
       <div class="table-section">
         <trna-elements-2 />
       </div>
+                  <div class="table-section">
+        <trna-elements-3 />
+      </div>
       <div class="table-section">
         <trna-elements-1 />
       </div>
-            <div class="table-section">
-        <trna-elements-3 />
-      </div>
+
     </div>
   </template>
   

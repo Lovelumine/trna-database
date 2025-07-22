@@ -168,7 +168,7 @@
           <h3>Engineered site</h3>
           <table>
             <tr class="toggle-row" v-if="Array.isArray(parseSup(record.js_sup_tRNA)) && parseSup(record.js_sup_tRNA).length > 5">
-              <td><b>Sprinzl–Vassilenko:</b>
+              <td><b>Sprinzl coordinate:</b>
       <!-- 切换按钮 -->
       <div class="toggle-group">
         <button

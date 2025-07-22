@@ -2,6 +2,7 @@
   <div class="trna-container" style="position: relative;">
     <!-- Main SVG chart -->
     <svg :width="width" :height="height">
+            <g :transform="`translate(0, ${yOffset})`">
       <g font-size="12" text-anchor="middle" stroke="#333" stroke-width="1">
         <g
           v-for="node in nodes"
@@ -22,7 +23,7 @@
           />
           <text :x="node.x" :y="node.y + 4">{{ node.base }}</text>
         </g>
-      </g>
+      </g></g>
     </svg>
 
     <!-- Tooltip -->
@@ -45,7 +46,8 @@ const props = defineProps({
   data:   { type: Array,  default: () => [] },
   width:  { type: Number, default: 520 },
   height: { type: Number, default: 900 },
-  r:      { type: Number, default: 12 }
+  r:      { type: Number, default: 12 },
+    yOffset: { type: Number, default: 40 }
 })
 
 // 1. 固定的 canonical 坐标
@@ -154,52 +156,87 @@ const positions = {
 // 2. nodes 计算：
 //   - 遍历所有 canonical positions，map.get(id)||'-'
 //   - 再把所有 insertion (`\d+i\d+`) 也加进来
+
+/* ---------- 手动“下一位”映射 ---------- */
+const nextMap = {
+  V17: "V1",
+  45: "V11",
+  V5: "V27",
+  V21: "46",
+  20: "20a",
+  "20a": "20b",
+  "20b": "21",
+  "-1": "1",
+  17: "17a",
+  "17a": "18",
+};
+
 const nodes = computed(() => {
   const list = []
   // canonical
   for (const [id, pos] of Object.entries(positions)) {
     const entry = props.data.find(d => d.id === id)
-    list.push({
-      id,
-      base:       entry ? entry.base : '-',
-      x:          pos.x,
-      y:          pos.y,
-      isOverflow: false
-    })
+    list.push({ id, base: entry ? entry.base : '-', x: pos.x, y: pos.y, isOverflow: false })
   }
+
   // insertion
   props.data
     .filter(d => /^\d+i\d+$/.test(d.id))
     .forEach(item => {
       const [, num, idx] = item.id.match(/^(\d+)i(\d+)$/)
+      console.log(`[Insertion] id=${item.id}, num=${num}, idx=${idx}`)
+
       const p1 = positions[num]
-      const p2 = positions[String(+num + 1)]
+      console.log(`[Insertion ${item.id}] p1=`, p1)
       if (!p1) return console.warn(`no canonical for ${item.id}`)
+
+      const nextKey = nextMap[num] ?? String(+num + 1)
+      const p2 = positions[nextKey]
+      console.log(`[Insertion ${item.id}] nextKey=${nextKey}, p2=`, p2)
+
       let dx, dy, mx, my
       if (p2) {
         dx = p2.x - p1.x; dy = p2.y - p1.y
-        mx = (p1.x + p2.x)/2; my = (p1.y + p2.y)/2
+        mx = (p1.x + p2.x) / 2; my = (p1.y + p2.y) / 2
+        console.log(`[Insertion ${item.id}] midpoint used: mx=${mx}, my=${my}`)
       } else {
         const p0 = positions[String(+num - 1)]
+        console.log(`[Insertion ${item.id}] fallback p0=`, p0)
         if (!p0) return console.warn(`no neighbor for ${item.id}`)
         dx = p1.x - p0.x; dy = p1.y - p0.y
         mx = p1.x; my = p1.y
+        console.log(`[Insertion ${item.id}] base p1 used: mx=${mx}, my=${my}`)
       }
-      const dist   = Math.hypot(dx, dy) || 1
-      const ux     = -dy / dist
-      const uy     = dx / dist
+
+      const dist = Math.hypot(dx, dy) || 1
+      const ux = -dy / dist, uy = dx / dist
+      console.log(`[Insertion ${item.id}] dx=${dx}, dy=${dy}, dist=${dist}, ux=${ux}, uy=${uy}`)
+
       const offset = 20 * +idx
-      list.push({
-        id:         item.id,
-        base:       item.base,
-        x:          mx + ux * offset,
-        y:          my + uy * offset,
-        isOverflow: true
-      })
+      console.log(`[Insertion ${item.id}] offset=${offset}`)
+
+      let x = mx + ux * offset, y = my + uy * offset
+      console.log(`[Insertion ${item.id}] pre-collision x=${x}, y=${y}`)
+
+      // 碰撞检测
+      const thresholdSq = 25 * 25
+      const minDistSq = Math.min(...Object.values(positions).map(p => (x - p.x) ** 2 + (y - p.y) ** 2))
+      const collision = minDistSq < thresholdSq
+      console.log(`[Insertion ${item.id}] minDistSq=${minDistSq}, collision=${collision}`)
+      // if (collision) {
+      //   x = mx - ux * offset
+      //   y = my - uy * offset
+      //   console.warn(`[Insertion ${item.id}] reversed to x=${x}, y=${y}`)
+      // }
+
+      list.push({ id: item.id, base: item.base, x, y, isOverflow: true })
     })
+
   return list
 })
 
+
+ 
 const hoverNode = ref(null)
 </script>
 
