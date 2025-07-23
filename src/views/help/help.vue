@@ -26,7 +26,8 @@
             element-loading-text="加载中..."
             @click="handleImageClick"
             v-html="content"
-          ></div>
+          >
+          </div>
         </el-col>
       </el-row>
     </div>
@@ -38,6 +39,7 @@
       @hide="showViewer = false"
     />
   </div>
+  <!-- 删除: 原来放在这里的 <div id="bottom"></div> 已移动到 markdown-body 内  -->
 </template>
 
 <script setup>
@@ -112,9 +114,22 @@ const loadMarkdown = async (file) => {
     const response = await axios.get(`/docs/${encoded}`);
     const markdownContent = response.data;
     const processedContent = extractHeadings(markdownContent);
-    content.value = md.render(processedContent);
+
+    // 把锚点注入到渲染后的 HTML 里
+    content.value = md.render(processedContent) + '<div id="bottom"></div>';
     await nextTick();
     initLazyLoad();
+
+    // 如果 URL 带了 #bottom，就滚到这个锚点
+    const hash = window.location.hash; // 直接用原生的 hash
+    if (hash === '#bottom') {
+      const bottomEl = document.getElementById('bottom');
+      if (bottomEl) {
+        // 滚到锚点，并把它对齐到视口底部
+        bottomEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }
+
     loading.value = false;
   } catch (error) {
     console.error(`Failed to load markdown file: ${file}`, error);
@@ -189,6 +204,17 @@ watch(() => route.query.file, async (newFile) => {
   headings.value = []; // 清空headings
   await loadMarkdown(file); // 加载新的文件并更新headings
 }, { immediate: true });
+
+watch(content, async () => {
+  // 等 v-html 真正插入完
+  await nextTick();
+  if (route.hash === '#bottom') {
+    const bottomEl = document.getElementById('bottom');
+    if (bottomEl) {
+      bottomEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+});
 
 onMounted(() => {
   window.addEventListener('scroll', onScroll);
