@@ -268,92 +268,90 @@ const treemapOption = computed<EChartsOption>(() => {
 
     // —— 3. Heatmap 配置
     const heatmapOption = computed<EChartsOption>(() => {
-          // 原始 stop vs 突变 stop 频次统计
-          const combo: Record<string, Record<string, number>> = {}
-          const originalStops = new Set<string>()
-          const mutatedStops = new Set<string>()
+  // 原始 stop vs 突变 stop 频次统计，只保留 nonsense
+  const combo: Record<string, Record<string, number>> = {}
+  const originalStops = new Set<string>()
+  const mutatedStops = new Set<string>()
 
-          filteredDataSource.value
-          .filter((row: any) => row.mutationType === 'Nonsense')
-          .forEach((row: any) => {
-            const codon = String(row['Codon Change'] || '').trim()
-            // 解构时加默认值，防止 split 结果不完整
-            const [orig = '', mut = ''] = codon.split('-')
-            // 如果格式不对，跳过
-            if (!orig || !mut) return
+  filteredDataSource.value
+    .filter((row: any) => row.mutationType.toLowerCase() === 'nonsense')
+    .forEach((row: any) => {
+      const codon = String(row['Codon Change'] || '').trim()
+      const [orig = '', mut = ''] = codon.split('-')
+      if (!orig || !mut) return
 
-            originalStops.add(orig)
-            mutatedStops.add(mut)
+      // 收集原始密码子
+      originalStops.add(orig)
+      // 收集不包含 "TGT" 的突变密码子
+      if (!mut.includes('TGT')) {
+        mutatedStops.add(mut)
+      }
 
-            combo[orig] = combo[orig] || {}
-            combo[orig][mut] = (combo[orig][mut] || 0) + 1
-          })
+      combo[orig] = combo[orig] || {}
+      combo[orig][mut] = (combo[orig][mut] || 0) + 1
+    })
 
-          // 对类别排序，保证可重复渲染时顺序一致
-          const yList = Array.from(originalStops).sort()
-          const xList = Array.from(mutatedStops).sort()
+  // 排序确保渲染顺序稳定
+  const yList = Array.from(originalStops).sort()
+  const xList = Array.from(mutatedStops).sort()
 
-          // 构造 heatmap 数据 [xIndex, yIndex, value]
-          const heatData: [number, number, number][] = []
-          yList.forEach((o, i) => {
-            xList.forEach((m, j) => {
-              heatData.push([j, i, combo[o]?.[m] || 0])
-            })
-          })
+  // 构造 heatmap 数据 [xIndex, yIndex, value]
+  const heatData: [number, number, number][] = []
+  yList.forEach((o, i) => {
+    xList.forEach((m, j) => {
+      heatData.push([j, i, combo[o]?.[m] || 0])
+    })
+  })
 
-          // 计算 visualMap 的最大值，避免空数组时报错
-          const values = heatData.map(d => d[2])
-          const maxCount = values.length > 0 ? Math.max(...values) : 0
+  // 计算 visualMap 的最大值
+  const maxCount = heatData.length ? Math.max(...heatData.map(d => d[2])) : 0
 
-          return {
-            title: {
-              text: 'Stop Codon Changes Frequency Heatmap',
-              left: 'center',
-            },
-            tooltip: {
-              trigger: 'item',
-              formatter: params => {
-                const [xIdx, yIdx, v] = params.value as number[]
-                return [
-                  `Original Stop: ${yList[yIdx]}`,
-                  `Mutated Stop: ${xList[xIdx]}`,
-                  `Count: ${v}`,
-                ].join('<br/>')
-              },
-            },
-            xAxis: {
-              type: 'category',
-              data: xList,
-              name: 'Mutated Stop',
-              axisLabel: {
-                rotate: 45,
-                interval: 0,
-              },
-            },
-            yAxis: {
-              type: 'category',
-              data: yList,
-              name: 'Original Stop',
-            },
-            visualMap: {
-              min: 0,
-              max: maxCount,
-              calculable: true,
-              orient: 'horizontal',
-              left: 'center',
-              bottom: '-1%',
-            },
-            series: [
-              {
-                type: 'heatmap',
-                data: heatData,
-                label: { show: false },
-              },
-            ],
-          }
-        })
+  return {
+    title: {
+      text: 'Stop Codon Changes Frequency Heatmap',
+      left: 'center',
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: params => {
+        const [xIdx, yIdx, v] = params.value as number[]
+        return [
+          `Original Codon: ${yList[yIdx]}`,
+          `Mutated Codon: ${xList[xIdx]}`,
+          `Count: ${v}`,
+        ].join('<br/>')
+      },
+    },
+    xAxis: {
+      type: 'category',
+      data: xList,
+      name: 'Mutated Codon',
+      axisLabel: { rotate: 45, interval: 0 },
+    },
+    yAxis: {
+      type: 'category',
+      data: yList,
+      name: 'Original Codon',
+    },
+    visualMap: {
+      min: 0,
+      max: maxCount,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '-1%',
+    },
+    series: [
+      {
+        type: 'heatmap',
+        data: heatData,
+        label: { show: false },
+      },
+    ],
+  }
+})
 
-    return {
+  return {
       columns: displayedColumns,
       filteredDataSource,
       tableSize,
@@ -418,5 +416,24 @@ const treemapOption = computed<EChartsOption>(() => {
      flex: 0 0 auto;
      width: 1000px;
   */
+}
+/* 在你的全局或组件 <style> 中添加 */
+.help-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 50%;
+  background-color: #1976d2;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.help-icon:hover {
+  background-color: #005bb5;
 }
 </style>
