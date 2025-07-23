@@ -168,80 +168,94 @@
           <h3>Engineered site</h3>
           <table>
             <tr class="toggle-row" v-if="Array.isArray(parseSup(record.js_sup_tRNA)) && parseSup(record.js_sup_tRNA).length > 5">
-              <td><b>Sprinzl coordinate:</b>
-      <!-- 切换按钮 -->
-      <div class="toggle-group">
-        <button
-          class="toggle-btn"
-          :class="{ active: showSup }"
-          @click="showSup = true">
-          Sup Numbering
-        </button>
-        <button
-          class="toggle-btn"
-          :class="{ active: !showSup }"
-          @click="showSup = false"
-        >
-          Original Numbering
-        </button>
-      </div>
-              </td>
-<td>      
+              <td>
+                <b>Sprinzl coordinate</b>
+                <!-- 引用徽章 -->
+                <sup
+                  class="cite-badge"
+                  :data-tooltip="CITE_TEXT"
+                  aria-label="Sprinzl & Vassilenko 2005"
+                >
+                  <a
+                    :href="CITE_LINK"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="cite-link"
+                  >1</a>
+                </sup>
 
-      <div
-        class="radial-container"
-        v-if="
-          // 只要 Sup 模式就展示
-          showSup
-          // 或者 Origin 模式下，且 origin 数组长度 ≥ 5 才展示
-          || (!showSup && parseSup(record.js_origin_tRNA).length >= 5)
-        "
-      >
-        <supTrnaRadial
-          v-if="showSup"
-          :data="parseSup(record.js_sup_tRNA)"
-          :width="775"
-          :height="560"
-          :r="12"
-        />
-        <TrnaRadial
-          v-else
-          :data="parseSup(record.js_origin_tRNA)"
-          :width="775"
-          :height="560"
-          :r="12"
-        />
-      </div> 
-      </td></tr>
+                <!-- 切换按钮 -->
+                <div class="toggle-group">
+                  <button
+                    class="toggle-btn"
+                    :class="{ active: showSup }"
+                    @click="showSup = true"
+                  >
+                    Sup Numbering
+                  </button>
+                  <button
+                    class="toggle-btn"
+                    :class="{ active: !showSup }"
+                    @click="showSup = false"
+                  >
+                    Original Numbering
+                  </button>
+                </div>
+              </td>
+              <td>
+                <div
+                  class="radial-container"
+                  v-if="
+                    showSup ||
+                    (!showSup && parseSup(record.js_origin_tRNA).length >= 5)
+                  "
+                >
+                  <supTrnaRadial
+                    v-if="showSup"
+                    :data="parseSup(record.js_sup_tRNA)"
+                    :width="775"
+                    :height="560"
+                    :r="12"
+                  />
+                  <TrnaRadial
+                    v-else
+                    :data="parseSup(record.js_origin_tRNA)"
+                    :width="775"
+                    :height="560"
+                    :r="12"
+                  />
+                </div>
+              </td>
+            </tr>
+
             <tr v-if="Array.isArray(parseSup(record.js_sup_tRNA)) && parseSup(record.js_sup_tRNA).length > 5">
               <td><b>Alignment:</b></td>
               <td>
                 <AlignmentTable
-    :alignmentData="parseSup(record.js_sup_tRNA)" :chunkSize="36" />
+                  :alignmentData="parseSup(record.js_sup_tRNA)"
+                  :chunkSize="36"
+                />
               </td>
             </tr>
 
-    <tr v-if="Array.isArray(parseSup(record.pairwise_score)) && parseSup(record.pairwise_score).length > 5">
-  <td><b>Score:</b></td>
-  <td>
-    <span class="tooltip">
-      {{ record.pairwise_score }}
-      <span class="tooltip-text">
-        Scoring：
-        <ul>
-          <li>match = +2</li>
-          <li>mismatch = −0.5</li>
-          <li>gap open = −2</li>
-          <li>gap extend = −1</li>
-        </ul>
-      </span>
-    </span>
-  </td>
-</tr>
-            <!-- <tr>
-              <td><b>Gaps:</b></td>
-              <td>{{ record.Gaps }}</td>
-            </tr> -->
+            <tr v-if="Array.isArray(parseSup(record.pairwise_score)) && parseSup(record.pairwise_score).length > 5">
+              <td><b>Score:</b></td>
+              <td>
+                <span class="tooltip">
+                  {{ record.pairwise_score }}
+                  <span class="tooltip-text">
+                    Scoring：
+                    <ul>
+                      <li>match = +2</li>
+                      <li>mismatch = −0.5</li>
+                      <li>gap open = −2</li>
+                      <li>gap extend = −1</li>
+                    </ul>
+                  </span>
+                </span>
+              </td>
+            </tr>
+
             <tr v-if="record['Secondary structure']">
               <td><b>Secondary Structure Comparison:</b></td>
               <td>
@@ -284,6 +298,19 @@
 </tr>
             </table>
 
+          <!-- 参考文献区块 -->
+          <div class="references">
+            <strong>References</strong>
+            <ol>
+              <li>
+                Sprinzl M, Vassilenko KS.
+                <em>Compilation of tRNA sequences and sequences of tRNA genes</em>.
+                Nucleic Acids Res. 2005 Jan 1;33(Database issue):D139-40.
+                doi: <a :href="CITE_LINK" target="_blank">10.1093/nar/gki012</a>.
+                PMID: 15608164; PMCID: PMC539966.
+              </li>
+            </ol>
+          </div>
         </div>
 
             <!-- 添加主图展示区域 -->
@@ -408,15 +435,22 @@ export default defineComponent({
       loadCIFFile(record.pdbid, record.ENSURE_ID, sampleIdx);
     }
 
+    // 引用常量
+    const CITE_TEXT =
+      'Sprinzl M, Vassilenko KS. Compilation of tRNA sequences and sequences of tRNA genes.\n'
+      + 'Nucleic Acids Res. 2005 Jan 1;33(Database issue):D139-40.\n'
+      + 'doi: 10.1093/nar/gki012. PMID: 15608164; PMCID: PMC539966';
+    const CITE_LINK = 'https://academic.oup.com/nar/article-lookup/doi/10.1093/nar/gki012';
+
     return {
-      filteredRecords,
-      loading,
       id,
-      TranStructure,
-      showSup,  
+      loading,
+      filteredRecords,
+      parseSup,
+      showSup,
       switchSample,
-      AlignmentTable,
-      parseSup
+      CITE_TEXT,
+      CITE_LINK
     };
   }
 });
@@ -449,10 +483,11 @@ table {
 td {
   border: 1px solid #ddd;
   padding: 8px;
+  vertical-align: top;
 }
 
 a {
-  color: blue;
+  color: #0d6efd;
   text-decoration: underline;
 }
 
@@ -466,38 +501,22 @@ a {
   position: relative;
 }
 
-/* 碱基匹配样式 */
-:deep(.match) { 
-  color: #4CAF50 !important; /* 强制应用绿色 */
-}        
-:deep(.mismatch) { 
-  color: #F44336 !important;  /* 强制应用红色 */
-}     
-:deep(.gap) { 
-  color: #9E9E9E !important; /* 强制应用灰色 */
-}  
+/* —— match/mismatch styles —— */
+:deep(.match) { color: #4caf50 !important; }
+:deep(.mismatch) { color: #f44336 !important; }
+:deep(.gap) { color: #9e9e9e !important; }
+:deep(.match-symbol) { color: #4caf50 !important; }
+:deep(.mismatch-symbol) { color: #f44336 !important; }
+:deep(.gap-symbol) { color: #9e9e9e !important; }
 
-/* 符号行样式 */
-:deep(.match-symbol) { 
-  color: #4CAF50 !important;
-} 
-:deep(.mismatch-symbol) { 
-  color: #F44336 !important;
-}
-:deep(.gap-symbol) { 
-  color: #9E9E9E !important;
-}
-
-/* 按钮组 */
+/* —— Toggle group —— */
 .toggle-group {
-  margin-bottom: 12px;
+  margin: 8px 0 12px;
   display: inline-flex;
   border: 1px solid #ddd;
   border-radius: 4px;
   overflow: hidden;
 }
-
-/* 切换按钮 */
 .toggle-btn {
   padding: 6px 14px;
   border: none;
@@ -524,14 +543,63 @@ a {
   align-items: center;
 }
 
-/* Tooltip 容器 */
+/* ===== Citation badge ===== */
+.cite-badge {
+  position: relative;
+  display: inline-block;
+  background: #1976d2;
+  color: #fff;
+  font-size: 0.72em;
+  width: 1.25em;
+  height: 1.25em;
+  line-height: 1.25em;
+  text-align: center;
+  border-radius: 50%;
+  margin-left: 6px;
+  cursor: help;
+}
+.cite-link {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+/* tooltip */
+.cite-badge:hover::after {
+  content: attr(data-tooltip);
+  white-space: pre-wrap;
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  width: 260px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 20;
+}
+.cite-badge:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 115%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(0,0,0,0.85) transparent transparent transparent;
+  z-index: 21;
+}
+
+/* ===== Tooltip for score ===== */
 .tooltip {
   position: relative;
   display: inline-block;
   cursor: help;
 }
-
-/* 默认隐藏的提示框内容 */
 .tooltip-text {
   visibility: hidden;
   width: 220px;
@@ -543,56 +611,66 @@ a {
   font-size: 12px;
   line-height: 1.4;
   position: absolute;
-  bottom: 125%;      /* 提示框在文字上方 */
+  bottom: 125%;
   left: 50%;
   transform: translateX(-50%);
   opacity: 0;
-  transition: opacity 0.2s ease-in-out;
+  transition: opacity .2s ease-in-out;
   z-index: 10;
 }
-
-/* 箭头小三角 */
 .tooltip-text::after {
   content: "";
   position: absolute;
-  top: 100%;         /* 在提示框底部画三角 */
+  top: 100%;
   left: 50%;
   transform: translateX(-50%);
   border-width: 6px;
   border-style: solid;
-  border-color: rgba(0, 0, 0, 0.75) transparent transparent transparent;
+  border-color: rgba(0,0,0,0.75) transparent transparent transparent;
 }
-
-/* Hover 时显示 */
 .tooltip:hover .tooltip-text {
   visibility: visible;
   opacity: 1;
 }
+
+/* sample switcher */
 .sample-switcher {
   display: inline-flex;
   border: 1px solid #ccc;
   border-radius: 999px;
   overflow: hidden;
   font-size: 0.875rem;
+  margin-bottom: 6px;
 }
-
 .sample-switcher .seg-btn {
   padding: 4px 12px;
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color .2s, color .2s;
   color: #555;
 }
 .sample-switcher .seg-btn:not(:last-child) {
   border-right: 1px solid #ccc;
 }
-
 .sample-switcher .seg-btn:hover {
   background-color: #f0f0f0;
 }
-
 .sample-switcher .seg-btn.active {
   background-color: #1976d2;
   color: #fff;
+}
+
+/* references */
+.references {
+  margin-top: 16px;
+  font-size: 0.9em;
+  color: #555;
+}
+.references ol {
+  padding-left: 20px;
+  margin: 6px 0;
+}
+.references li {
+  margin-bottom: 4px;
 }
 </style>
