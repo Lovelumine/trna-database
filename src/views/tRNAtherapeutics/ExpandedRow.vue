@@ -362,7 +362,7 @@ export default defineComponent({
     console.log("[ExpandedRow] route param id =>", id);
 
     // 加载 CSV 数据的自定义逻辑
-    const { filteredDataSource, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv');
+    const { filteredDataSource, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv');
     const loading = ref(true);
 
     const showSup = ref(true);

@@ -91,7 +91,7 @@ export default {
   setup() {
     // 1. 使用 useTableData 加载 tRNAtherapeutics.csv，只在首次挂载时触发
     const { searchText, filteredDataSource, searchColumn, loadData } =
-      useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv');
+      useTableData('https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv');
 
     const safeRecords = computed(() => filteredDataSource.value ?? []);
 

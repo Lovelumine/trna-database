@@ -4,7 +4,7 @@ import type { STableColumnsType } from '@shene/table';
 export type DataType = { [key: string]: string };
 
 export const allColumns: STableColumnsType<DataType> = [
-  { title: 'Related Disease', dataIndex: 'Related_disease', width: 200, ellipsis: true, key: 'Related_disease', 
+  { title: 'Related Disease', dataIndex: 'Related_disease', width: 150, ellipsis: true, key: 'Related_disease', 
     filter: {
       type: 'multiple',
       list: [
@@ -27,7 +27,7 @@ export const allColumns: STableColumnsType<DataType> = [
   { title: 'PTC Codon', dataIndex: 'PTC_codon', width: 100, ellipsis: true, key: 'PTC_codon', resizable: true },
   { title: 'Delivery as Vector or IVT tRNA', dataIndex: 'Delivery_as_vector_or_IVT_tRNA', width: 200, ellipsis: true, key: 'Delivery_as_vector_or_IVT_tRNA', resizable: true },
   { title: 'AA and Anticodon of Origin tRNA', dataIndex: 'aa_and_anticodon_of_origin_tRNA', width: 250, ellipsis: true, key: 'aa_and_anticodon_of_origin_tRNA', resizable: true },
-  { title: 'AA and Anticodon of sup-tRNA', dataIndex: 'aa_and_anticodon_of_sup-tRNA', width: 250, ellipsis: true, key: 'aa_and_anticodon_of_sup-tRNA', resizable: true },
+  { title: 'AA and Anticodon of sup-tRNA', dataIndex: 'aa_and_anticodon_of_sup-tRNA', width: 220, ellipsis: true, key: 'aa_and_anticodon_of_sup-tRNA', resizable: true },
   { title: 'Rnacentral ID of Origin tRNA', dataIndex: 'rnacentral_ID_of_origin_tRNA', width: 100, ellipsis: true, key: 'rnacentral_ID_of_origin_tRNA', resizable: true },
   { title: 'tRNAscan-SE ID of origin tRNA', dataIndex: 'tRNAscan_SE_ID_of_origin_tRNA', width: 300, ellipsis: true, key: 'tRNAscan_SE_ID_of_origin_tRNA', resizable: true },
   { title: 'Species Source of Origin tRNA', dataIndex: 'Species_source_of_origin_tRNA', width: 250, ellipsis: true, key: 'Species_source_of_origin_tRNA', resizable: true ,customRender: ({ text }) => <em>{text}</em>,},
