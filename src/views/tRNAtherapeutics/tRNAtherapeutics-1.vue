@@ -125,7 +125,7 @@ export default defineComponent({
   setup(props) {
     // 只在首次挂载时加载 CSV，一旦加载完成就不再重复 fetch
     const { searchText, filteredDataSource, searchColumn, loadData } =
-      useTableData('https://minio.lumoxuan.cn/ensure/tRNAtherapeutics.csv');
+      useTableData('https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv');
 
     const tableSize = ref<'small' | 'default' | 'large'>('default');
     const selectedColumns = ref<string[]>([
@@ -134,6 +134,7 @@ export default defineComponent({
       'aa_and_anticodon_of_sup-tRNA',
       'Reaction_system',
       'pre_ENSURE_ID',
+      'Reading_through_efficiency'
     ]);
 
     // 控制进度条显示，仅在第一次加载时 true

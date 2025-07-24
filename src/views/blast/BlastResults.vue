@@ -144,7 +144,7 @@ const fileToDbMap: Record<string, string> = {
   'Coding Variation in Genetic Disease.csv': 'Genetic Disease',
   'Nonsense Sup-RNA.csv': 'Nonsense Suppressors',
   'Frameshift sup-tRNA.csv': 'Frameshift sup-tRNA',
-  'tRNAtherapeutics.csv': 'Engineered Sup-tRNA',
+  'Engineered Sup-tRNA.csv': 'Engineered Sup-tRNA',
   'Function and Modification.csv': 'Function & Modification',
   'aaRS Recognition.csv': 'aaRS Recognition'
 };
