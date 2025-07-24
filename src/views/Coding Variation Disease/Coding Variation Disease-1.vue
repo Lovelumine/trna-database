@@ -88,6 +88,14 @@
         <h3>③ Stop Codon Change Heatmap（Nonsense）</h3>
         <VChart :option="heatmapOption" autoresize style="height:450px;" />
       </div>
+            <div class="chart-col">
+        <h3>④ Stop Codon Change Heatmap（Missense）</h3>
+        <VChart :option="heatmapOptionMissense" autoresize style="height:450px;" />
+      </div>
+            <div class="chart-col">
+        <h3>⑤ Stop Codon Change Heatmap（Frameshift）</h3>
+        <VChart :option="heatmapOptionFrameshift" autoresize style="height:450px;" />
+      </div>
     </div>
   </section>
 </template>
@@ -267,7 +275,7 @@ const treemapOption = computed<EChartsOption>(() => {
     });
 
     // —— 3. Heatmap 配置
-    const heatmapOption = computed<EChartsOption>(() => {
+  const heatmapOption = computed<EChartsOption>(() => {
   // 原始 stop vs 突变 stop 频次统计，只保留 nonsense
   const combo: Record<string, Record<string, number>> = {}
   const originalStops = new Set<string>()
@@ -351,6 +359,172 @@ const treemapOption = computed<EChartsOption>(() => {
   }
 })
 
+  // —— 4. HeatmapFrameshift 配置
+  const heatmapOptionFrameshift = computed<EChartsOption>(() => {
+  // 原始 stop vs 突变 stop 频次统计，只保留 nonsense
+  const combo: Record<string, Record<string, number>> = {}
+  const originalStops = new Set<string>()
+  const mutatedStops = new Set<string>()
+
+  filteredDataSource.value
+    .filter((row: any) => row.mutationType.toLowerCase() === 'frameshift')
+    .forEach((row: any) => {
+      const codon = String(row['Codon Change'] || '').trim()
+      const [orig = '', mut = ''] = codon.split('-')
+      if (!orig || !mut) return
+
+      // 收集原始密码子
+      originalStops.add(orig)
+      // 收集不包含 "TGT" 的突变密码子
+      mutatedStops.add(mut)
+
+      combo[orig] = combo[orig] || {}
+      combo[orig][mut] = (combo[orig][mut] || 0) + 1
+    })
+
+  // 排序确保渲染顺序稳定
+  const yList = Array.from(originalStops).sort()
+  const xList = Array.from(mutatedStops).sort()
+
+  // 构造 heatmap 数据 [xIndex, yIndex, value]
+  const heatData: [number, number, number][] = []
+  yList.forEach((o, i) => {
+    xList.forEach((m, j) => {
+      heatData.push([j, i, combo[o]?.[m] || 0])
+    })
+  })
+
+  // 计算 visualMap 的最大值
+  const maxCount = heatData.length ? Math.max(...heatData.map(d => d[2])) : 0
+
+  return {
+    title: {
+      text: 'Stop Codon Changes Frequency Heatmap',
+      left: 'center',
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: params => {
+        const [xIdx, yIdx, v] = params.value as number[]
+        return [
+          `Original Codon: ${yList[yIdx]}`,
+          `Mutated Codon: ${xList[xIdx]}`,
+          `Count: ${v}`,
+        ].join('<br/>')
+      },
+    },
+    xAxis: {
+      type: 'category',
+      data: xList,
+      name: 'Mutated Codon',
+      axisLabel: { rotate: 45, interval: 0 },
+    },
+    yAxis: {
+      type: 'category',
+      data: yList,
+      name: 'Original Codon',
+    },
+    visualMap: {
+      min: 0,
+      max: maxCount,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '-1%',
+    },
+    series: [
+      {
+        type: 'heatmap',
+        data: heatData,
+        label: { show: false },
+      },
+    ],
+  }
+})
+
+    // —— 5. HeatmapMissense 配置
+  const heatmapOptionMissense = computed<EChartsOption>(() => {
+  // 原始 stop vs 突变 stop 频次统计，只保留 nonsense
+  const combo: Record<string, Record<string, number>> = {}
+  const originalStops = new Set<string>()
+  const mutatedStops = new Set<string>()
+
+  filteredDataSource.value
+    .filter((row: any) => row.mutationType.toLowerCase() === 'missense')
+    .forEach((row: any) => {
+      const codon = String(row['Codon Change'] || '').trim()
+      const [orig = '', mut = ''] = codon.split('-')
+      if (!orig || !mut) return
+
+      // 收集原始密码子
+      originalStops.add(orig)
+      // 收集不包含 "TGT" 的突变密码子
+      mutatedStops.add(mut)
+
+      combo[orig] = combo[orig] || {}
+      combo[orig][mut] = (combo[orig][mut] || 0) + 1
+    })
+
+  // 排序确保渲染顺序稳定
+  const yList = Array.from(originalStops).sort()
+  const xList = Array.from(mutatedStops).sort()
+
+  // 构造 heatmap 数据 [xIndex, yIndex, value]
+  const heatData: [number, number, number][] = []
+  yList.forEach((o, i) => {
+    xList.forEach((m, j) => {
+      heatData.push([j, i, combo[o]?.[m] || 0])
+    })
+  })
+
+  // 计算 visualMap 的最大值
+  const maxCount = heatData.length ? Math.max(...heatData.map(d => d[2])) : 0
+
+  return {
+    title: {
+      text: 'Stop Codon Changes Frequency Heatmap',
+      left: 'center',
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: params => {
+        const [xIdx, yIdx, v] = params.value as number[]
+        return [
+          `Original Codon: ${yList[yIdx]}`,
+          `Mutated Codon: ${xList[xIdx]}`,
+          `Count: ${v}`,
+        ].join('<br/>')
+      },
+    },
+    xAxis: {
+      type: 'category',
+      data: xList,
+      name: 'Mutated Codon',
+      axisLabel: { rotate: 45, interval: 0 },
+    },
+    yAxis: {
+      type: 'category',
+      data: yList,
+      name: 'Original Codon',
+    },
+    visualMap: {
+      min: 0,
+      max: maxCount,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '-1%',
+    },
+    series: [
+      {
+        type: 'heatmap',
+        data: heatData,
+        label: { show: false },
+      },
+    ],
+  }
+})
+
   return {
       columns: displayedColumns,
       filteredDataSource,
@@ -366,6 +540,8 @@ const treemapOption = computed<EChartsOption>(() => {
       stackedBarOption,
       heatmapOption,
       pagination,
+      heatmapOptionMissense,
+      heatmapOptionFrameshift
     };
   }
 });
