@@ -129,7 +129,7 @@ export default defineComponent({
 
     const tableSize = ref<'small' | 'default' | 'large'>('default');
     const selectedColumns = ref<string[]>([
-      'Related_disease',
+      'PTC_gene',
       'Species_source_of_origin_tRNA',
       'aa_and_anticodon_of_sup-tRNA',
       'Reaction_system',
