@@ -39,7 +39,7 @@ export const allColumns: STableColumnsType<DataType> = [
   { title: 'Engineered aaRS', dataIndex: 'Engineered_aaRS', width: 150, ellipsis: true, key: 'Engineered_aaRS', resizable: true },
   { title: 'Reading Through Efficiency', dataIndex: 'Reading_through_efficiency', width: 200, ellipsis: true, key: 'Reading_through_efficiency', resizable: true },
   { title: 'Measuring of Efficiency', dataIndex: 'Measuring_of_efficiency', width: 200, ellipsis: true, key: 'Measuring_of_efficiency', resizable: true },
-  { title: 'Reaction_system', dataIndex: 'Reaction_system', width: 150, ellipsis: true, key: 'Reaction_system', resizable: true },
+  { title: 'Reaction system', dataIndex: 'Reaction_system', width: 150, ellipsis: true, key: 'Reaction_system', resizable: true ,customRender: ({ text }) => <em>{text}</em>,},
   { title: 'Safety', dataIndex: 'Safety', width: 100, ellipsis: true, key: 'Safety', resizable: true },
   { title: 'Secondary structure', dataIndex: 'Secondary structure', width: 150, ellipsis: true, key: 'Secondary structure', resizable: true },
   { title: 'Secondary structure of sup-tRNA', dataIndex: 'Secondary structure of sup-trna', width: 150, ellipsis: true, key: 'Secondary structure of sup-trna', resizable: true },

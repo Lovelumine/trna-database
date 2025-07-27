@@ -1,8 +1,8 @@
 <template>
   <div class="site--main">
-    <!-- 顶部线性进度条，仅在数据首次加载时显示（无限循环动效） -->
+    <!-- 线性进度条：supData 加载时显示 -->
     <el-progress
-      v-if="loading"
+      v-if="loadingSup"
       :percentage="100"
       :indeterminate="true"
       :stroke-width="4"
@@ -24,7 +24,7 @@
             placeholder="Select column to search"
             class="search-column-select"
           >
-            <el-option :key="'all'" :label="'All columns'" :value="''" />
+            <el-option key="all" label="All columns" :value="''" />
             <el-option
               v-for="column in allColumns"
               :key="column.key"
@@ -99,18 +99,17 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, computed } from 'vue';
 import { ElTag, ElSpace, ElSelect, ElOption, ElProgress } from 'element-plus';
 import { STableProvider } from '@shene/table';
-import { useTableData } from '../../assets/js/useTableData.js';
 import { allColumns } from './columns';
 import TranStructure from '@/components/TranStructure.vue';
-
 import en from '@shene/table/dist/locale/en';
+
 const locale = ref(en);
 
 export default defineComponent({
-  name: 'TRNATherapeutics-1',
+  name: 'tRNAtherapeutics1',
   components: {
     ElTag,
     ElSpace,
@@ -118,16 +117,18 @@ export default defineComponent({
     ElOption,
     ElProgress,
     TranStructure,
+    STableProvider,
   },
   props: {
-    selectedPmids: { type: Array, default: () => [] },
+    selectedPmids:  { type: Array as () => string[], required: true },
+    supData:        { type: Array as () => any[], required: true },
+    loadingSup:     { type: Boolean, required: true },
   },
   setup(props) {
-    // 只在首次挂载时加载 CSV，一旦加载完成就不再重复 fetch
-    const { searchText, filteredDataSource, searchColumn, loadData } =
-      useTableData('https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv');
-
-    const tableSize = ref<'small' | 'default' | 'large'>('default');
+    // 本地搜索、大小、列控制
+    const searchText      = ref('');
+    const searchColumn    = ref('');
+    const tableSize       = ref<'small'|'default'|'large'>('default');
     const selectedColumns = ref<string[]>([
       'PTC_gene',
       'Species_source_of_origin_tRNA',
@@ -137,128 +138,85 @@ export default defineComponent({
       'Reading_through_efficiency'
     ]);
 
-    // 控制进度条显示，仅在第一次加载时 true
-    const loading = ref(true);
-
     // 计算要显示的列
-    const displayedColumns = computed(() =>
-      allColumns.filter((col) =>
-        selectedColumns.value.includes(col.key as string)
-      )
+    const columns = computed(() =>
+      allColumns.filter(col => selectedColumns.value.includes(col.key as string))
     );
 
-    // 根据父组件传来的 PMIDs 过滤数据
-    const filteredDataSourceWithPmid = computed(() => {
-      if (props.selectedPmids.length > 0) {
-        return filteredDataSource.value.filter((record) =>
-          props.selectedPmids.includes(String(record.PMID))
-        );
+    // 根据 PMIDs + 本地搜索 过滤 supData
+    const filteredDataSource = computed(() => {
+      let data = props.supData;
+      if (props.selectedPmids.length) {
+        data = data.filter(r => props.selectedPmids.includes(String(r.PMID)));
       }
-      return filteredDataSource.value;
-    });
-
-    // 首次挂载时调用一次 loadData，并关闭 loading
-    onMounted(async () => {
-      loading.value = true;
-      await loadData();
-      loading.value = false;
+      if (searchText.value) {
+        data = data.filter(r => {
+          const hay = (searchColumn.value
+            ? String(r[searchColumn.value])
+            : Object.values(r).join(' ')
+          ).toLowerCase();
+          return hay.includes(searchText.value.toLowerCase());
+        });
+      }
+      return data;
     });
 
     return {
-      columns: displayedColumns,
-      filteredDataSource: filteredDataSourceWithPmid,
+      locale,
+      columns,
+      filteredDataSource,
       tableSize,
       searchText,
       searchColumn,
-      locale,
       selectedColumns,
-      allColumns,
-      loading,
-      TranStructure,
+      allColumns
     };
-  },
+  }
 });
 </script>
 
 <style scoped>
 .site--main {
   padding: 20px;
-  position: relative;
 }
-
 .content-wrapper {
   display: flex;
-  flex-direction: column;}
-
+  flex-direction: column;
+}
 .top-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
-
 .search-box {
   flex-grow: 1;
   margin-right: 10px;
 }
-
 .size-controls,
 .column-controls {
   display: flex;
   align-items: center;
 }
-
 .column-select {
   margin-left: 10px;
-  width: 200px; /* 设置选择框的宽度 */
+  width: 200px;
 }
-
 .search-input {
   padding: 10px 20px;
   font-size: 16px;
   border: 2px solid #007cf07d;
   border-radius: 25px;
-  width: 150px; /* 设置初始宽度 */
-  transition: all 0.4s ease-in-out; /* 平滑过渡效果 */
+  width: 150px;
+  transition: all 0.4s ease-in-out;
 }
-
 .search-input:focus {
-  width: 300px; /* 聚焦时扩展宽度 */
+  width: 300px;
   outline: none;
   border-color: #0056b3;
 }
-
 .search-column-select {
-  margin-left: 10px; /* 与搜索框之间的间距 */
-  width: 150px; /* 设置选择框的宽度 */
-}
-
-.expanded-row {
-  border: 1px solid #ccc;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.section {
-  margin-bottom: 16px;
-}
-
-.section h2 {
-  margin-bottom: 8px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-td {
-  border: 1px solid #ddd;
-  padding: 8px;
-}
-
-a {
-  color: #409eff;
-  text-decoration: underline;
+  margin-left: 10px;
+  width: 150px;
 }
 </style>
