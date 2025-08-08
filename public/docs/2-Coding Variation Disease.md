@@ -1,8 +1,8 @@
-### Coding Variation Disease
+### Genetic Disorders
 
  There are many gene mutations in human genes: single base substitutions can cause nonsense mutations, missense mutations; insertion or deletion of bases can cause frameshift mutations\. These mutations can cause many diseases\.  This section collects data on diseases caused by the above three mutations, which are divided into two categories: genetic diseases and cancers, and introduces the characteristics of the diseases\.
 
-#### 2.1 Coding Variation in Genetic Disease
+#### 2.1 Coding Variation in Disease
 
 The module integrates the data of genetic diseases caused by gene nonsense mutations, missense mutations, and frameshift mutations from the HGV database, including 68 nonsense mutations, 214 missense mutations, and 98 frameshift mutations\. In addition, about 200 kinds of disease information are integrated, 201 genes are involved, and 16 kinds of information such as Mutation Site, Original Codon and Amino Acid, Mutated Codon and Amino Acid, and Genome Position are summarized\. Users can gain insight into genetic disease samples and conduct research related to tRNA therapy\.
 

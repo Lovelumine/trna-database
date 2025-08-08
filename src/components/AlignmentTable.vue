@@ -20,7 +20,7 @@
           </td>
         </tr>
         <tr>
-          <th class="label-cell">Sup-tRNA</th>
+          <th class="label-cell">sup-tRNA</th>
           <td
             v-for="item in chunk"
             :key="item.id + '_sup'"

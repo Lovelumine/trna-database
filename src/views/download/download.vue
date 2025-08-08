@@ -31,11 +31,11 @@ import 'element-plus/dist/index.css';
 export default {
   setup() {
     const downloadData = ref([
-      { category: 'Coding Variation Disease', name: 'Coding Variation in Cancer', link: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Cancer.csv' },
-      { category: 'Coding Variation Disease', name: 'Coding Variation in Genetic Disease', link: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv' },
-      { category: 'Natural Sup-tRNA', name: 'Nonsense Sup-RNA', link: 'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv' },
-      { category: 'Natural Sup-tRNA', name: 'Frameshift sup-tRNA', link: 'https://minio.lumoxuan.cn/ensure/Frameshift sup-tRNA.csv' },
-      { category: 'Engineered Sup-tRNA', name: 'Engineered Sup-tRNA', link: 'https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv' },
+      { category: 'Genetic Disorders', name: 'Coding Variation in Cancer', link: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Cancer.csv' },
+      { category: 'Genetic Disorders', name: 'Coding Variation in Disease', link: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv' },
+      { category: 'Natural sup-tRNA', name: 'Nonsense Sup-RNA', link: 'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv' },
+      { category: 'Natural sup-tRNA', name: 'Frameshift sup-tRNA', link: 'https://minio.lumoxuan.cn/ensure/Frameshift sup-tRNA.csv' },
+      { category: 'Engineered sup-tRNA', name: 'Engineered sup-tRNA', link: 'https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv' },
       { category: 'tRNA elements', name: 'Function and Modification', link: 'https://minio.lumoxuan.cn/ensure/Function and Modification.csv' },
       { category: 'tRNA elements', name: 'aaRS Recognition', link: 'https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv' }
     ]);

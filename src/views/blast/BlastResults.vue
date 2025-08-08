@@ -28,7 +28,10 @@
                 v-for="(ch, i) in parseAlignment(record.alignment).targetChars"
                 :key="i"
               >
-                <span :class="cellClass(i, record.alignment)">{{ ch }}</span>
+                <span
+                  :class="cellClass(i, record.alignment)"
+                  class="char-cell"
+                >{{ ch }}</span>
               </template>
             </div>
             <div class="align-row">
@@ -36,7 +39,10 @@
                 v-for="(ch, i) in parseAlignment(record.alignment).queryChars"
                 :key="i"
               >
-                <span :class="cellClass(i, record.alignment)">{{ ch }}</span>
+                <span
+                  :class="cellClass(i, record.alignment)"
+                  class="char-cell"
+                >{{ ch }}</span>
               </template>
             </div>
           </div>
@@ -49,19 +55,20 @@
                   v-if="filterRow(entry[0], entry[1])"
                   :class="{ highlighted: entry[0] === record.column }"
                 >
-                  <td class="key-cell">{{ cleanString(entry[0]) }}</td>
+                  <!-- 这里将下划线替换为空格 -->
+                  <td class="key-cell">{{ formatKey(entry[0]) }}</td>
                   <td class="val-cell">
-                    <!-- 图片显示 -->
-                    <template v-if="cleanString(entry[0]) === 'pictureid'">
+                    <template v-if="cleanString(entry[0]) === 'pairwise_alignment'">
+                      <pre class="pairwise">{{ stripScore(cleanString(entry[1])) }}</pre>
+                    </template>
+                    <template v-else-if="cleanString(entry[0]) === 'pictureid'">
                       <button @click="showLightbox(cleanString(entry[1]))">
                         View Image
                       </button>
                     </template>
-                    <!-- Species 名称斜体 -->
                     <template v-else-if="/specie/i.test(cleanString(entry[0]))">
                       <i>{{ cleanString(entry[1]) }}</i>
                     </template>
-                    <!-- 其他情况清洗显示 -->
                     <template v-else>
                       {{ cleanString(entry[1]) }}
                     </template>
@@ -114,13 +121,11 @@ const props = defineProps<{
   loading: boolean;
 }>();
 
-// 国际化 & 分页
 const locale = ref(en);
 watch(() => props.results.length, len => {
   pagination.value.total = len;
 });
 
-// 列定义
 const columns = [
   { title: 'Database', dataIndex: 'file', key: 'file', width: 120 },
   { title: 'Row', dataIndex: 'row', key: 'row', width: 60 },
@@ -128,23 +133,20 @@ const columns = [
   { title: 'Score', dataIndex: 'score', key: 'score', width: 80, sorter: (a, b) => a.score - b.score }
 ] as STableColumnsType<any>;
 
-// 排除的字段名列表
 const excludeKeys = [
   'js_origin_tRNA',
   'js_sup_tRNA',
   'Unnamed: 17',
   'incidenceRate',
   'PMID of references'
-  // 可继续添加其它要排除的字段
 ];
 
-// 文件名到数据库名的映射
 const fileToDbMap: Record<string, string> = {
-  'Coding Variation in Cancer.csv': 'Cancer',
-  'Coding Variation in Genetic Disease.csv': 'Genetic Disease',
+  'Coding Variation in Cancer.csv': 'Coding Variation in Cancer',
+  'Coding Variation in Genetic Disease.csv': 'Coding Variation in Disease',
   'Nonsense Sup-RNA.csv': 'Nonsense Suppressors',
   'Frameshift sup-tRNA.csv': 'Frameshift sup-tRNA',
-  'Engineered Sup-tRNA.csv': 'Engineered Sup-tRNA',
+  'Engineered Sup-tRNA.csv': 'Engineered sup-tRNA',
   'Function and Modification.csv': 'Function & Modification',
   'aaRS Recognition.csv': 'aaRS Recognition'
 };
@@ -153,13 +155,25 @@ function mapFileToDb(file: string): string {
   return fileToDbMap[clean] || clean;
 }
 
-// 清理字符串，去除 BOM 和特殊字符
+
+// 去掉 pairwise_alignment 中的 Score= 行
+function stripScore(text: string): string {
+  return text
+    .split('\n')
+    .filter(line => !line.trim().startsWith('Score='))
+    .join('\n');
+}
+
 function cleanString(x: unknown): string {
   if (typeof x !== 'string') return String(x);
   return x.replace(/^\ufeff/, '').replace(/ï»¿/g, '');
 }
 
-// 过滤空值和排除字段
+// 新增：替换下划线为普通空格
+function formatKey(key: string): string {
+  return cleanString(key).replace(/_/g, ' ');
+}
+
 function filterRow(key: unknown, val: unknown): boolean {
   const k = cleanString(key);
   if (excludeKeys.includes(k)) return false;
@@ -167,26 +181,39 @@ function filterRow(key: unknown, val: unknown): boolean {
   return v.trim().length > 0;
 }
 
-// 解析 alignment，提取 target/query 行和匹配符
 function parseAlignment(text: string) {
-  const real = text.replace(/\\n/g, '\n');
+  const real = text.replace(/\\n/g, '\n').trim();
   const parts = real.split('\n');
-  const targetLine = parts[0].replace(/^target\s*/, '');
+
+  const targetLine = (parts[0] || '')
+    .replace(/^target(?:\s+target)?\s*/, 'target ')
+    .replace(/target\s+/, 'target ');
   const matchLine = parts[1] || '';
-  const queryLine = (parts[2] || '').replace(/^query\s*/, '');
+  const queryLine = (parts[2] || '')
+    .replace(/^query(?:\s+query)?\s*/, 'query  ')
+    .replace(/query\s+/, 'query  ');
+
+  const tArr = Array.from(targetLine);
+  const qArr = Array.from(queryLine);
+  const maxLen = Math.max(tArr.length, qArr.length);
+
+  while (tArr.length < maxLen) tArr.push(' ');
+  while (qArr.length < maxLen) qArr.push(' ');
+
+  const mLine = matchLine.padEnd(maxLen, ' ');
+
   return {
-    targetChars: Array.from(targetLine),
-    matchLine,
-    queryChars: Array.from(queryLine)
+    targetChars: tArr,
+    matchLine: mLine,
+    queryChars: qArr
   };
 }
 
-// 根据 index 判断 cell 类型
 function cellClass(idx: number, text: string) {
   const { targetChars, matchLine, queryChars } = parseAlignment(text);
   if (matchLine[idx] === '|') return 'match';
-  if (targetChars[idx] === '-') return 'insertion';
-  if (queryChars[idx] === '-') return 'deletion';
+  if (targetChars[idx] === '-')  return 'insertion';
+  if (queryChars[idx] === '-')   return 'deletion';
   return 'mismatch';
 }
 </script>
@@ -200,6 +227,13 @@ function cellClass(idx: number, text: string) {
   margin-bottom: 0.6rem;
   font-family: monospace;
   white-space: nowrap;
+}
+.char-cell {
+  display: inline-block;
+  width: 0.6em;
+  text-align: center;
+  margin: 0;
+  padding: 0;
 }
 .align-row {
   line-height: 1.2;
@@ -241,5 +275,16 @@ function cellClass(idx: number, text: string) {
   text-align: center;
   padding: 1rem;
   color: #666;
+}
+
+/* pairwise_alignment 专用样式 */
+.pairwise {
+  font-family: monospace;
+  white-space: pre;
+  margin: 0;
+  padding: 0.5em;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  overflow: auto;
 }
 </style>

@@ -13,10 +13,10 @@
     
     <h2>Key Features</h2>
     
-    <h3><a :href="geneticVariationUrl">Genetic Variation Database</a></h3>
-    <p>Explore variations in genetic diseases and cancers, including missense, nonsense, and frameshift mutations, with potential sup-tRNA therapy applications.</p>
+    <h3><a :href="geneticVariationUrl">Genetic Disorders Database</a></h3>
+    <p>Explore conding variation in diseases and cancers, including missense, nonsense, and frameshift mutations, with potential sup-tRNA therapy applications.</p>
     
-    <h3><a :href="naturalSupTRNACatalogUrl">Natural Sup-tRNAs Catalog</a></h3>
+    <h3><a :href="naturalSupTRNACatalogUrl">Natural sup-tRNAs Catalog</a></h3>
     <p>Discover detailed information on natural sup-tRNAs, including their species of origin, sequences, and structures.</p>
     
     <h3><a :href="tRNATherapeuticsDataUrl">Engineered sup-tRNA Information</a></h3>

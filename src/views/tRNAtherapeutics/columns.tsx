@@ -33,7 +33,7 @@ export const allColumns: STableColumnsType<DataType> = [
   { title: 'Species Source of Origin tRNA', dataIndex: 'Species_source_of_origin_tRNA', width: 250, ellipsis: true, key: 'Species_source_of_origin_tRNA', resizable: true ,customRender: ({ text }) => <em>{text}</em>,},
   { title: 'ENSURE ID', dataIndex: 'ENSURE_ID', width: 300, ellipsis: true, key: 'ENSURE_ID', resizable: true },
   { title: 'Sequence of Origin tRNA', dataIndex: 'Sequence_of_origin_tRNA', width: 300, ellipsis: true, key: 'Sequence_of_origin_tRNA', resizable: true },
-  { title: 'Sequence of Sup-tRNA', dataIndex: 'Sequence_of_sup-tRNA', width: 350, ellipsis: true, key: 'Sequence_of_sup-tRNA', resizable: true },
+  { title: 'Sequence of sup-tRNA', dataIndex: 'Sequence_of_sup-tRNA', width: 350, ellipsis: true, key: 'Sequence_of_sup-tRNA', resizable: true },
   { title: 'sup-tRNA Gene', dataIndex: 'sup-tRNA_gene', width: 300, ellipsis: true, key: 'sup-tRNA_gene', resizable: true },
   { title: 'Modification', dataIndex: 'Modification', width: 300, ellipsis: true, key: 'Modification', resizable: true },
   { title: 'Engineered aaRS', dataIndex: 'Engineered_aaRS', width: 150, ellipsis: true, key: 'Engineered_aaRS', resizable: true },

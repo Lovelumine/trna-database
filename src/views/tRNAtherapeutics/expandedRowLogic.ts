@@ -25,7 +25,7 @@ export function formatAlignment(alignment?: string): string {
 
   const labelWidth = 12;
   const originLabel = "origin-tRNA ".padEnd(labelWidth, ' ');
-  const supLabel    = "Sup-tRNA    ".padEnd(labelWidth, ' ');
+  const supLabel    = "sup-tRNA    ".padEnd(labelWidth, ' ');
   const blankLabel  = ' '.repeat(labelWidth);
 
   let html = '';

@@ -6,10 +6,10 @@
     <nav class="site--header__center">
       <ul class="topNav-items">
         <li><router-link to="/" active-class="active-link">Home</router-link></li>
-        <li><router-link to="/CodingVariationDisease" active-class="active-link">Coding Variation Disease</router-link></li>
-        <li><router-link to="/naturalsuptRNA" active-class="active-link">Natural Sup-tRNA</router-link></li>
-        <li><router-link to="/tRNAtherapeutics" active-class="active-link">Engineered Sup-tRNA</router-link></li>
-        <li><router-link to="/tRNAElements" active-class="active-link">tRNA elements</router-link></li>
+        <li><router-link to="/CodingVariationDisease" active-class="active-link">Genetic Disorders</router-link></li>
+        <li><router-link to="/naturalsuptRNA" active-class="active-link">Natural sup-tRNA</router-link></li>
+        <li><router-link to="/tRNAtherapeutics" active-class="active-link">Engineered sup-tRNA</router-link></li>
+        <li><router-link to="/tRNAElements" active-class="active-link">tRNA Elements</router-link></li>
         <li><router-link to="/blast" active-class="active-link">Blast Search</router-link></li>
         <li><router-link to="/AIyingying" active-class="active-link">AI Assistant</router-link></li>
         <li class="mobile-only"><router-link to="/download" active-class="active-link">Download</router-link></li>
