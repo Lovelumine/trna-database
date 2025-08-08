@@ -54,7 +54,7 @@
           </table>
         </div>
         <div class="section">
-          <h2>Engineered Sup-tRNA</h2>
+          <h2>Engineered sup-tRNA</h2>
           <table>
             <tr>
               <td><b>ENSURE ID of sup-tRNA:</b></td>
@@ -121,7 +121,7 @@
               <td style="font-family: monospace;">{{ record['sup-tRNA_gene'] }}</td>
             </tr>
             <tr>
-              <td><b>Sup-tRNA sequence:</b></td>
+              <td><b>sup-tRNA sequence:</b></td>
               <td style="font-family: monospace;">{{ record['Sequence_of_sup-tRNA'] }}</td>
             </tr>
             <tr>

@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Coding Variation Disease</h2>
+    <h2>Genetic Disorders</h2>
 
     <div class="table-section">
       <CodingVariationDisease1 />

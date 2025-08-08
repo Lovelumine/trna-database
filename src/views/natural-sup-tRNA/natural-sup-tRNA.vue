@@ -1,6 +1,6 @@
 <template>
     <div class="site--main">
-      <h2>Natural Sup-tRNA</h2>
+      <h2>Natural sup-tRNA</h2>
         <div class="table-section">
         <naturalsuptRNA1 />
       </div>

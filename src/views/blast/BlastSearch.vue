@@ -128,10 +128,10 @@ const DEFAULT_GAP_OPEN = -2.0;
 const DEFAULT_GAP_EXTEND = -1.0;
 const DEFAULT_DBS = [
   'Coding Variation in Cancer',
-  'Coding Variation in Genetic Disease',
+  'Coding Variation in Disease',
   'Nonsense Sup-RNA',
   'Frameshift sup-tRNA',
-  'Engineered Sup-tRNA',
+  'Engineered sup-tRNA',
   'Function and Modification',
   'aaRS Recognition'
 ];
@@ -151,10 +151,10 @@ function resetDefaults() {
 // 数据库 Pills
 const databases = [
   { name: 'Coding Variation in Cancer', url: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Cancer.csv' },
-  { name: 'Coding Variation in Genetic Disease', url: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv' },
+  { name: 'Coding Variation in Disease', url: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv' },
   { name: 'Nonsense Sup-RNA', url: 'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv' },
   { name: 'Frameshift sup-tRNA', url: 'https://minio.lumoxuan.cn/ensure/Frameshift sup-tRNA.csv' },
-  { name: 'Engineered Sup-tRNA', url: 'https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv' },
+  { name: 'Engineered sup-tRNA', url: 'https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv' },
   { name: 'Function and Modification', url: 'https://minio.lumoxuan.cn/ensure/Function and Modification.csv' },
   { name: 'aaRS Recognition', url: 'https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv' },
 ];

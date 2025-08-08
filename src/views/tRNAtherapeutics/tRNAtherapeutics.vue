@@ -7,7 +7,7 @@
 
     <!-- 2. PMID 加载完成后，展示 PMID 表格 -->
     <div v-else class="table-section">
-      <h2>Engineered Sup-tRNA</h2>
+      <h2>Engineered sup-tRNA</h2>
       <div class="top-controls">
         <div class="search-box">
           <input v-model="searchText" placeholder="Enter search content" class="search-input" />
