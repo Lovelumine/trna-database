@@ -1,4 +1,4 @@
-### tRNA elements
+### tRNA Elements
 
 tRNAs perform different physiological functions, in which tRNA modifications, bases at key sites, and other proxies play important roles in interactions with EF\-Tu, the aminoacyl tRNA synthetase\(aaRS\), and in specific physiological functions\. This section contains three parts: tRNA Function and Modification; aaRS Recognition; EF\-Tu, A\-site, P\-site and E\-site recognition\.
 
