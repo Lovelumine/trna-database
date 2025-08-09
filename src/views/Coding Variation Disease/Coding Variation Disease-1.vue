@@ -29,7 +29,7 @@
           <el-option
             v-for="column in allColumns"
             :key="column.key"
-            :label="column.title as string"
+            :label="typeof column.title === 'string' ? column.title : String(column.key)"
             :value="column.key"
           />
         </el-select>

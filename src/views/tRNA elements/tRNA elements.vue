@@ -1,6 +1,6 @@
 <template>
     <div class="site--main">
-      <h2>tRNA elements</h2>
+      <h2>tRNA Elements</h2>
 
 
       <h2>tRNA Binding Site of Recognition</h2>
