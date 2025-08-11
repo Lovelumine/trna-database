@@ -10,7 +10,7 @@ ENSURE is an encyclopedia of suppressed tRNA therapeutics equipped with an artif
 
 The current version of ENSURE contains four sections:
 
-1. Genetic Disorders: Coding Variation in Disease provides data of 200 genetic diseases caused by 68 nonsense mutations, 214 missense mutations, and 98 frameshift mutations involving 201 genes from HGV database\. In addition, the Coding Variation in Cancer contains lots of cancers caused by nonsense, missense and frameshift mutations from the COSMICS database, quantity reached respectively 361, 14982 and 882, covering 765 diseases and 7211 genes\.
+1. Mutation-induced Disease: Coding Variation in Disease provides data of 200 genetic diseases caused by 68 nonsense mutations, 214 missense mutations, and 98 frameshift mutations involving 201 genes from HGV database\. In addition, the Coding Variation in Cancer contains lots of cancers caused by nonsense, missense and frameshift mutations from the COSMICS database, quantity reached respectively 361, 14982 and 882, covering 765 diseases and 7211 genes\.
 
 2. Natural sup\-tRNAs: Natural sup\-tRNAs are included and categorized into two modules according to the type of suppression: nonsense mutation suppressor tRNAs \(Nonsense Sup\-tRNAs\) and frameshift mutation suppressor tRNAs \(Frameshift Sup\-tRNAs\)\. The Nonsense Sup\-tRNA module contains information on 50 natural sup\-tRNAs from a variety of species, including humans, plants, and microorganisms; the Frameshift Sup\-tRNA module integrates 100 publications from the PubMed database, and presents sequence information on 50 frameshift sup\-tRNAs\.
 

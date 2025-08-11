@@ -10,9 +10,9 @@ tRNA Function and Modification section that integrates information on more than 
 
 This part summarizes 105 key sites and bases for tRNA recognition of aminoacyl tRNA synthetase by analyzing more than 100 literatures, covering 22 kinds of tRNAs with amino acid orthologs, and dividing the sites into 4 tRNA secondary structure domains by corresponding the sites to the structures, so that the users can get the key recognition bases and sites for tRNAs and aminoacyl tRNA synthetase quickly\.
 
-#### 5.3  EF-Tu, A-site, P-site and E-site recognition
+#### 5.3  tRNA Recognition by EF-Tu and Ribosomal A/P/E Sites
 
-This part summarizes the key sites and bases for the mutual recognition of tRNA with elongation factor EF\-Tu, as well as with the A\-site, P\-site and E\-site of ribosome, which is a total of 24 key sites, and the secondary structure covers the 4 structures of tRNA, including the accepter stem, the D stem, and the anticodon stem, etc\., which are shown on the diagram\. It helps users to quickly determine the key sites of tRNA and the retention or non\-retention of bases, which is of guiding significance in the process of tRNA synthesis\. 
+This section compiles 60 curated entries on the mutual recognition of tRNA with elongation factor EF-Tu and with the ribosomal A-, P- and E-sites. We identify 47 base–position tokens mapping to 28 distinct tRNA positions spanning the four canonical tRNA secondary-structure domains—acceptor stem (1, 3, 5, 68, 70, 72, 73), D-arm (10, 13–16, 20, 22), anticodon arm (26, 34–38, 44), variable loop (45, 47, 48) and T-arm (49, 59)—with two additional positions (8, 9) classified as other/unknown. The table is organized by Acceptor branch, Core region and Anticodon branch; numeric positions appear primarily in the first and third columns, while the Core region captures non-positional interaction features. Recorded modification elements include 12 types (C+34, I, L34, Q34, k2C, m1G37, m5C38, mnm5s2U, t6A37, yW37, ψ35, ψ36), helping users quickly pinpoint key bases/sites and whether specific bases are retained or substituted during tRNA engineering.\. 
 
 #### Step 1: Search for tRNA modifications or corresponding functions of interest and study cells, etc.
 

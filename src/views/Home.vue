@@ -13,7 +13,7 @@
     
     <h2>Key Features</h2>
     
-    <h3><a :href="geneticVariationUrl">Genetic Disorders Database</a></h3>
+    <h3><a :href="geneticVariationUrl">Mutation-induced Disease Database</a></h3>
     <p>Explore conding variation in diseases and cancers, including missense, nonsense, and frameshift mutations, with potential sup-tRNA therapy applications.</p>
     
     <h3><a :href="naturalSupTRNACatalogUrl">Natural sup-tRNAs Catalog</a></h3>

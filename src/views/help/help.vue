@@ -80,7 +80,7 @@ const md = markdownIt({
 
 const files = [
   { name: 'Introduction', file: '1-introduction.md' },
-  { name: 'Genetic Disorders', file: '2-Coding Variation Disease.md' },
+  { name: 'Mutation-induced Disease', file: '2-Coding Variation Disease.md' },
   { name: 'Natural sup-tRNA', file: '3-Natural Sup-tRNA.md' },
   { name: 'Engineered sup-tRNA', file: '4-Engineered Sup-tRNA.md' },
   { name: 'Modification with Function', file: '5-Modification with Function.md' }
