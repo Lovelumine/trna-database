@@ -1,4 +1,4 @@
-### Genetic Disorders
+### Mutation-induced Disease
 
  There are many gene mutations in human genes: single base substitutions can cause nonsense mutations, missense mutations; insertion or deletion of bases can cause frameshift mutations\. These mutations can cause many diseases\.  This section collects data on diseases caused by the above three mutations, which are divided into two categories: genetic diseases and cancers, and introduces the characteristics of the diseases\.
 

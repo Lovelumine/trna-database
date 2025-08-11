@@ -6,7 +6,7 @@
     <nav class="site--header__center">
       <ul class="topNav-items">
         <li><router-link to="/" active-class="active-link">Home</router-link></li>
-        <li><router-link to="/CodingVariationDisease" active-class="active-link">Genetic Disorders</router-link></li>
+        <li><router-link to="/CodingVariationDisease" active-class="active-link">Mutation-induced Disease</router-link></li>
         <li><router-link to="/naturalsuptRNA" active-class="active-link">Natural sup-tRNA</router-link></li>
         <li><router-link to="/tRNAtherapeutics" active-class="active-link">Engineered sup-tRNA</router-link></li>
         <li><router-link to="/tRNAElements" active-class="active-link">tRNA Elements</router-link></li>
