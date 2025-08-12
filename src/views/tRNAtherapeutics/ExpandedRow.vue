@@ -18,7 +18,7 @@
               <td><b>PTC Site:</b></td>
               <td>{{ record['PTC_site'] }}</td>
             </tr>
-            <tr>
+            <tr v-if ="record.Origin_aa_and_codon_of_PTC_site && record.Origin_aa_and_codon_of_PTC_site.trim() !== ''">
               <td><b>Origin AA and Codon:</b></td>
               <td>{{ record.Origin_aa_and_codon_of_PTC_site }}</td>
             </tr>
@@ -62,7 +62,7 @@
                 <a :href="record.ENSURE_ID_link" target="_blank">{{ record.ENSURE_ID }}</a>
               </td>
             </tr>
-            <tr>
+            <tr v-if="record.Species_source_of_origin_tRNA && String(record.Species_source_of_origin_tRNA).trim() !== ''">
               <td><b>Species source:</b></td>
               <td>{{ record.Species_source_of_origin_tRNA }}</td>
             </tr>
@@ -128,7 +128,7 @@
               <td><b>Secondary structure:</b></td>
               <td style="font-family: monospace;">{{ record['Secondary structure of sup-trna'] }}</td>
             </tr>
-            <tr>
+            <tr v-if ="record.Modification && String(record.Modification).trim() !== ''">
               <td><b>Modification:</b></td>
               <td>{{ record.Modification }}</td>
             </tr>
@@ -148,7 +148,7 @@
               <td><b>tRNAscan-SE ID:</b></td>
               <td>{{ record['tRNAscan-SE_ID_of_origin_tRNA'] }}</td>
             </tr>
-            <tr>
+            <tr v-if="record.Species_source_of_origin_tRNA && String(record.Species_source_of_origin_tRNA).trim() !== ''">
               <td><b>Species source:</b></td>
               <td>{{ record.Species_source_of_origin_tRNA }}</td>
             </tr>

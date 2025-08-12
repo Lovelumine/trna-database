@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h1>Welcome to ENSURE: The Encyclopedia of Suppressor tRNA with AI Assistant</h1>
+    <h1>Welcome to ENSURE: The Encyclopedia of Suppressor tRNA with an AI Assistant</h1>
     <p>Welcome to ENSURE! Our platform offers extensive data and tools to advance the field of sup-tRNA.</p>
     
     <div class="image-container">
