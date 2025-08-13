@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Coding Variation in Disease</h2>
+    <h2>Coding Variation in Genetic Disorders</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->

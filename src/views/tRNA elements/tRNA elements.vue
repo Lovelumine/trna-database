@@ -13,6 +13,9 @@
                   <div class="table-section">
         <trna-elements-3 />
       </div>
+          <div class="table-section">
+      <trna-ribosome-interaction-sites />
+    </div>
       <div class="table-section">
         <trna-elements-1 />
       </div>
@@ -24,6 +27,7 @@
   import TrnaElements1 from './function and modification.vue';
   import TrnaElements2 from './aaRS recognition.vue';
   import TrnaElements3 from './EFTU.vue';
+  import TrnaRibosomeInteractionSites from './tRNA-ribosome Interaction Sites.vue';
   import ConceptMap from '../../components/ConceptMap.vue'
   
   export default {
@@ -32,7 +36,8 @@
       TrnaElements1,
       TrnaElements2,
       TrnaElements3,
-      ConceptMap
+      ConceptMap,
+      TrnaRibosomeInteractionSites
     },
   };
   </script>
