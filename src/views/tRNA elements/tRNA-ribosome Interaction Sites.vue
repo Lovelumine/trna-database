@@ -1,6 +1,7 @@
 <template>
+  <div class="site--main">
   <div class="ribosome-sites">
-    <h3>tRNA–Ribosome Interaction Sites</h3>
+    <h2>tRNA–Ribosome Interaction Sites</h2>
 
     <!-- 术语与缩写说明 -->
     <el-alert
@@ -93,7 +94,7 @@
       :loop="true"
       @hide="lightbox.visible = false"
     />
-  </div>
+  </div></div>
 </template>
 
 <script lang="tsx">
