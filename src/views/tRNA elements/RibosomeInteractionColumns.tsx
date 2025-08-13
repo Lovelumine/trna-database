@@ -5,7 +5,7 @@ export type RowType = { [key: string]: string };
 
 // 默认显示的列
 export const selectedColumns = ref<string[]>([
-  'site', 'tRNA region', 'trna_pos', 'ribo_pos'
+  'site', 'subsite','tRNA region', 'trna_pos', 'ribo_pos'
 ]);
 
 // 列定义（dataIndex 必须与 CSV 表头一致；若你的 CSV 表头不同，请把 dataIndex 改成对应名字）
@@ -27,6 +27,14 @@ export const allColumns: STableColumnsType<RowType> = [
       onFilter: (value, record) => value.includes(record['site'])
     }
   },
+    {
+    title: 'subsite',
+    dataIndex: 'subsite',
+    key: 'subsite',
+    width: 100,
+    ellipsis: true,
+    resizable: true
+  },
   {
     title: 'tRNA Region',
     dataIndex: 'tRNA region',
@@ -39,7 +47,7 @@ export const allColumns: STableColumnsType<RowType> = [
     title: 'tRNA Positions',
     dataIndex: 'tRNA positions',
     key: 'trna_pos',
-    width: 320,
+    width: 240,
     ellipsis: true,
     resizable: true
   },
