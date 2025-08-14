@@ -132,7 +132,7 @@ const DEFAULT_DBS = [
   'Nonsense Sup-RNA',
   'Frameshift sup-tRNA',
   'Engineered sup-tRNA',
-  'Function and Modification',
+  'Function of Modification',
   'aaRS Recognition'
 ];
 function resetDefaults() {
@@ -155,7 +155,7 @@ const databases = [
   { name: 'Nonsense Sup-RNA', url: 'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv' },
   { name: 'Frameshift sup-tRNA', url: 'https://minio.lumoxuan.cn/ensure/Frameshift sup-tRNA.csv' },
   { name: 'Engineered sup-tRNA', url: 'https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv' },
-  { name: 'Function and Modification', url: 'https://minio.lumoxuan.cn/ensure/Function and Modification.csv' },
+  { name: 'Function of Modification', url: 'https://minio.lumoxuan.cn/ensure/Function and Modification.csv' },
   { name: 'aaRS Recognition', url: 'https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv' },
 ];
 const selectedDbs = ref(databases.map(d=>d.name));

@@ -19,14 +19,14 @@
   <script>
   import naturalsuptRNA1 from './natural-sup-tRNA-1.vue';
   import FrameshiftsuptRNA from './Frameshift sup-tRNA.vue';
-  import ConstructionofsuptRNA from './Construction of sup-tRNA.vue';
+  // import ConstructionofsuptRNA from './Construction of sup-tRNA.vue';
   
   export default {
     name: 'naturalsuptRNA',
     components: {
       naturalsuptRNA1,
       FrameshiftsuptRNA,
-      ConstructionofsuptRNA,
+      // ConstructionofsuptRNA,
     },
   };
   </script>

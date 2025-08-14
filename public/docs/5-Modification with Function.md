@@ -1,10 +1,10 @@
 ### tRNA Elements
 
-tRNAs perform different physiological functions, in which tRNA modifications, bases at key sites, and other proxies play important roles in interactions with EF\-Tu, the aminoacyl tRNA synthetase\(aaRS\), and in specific physiological functions\. This section contains three parts: tRNA Function and Modification; aaRS Recognition; EF\-Tu, A\-site, P\-site and E\-site recognition\.
+tRNAs perform different physiological functions, in which tRNA modifications, bases at key sites, and other proxies play important roles in interactions with EF\-Tu, the aminoacyl tRNA synthetase\(aaRS\), and in specific physiological functions\. This section contains three parts: tRNA Function of Modification; aaRS Recognition; EF\-Tu, A\-site, P\-site and E\-site recognition\.
 
-#### 5.1 tRNA Function and Modification
+#### 5.1 tRNA Function of Modification
 
-tRNA Function and Modification section that integrates information on more than 50 different tRNA modifications, corresponding tRNAs, modification sites, situation\-specific functions or characterizations\. Users can learn more about the tRNA modifications that have been studied\.
+tRNA Function of Modification section that integrates information on more than 50 different tRNA modifications, corresponding tRNAs, modification sites, situation\-specific functions or characterizations\. Users can learn more about the tRNA modifications that have been studied\.
 
 #### 5.2 aaRS recognition
 
@@ -16,7 +16,7 @@ This section compiles 60 curated entries on the mutual recognition of tRNA with 
 
 #### Step 1: Search for tRNA modifications or corresponding functions of interest and study cells, etc.
 
-Users can click tRNA elements to enter the page, and in the tRNA Function and Modification section, they can use the search function to retrieve the required information such as modification types \(symbols mentioned in modomics\), functions, research cells, etc\. Users can also use the filter function to streamline the information in the database and keep only the parts of interest such as modifications and functions\. Or users can directly use the FILTER function to streamline the database information and keep only the parts of interest such as modifications, functions, etc\. The intelligent assistant "yingying" is always there to help users\.
+Users can click tRNA elements to enter the page, and in the tRNA Function of Modification section, they can use the search function to retrieve the required information such as modification types \(symbols mentioned in modomics\), functions, research cells, etc\. Users can also use the filter function to streamline the information in the database and keep only the parts of interest such as modifications and functions\. Or users can directly use the FILTER function to streamline the database information and keep only the parts of interest such as modifications, functions, etc\. The intelligent assistant "yingying" is always there to help users\.
 
 ![](https://trna.lumoxuan.cn/docs/modeification%20with%20function/Step%201-%20Search%20for%20tRNA%20modifications%20or%20corresponding%20functions%20of%20interest%20and%20study%20cells,%20etc.png)
 

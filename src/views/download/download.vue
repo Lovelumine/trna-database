@@ -36,7 +36,7 @@ export default {
       { category: 'Natural sup-tRNA', name: 'Nonsense Sup-RNA', link: 'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv' },
       { category: 'Natural sup-tRNA', name: 'Frameshift sup-tRNA', link: 'https://minio.lumoxuan.cn/ensure/Frameshift sup-tRNA.csv' },
       { category: 'Engineered sup-tRNA', name: 'Engineered sup-tRNA', link: 'https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv' },
-      { category: 'tRNA elements', name: 'Function and Modification', link: 'https://minio.lumoxuan.cn/ensure/Function and Modification.csv' },
+      { category: 'tRNA elements', name: 'Function of Modification', link: 'https://minio.lumoxuan.cn/ensure/Function and Modification.csv' },
       { category: 'tRNA elements', name: 'aaRS Recognition', link: 'https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv' },
       { category: 'tRNA elements', name: 'EF-Tu recognition site', link: 'https://minio.lumoxuan.cn/ensure/EF-Tu.csv' }
     ]);
