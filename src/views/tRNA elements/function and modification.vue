@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Function and Modification</h2>
+    <h2>Function of Modification</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
     <div class="top-controls">
       <!-- 搜索框 -->
@@ -40,18 +40,21 @@
       <s-table
         :columns="displayedColumns"
         :data-source="filteredDataSource"
-        :row-key="record => record.key"
+        :row-key="rowKey"
         :stripe="true"
         :show-sorter-tooltip="true"
         :size="tableSize"
         :expand-row-by-click="true"
-        :pagination="pagination"
+        :pagination="paginationView"
+        @update:pagination="(p) => Object.assign(pagination, p)"
+        @change="handleTableChange"
       >
-      <template #bodyCell="{ text, column, record }">
+        <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'species'">
             <span class="latin-name">{{ record.species }}</span>
           </template>
-          </template>
+        </template>
+
         <template #expandedRowRender="{ record }">
           <div>
             <p><b>Modification Type:</b> {{ record.Modification_Type }}</p>
@@ -71,14 +74,14 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed,watch } from 'vue';
+import { defineComponent, ref, onMounted, computed, watch, toRaw } from 'vue';
 import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
-import {highlightModification} from '../../utils/highlightModification.js'
-import {pagination} from '../../utils/table'
-import { allColumns ,selectedColumns} from './FunctionAndModificationColumns';
+import { highlightModification } from '../../utils/highlightModification.js'
+import { createPagination } from '../../utils/table'
+import { allColumns ,selectedColumns } from './FunctionAndModificationColumns';
 
 // 定义数据类型
 type DataType = { [key: string]: string };
@@ -92,43 +95,76 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource,  searchColumn,loadData } = useTableData('https://minio.lumoxuan.cn/ensure/Function and Modification.csv');
-    const tableSize = ref('default'); // 表格尺寸状态
+    const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/Function and Modification.csv');
+    const tableSize = ref<'small' | 'default' | 'large'>('default');
 
+    // 统一可控分页对象
+    const pagination = createPagination();
 
-    onMounted(async() => {
+    onMounted(async () => {
       await loadData();
-      triggerColumnChange();
-    });
-
-    const triggerColumnChange = () => {
-      // 模拟点击列选择控件以触发数据刷新
+      // 触发列选择刷新（避免首次 columns 为空）
       selectedColumns.value = [...selectedColumns.value];
-    };
-
-    watch([tableSize, searchColumn, searchText, selectedColumns], async () => {
-      await loadData();
     });
 
+    // 给子表格一个“新引用”的分页对象，避免缓存旧引用
+    const paginationView = computed(() => ({ ...toRaw(pagination) }));
 
+    // 稳定的 rowKey，避免展开/分页状态丢失
+    const rowKey = (r: any, idx: number) => r?.key ?? r?.id ?? `${r?.tRNA_TYPE ?? ''}-${r?.Modification_site ?? ''}-${idx}`;
+
+    // 外部筛选（搜索/列选择）时回到第 1 页
+    watch([searchText, searchColumn, selectedColumns], () => {
+      pagination.current = 1;
+    });
+
+    // 数据源变化时同步 total，并避免 current 落空页
+    watch(
+      () => filteredDataSource.value.length,
+      (len) => {
+        pagination.total = len;
+        const maxPage = Math.max(1, Math.ceil(len / pagination.pageSize));
+        if (pagination.current > maxPage) pagination.current = maxPage; // 仅越界时调整
+      },
+      { immediate: true }
+    );
+
+    // pageSize 变化时夹紧 current
+    watch(
+      () => pagination.pageSize,
+      () => {
+        const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
+        if (pagination.current > maxPage) pagination.current = maxPage;
+      }
+    );
+
+    // 表格内部变化：只维护 current/pageSize，total 始终以外部过滤后的全集为准
+    const handleTableChange = (page: any) => {
+      if (page?.current != null) pagination.current = page.current;
+      if (page?.pageSize != null) pagination.pageSize = page.pageSize;
+      pagination.total = filteredDataSource.value.length;
+    };
 
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
     return {
-      columns: displayedColumns,
+      // 表格
+      displayedColumns,
       filteredDataSource,
       tableSize,
       searchText,
       locale,
       selectedColumns,
-      displayedColumns,
-      searchColumn, // 添加搜索列
-      allColumns, // 列选择控件
+      searchColumn,
+      allColumns,
       highlightModification,
-      triggerColumnChange,
-      pagination
+      // 分页
+      pagination,
+      paginationView,
+      handleTableChange,
+      rowKey
     };
   }
 });
@@ -170,9 +206,9 @@ export default defineComponent({
 }
 
 .latin-name {
-            font-style: italic;
-            font-family: 'Times New Roman', Times, serif; /* 替换为你想要的字体 */
-            font-size: 16px; /* 可选：调整字体大小 */
-            color: #333; /* 可选：设置字体颜色 */
-        }
+  font-style: italic;
+  font-family: 'Times New Roman', Times, serif; /* 替换为你想要的字体 */
+  font-size: 16px; /* 可选：调整字体大小 */
+  color: #333; /* 可选：设置字体颜色 */
+}
 </style>

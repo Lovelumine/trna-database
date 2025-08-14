@@ -40,12 +40,14 @@
       <s-table
         :columns="displayedColumns"
         :data-source="filteredDataSource"
-        :row-key="record => record.key"
+        :row-key="rowKey"
         :stripe="true"
         :show-sorter-tooltip="true"
         :size="tableSize"
         :expand-row-by-click="true"
-        :pagination="pagination"
+        :pagination="paginationView"
+        @update:pagination="(p) => Object.assign(pagination, p)"
+        @change="handleTableChange"
       >
       <template #bodyCell="{ text, column, record }">
           <template v-if="column.key === 'species'">
@@ -67,13 +69,13 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed,watch } from 'vue';
+import { defineComponent, ref, onMounted, computed, watch, toRaw } from 'vue';
 import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
 import {highlightModification} from '../../utils/highlightModification.js'
-import {pagination} from '../../utils/table'
+import { createPagination } from '../../utils/table'
 import { allColumns ,selectedColumns} from './EFTUcolumns';
 
 // 定义数据类型
@@ -91,6 +93,13 @@ export default defineComponent({
     const { searchText, filteredDataSource,  searchColumn,loadData } = useTableData('https://minio.lumoxuan.cn/ensure/EF-Tu.csv');
     const tableSize = ref('default'); // 表格尺寸状态
 
+    // Pagination (stable, single source of truth)
+    const pagination = createPagination();
+    const paginationView = computed(() => ({ ...toRaw(pagination) }));
+
+    // Stable rowKey
+    const rowKey = (r: any, idx: number) =>
+      r?.key ?? `${r?.species ?? ''}-${r?.['tRNA families'] ?? ''}-${idx}`;
 
     onMounted(async() => {
       await loadData();
@@ -102,11 +111,39 @@ export default defineComponent({
       selectedColumns.value = [...selectedColumns.value];
     };
 
-    watch([tableSize, searchColumn, searchText, selectedColumns], async () => {
-      await loadData();
+    // Reset to page 1 when external filters change
+    watch([searchText, searchColumn, selectedColumns], () => {
+      pagination.current = 1;
     });
 
+    // Keep total in sync and clamp current page
+    watch(
+      () => filteredDataSource.value.length,
+      (len) => {
+        pagination.total = len;
+        const maxPage = Math.max(1, Math.ceil(len / pagination.pageSize));
+        if (pagination.current > maxPage) pagination.current = maxPage;
+      },
+      { immediate: true }
+    );
 
+    // Clamp when pageSize changes
+    watch(
+      () => pagination.pageSize,
+      () => {
+        const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
+        if (pagination.current > maxPage) pagination.current = maxPage;
+      }
+    );
+
+    // Table internal changes: only mirror current/pageSize and recompute total
+    const handleTableChange = (page?: any) => {
+      if (page?.current != null) pagination.current = page.current;
+      if (page?.pageSize != null) pagination.pageSize = page.pageSize;
+      pagination.total = filteredDataSource.value.length;
+      const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
+      if (pagination.current > maxPage) pagination.current = maxPage;
+    };
 
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
@@ -124,7 +161,10 @@ export default defineComponent({
       allColumns, // 列选择控件
       highlightModification,
       triggerColumnChange,
-      pagination
+      pagination,
+      paginationView,
+      handleTableChange,
+      rowKey
     };
   }
 });

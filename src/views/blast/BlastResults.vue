@@ -98,7 +98,8 @@ import { defineProps, ref, watch } from 'vue';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import en from '@shene/table/dist/locale/en';
-import { pagination } from '../../utils/table';
+import { createPagination } from '../../utils/table';
+const pagination = createPagination();
 import VueEasyLightbox from 'vue-easy-lightbox';
 import {
   visible,
@@ -122,9 +123,16 @@ const props = defineProps<{
 }>();
 
 const locale = ref(en);
-watch(() => props.results.length, len => {
-  pagination.value.total = len;
-});
+watch(
+  () => props.results,                      // 监听数组本身，替换也能触发
+  (rows) => {
+    const len = rows?.length ?? 0;
+    pagination.total = len;                 // ← 不要再写 .value
+    // 数据变化时把页码拉回第一页，避免“当前页 > 最大页”
+    pagination.current = 1;
+  },
+  { immediate: true }
+);
 
 const columns = [
   { title: 'Database', dataIndex: 'file', key: 'file', width: 120 },
@@ -147,7 +155,7 @@ const fileToDbMap: Record<string, string> = {
   'Nonsense Sup-RNA.csv': 'Nonsense Suppressors',
   'Frameshift sup-tRNA.csv': 'Frameshift sup-tRNA',
   'Engineered Sup-tRNA.csv': 'Engineered sup-tRNA',
-  'Function and Modification.csv': 'Function & Modification',
+  'Function of Modification.csv': 'Function & Modification',
   'aaRS Recognition.csv': 'aaRS Recognition'
 };
 function mapFileToDb(file: string): string {

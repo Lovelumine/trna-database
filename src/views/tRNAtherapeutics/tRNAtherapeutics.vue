@@ -73,7 +73,7 @@
 </template>
 
 <script lang="tsx">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { STableProvider } from '@shene/table';
 import Papa from 'papaparse';
 import tRNAtherapeutics1 from './tRNAtherapeutics-1.vue';
@@ -134,8 +134,45 @@ export default {
       const start = (pagination.value.current - 1) * pagination.value.pageSize;
       return filteredPmidData.value.slice(start, start + pagination.value.pageSize);
     });
+
+    // When external filters change, go back to page 1
+    watch([searchText, searchColumn], () => {
+      pagination.value.current = 1;
+    });
+
+    // Keep total synced with filtered length; clamp current into valid range
+    watch(
+      () => filteredPmidData.value.length,
+      (len) => {
+        pagination.value.total = len;
+        const maxPage = Math.max(1, Math.ceil(len / pagination.value.pageSize));
+        if (pagination.value.current > maxPage) pagination.value.current = maxPage;
+      },
+      { immediate: true }
+    );
+
+    // When pageSize changes, also clamp current and refresh total from filtered length
+    watch(
+      () => pagination.value.pageSize,
+      () => {
+        const total = filteredPmidData.value.length;
+        pagination.value.total = total;
+        const maxPage = Math.max(1, Math.ceil(total / pagination.value.pageSize));
+        if (pagination.value.current > maxPage) pagination.value.current = maxPage;
+      }
+    );
+
     const handleTableChange = (pag: any) => {
+      // Merge incoming pagination (current/pageSize)
       pagination.value = { ...pagination.value, ...pag };
+
+      // Recompute total from the filtered dataset
+      const total = filteredPmidData.value.length;
+      pagination.value.total = total;
+
+      // Clamp current into valid range in case the filter shrank the dataset
+      const maxPage = Math.max(1, Math.ceil(total / pagination.value.pageSize));
+      if (pagination.value.current > maxPage) pagination.value.current = maxPage;
     };
 
     // 基于 supData 构建 Alignment 图表

@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import PageNotFound from './views/404.vue'; // 引入404组件
+import EnsureSTable from './components/EnsureSTable.vue'
 
 // 引入样式
 import './assets/global.css';
@@ -126,6 +127,7 @@ for (const name in ElIcons) {
 app.component('font-awesome-icon', FontAwesomeIcon);
 
 app.use(STable);
+app.component('s-table', EnsureSTable)
 app.use(VXETable);
 app.use(router);
 app.use(VWave, {});

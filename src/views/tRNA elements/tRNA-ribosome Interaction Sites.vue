@@ -14,7 +14,7 @@
       AC, anticodon; acc., acceptor; D loop, D stem, the dihydrouracil loop
       and stem of tRNA; T loop, T stem, the thymidine-containing loop and stem
       of tRNA. RNA contacts are indicated as follows: bk, backbone; bs, base;
-      bp, base pair.
+      bp, base pair.*Interaction with mRNA backbone.
     </el-alert>
 
     <!-- 顶部控件：搜索、表格尺寸、列选择 -->
@@ -56,11 +56,13 @@
       <s-table
         :columns="columns"
         :data-source="filteredDataSource"
-        :row-key="row => row.key || row['Site'] + '-' + row['Interaction'] + '-' + row['tRNA positions']"
+        :row-key="rowKey"
         :stripe="true"
         :size="tableSize"
         :expand-row-by-click="true"
-        :pagination="pagination"
+        :pagination="paginationView"
+        @update:pagination="(p) => Object.assign(pagination, p)"
+        @change="handleTableChange"
       >
         <template #expandedRowRender="{ record }">
           <div class="expanded">
@@ -98,12 +100,12 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, computed, onMounted } from 'vue';
+import { defineComponent, ref, computed, onMounted, watch, toRaw } from 'vue';
 import { ElSelect, ElOption, ElRadioGroup, ElRadioButton, ElAlert } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useTableData } from '../../assets/js/useTableData.js';
-import { pagination } from '../../utils/table';
+import { createPagination } from '../../utils/table';
 import VueEasyLightbox from 'vue-easy-lightbox';
 
 // 列配置（TSX 拆分）
@@ -128,6 +130,8 @@ export default defineComponent({
     const { searchText, filteredDataSource, loadData, searchColumn } =
       useTableData('https://minio.lumoxuan.cn/ensure/tRNA_ribosome_interactions.csv');
 
+    const pagination = createPagination();
+
     onMounted(async () => {
       await loadData();
       triggerColumnChange();
@@ -135,6 +139,38 @@ export default defineComponent({
 
     const triggerColumnChange = () => {
       selectedColumns.value = [...selectedColumns.value];
+    };
+
+    // stable pagination view for child component
+    const paginationView = computed(() => ({ ...toRaw(pagination) }));
+
+    // stable rowKey function
+    const rowKey = (row: any, idx: number) =>
+      row?.key ?? `${row['site'] ?? row['Site'] ?? ''}-${row['Interaction'] ?? row['interaction'] ?? ''}-${row['tRNA positions'] ?? row['tRNA Positions'] ?? ''}-${idx}`;
+
+    // reset to first page when external filters change
+    watch([searchText, searchColumn, selectedColumns], () => {
+      pagination.current = 1;
+    });
+
+    // keep total in sync and clamp current within range
+    watch(
+      () => filteredDataSource.value.length,
+      (len) => {
+        pagination.total = len;
+        const maxPage = Math.max(1, Math.ceil(len / pagination.pageSize));
+        if (pagination.current > maxPage) pagination.current = maxPage;
+      },
+      { immediate: true }
+    );
+
+    // table internal change handler
+    const handleTableChange = (page: any, _filters: any, _sorter: any, extra: any) => {
+      if (page) Object.assign(pagination, page);
+      const total = extra?.currentDataSource?.length ?? filteredDataSource.value.length;
+      pagination.total = total;
+      const maxPage = Math.max(1, Math.ceil(total / pagination.pageSize));
+      if (pagination.current > maxPage) pagination.current = maxPage;
     };
 
     const columns = computed<STableColumnsType<any>>(() =>
@@ -166,6 +202,9 @@ export default defineComponent({
       selectedColumns,
       triggerColumnChange,
       pagination,
+      paginationView,
+      handleTableChange,
+      rowKey,
 
       // images
       images,
