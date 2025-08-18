@@ -75,12 +75,8 @@ export default defineConfig({
         target: 'http://localhost:3457',
         changeOrigin: true,
       },      
-      '/chat': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-      '/api': {
-        target: 'https://speedtest.lumoxuan.cn',
+      '/chat/api': {
+        target: 'http://223.82.75.76:8080',
         changeOrigin: true,
       },
       '/run-blast': {
