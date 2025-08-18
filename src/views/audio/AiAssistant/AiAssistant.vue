@@ -2,22 +2,10 @@
   <div class="ai-assistant">
     <h3>智慧工作台</h3>
 
-    <!-- 顶部导航栏和语言风格选择 -->
     <div class="navbar">
-      <button
-        :class="{ active: currentTab === 'subtitles' }"
-        @click="currentTab = 'subtitles'"
-      >
-        智能字幕
-      </button>
-      <button
-        :class="{ active: currentTab === 'chat' }"
-        @click="currentTab = 'chat'"
-      >
-        实时提问
-      </button>
-      
-      <!-- 语言风格选择下拉菜单 -->
+      <button :class="{ active: currentTab === 'subtitles' }" @click="currentTab = 'subtitles'">智能字幕</button>
+      <button :class="{ active: currentTab === 'chat' }" @click="currentTab = 'chat'">实时提问</button>
+
       <select v-model="languageStyle" class="language-select">
         <option value="default">默认风格</option>
         <option value="formal">正式风格</option>
@@ -27,11 +15,16 @@
     </div>
 
     <div v-if="currentTab === 'subtitles'">
-      <SubtitlesTab :subtitles="subtitlesPath" />
+      <!-- 用 props.subtitles，而不是 subtitlesPath -->
+      <SubtitlesTab :subtitles="props.subtitles" />
     </div>
 
     <div v-if="currentTab === 'chat'">
-      <ChatTab :languageStyle="languageStyle" />
+      <ChatTab
+  :languageStyle="languageStyle"
+  :subtitles="props.subtitles" 
+  :key="props.subtitles"       
+/>
     </div>
   </div>
 </template>
@@ -41,12 +34,12 @@ import { ref } from 'vue';
 import SubtitlesTab from './SubtitlesTab.vue';
 import ChatTab from './ChatTab.vue';
 
-const currentTab = ref('subtitles');  // 控制当前显示的功能
-const subtitlesPath = ref('/src/views/audio/audio/双序列比对工具的介绍.srt');
+const props = defineProps<{ subtitles: string }>();
 
-// 语言风格状态变量
-const languageStyle = ref('default');
+const currentTab = ref<'subtitles' | 'chat'>('subtitles');
+const languageStyle = ref<'default' | 'formal' | 'casual' | 'friendly'>('default');
 </script>
+
 
 <style scoped>
 .ai-assistant {
