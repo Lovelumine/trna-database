@@ -1,4 +1,4 @@
-//src/views/AIYingying/AISidebar.vue
+<!-- src/views/AIYingying/AISidebar.vue -->
 <template>
   <div class="sidebar">
     <div class="sidebar-header">
@@ -7,6 +7,13 @@
         <div class="title">AY-GLM 4.0</div>
       </div>
     </div>
+
+    <!-- ✅ AI 提示 -->
+    <div class="ai-tip" role="note" aria-live="polite">
+      <font-awesome-icon icon="circle-info" class="ai-tip-icon" />
+      <span class="ai-tip-text">{{ aiTip }}</span>
+    </div>
+
     <div class="sidebar-menu">
       <div
         class="menu-item"
@@ -25,21 +32,37 @@
 <script>
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPenNib, faLightbulb, faLanguage, faBookOpen, faBookReader, faHistory } from '@fortawesome/free-solid-svg-icons';
+import {
+  faPenNib,
+  faLightbulb,
+  faLanguage,
+  faBookOpen,
+  faBookReader,
+  faHistory,
+  faCircleInfo,        // ✅ 新增：信息提示图标
+} from '@fortawesome/free-solid-svg-icons';
 
-library.add(faPenNib, faLightbulb, faLanguage, faBookOpen, faBookReader, faHistory);
+library.add(
+  faPenNib,
+  faLightbulb,
+  faLanguage,
+  faBookOpen,
+  faBookReader,
+  faHistory,
+  faCircleInfo         // ✅ 新增
+);
 
 export default {
   name: 'Sidebar',
-  components: {
-    FontAwesomeIcon
-  },
+  components: { FontAwesomeIcon },
   data() {
     return {
       menuItems: [
         { id: 1, text: 'Intelligent Document', icon: 'book-open' },
-],
-      selectedMenuId: 1 // 默认选中的菜单项 ID
+      ],
+      selectedMenuId: 1, // 默认选中的菜单项 ID
+      // ✅ AI 提示文案（英文）
+      aiTip: 'Note: AI-generated responses may be inaccurate. Please verify important information.',
     };
   },
   methods: {
@@ -66,7 +89,7 @@ export default {
 .sidebar-header {
   display: flex;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 16px;
 }
 
 .logo {
@@ -84,6 +107,27 @@ export default {
   font-size: 22px;
   font-weight: 600;
   color: #2c3e50;
+}
+
+/* ✅ AI 提示样式（轻量、紧凑） */
+.ai-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #4b5563;
+  background: #f9fafb;
+  border-left: 3px solid #e5e7eb;
+  padding: 8px 10px;
+  margin: 0 0 16px 0;
+  border-radius: 8px;
+}
+.ai-tip-icon {
+  color: #2563eb; /* 蓝色小图标 */
+  margin-top: 2px;
+}
+.ai-tip-text {
+  line-height: 1.35;
 }
 
 .sidebar-menu {
@@ -127,13 +171,17 @@ export default {
     display: none;
   }
 
+  .ai-tip {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+
   .sidebar-menu .menu-item {
     padding: 10px 10px; /* 调整菜单项的内边距 */
   }
 
-  .sidebar-menu .menu-item>span {
+  .sidebar-menu .menu-item > span {
     display: none;
   }
 }
-
 </style>
