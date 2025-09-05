@@ -3,19 +3,12 @@
 Flask 搜索服务：在本地或远程 CSV 中按行筛选与 query_seq 最优对齐。
 
 Endpoints:
-  POST /search
-  Request JSON:
-    {
-      "query_seq": "YOUR_SEQUENCE",
-      "csv_paths": ["...csv", ...],
-      "number": 5,
-      "match": 2.0,
-      "mismatch": -0.5,
-      "gap_open": -2.0,
-      "gap_extend": -1.0
-    }
-  Response JSON: List of best-matching rows with 'alignment' 字段包含 target/match/query 三行。
+  GET  /health    健康检查接口，返回 200 OK
+  GET  /          首页，返回 200 OK
+  POST /search    实际查询接口
+  GET  /search    返回 200 OK，用于监控/测试
 """
+
 import os, io, requests, pandas as pd
 import threading
 import sys
@@ -27,6 +20,9 @@ from flask_cors     import CORS
 app = Flask(__name__)
 CORS(app)
 
+# -----------------------------
+# 工具函数
+# -----------------------------
 def load_csv(path_or_url: str) -> pd.DataFrame:
     if path_or_url.startswith(('http://','https://')):
         r = requests.get(path_or_url, timeout=15)
@@ -56,24 +52,39 @@ def alignment_score_and_str(
     score = best.score
     raw   = best.format()
 
-    # 直接拆成三行：seqA / match_line / seqB
+    # 拆成三行：seqA / match_line / seqB
     lines = raw.splitlines()
     if len(lines) >= 3:
         flatA     = lines[0]
         match_line= lines[1]
         flatB     = lines[2]
     else:
-        # 万一不是三行，退回最简单拼接
         flatA  = ''.join(lines)
         match_line = ''
         flatB  = ''
 
-    # 构造最终字符串
     flat_alignment = f"target {flatA}\n{match_line}\nquery  {flatB}"
     return score, flat_alignment
 
-@app.route('/search', methods=['POST'])
+# -----------------------------
+# 路由
+# -----------------------------
+@app.route('/', methods=['GET'])
+def index():
+    return 'OK', 200
+
+@app.route('/health', methods=['GET'])
+def health():
+    return 'OK', 200
+
+@app.route('/search', methods=['GET', 'POST'])
+@app.route('/search/', methods=['GET', 'POST'])
 def search():
+    # 健康检查或手工测试时 GET
+    if request.method == 'GET':
+        return 'OK', 200
+
+    # POST 查询逻辑
     data       = request.json or {}
     query_seq  = data.get('query_seq','')
     csv_paths  = data.get('csv_paths',[])
@@ -121,18 +132,23 @@ def search():
     topn = sorted(results, key=lambda x: x['score'], reverse=True)[:number]
     return jsonify(topn)
 
+# -----------------------------
+# 自动重启（可选）
+# -----------------------------
 def schedule_restart(interval_sec: float = 1800):
     """在 interval_sec 秒后重启当前进程。"""
     def _restart():
-        # 重新执行当前 Python 解释器和脚本
         os.execv(sys.executable, [sys.executable] + sys.argv)
     t = threading.Timer(interval_sec, _restart)
     t.setDaemon(True)
     t.start()
-    
-if __name__ == '__main__':
-    # 启动重启定时器：每 1800 秒（半小时）触发一次
-    # schedule_restart(10)
 
-    # 单线程下跑，避免多线程下 Biopython 崩溃
+# -----------------------------
+# 主入口
+# -----------------------------
+if __name__ == '__main__':
+    # 如果要开启定时重启，取消注释：
+    # schedule_restart(1800)
+
+    # 单线程，避免 Biopython 崩溃
     app.run(host='0.0.0.0', port=8000, threaded=False)
