@@ -10,7 +10,7 @@
 # ==== 配置区 ====
 PYTHON_BIN=python
 SERVICE_SCRIPT="./searchservice.py"
-RESTART_INTERVAL=1800
+RESTART_INTERVAL=180
 
 # 启动函数
 start_service() {

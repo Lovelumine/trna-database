@@ -21,12 +21,22 @@
       <!-- 展开行渲染 -->
       <template #expandedRowRender="{ record }">
         <div class="expanded-content">
-          <!-- 格式化 alignment -->
+          <!-- 图例 -->
+          <div class="align-legend">
+            <span class="legend-item"><i class="legend-dot match"></i>Match</span>
+            <span class="legend-item"><i class="legend-dot mismatch"></i>Mismatch</span>
+            <span class="legend-item"><i class="legend-dot insertion"></i>Insertion (相对 Target)</span>
+            <span class="legend-item"><i class="legend-dot deletion"></i>Deletion (相对 Target)</span>
+          </div>
+
+          <!-- 对齐可视化 -->
           <div class="alignment">
+            <!-- Target：数据库序列（被比对） -->
             <div class="align-row">
+              <span class="seq-label target">Target</span>
               <template
-                v-for="(ch, i) in parseAlignment(record.alignment).targetChars"
-                :key="i"
+                v-for="(ch, i) in parseAlignmentForView(record.alignment).targetChars"
+                :key="'t-' + i"
               >
                 <span
                   :class="cellClass(i, record.alignment)"
@@ -34,10 +44,13 @@
                 >{{ ch }}</span>
               </template>
             </div>
+
+            <!-- Query：查询序列（你的输入） -->
             <div class="align-row">
+              <span class="seq-label query">Query</span>
               <template
-                v-for="(ch, i) in parseAlignment(record.alignment).queryChars"
-                :key="i"
+                v-for="(ch, i) in parseAlignmentForView(record.alignment).queryChars"
+                :key="'q-' + i"
               >
                 <span
                   :class="cellClass(i, record.alignment)"
@@ -55,7 +68,6 @@
                   v-if="filterRow(entry[0], entry[1])"
                   :class="{ highlighted: entry[0] === record.column }"
                 >
-                  <!-- 这里将下划线替换为空格 -->
                   <td class="key-cell">{{ formatKey(entry[0]) }}</td>
                   <td class="val-cell">
                     <template v-if="cleanString(entry[0]) === 'pairwise_alignment'">
@@ -80,6 +92,7 @@
         </div>
       </template>
     </s-table>
+
     <div v-else-if="!loading" class="no-results">No results yet.</div>
 
     <!-- Lightbox 弹窗 -->
@@ -113,7 +126,7 @@ interface ResultRow {
   row: number;
   column: string;
   score: number;
-  alignment: string;
+  alignment: string;          // 三行文本：target 行、match 行（可有可无）、query 行
   row_data: Record<string, any>;
 }
 
@@ -124,11 +137,10 @@ const props = defineProps<{
 
 const locale = ref(en);
 watch(
-  () => props.results,                      // 监听数组本身，替换也能触发
+  () => props.results,
   (rows) => {
     const len = rows?.length ?? 0;
-    pagination.total = len;                 // ← 不要再写 .value
-    // 数据变化时把页码拉回第一页，避免“当前页 > 最大页”
+    pagination.total = len;
     pagination.current = 1;
   },
   { immediate: true }
@@ -163,7 +175,6 @@ function mapFileToDb(file: string): string {
   return fileToDbMap[clean] || clean;
 }
 
-
 // 去掉 pairwise_alignment 中的 Score= 行
 function stripScore(text: string): string {
   return text
@@ -177,7 +188,7 @@ function cleanString(x: unknown): string {
   return x.replace(/^\ufeff/, '').replace(/ï»¿/g, '');
 }
 
-// 新增：替换下划线为普通空格
+// 下划线变空格
 function formatKey(key: string): string {
   return cleanString(key).replace(/_/g, ' ');
 }
@@ -189,39 +200,58 @@ function filterRow(key: unknown, val: unknown): boolean {
   return v.trim().length > 0;
 }
 
-function parseAlignment(text: string) {
+/* ------------------- 对齐解析与上色逻辑 ------------------- */
+
+// 缓存已解析的 alignment，避免在 v-for 中重复计算
+const alignCache = new Map<string, { tArr: string[]; qArr: string[]; len: number }>();
+
+// 从一行（带前缀与索引）中提取末尾的纯序列（含 '-'、'#' 等）
+function extractSeq(line: string): string {
+  // 允许 ACGTU、IUPAC、'-'、'#'、以及空格（稍后会去掉空格）
+  const m = line.match(/[ACGTUIRYSWKMBDHVN#P\-\s]+$/i);
+  return (m?.[0] ?? '').replace(/\s+/g, ''); // 去空格，保留 '-' 作为 gap
+}
+
+// 解析 alignment 文本：仅取 target 与 query 的纯序列并对齐（包含 gap）
+function parseAlignmentRaw(text: string) {
+  if (alignCache.has(text)) return alignCache.get(text)!;
+
   const real = text.replace(/\\n/g, '\n').trim();
   const parts = real.split('\n');
 
-  const targetLine = (parts[0] || '')
-    .replace(/^target(?:\s+target)?\s*/, 'target ')
-    .replace(/target\s+/, 'target ');
-  const matchLine = parts[1] || '';
-  const queryLine = (parts[2] || '')
-    .replace(/^query(?:\s+query)?\s*/, 'query  ')
-    .replace(/query\s+/, 'query  ');
+  const targetSeq = extractSeq(parts[0] ?? ''); // 第一行：Target（数据库）
+  const querySeq  = extractSeq(parts[2] ?? ''); // 第三行：Query（查询）
 
-  const tArr = Array.from(targetLine);
-  const qArr = Array.from(queryLine);
-  const maxLen = Math.max(tArr.length, qArr.length);
+  // 一般 pairwise 对齐会保证长度一致（包含 '-')
+  const len = Math.max(targetSeq.length, querySeq.length);
+  const tArr: string[] = targetSeq.padEnd(len, ' ').split('');
+  const qArr: string[] = querySeq.padEnd(len, ' ').split('');
 
-  while (tArr.length < maxLen) tArr.push(' ');
-  while (qArr.length < maxLen) qArr.push(' ');
-
-  const mLine = matchLine.padEnd(maxLen, ' ');
-
-  return {
-    targetChars: tArr,
-    matchLine: mLine,
-    queryChars: qArr
-  };
+  const res = { tArr, qArr, len };
+  alignCache.set(text, res);
+  return res;
 }
 
+// 提供给模板的视图层数据
+function parseAlignmentForView(text: string) {
+  const { tArr, qArr } = parseAlignmentRaw(text);
+  return { targetChars: tArr, queryChars: qArr };
+}
+
+// 颜色判断：直接比较两个字符（含 gap）
 function cellClass(idx: number, text: string) {
-  const { targetChars, matchLine, queryChars } = parseAlignment(text);
-  if (matchLine[idx] === '|') return 'match';
-  if (targetChars[idx] === '-')  return 'insertion';
-  if (queryChars[idx] === '-')   return 'deletion';
+  const { tArr, qArr } = parseAlignmentRaw(text);
+  const t = (tArr[idx] || ' ').toUpperCase();
+  const q = (qArr[idx] || ' ').toUpperCase();
+
+  // gap 判断（以 Target 为参考系）
+  if (t === '-' && q !== '-') return 'insertion';
+  if (q === '-' && t !== '-') return 'deletion';
+
+  // 把 T 归一为 U（把 DNA/RNA 视作等价；不需要可删除这行）
+  const norm = (c: string) => (c === 'T' ? 'U' : c);
+
+  if (norm(t) === norm(q)) return 'match';
   return 'mismatch';
 }
 </script>
@@ -231,11 +261,52 @@ function cellClass(idx: number, text: string) {
   padding: 0.5rem 1rem;
   background: #fdfdfd;
 }
+
+/* 图例 */
+.align-legend {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: #555;
+}
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot {
+  display: inline-block;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: currentColor;
+}
+.legend-dot.match    { color: #4caf50; }
+.legend-dot.mismatch { color: #f44336; }
+.legend-dot.insertion{ color: #ff9800; }
+.legend-dot.deletion { color: #2196f3; }
+
+/* 对齐区域 */
 .alignment {
   margin-bottom: 0.6rem;
   font-family: monospace;
   white-space: nowrap;
 }
+
+.align-row {
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+}
+
+/* 左侧行标签（固定宽度，便于对齐） */
+.seq-label {
+  display: inline-block;
+  min-width: 10ch;      /* 可按需要调整 */
+  margin-right: 8px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  color: #666;
+}
+.seq-label.target { font-weight: 600; }
+.seq-label.query  { font-weight: 600; }
+
 .char-cell {
   display: inline-block;
   width: 0.6em;
@@ -243,24 +314,18 @@ function cellClass(idx: number, text: string) {
   margin: 0;
   padding: 0;
 }
-.align-row {
-  line-height: 1.2;
-}
-.match {
-  color: #4caf50;
-}
-.mismatch {
-  color: #f44336;
-}
-.insertion {
-  color: #ff9800;
-}
-.deletion {
-  color: #2196f3;
-}
+
+/* 颜色 */
+.match    { color: #4caf50; }
+.mismatch { color: #f44336; }
+.insertion{ color: #ff9800; }
+.deletion { color: #2196f3; }
+
+/* row_data 表格 */
 .row-data-table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 8px;
 }
 .row-data-table td {
   border: 1px solid #ddd;
@@ -276,9 +341,7 @@ function cellClass(idx: number, text: string) {
 .highlighted .val-cell {
   background: #ffffcc;
 }
-.val-cell {
-  background: #fff;
-}
+.val-cell { background: #fff; }
 .no-results {
   text-align: center;
   padding: 1rem;
