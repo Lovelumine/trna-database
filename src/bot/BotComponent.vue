@@ -284,7 +284,7 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
+<style>
 /* ——AI 提示条—— */
 #ai-tip{
   display:flex; align-items:center; gap:6px;
@@ -333,7 +333,7 @@ export default defineComponent({
   max-height: 140px;            /* 👈 控制最大高度 */
   overflow: auto;
 }
-.evidence-body :where(img){ max-width:100%; border-radius:6px; }
+.evidence-body :where(img){ max-width:100%; border-radius:6px;height: 150px; }
 
 /* ——示例问题（父容器横向滚动）—— */
 #example-questions{
@@ -380,4 +380,13 @@ export default defineComponent({
 #chat-input{ flex-grow:1; padding:10px; font-size:16px; border:1px solid #ccc; border-radius:20px; outline:none; }
 #send-button{ background:#007bff; color:#fff; padding:10px 16px; border:none; border-radius:20px; cursor:pointer; transition:all .3s ease; }
 #send-button:hover{ background:#0056b3; }
+
+.message-image {
+  display: block;
+  max-width: 100%;  /* 让图片宽度自适应 */
+  height: 150px;     /* 保持图片的纵横比 */
+  border-radius: 8px;
+  margin-top: 6px;
+}
+
 </style>
