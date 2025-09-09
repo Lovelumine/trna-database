@@ -172,22 +172,27 @@
     <!-- 图表 -->
     <section class="chart-section-wrapper">
       <div class="chart-row">
+                <div class="chart-col">
+          <h3>① Species Distribution</h3>
+          <VChart :option="speciesOption" autoresize style="height:300px;" />
+        </div>
         <div class="chart-col">
-          <h3>① Stop Codon Readthrough Distribution</h3>
+          <h3>② Stop Codon Readthrough Distribution</h3>
           <VChart :option="stopCodonOption" autoresize style="height:300px;" />
         </div>
         <div class="chart-col">
-          <h3>② Distribution of Amino Acids chared on sup-tRNA</h3>
+          <h3>③ Distribution of Amino Acids chared on sup-tRNA</h3>
           <VChart :option="aaOption" autoresize style="height:300px;" />
         </div>
         <div class="chart-col">
-          <h3>③ Tissue/Organelle of Origin</h3>
+          <h3>④ Tissue/Organelle of Origin</h3>
           <VChart :option="tissueOption" autoresize style="height:300px;" />
         </div>
         <div class="chart-col">
-          <h3>④ Anticodon Mutation Heatmap</h3>
+          <h3>⑤ Anticodon Mutation Heatmap</h3>
           <VChart :option="anticodonHeatmapOption" autoresize style="height:300px;" />
         </div>
+
       </div>
     </section>
   </div>
@@ -373,6 +378,22 @@ export default defineComponent({
       };
     });
 
+    const speciesOption = computed<EChartsOption>(() => {
+  const counts: Record<string, number> = {};
+  filteredDataSource.value.forEach((r: any) => {
+    const species = r['Species'] || 'Unknown';
+    counts[species] = (counts[species] || 0) + 1;
+  });
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return {
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: entries.map(([k]) => k) },
+    yAxis: { type: 'value' },
+    series: [{ type: 'bar', data: entries.map(([, v]) => v), itemStyle: { borderRadius: 4 } }]
+  };
+});
+
+
     const anticodonHeatmapOption = computed<EChartsOption>(() => {
       const beforeList = new Set<string>();
       const afterList = new Set<string>();
@@ -449,7 +470,8 @@ export default defineComponent({
       stopCodonOption,
       aaOption,
       tissueOption,
-      anticodonHeatmapOption
+      anticodonHeatmapOption,
+      speciesOption
     };
   }
 });
