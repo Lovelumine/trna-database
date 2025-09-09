@@ -208,7 +208,7 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
+<style>
 * { box-sizing: border-box; }
 
 .chat-container {
@@ -250,7 +250,18 @@ export default defineComponent({
 }
 
 .content { background-color: #e6f7ff; padding: 10px 15px; border-radius: 8px; max-width: 120%; }
+
+/* General rule for all images */
+/* 确保图片大小被正确限制 */
+.message .content img {
+  max-width: 50% !important;  /* 确保图像宽度不超过 70% */
+  height: auto !important;    /* 保持图片的纵横比 */
+  display: block !important;  /* 确保图片是块级元素 */
+  margin: 0 auto !important; /* 将图片居中 */
+}
+
 img { max-width: 100% !important; }
+
 .message-right .content { background-color: #bae7ff; }
 
 .name { font-weight: bold; margin-bottom: 5px; }
@@ -277,7 +288,7 @@ img { max-width: 100% !important; }
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.35;
-  max-height: 140px;   /* 控制高度，避免撑开窗口 */
+  max-height: 440px;   /* 控制高度，避免撑开窗口 */
   overflow: auto;
 }
 

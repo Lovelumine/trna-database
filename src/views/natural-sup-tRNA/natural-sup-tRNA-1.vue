@@ -174,7 +174,7 @@
       <div class="chart-row">
                 <div class="chart-col">
           <h3>① Species Distribution</h3>
-          <VChart :option="speciesOption" autoresize style="height:300px;" />
+          <VChart :option="speciesOption" autoresize style="height:400px;" />
         </div>
         <div class="chart-col">
           <h3>② Stop Codon Readthrough Distribution</h3>
@@ -378,20 +378,43 @@ export default defineComponent({
       };
     });
 
-    const speciesOption = computed<EChartsOption>(() => {
+const speciesOption = computed<EChartsOption>(() => {
   const counts: Record<string, number> = {};
   filteredDataSource.value.forEach((r: any) => {
     const species = r['Species'] || 'Unknown';
     counts[species] = (counts[species] || 0) + 1;
   });
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
   return {
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: entries.map(([k]) => k) },
+        grid: {
+      top: '10%',
+      right: '10%',
+      bottom: '50%', // 增加底部的空白区域
+      left: '10%',
+    },
+    xAxis: {
+      type: 'category',
+      data: entries.map(([k]) => k),
+      axisLabel: {
+        rotate: 45, // 让物种名称斜着显示
+        interval: 0, // 显示所有标签
+        fontSize: 12, // 控制字体大小
+        fontStyle: 'italic',
+      },
+    },
     yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: entries.map(([, v]) => v), itemStyle: { borderRadius: 4 } }]
+    series: [
+      {
+        type: 'bar',
+        data: entries.map(([, v]) => v),
+        itemStyle: { borderRadius: 4 },
+      },
+    ],
   };
 });
+
 
 
     const anticodonHeatmapOption = computed<EChartsOption>(() => {
