@@ -332,7 +332,7 @@
 <script lang="tsx">
 import { defineComponent, ref, onMounted, computed, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
-import { useTableData } from '../../assets/js/useTableData.js';
+import { useTableData } from '@/assets/js/useTableData.js';
 import TranStructure from '@/components/TranStructure.vue';
 import * as d3 from 'd3';
 import { draw_cloverleaf, draw_base_distro } from '@/utils/tRNAviz/js/consensusESM.js';

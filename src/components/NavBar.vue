@@ -87,7 +87,6 @@ export default {
 }
 
 .site--url {
-  display: flex;
   align-items: center;
   font-size: 18px;
   font-weight: 700;
