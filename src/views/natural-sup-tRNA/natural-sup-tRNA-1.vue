@@ -1,6 +1,6 @@
 <template>
   <div class="site--main">
-    <h2>Nonsense sup-RNA</h2>
+    <h2>Nonsense sup-tRNA</h2>
     <!-- 顶部行包含尺寸调整、搜索框和列选择 -->
     <div class="top-controls">
       <div class="search-box">
