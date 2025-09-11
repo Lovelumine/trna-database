@@ -204,7 +204,7 @@
         </div>
 
         <div class="chart-col">
-          <h3>③ Noncanonical Charged Amino Acids</h3>
+          <h3>③ Distribution of Amino Acids chared on sup-tRNA</h3>
           <VChart :option="aaOption" autoresize style="height:300px;" />
         </div>
 
