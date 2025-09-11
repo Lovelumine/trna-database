@@ -279,23 +279,32 @@
 <tr>
   <td><b>3D Structure:</b></td>
   <td>
-<div class="sample-switcher">
-  <div
-    v-for="i in 5"
-    :key="i"
-    class="seg-btn"
-    :class="{ active: record._selectedSample === (i-1) }"
-    @click="switchSample(record, i-1)"
-  >
-    {{ i-1 }}
-  </div>
-</div>
+    <div class="sample-switcher">
+      <div
+        v-for="i in 5"
+        :key="i"
+        class="seg-btn"
+        :class="{ active: record._selectedSample === (i-1) }"
+        @click="switchSample(record, i-1)"
+      >
+        {{ i-1 }}
+      </div>
+    </div>
+
     <div
       :id="'pdb-container-' + record.ENSURE_ID"
       style="height: 400px; width: 600px;"
     ></div>
+
+    <!-- 警示提示 -->
+    <div class="af3-warning">
+      <small style="color: #a94442;">
+        ⚠ Predicted by AlphaFold3, for visualization only. Accuracy not guaranteed.
+      </small>
+    </div>
   </td>
 </tr>
+
             </table>
 
           <!-- 参考文献区块 -->
@@ -673,4 +682,11 @@ a {
 .references li {
   margin-bottom: 4px;
 }
+.af3-warning {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #a94442; /* 红色提示 */
+  font-style: italic;
+}
+
 </style>

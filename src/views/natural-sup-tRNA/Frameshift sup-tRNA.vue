@@ -356,7 +356,9 @@ export default defineComponent({
       const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
       return {
         tooltip: { trigger: 'axis' },
-        xAxis: { type: 'category', data: entries.map(([sp]) => sp) },
+        xAxis: { type: 'category', data: entries.map(([sp]) => sp) ,      axisLabel: {
+        fontStyle: 'italic',
+      },},
         yAxis: { type: 'value' },
         series: [{ type: 'bar', data: entries.map(([, c]) => c), itemStyle: { borderRadius: 4 } }]
       };
