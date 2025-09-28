@@ -61,12 +61,12 @@
       </s-table-provider>
     </div>
 
-    <!-- 3. supData 加载骨架（用于总体图表） -->
+    <!-- 3. 聚合小文件加载骨架（用于总体图表） -->
     <div v-if="!loadingPmid && loadingSup" class="skeleton-wrapper">
       <el-skeleton variant="rect" animated style="height:400px; border-radius:8px;" />
     </div>
 
-    <!-- 4. 完整 supData 一次性加载后，渲染图表 -->
+    <!-- 4. 渲染 “Per-Position Alignment Variation” 图表 -->
     <section v-if="!loadingSup" style="margin:24px 0">
       <h3>Per-Position Alignment Variation</h3>
       <VChart :option="perPositionOption" autoresize style="height:400px;" />
@@ -79,30 +79,27 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { STableProvider } from '@shene/table';
 import Papa from 'papaparse';
 import tRNAtherapeutics1 from './tRNAtherapeutics-1.vue';
-import { useTableData } from '../../assets/js/useTableData.js';
+// import { useTableData } from '../../assets/js/useTableData.js'; // 不再需要整表加载
 import en from '@shene/table/dist/locale/en';
 import type { EChartsOption } from 'echarts';
 import { ElSkeleton } from 'element-plus';
 
-
-const ENGINEERED_CSV_URL = 'https://minio.lumoxuan.cn/ensure/Engineered%20Sup-tRNA.csv';
-
 const locale = ref(en);
-interface AlignmentItem { id: string; base: string; sup_base: string; }
+
+// 后端 /search 仍然读取大 CSV（保持不变）
+const ENGINEERED_CSV_URL = 'https://minio.lumoxuan.cn/ensure/Engineered%20Sup-tRNA.csv';
+// 图表改为读取你的小文件
+const PERPOS_COUNTS_URL = 'https://minio.lumoxuan.cn/ensure/Engineered-Sup-tRNA.perpos.counts.csv';
 
 export default {
   name: 'tRNAtherapeutics',
   components: { tRNAtherapeutics1, STableProvider, ElSkeleton },
   setup() {
-    // 加载状态
+    // ===== 加载状态 =====
     const loadingPmid = ref(true);  // PMID 表格
-    const loadingSup  = ref(true);  // 完整 supData（仅用于总体图）
+    const loadingSup  = ref(true);  // 图表的小文件
 
-    // （保持原有）一次性拉完整 supData，用于总体图表；不影响功能
-    const { filteredDataSource: supData, loadData: loadSupData } =
-      useTableData(ENGINEERED_CSV_URL);
-
-    // ===== 新增：按 PMID 分批调用后端 /search，结果缓存到 supByPmid =====
+    // ===== 每行展开 -> 用后端 /search 按 PMID 分批拉取 =====
     const supByPmid = ref<Record<string, any[]>>({});
     const loadingSupByPmid = ref<Record<string, boolean>>({});
     const fetchedSet = new Set<string>();
@@ -111,11 +108,9 @@ export default {
       loadingSupByPmid.value[pmid] = true;
       try {
         const payload = {
-          // 为了兼容后端 /search 的必需参数，这里给一个极短的 query_seq
-          // 但由于已按 pmids 预过滤，参与对齐的只有该 PMID 的行，负担很小
           query_seq: 'N',
           csv_paths: [ENGINEERED_CSV_URL],
-          number: 5000,           // 该 PMID 相关行一般远小于此值，足够覆盖
+          number: 5000,
           pmids: [pmid]
         };
         const resp = await fetch(`/search`, {
@@ -124,7 +119,6 @@ export default {
           body: JSON.stringify(payload)
         });
         const arr = await resp.json();
-        // /search 的每个元素里携带 row_data（即 CSV 行对象），直接作为 supData 的同构数据使用
         supByPmid.value[pmid] = Array.isArray(arr) ? arr.map((x: any) => x.row_data) : [];
       } catch (e) {
         console.error('[fetchSupRowsForPmid] error:', e);
@@ -133,17 +127,15 @@ export default {
         loadingSupByPmid.value[pmid] = false;
       }
     }
-
-    // 在展开行渲染的瞬间触发拉取，且只触发一次
     function triggerFetch(pmid: string) {
       if (!fetchedSet.has(pmid)) {
         fetchedSet.add(pmid);
         void fetchSupRowsForPmid(pmid);
       }
-      return true; // 让占位 <span> 渲染一次即可
+      return true;
     }
 
-    // ===== PMID 表格搜索与分页（保持原有逻辑） =====
+    // ===== PMID 表格搜索与分页（原样保留） =====
     const searchText   = ref('');
     const searchColumn = ref('');
     const tableSize    = ref<'small'|'default'|'large'>('default');
@@ -212,46 +204,51 @@ export default {
       if (pagination.value.current > maxPage) pagination.value.current = maxPage;
     };
 
-    // ===== 图表（保持原有逻辑，源于一次性完整 supData） =====
-    const safeRecords = computed(() => supData.value || []);
-    const getType = (item: AlignmentItem) =>
-      item.base === '-' && item.sup_base !== '-' ? 'insertion'
-      : item.base !== '-' && item.sup_base === '-' ? 'deletion'
-      : item.base === item.sup_base               ? 'match'
-      : 'mismatch';
-    const perPositionCounts = computed(() => {
-      const M: Record<string, any> = {};
-      safeRecords.value.forEach((rec: any) => {
-        let arr: AlignmentItem[] = [];
-        try { arr = JSON.parse(rec.js_sup_tRNA || '[]'); } catch {}
-        arr.forEach(it => {
-          const p = it.id;
-          if (!M[p]) M[p] = { match:0, mismatch:0, insertion:0, deletion:0 };
-          M[p][getType(it)]++;
-        });
-      });
-      return M;
-    });
-    const perPositionOption = computed<EChartsOption>(() => {
-      const positions = Object.keys(perPositionCounts.value).sort((a,b)=>+a - +b);
-      const types = ['match','mismatch','insertion','deletion'];
-      const series = types.map(type => ({
-        name: type, type:'bar' as const, stack:'all',
-        data: positions.map(p => perPositionCounts.value[p][type]),
-        itemStyle:{ borderRadius:4 }
-      }));
-      return {
-        tooltip: { trigger:'axis' },
-        legend:  { data: types.slice(), top:30 },
-        xAxis:   { type:'category', data:positions, name:'position', axisLabel:{ rotate:45 } },
-        yAxis:   { type:'value', name:'count' },
-        series
-      };
-    });
+    // ===== 图表：改为读取聚合后的小 CSV =====
+    type PerRow = { position: string; match: number; mismatch: number; insertion: number; deletion: number };
+    const perposRows = ref<PerRow[]>([]);
 
-    // ===== 挂载：先 PMID，再完整 supData（用于总体图） =====
+    const perPositionOption = computed<EChartsOption>(() => {
+  if (!perposRows.value.length) {
+    return {
+      tooltip: { trigger: 'axis' },
+      legend:  { data: [], top: 30 },
+      xAxis:   { type: 'category', data: [], name: 'position' },
+      yAxis:   { type: 'value', name: 'count' },
+      series:  []
+    };
+  }
+
+  // 先把能转成数字的按数字升序，其余（如 V1、7a1）保持原文件顺序排在后面
+  const rows = [...perposRows.value];
+  const numRows  = rows.filter(r => !Number.isNaN(Number(r.position)))
+                       .sort((a, b) => Number(a.position) - Number(b.position));
+  const restRows = rows.filter(r =>  Number.isNaN(Number(r.position))); // 保留原顺序
+  const ordered  = numRows.concat(restRows);
+
+  const positions = ordered.map(r => r.position);
+  const match     = ordered.map(r => r.match);
+  const mismatch  = ordered.map(r => r.mismatch);
+  const insertion = ordered.map(r => r.insertion);
+  const deletion  = ordered.map(r => r.deletion);
+
+  return {
+    tooltip: { trigger: 'axis' },
+    legend:  { data: ['match','mismatch','insertion','deletion'], top: 30 },
+    xAxis:   { type: 'category', data: positions, name: 'position', axisLabel: { rotate: 45 } },
+    yAxis:   { type: 'value', name: 'count' },
+    series: [
+      { name: 'match',     type: 'bar', stack: 'all', data: match,     itemStyle: { borderRadius: 4 } },
+      { name: 'mismatch',  type: 'bar', stack: 'all', data: mismatch,  itemStyle: { borderRadius: 4 } },
+      { name: 'insertion', type: 'bar', stack: 'all', data: insertion, itemStyle: { borderRadius: 4 } },
+      { name: 'deletion',  type: 'bar', stack: 'all', data: deletion,  itemStyle: { borderRadius: 4 } }
+    ]
+  };
+});
+
+    // ===== 挂载：先 PMID，再加载小文件用于总体图 =====
     onMounted(async () => {
-      // 1) PMID 列表
+      // 1) PMID 列表（保持不变）
       try {
         const resp = await fetch('https://minio.lumoxuan.cn/ensure/pmid_article_info_extended.csv');
         const txt  = await resp.text();
@@ -275,9 +272,28 @@ export default {
         loadingPmid.value = false;
       }
 
-      // 2) 完整 supData（仅一次，用于总体图表）
-      await loadSupData();
-      loadingSup.value = false;
+      // 2) 加载聚合后的小 CSV（极小，图表很快渲染）
+      try {
+        const resp2 = await fetch(PERPOS_COUNTS_URL);
+        const txt2  = await resp2.text();
+        Papa.parse(txt2, {
+          header: true,
+          skipEmptyLines: true,
+          complete(res) {
+            perposRows.value = (res.data as any[]).map(r => ({
+              position: String(r.position),
+              match:     Number(r.match ?? 0),
+              mismatch:  Number(r.mismatch ?? 0),
+              insertion: Number(r.insertion ?? 0),
+              deletion:  Number(r.deletion ?? 0)
+            }));
+          }
+        });
+      } catch (e) {
+        console.error('load PERPOS_COUNTS_URL failed:', e);
+      } finally {
+        loadingSup.value = false;
+      }
     });
 
     return {
@@ -290,12 +306,12 @@ export default {
       pagination,
       paginatedFilteredPmidData,
       handleTableChange,
+
       perPositionOption,
       loadingPmid,
       loadingSup,
-      supData,
 
-      // 新增：每行展开时的后端搜索缓存
+      // 展开行数据
       supByPmid,
       loadingSupByPmid,
       triggerFetch,
