@@ -1,11 +1,11 @@
 <template>
   <div class="site--main">
-    <!-- 1. PMID 加载时，先展示表格骨架 -->
+    <!-- 1. PMID 加载骨架 -->
     <div v-if="loadingPmid" class="skeleton-wrapper">
       <el-skeleton :rows="5" animated style="margin-bottom:24px; border-radius:8px;" />
     </div>
 
-    <!-- 2. PMID 加载完成后，展示 PMID 表格 -->
+    <!-- 2. PMID 表格 -->
     <div v-else class="table-section">
       <h2>Engineered sup-tRNA</h2>
       <div class="top-controls">
@@ -41,13 +41,15 @@
           @change="handleTableChange"
         >
           <template #expandedRowRender="{ record }">
-            <!-- 传入 supData 和加载状态，子组件展示进度条 -->
+            <!-- 触发展开即按 PMID 调后端 /search 拉取，仅该 PMID 相关行 -->
+            <span v-if="triggerFetch(record.PMID)" style="display:none"></span>
             <tRNAtherapeutics1
               :selectedPmids="[record.PMID]"
-              :supData="supData"
-              :loadingSup="loadingSup"
+              :supData="supByPmid[record.PMID] || []"
+              :loadingSup="loadingSupByPmid[record.PMID] ?? true"
             />
           </template>
+
           <template #default="{ text, column }">
             <span v-if="column.dataIndex === 'PMID'">
               <a :href="`https://pubmed.ncbi.nlm.nih.gov/${text}`" target="_blank">{{ text }}</a>
@@ -59,12 +61,12 @@
       </s-table-provider>
     </div>
 
-    <!-- 3. supData 加载时，显示图表骨架 -->
+    <!-- 3. supData 加载骨架（用于总体图表） -->
     <div v-if="!loadingPmid && loadingSup" class="skeleton-wrapper">
       <el-skeleton variant="rect" animated style="height:400px; border-radius:8px;" />
     </div>
 
-    <!-- 4. supData 加载完成后，渲染 Alignment 图表 -->
+    <!-- 4. 完整 supData 一次性加载后，渲染图表 -->
     <section v-if="!loadingSup" style="margin:24px 0">
       <h3>Per-Position Alignment Variation</h3>
       <VChart :option="perPositionOption" autoresize style="height:400px;" />
@@ -82,6 +84,9 @@ import en from '@shene/table/dist/locale/en';
 import type { EChartsOption } from 'echarts';
 import { ElSkeleton } from 'element-plus';
 
+
+const ENGINEERED_CSV_URL = 'https://minio.lumoxuan.cn/ensure/Engineered%20Sup-tRNA.csv';
+
 const locale = ref(en);
 interface AlignmentItem { id: string; base: string; sup_base: string; }
 
@@ -89,15 +94,56 @@ export default {
   name: 'tRNAtherapeutics',
   components: { tRNAtherapeutics1, STableProvider, ElSkeleton },
   setup() {
-    // 两个加载状态：PMID 和 supData
-    const loadingPmid = ref(true);
-    const loadingSup  = ref(true);
+    // 加载状态
+    const loadingPmid = ref(true);  // PMID 表格
+    const loadingSup  = ref(true);  // 完整 supData（仅用于总体图）
 
-    // 父组件中只加载一次 sup-tRNA 数据
+    // （保持原有）一次性拉完整 supData，用于总体图表；不影响功能
     const { filteredDataSource: supData, loadData: loadSupData } =
-      useTableData('https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv');
+      useTableData(ENGINEERED_CSV_URL);
 
-    // PMID 表格搜索与分页
+    // ===== 新增：按 PMID 分批调用后端 /search，结果缓存到 supByPmid =====
+    const supByPmid = ref<Record<string, any[]>>({});
+    const loadingSupByPmid = ref<Record<string, boolean>>({});
+    const fetchedSet = new Set<string>();
+
+    async function fetchSupRowsForPmid(pmid: string) {
+      loadingSupByPmid.value[pmid] = true;
+      try {
+        const payload = {
+          // 为了兼容后端 /search 的必需参数，这里给一个极短的 query_seq
+          // 但由于已按 pmids 预过滤，参与对齐的只有该 PMID 的行，负担很小
+          query_seq: 'N',
+          csv_paths: [ENGINEERED_CSV_URL],
+          number: 5000,           // 该 PMID 相关行一般远小于此值，足够覆盖
+          pmids: [pmid]
+        };
+        const resp = await fetch(`/search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const arr = await resp.json();
+        // /search 的每个元素里携带 row_data（即 CSV 行对象），直接作为 supData 的同构数据使用
+        supByPmid.value[pmid] = Array.isArray(arr) ? arr.map((x: any) => x.row_data) : [];
+      } catch (e) {
+        console.error('[fetchSupRowsForPmid] error:', e);
+        supByPmid.value[pmid] = [];
+      } finally {
+        loadingSupByPmid.value[pmid] = false;
+      }
+    }
+
+    // 在展开行渲染的瞬间触发拉取，且只触发一次
+    function triggerFetch(pmid: string) {
+      if (!fetchedSet.has(pmid)) {
+        fetchedSet.add(pmid);
+        void fetchSupRowsForPmid(pmid);
+      }
+      return true; // 让占位 <span> 渲染一次即可
+    }
+
+    // ===== PMID 表格搜索与分页（保持原有逻辑） =====
     const searchText   = ref('');
     const searchColumn = ref('');
     const tableSize    = ref<'small'|'default'|'large'>('default');
@@ -119,7 +165,6 @@ export default {
     ]);
     const pmidSearchableColumns = pmidColumns.value;
 
-    // 过滤 & 分页 PMID 数据
     const filteredPmidData = computed(() => {
       if (!searchText.value) return rawPmidData.value;
       return rawPmidData.value.filter(r => {
@@ -135,12 +180,10 @@ export default {
       return filteredPmidData.value.slice(start, start + pagination.value.pageSize);
     });
 
-    // When external filters change, go back to page 1
     watch([searchText, searchColumn], () => {
       pagination.value.current = 1;
     });
 
-    // Keep total synced with filtered length; clamp current into valid range
     watch(
       () => filteredPmidData.value.length,
       (len) => {
@@ -151,7 +194,6 @@ export default {
       { immediate: true }
     );
 
-    // When pageSize changes, also clamp current and refresh total from filtered length
     watch(
       () => pagination.value.pageSize,
       () => {
@@ -163,19 +205,14 @@ export default {
     );
 
     const handleTableChange = (pag: any) => {
-      // Merge incoming pagination (current/pageSize)
       pagination.value = { ...pagination.value, ...pag };
-
-      // Recompute total from the filtered dataset
       const total = filteredPmidData.value.length;
       pagination.value.total = total;
-
-      // Clamp current into valid range in case the filter shrank the dataset
       const maxPage = Math.max(1, Math.ceil(total / pagination.value.pageSize));
       if (pagination.value.current > maxPage) pagination.value.current = maxPage;
     };
 
-    // 基于 supData 构建 Alignment 图表
+    // ===== 图表（保持原有逻辑，源于一次性完整 supData） =====
     const safeRecords = computed(() => supData.value || []);
     const getType = (item: AlignmentItem) =>
       item.base === '-' && item.sup_base !== '-' ? 'insertion'
@@ -184,7 +221,7 @@ export default {
       : 'mismatch';
     const perPositionCounts = computed(() => {
       const M: Record<string, any> = {};
-      safeRecords.value.forEach(rec => {
+      safeRecords.value.forEach((rec: any) => {
         let arr: AlignmentItem[] = [];
         try { arr = JSON.parse(rec.js_sup_tRNA || '[]'); } catch {}
         arr.forEach(it => {
@@ -212,9 +249,9 @@ export default {
       };
     });
 
-    // 挂载顺序：先加载 PMID，再加载 supData
+    // ===== 挂载：先 PMID，再完整 supData（用于总体图） =====
     onMounted(async () => {
-      // 加载 PMID
+      // 1) PMID 列表
       try {
         const resp = await fetch('https://minio.lumoxuan.cn/ensure/pmid_article_info_extended.csv');
         const txt  = await resp.text();
@@ -237,7 +274,8 @@ export default {
       } finally {
         loadingPmid.value = false;
       }
-      // 加载 sup-tRNA 数据
+
+      // 2) 完整 supData（仅一次，用于总体图表）
       await loadSupData();
       loadingSup.value = false;
     });
@@ -256,6 +294,11 @@ export default {
       loadingPmid,
       loadingSup,
       supData,
+
+      // 新增：每行展开时的后端搜索缓存
+      supByPmid,
+      loadingSupByPmid,
+      triggerFetch,
     };
   }
 };
