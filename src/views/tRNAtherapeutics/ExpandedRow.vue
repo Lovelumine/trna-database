@@ -346,96 +346,105 @@ import TranStructure from '@/components/TranStructure.vue';
 import * as d3 from 'd3';
 import { draw_cloverleaf, draw_base_distro } from '@/utils/tRNAviz/js/consensusESM.js';
 import "@/utils/tRNAviz/css/explorer.css";
-// 从同目录下导入提取出的逻辑函数
-import {
-  formatAlignment,
-  loadCIFFile
-} from './expandedRowLogic';
+import { formatAlignment, loadCIFFile } from './expandedRowLogic';
 import TrnaRadial from '@/components/TrnaRadial.vue'
 import supTrnaRadial from '@/components/supTrnaRadial.vue'
 import AlignmentTable from '@/components/AlignmentTable.vue';
 
+// 保持你原 CSV
+const ENGINEERED_CSV_URL = 'https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv';
+
 export default defineComponent({
   name: 'TRNATherapeutics-1',
-  components: {
-    TranStructure,
-    TrnaRadial,
-    supTrnaRadial,
-    AlignmentTable,
-  },
+  components: { TranStructure, TrnaRadial, supTrnaRadial, AlignmentTable },
   setup() {
-    console.log("[ExpandedRow] setup() invoked.");
-
     const route = useRoute();
-    const id = route.params.key;
-    console.log("[ExpandedRow] route param id =>", id);
+    const id = route.params.key as string;
 
-    // 加载 CSV 数据的自定义逻辑
-    const { filteredDataSource, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv');
+    // 原有数据管道
+    const { filteredDataSource, loadData } = useTableData(ENGINEERED_CSV_URL);
     const loading = ref(true);
-
     const showSup = ref(true);
 
-    // 过滤出与当前 id 匹配的记录
+    // ★ 新增：可写的本地覆盖数据（避免写 computed）
+    const localOverride = ref<any[] | null>(null);
+
+    // ★ 新增：统一的数据来源（若有覆盖，用覆盖；否则用原有 filteredDataSource）
+    const recordsSource = computed<any[]>(() => localOverride.value ?? filteredDataSource.value);
+
+    // 原有：按 ENSURE_ID 过滤（只改成用 recordsSource）
     const filteredRecords = computed(() => {
-      const result = filteredDataSource.value.filter(record => record.ENSURE_ID == id);
-      console.log("[ExpandedRow] computed filteredRecords =>", result);
-      return result;
+      const res = recordsSource.value.filter((r: any) => r.ENSURE_ID == id);
+      return res;
     });
 
     const parseSup = (str: string) => {
-      try {
-        return JSON.parse(str);
-      } catch {
-        return [];
-      }
+      try { return JSON.parse(str); } catch { return []; }
     };
 
+    // ★ 修复后的后端拉取（不写 computed；空结果/异常会返回 false 触发回退）
+    async function tryBackendFetchByEnsureId(ensureId: string): Promise<boolean> {
+      const payload: any = {
+        query_seq: 'N',
+        csv_paths: [ENGINEERED_CSV_URL],
+        number: 5000,
+        ensure_ids: [ensureId]
+      };
+
+      const endpoints = ['/search', 'http://223.82.65.76:8000/search']; // 同源优先，其次直连
+      for (const ep of endpoints) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 5000);
+          const resp = await fetch(ep, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          clearTimeout(timer);
+          if (!resp.ok) continue;
+          const arr = await resp.json();
+          if (!Array.isArray(arr) || arr.length === 0 || !arr[0]?.row_data) continue;
+
+          // ★ 正确做法：写入可写的 localOverride
+          localOverride.value = arr.map((x: any, i: number) => ({
+            ...x.row_data,
+            key: x.row_data?.ENSURE_ID || `${ensureId}-${i}`
+          }));
+          return true;
+        } catch (e) {
+          // 尝试下一个端点
+        }
+      }
+      return false;
+    }
+
     onMounted(async () => {
-      console.log("[ExpandedRow] onMounted() start...");
       try {
-        console.log("[ExpandedRow] Begin loadData() for CSV...");
-        await loadData();
-        console.log("[ExpandedRow] CSV data loaded =>", filteredDataSource.value);
+        const ok = await tryBackendFetchByEnsureId(id);
+        if (!ok) {
+          await loadData();          // 回退到原全量加载
+        }
 
         await nextTick();
-        console.log("[ExpandedRow] DOM updated. handle each record...");
 
-        filteredRecords.value.forEach(record => {
-          console.log("[ExpandedRow] handle record =>", record);
+        // 初始化每条记录的 3D / alignment
+        filteredRecords.value.forEach((record: any) => {
           record._selectedSample = 0;
-          // 加载 PDB 文件
           loadCIFFile(record.pdbid, record.ENSURE_ID, 0);
-
-          // 格式化 Alignment·
-          record.formattedAlignment = formatAlignment(record.Alignment);
+          try { record.formattedAlignment = formatAlignment(record.Alignment); } catch {}
         });
 
-        // 现在去加载 ala.json（其结构是 { "1": {...}, "2": {...}, ... }）
-        console.log("[ExpandedRow] Fetching JSON for Cloverleaf from ala.json...");
+        // 可视化底图
         d3.json("https://minio.lumoxuan.cn/ensure/trnaviz/ala.json")
           .then(plotData => {
-            console.log("[ExpandedRow] ala.json loaded =>", plotData);
-
-            // 3) 使用 draw_cloverleaf
-            //   第2个参数 isotype 可随意，这里假定 "Ala" 或 "Any"
             draw_cloverleaf(plotData, "Ala", "https://minio.lumoxuan.cn/ensure/trnaviz/ala.json");
-            
-            // 4) 如果你想同时画 base distro，可以再调用 draw_base_distro
-            //   但是要先看 consensus.js 的 draw_base_distro 需要什么参数
-            //   (它里面常见用法: draw_base_distro(plotData, 'cloverleaf') )
-            //   这里就示例一下：
             draw_base_distro(plotData, 'cloverleaf');
-            
           })
-          .catch(err => {
-            console.error("[ExpandedRow] d3.json error =>", err);
-          });
-      } catch (error) {
-        console.error("[ExpandedRow] onMounted error =>", error);
+          .catch(() => {});
       } finally {
         loading.value = false;
-        console.log("[ExpandedRow] onMounted finished. loading =>", loading.value);
       }
     });
 
@@ -444,7 +453,6 @@ export default defineComponent({
       loadCIFFile(record.pdbid, record.ENSURE_ID, sampleIdx);
     }
 
-    // 引用常量
     const CITE_TEXT =
       'Sprinzl M, Vassilenko KS. Compilation of tRNA sequences and sequences of tRNA genes.\n'
       + 'Nucleic Acids Res. 2005 Jan 1;33(Database issue):D139-40.\n'
