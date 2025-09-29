@@ -65,7 +65,7 @@
         <s-table
           :columns="columns"
           :data-source="filteredDataSource"
-          :row-key="record => record.key"
+          :row-key="computeRowKey"
           :stripe="true"
           :show-sorter-tooltip="true"
           :size="tableSize"
@@ -79,13 +79,11 @@
                 <ElTag
                   v-for="item in record.Related_disease.split(';').map(str => str.trim())"
                   :key="item"
-                  :type="
-                    item === 'cystic fibrosis'
-                      ? 'danger'
-                      : item === 'Model protein'
-                      ? 'info'
-                      : 'success'
-                  "
+                  :type="item === 'cystic fibrosis'
+                    ? 'danger'
+                    : item === 'Model protein'
+                    ? 'info'
+                    : 'success'"
                 >
                   {{ item }}
                 </ElTag>
@@ -161,6 +159,12 @@ export default defineComponent({
       return data;
     });
 
+    // 动态计算 rowKey
+    const computeRowKey = (record: any) => {
+      // 确保返回一个有效的唯一标识符（如 ENSURE_ID、PMID 或 key）
+      return record.ENSURE_ID || record.PMID || record.key || record['Index'] || `row-${Math.random()}`;
+    };
+
     return {
       locale,
       columns,
@@ -169,7 +173,8 @@ export default defineComponent({
       searchText,
       searchColumn,
       selectedColumns,
-      allColumns
+      allColumns,
+      computeRowKey // 返回 computeRowKey 方法
     };
   }
 });

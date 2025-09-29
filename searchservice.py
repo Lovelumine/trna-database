@@ -59,10 +59,23 @@ def _maybe_fix_mojibake(s: str) -> str:
 def _fix_df_mojibake(df: pd.DataFrame) -> pd.DataFrame:
     if not isinstance(df, pd.DataFrame) or df.empty:
         return df
-    # 仅当任意单元包含明显乱码标志时才逐格修复
-    if not any(df.astype(str).apply(lambda col: col.str.contains('Ã|Â', na=False)).any()):
+
+    # 只有检测到疑似乱码时才做逐元素修复，避免无意义的全表遍历
+    try:
+        # 列向量化检测是否包含 'Ã' 或 'Â'
+        has_moji = df.apply(lambda col: col.astype(str).str.contains(r'Ã|Â', na=False)).any().any()
+    except Exception:
+        has_moji = True  # 保险起见，检测失败就当作需要修复
+
+    if not has_moji:
         return df
-    return df.applymap(_maybe_fix_mojibake)
+
+    # pandas 2.1+ 推荐使用 DataFrame.map；老版本没有 map 就回退到 applymap
+    if hasattr(df, "map") and callable(getattr(df, "map")):
+        return df.map(_maybe_fix_mojibake)
+    else:
+        # 兼容老版本 pandas
+        return df.applymap(_maybe_fix_mojibake)
 
 def load_csv(path_or_url: str) -> pd.DataFrame:
     """统一按字节读取，避免 requests 的 r.text 误判编码；读取后按需修复乱码。"""
