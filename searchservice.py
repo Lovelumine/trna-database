@@ -270,17 +270,6 @@ def search():
     return jsonify(topn)
 
 # -----------------------------
-# 自动重启（可选）
-# -----------------------------
-def schedule_restart(interval_sec: float = 1800):
-    """在 interval_sec 秒后重启当前进程。"""
-    def _restart():
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-    t = threading.Timer(interval_sec, _restart)
-    t.setDaemon(True)
-    t.start()
-
-# -----------------------------
 # 主入口
 # -----------------------------
 if __name__ == '__main__':
