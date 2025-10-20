@@ -79,27 +79,27 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { STableProvider } from '@shene/table';
 import Papa from 'papaparse';
 import tRNAtherapeutics1 from './tRNAtherapeutics-1.vue';
-// import { useTableData } from '../../assets/js/useTableData.js'; // 不再需要整表加载
 import en from '@shene/table/dist/locale/en';
 import type { EChartsOption } from 'echarts';
 import { ElSkeleton } from 'element-plus';
 
 const locale = ref(en);
 
-// 后端 /search 仍然读取大 CSV（保持不变）
-const ENGINEERED_CSV_URL = 'https://minio.lumoxuan.cn/ensure/Engineered%20Sup-tRNA.csv';
-// 图表改为读取你的小文件
+// 图表改为读取你的小文件（保持不变）
 const PERPOS_COUNTS_URL = 'https://minio.lumoxuan.cn/ensure/Engineered-Sup-tRNA.perpos.counts.csv';
+
+// 后端 API（同源部署可留空，或写你的后端域名/端口）
+const API_BASE = ''; // 如需直连本机后端：'http://127.0.0.1:8000'
 
 export default {
   name: 'tRNAtherapeutics',
   components: { tRNAtherapeutics1, STableProvider, ElSkeleton },
   setup() {
     // ===== 加载状态 =====
-    const loadingPmid = ref(true);  // PMID 表格
-    const loadingSup  = ref(true);  // 图表的小文件
+    const loadingPmid = ref(true);  // PMID 主表格（保留 CSV 流程）
+    const loadingSup  = ref(true);  // 图表小文件
 
-    // ===== 每行展开 -> 用后端 /search 按 PMID 分批拉取 =====
+    // ===== 每行展开 -> 用后端 MySQL /search_table 按 PMID 分批拉取 =====
     const supByPmid = ref<Record<string, any[]>>({});
     const loadingSupByPmid = ref<Record<string, boolean>>({});
     const fetchedSet = new Set<string>();
@@ -107,19 +107,22 @@ export default {
     async function fetchSupRowsForPmid(pmid: string) {
       loadingSupByPmid.value[pmid] = true;
       try {
+        // ★ 修改点：改用 MySQL 搜索接口 /search_table，精确按 PMID 查询 sup-tRNA 记录
         const payload = {
-          query_seq: 'N',
-          csv_paths: [ENGINEERED_CSV_URL],
-          number: 5000,
-          pmids: [pmid]
+          table: 'Engineered_sup_tRNA',
+          column: 'PMID',
+          value: pmid,
+          mode: 'exact',
+          limit: 1000
         };
-        const resp = await fetch(`/search`, {
+        const resp = await fetch(`${API_BASE}/search_table`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        const arr = await resp.json();
-        supByPmid.value[pmid] = Array.isArray(arr) ? arr.map((x: any) => x.row_data) : [];
+        const json = await resp.json();
+        // 后端返回 { results: [...] }，直接取结果即可
+        supByPmid.value[pmid] = Array.isArray(json?.results) ? json.results : [];
       } catch (e) {
         console.error('[fetchSupRowsForPmid] error:', e);
         supByPmid.value[pmid] = [];
@@ -127,6 +130,7 @@ export default {
         loadingSupByPmid.value[pmid] = false;
       }
     }
+
     function triggerFetch(pmid: string) {
       if (!fetchedSet.has(pmid)) {
         fetchedSet.add(pmid);
@@ -135,7 +139,7 @@ export default {
       return true;
     }
 
-    // ===== PMID 表格搜索与分页（原样保留） =====
+    // ===== PMID 主表格（保持不变：仍然从 CSV 加载） =====
     const searchText   = ref('');
     const searchColumn = ref('');
     const tableSize    = ref<'small'|'default'|'large'>('default');
@@ -204,49 +208,49 @@ export default {
       if (pagination.value.current > maxPage) pagination.value.current = maxPage;
     };
 
-    // ===== 图表：改为读取聚合后的小 CSV =====
+    // ===== 图表：读取聚合后的小 CSV（保持不变） =====
     type PerRow = { position: string; match: number; mismatch: number; insertion: number; deletion: number };
     const perposRows = ref<PerRow[]>([]);
 
     const perPositionOption = computed<EChartsOption>(() => {
-  if (!perposRows.value.length) {
-    return {
-      tooltip: { trigger: 'axis' },
-      legend:  { data: [], top: 30 },
-      xAxis:   { type: 'category', data: [], name: 'position' },
-      yAxis:   { type: 'value', name: 'count' },
-      series:  []
-    };
-  }
+      if (!perposRows.value.length) {
+        return {
+          tooltip: { trigger: 'axis' },
+          legend:  { data: [], top: 30 },
+          xAxis:   { type: 'category', data: [], name: 'position' },
+          yAxis:   { type: 'value', name: 'count' },
+          series:  []
+        };
+      }
 
-  // 先把能转成数字的按数字升序，其余（如 V1、7a1）保持原文件顺序排在后面
-  const rows = [...perposRows.value];
-  const numRows  = rows.filter(r => !Number.isNaN(Number(r.position)))
-                       .sort((a, b) => Number(a.position) - Number(b.position));
-  const restRows = rows.filter(r =>  Number.isNaN(Number(r.position))); // 保留原顺序
-  const ordered  = numRows.concat(restRows);
+      // 先把能转成数字的按数字升序，其余（如 V1、7a1）保持原文件顺序排在后面
+      const rows = [...perposRows.value];
+      const numRows  = rows.filter(r => !Number.isNaN(Number(r.position)))
+                           .sort((a, b) => Number(a.position) - Number(b.position));
+      const restRows = rows.filter(r =>  Number.isNaN(Number(r.position))); // 保留原顺序
+      const ordered  = numRows.concat(restRows);
 
-  const positions = ordered.map(r => r.position);
-  const match     = ordered.map(r => r.match);
-  const mismatch  = ordered.map(r => r.mismatch);
-  const insertion = ordered.map(r => r.insertion);
-  const deletion  = ordered.map(r => r.deletion);
+      const positions = ordered.map(r => r.position);
+      const match     = ordered.map(r => r.match);
+      const mismatch  = ordered.map(r => r.mismatch);
+      const insertion = ordered.map(r => r.insertion);
+      const deletion  = ordered.map(r => r.deletion);
 
-  return {
-    tooltip: { trigger: 'axis' },
-    legend:  { data: ['match','mismatch','insertion','deletion'], top: 30 },
-    xAxis:   { type: 'category', data: positions, name: 'position', axisLabel: { rotate: 45 } },
-    yAxis:   { type: 'value', name: 'count' },
-    series: [
-      { name: 'match',     type: 'bar', stack: 'all', data: match,     itemStyle: { borderRadius: 4 } },
-      { name: 'mismatch',  type: 'bar', stack: 'all', data: mismatch,  itemStyle: { borderRadius: 4 } },
-      { name: 'insertion', type: 'bar', stack: 'all', data: insertion, itemStyle: { borderRadius: 4 } },
-      { name: 'deletion',  type: 'bar', stack: 'all', data: deletion,  itemStyle: { borderRadius: 4 } }
-    ]
-  };
-});
+      return {
+        tooltip: { trigger: 'axis' },
+        legend:  { data: ['match','mismatch','insertion','deletion'], top: 30 },
+        xAxis:   { type: 'category', data: positions, name: 'position', axisLabel: { rotate: 45 } },
+        yAxis:   { type: 'value', name: 'count' },
+        series: [
+          { name: 'match',     type: 'bar', stack: 'all', data: match,     itemStyle: { borderRadius: 4 } },
+          { name: 'mismatch',  type: 'bar', stack: 'all', data: mismatch,  itemStyle: { borderRadius: 4 } },
+          { name: 'insertion', type: 'bar', stack: 'all', data: insertion, itemStyle: { borderRadius: 4 } },
+          { name: 'deletion',  type: 'bar', stack: 'all', data: deletion,  itemStyle: { borderRadius: 4 } }
+        ]
+      };
+    });
 
-    // ===== 挂载：先 PMID，再加载小文件用于总体图 =====
+    // ===== 挂载：先加载 PMID CSV，再加载小 CSV（保持不变） =====
     onMounted(async () => {
       // 1) PMID 列表（保持不变）
       try {
@@ -272,7 +276,7 @@ export default {
         loadingPmid.value = false;
       }
 
-      // 2) 加载聚合后的小 CSV（极小，图表很快渲染）
+      // 2) 小 CSV（图表）
       try {
         const resp2 = await fetch(PERPOS_COUNTS_URL);
         const txt2  = await resp2.text();
@@ -311,7 +315,7 @@ export default {
       loadingPmid,
       loadingSup,
 
-      // 展开行数据
+      // 展开行数据（已改为 MySQL）
       supByPmid,
       loadingSupByPmid,
       triggerFetch,
@@ -319,6 +323,7 @@ export default {
   }
 };
 </script>
+
 
 <style scoped>
 .site--main { padding: 20px; }

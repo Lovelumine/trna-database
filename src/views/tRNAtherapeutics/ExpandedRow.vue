@@ -341,18 +341,14 @@
 <script lang="tsx">
 import { defineComponent, ref, onMounted, computed, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
-import { useTableData } from '@/assets/js/useTableData.js';
 import TranStructure from '@/components/TranStructure.vue';
 import * as d3 from 'd3';
 import { draw_cloverleaf, draw_base_distro } from '@/utils/tRNAviz/js/consensusESM.js';
 import "@/utils/tRNAviz/css/explorer.css";
 import { formatAlignment, loadCIFFile } from './expandedRowLogic';
-import TrnaRadial from '@/components/TrnaRadial.vue'
-import supTrnaRadial from '@/components/supTrnaRadial.vue'
+import TrnaRadial from '@/components/TrnaRadial.vue';
+import supTrnaRadial from '@/components/supTrnaRadial.vue';
 import AlignmentTable from '@/components/AlignmentTable.vue';
-
-// 保持你原 CSV
-const ENGINEERED_CSV_URL = 'https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv';
 
 export default defineComponent({
   name: 'TRNATherapeutics-1',
@@ -361,82 +357,89 @@ export default defineComponent({
     const route = useRoute();
     const id = route.params.key as string;
 
-    // 原有数据管道
-    const { filteredDataSource, loadData } = useTableData(ENGINEERED_CSV_URL);
     const loading = ref(true);
     const showSup = ref(true);
+    const records = ref<any[]>([]);
 
-    // ★ 新增：可写的本地覆盖数据（避免写 computed）
-    const localOverride = ref<any[] | null>(null);
+    // 后端接口（优先同源，其次可填你的服务地址）
+    const API_ENDPOINTS = [
+      '/search_table',
+    ];
 
-    // ★ 新增：统一的数据来源（若有覆盖，用覆盖；否则用原有 filteredDataSource）
-    const recordsSource = computed<any[]>(() => localOverride.value ?? filteredDataSource.value);
-
-    // 原有：按 ENSURE_ID 过滤（只改成用 recordsSource）
     const filteredRecords = computed(() => {
-      const res = recordsSource.value.filter((r: any) => r.ENSURE_ID == id);
-      return res;
+      // 一般后端已按 ENSURE_ID 精确返回；此处再保险过滤一下
+      return records.value.filter((r: any) => String(r.ENSURE_ID) === String(id));
     });
 
     const parseSup = (str: string) => {
       try { return JSON.parse(str); } catch { return []; }
     };
 
-    // ★ 修复后的后端拉取（不写 computed；空结果/异常会返回 false 触发回退）
-    async function tryBackendFetchByEnsureId(ensureId: string): Promise<boolean> {
-      const payload: any = {
-        query_seq: 'N',
-        csv_paths: [ENGINEERED_CSV_URL],
-        number: 5000,
-        ensure_ids: [ensureId]
+    async function fetchByEnsureId(ensureId: string): Promise<boolean> {
+      const payload = {
+        table: 'Engineered_sup_tRNA',
+        column: 'ENSURE_ID',
+        value: ensureId,
+        mode: 'exact',
+        limit: 50
       };
 
-      const endpoints = ['/search', 'http://223.82.65.76:8000/search']; // 同源优先，其次直连
-      for (const ep of endpoints) {
+      for (const ep of API_ENDPOINTS) {
         try {
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 5000);
+          const t = setTimeout(() => controller.abort(), 8000);
           const resp = await fetch(ep, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
             signal: controller.signal
           });
-          clearTimeout(timer);
+          clearTimeout(t);
           if (!resp.ok) continue;
-          const arr = await resp.json();
-          if (!Array.isArray(arr) || arr.length === 0 || !arr[0]?.row_data) continue;
 
-          // ★ 正确做法：写入可写的 localOverride
-          localOverride.value = arr.map((x: any, i: number) => ({
-            ...x.row_data,
-            key: x.row_data?.ENSURE_ID || `${ensureId}-${i}`
+          const data = await resp.json();
+          if (data?.error) continue;
+
+          const rows: any[] = Array.isArray(data?.results) ? data.results : [];
+          records.value = rows.map((x: any, i: number) => ({
+            ...x,
+            key: x.ENSURE_ID || `${ensureId}-${i}`,
+            // 方便模板里使用的链接字段
+            ENSURE_ID_link: x.ENSURE_ID_link || `#/${ensureId}`
           }));
+
           return true;
-        } catch (e) {
+        } catch {
           // 尝试下一个端点
         }
       }
       return false;
     }
 
+    function switchSample(record: any, sampleIdx: number) {
+      record._selectedSample = sampleIdx;
+      loadCIFFile(record.pdbid, record.ENSURE_ID, sampleIdx);
+    }
+
     onMounted(async () => {
       try {
-        const ok = await tryBackendFetchByEnsureId(id);
-        if (!ok) {
-          await loadData();          // 回退到原全量加载
-        }
-
+        await fetchByEnsureId(id);
         await nextTick();
 
-        // 初始化每条记录的 3D / alignment
+        // 初始化每条记录的 3D / 对齐格式化（若字段存在）
         filteredRecords.value.forEach((record: any) => {
           record._selectedSample = 0;
-          loadCIFFile(record.pdbid, record.ENSURE_ID, 0);
-          try { record.formattedAlignment = formatAlignment(record.Alignment); } catch {}
+          if (record.pdbid) {
+            loadCIFFile(record.pdbid, record.ENSURE_ID, 0);
+          }
+          try {
+            if (record.Alignment) {
+              record.formattedAlignment = formatAlignment(record.Alignment);
+            }
+          } catch {}
         });
 
-        // 可视化底图
+        // 可视化底图（按需保留）
         d3.json("https://minio.lumoxuan.cn/ensure/trnaviz/ala.json")
           .then(plotData => {
             draw_cloverleaf(plotData, "Ala", "https://minio.lumoxuan.cn/ensure/trnaviz/ala.json");
@@ -448,15 +451,10 @@ export default defineComponent({
       }
     });
 
-    function switchSample(record: any, sampleIdx: number) {
-      record._selectedSample = sampleIdx;
-      loadCIFFile(record.pdbid, record.ENSURE_ID, sampleIdx);
-    }
-
     const CITE_TEXT =
-      'Sprinzl M, Vassilenko KS. Compilation of tRNA sequences and sequences of tRNA genes.\n'
-      + 'Nucleic Acids Res. 2005 Jan 1;33(Database issue):D139-40.\n'
-      + 'doi: 10.1093/nar/gki012. PMID: 15608164; PMCID: PMC539966';
+      'Sprinzl M, Vassilenko KS. Compilation of tRNA sequences and sequences of tRNA genes.\n' +
+      'Nucleic Acids Res. 2005 Jan 1;33(Database issue):D139-40.\n' +
+      'doi: 10.1093/nar/gki012. PMID: 15608164; PMCID: PMC539966';
     const CITE_LINK = 'https://academic.oup.com/nar/article-lookup/doi/10.1093/nar/gki012';
 
     return {
