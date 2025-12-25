@@ -2,6 +2,19 @@
   <div class="site--main">
     <h1>Welcome to ENSURE: The Encyclopedia of Suppressor tRNA with an AI Assistant</h1>
     <p>Welcome to ENSURE! Our platform offers extensive data and tools to advance the field of sup-tRNA.</p>
+
+    <h2>How to Cite</h2>
+    <div class="citation-card">
+      <p class="citation-hint">If you use ENSURE in your research, please cite:</p>
+      <p class="citation-text">
+        Zhuo Ouyang, Yifeng Zhang, Fan Feng, Xudong Zeng, Qiuhui Wu, Abdul Hafeez, Wenkai Teng, Yixin Kong, Xuan Bu,
+        Yang Sun, Bin Li, Yanzi Wen, Zhao-Rong Lun, Lianghu Qu, Xiao Feng, Lingling Zheng, ENSURE: the encyclopedia of
+        suppressor tRNA with an AI assistant, <i>Nucleic Acids Research</i>, 2025; gkaf1062,
+        <a href="https://doi.org/10.1093/nar/gkaf1062" target="_blank" rel="noopener noreferrer">
+          https://doi.org/10.1093/nar/gkaf1062
+        </a>
+      </p>
+    </div>
     
     <div class="image-container">
       <img :src="'https://minio.lumoxuan.cn/ensure/picture/structure.png'" @click="openLightbox(0)" class="centered-image" alt="Structure">
@@ -116,5 +129,24 @@ a:hover {
 .centered-image {
   cursor: pointer;
   max-width: 80%;
+}
+
+.citation-card {
+  background: #f6f8fa;
+  border-left: 6px solid #1a73e8;
+  border-radius: 4px;
+  padding: 14px 18px;
+  margin: 14px 0 26px;
+}
+
+.citation-hint {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.citation-text {
+  margin: 0;
+  line-height: 1.6;
+  word-break: break-word;
 }
 </style>
