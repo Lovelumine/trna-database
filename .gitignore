@@ -45,3 +45,7 @@ python scripts
 
 
 __pycache__
+
+# Large media/fonts kept locally but not tracked
+*.mp4
+*.ttf
