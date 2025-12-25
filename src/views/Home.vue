@@ -11,8 +11,11 @@
     <p>Welcome to ENSURE! Our platform offers extensive data and tools to advance the field of sup-tRNA.</p>
 
     <h2>How to Cite</h2>
-    <div class="citation-card citation-card--fold">
-      <p class="citation-hint">If you use ENSURE in your research, please cite:</p>
+    <div class="citation-card citation-card--fold" tabindex="0" title="Hover to expand">
+      <p class="citation-hint">
+        If you use ENSURE in your research, please cite:
+        <span class="citation-expand-indicator">Hover to expand</span>
+      </p>
       <p class="citation-text">
         Zhuo Ouyang, Yifeng Zhang, Fan Feng, Xudong Zeng, Qiuhui Wu, Abdul Hafeez, Wenkai Teng, Yixin Kong, Xuan Bu,
         Yang Sun, Bin Li, Yanzi Wen, Zhao-Rong Lun, Lianghu Qu, Xiao Feng, Lingling Zheng, ENSURE: the encyclopedia of
@@ -166,12 +169,43 @@ a:hover {
 .citation-hint {
   margin: 0 0 8px;
   font-weight: 600;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
 }
 
 .citation-text {
   margin: 0;
   line-height: 1.6;
   word-break: break-word;
+}
+
+.citation-card--fold {
+  cursor: pointer;
+  outline: none;
+  position: relative;
+}
+
+.citation-card--fold:focus-visible {
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.25);
+}
+
+.citation-expand-indicator {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.citation-card--fold::after {
+  content: "▾";
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  color: #1a73e8;
+  transition: transform 180ms ease;
+  pointer-events: none;
 }
 
 .citation-card--fold .citation-text {
@@ -181,15 +215,29 @@ a:hover {
   transition: max-height 180ms ease, opacity 180ms ease;
 }
 
-.citation-card--fold:hover .citation-text {
+.citation-card--fold:hover .citation-text,
+.citation-card--fold:focus-within .citation-text {
   max-height: 260px;
   opacity: 1;
+}
+
+.citation-card--fold:hover::after,
+.citation-card--fold:focus-within::after {
+  transform: rotate(-180deg);
 }
 
 @media (hover: none) {
   .citation-card--fold .citation-text {
     max-height: none;
     opacity: 1;
+  }
+
+  .citation-expand-indicator {
+    display: none;
+  }
+
+  .citation-card--fold::after {
+    display: none;
   }
 }
 </style>
