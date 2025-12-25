@@ -49,6 +49,11 @@ export default {
       type: String,
       required: true,
     },
+    editable: {
+      type: Boolean,
+      required: false,
+      default: false,
+    },
   },
   data() {
     return {
@@ -63,12 +68,23 @@ export default {
       },
     };
   },
+  computed: {
+    isEditable() {
+      if (this.editable) return true;
+      try {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('editable') === '1' || params.get('edit') === '1';
+      } catch {
+        return false;
+      }
+    },
+  },
   methods: {
     drawPlot(id, structure, sequence, color) {
       let container = new fornac.FornaContainer("#" + id, {
         animation: true,
         zoomable: true,
-        editable: false,
+        editable: this.isEditable,
       });
       container.displayNumbering(false);
       container.addRNA(structure, { sequence: sequence });
