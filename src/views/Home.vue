@@ -1,10 +1,17 @@
 <template>
   <div class="site--main">
+    <div class="ensure-banner">
+      <p class="ensure-disclaimer">
+        ⚠️ The ENSURE database is provided for academic and non-commercial research use only.
+        Commercial use requires prior written permission from the authors and Sun Yat-sen University.
+      </p>
+    </div>
+
     <h1>Welcome to ENSURE: The Encyclopedia of Suppressor tRNA with an AI Assistant</h1>
     <p>Welcome to ENSURE! Our platform offers extensive data and tools to advance the field of sup-tRNA.</p>
 
     <h2>How to Cite</h2>
-    <div class="citation-card">
+    <div class="citation-card citation-card--fold">
       <p class="citation-hint">If you use ENSURE in your research, please cite:</p>
       <p class="citation-text">
         Zhuo Ouyang, Yifeng Zhang, Fan Feng, Xudong Zeng, Qiuhui Wu, Abdul Hafeez, Wenkai Teng, Yixin Kong, Xuan Bu,
@@ -90,6 +97,23 @@ export default {
   padding: 20px;
 }
 
+/* 顶部免责声明横幅 */
+.ensure-banner {
+  background-color: #fff3cd;
+  border-left: 6px solid #ffc107;
+  padding: 12px 18px;
+  margin-bottom: 18px;
+  border-radius: 4px;
+}
+
+.ensure-disclaimer {
+  margin: 0;
+  font-size: 14px;
+  color: #856404;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 .image-container {
   display: flex;
   justify-content: center;
@@ -148,5 +172,24 @@ a:hover {
   margin: 0;
   line-height: 1.6;
   word-break: break-word;
+}
+
+.citation-card--fold .citation-text {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 180ms ease, opacity 180ms ease;
+}
+
+.citation-card--fold:hover .citation-text {
+  max-height: 260px;
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .citation-card--fold .citation-text {
+    max-height: none;
+    opacity: 1;
+  }
 }
 </style>

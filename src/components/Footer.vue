@@ -3,6 +3,10 @@
     <div class="footer-content">
       <div class="copyright">
         © Copyright 2024 Zheng Lab. School of Life Science, Sun Yat-sen University, China.
+        <br />
+        ⚠️ The ENSURE database is provided for academic and non-commercial research use only.
+        <br />
+        Commercial use requires prior written permission from the authors and Sun Yat-sen University.
       </div>
       <div class="beian-source-code">
         <a href="https://beian.miit.gov.cn" target="_blank" class="beian-link">赣ICP备2024033025号</a>
