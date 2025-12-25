@@ -30,9 +30,11 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, 'src') // 设置别名
-    }
+    alias: [
+      { find: "@", replacement: path.resolve(__dirname, 'src') }, // 设置别名
+      // 仅重写裸导入的入口，避免影响样式路径（vue3-video-play/dist/style.css）
+      { find: /^vue3-video-play$/, replacement: "vue3-video-play/dist/index.mjs" },
+    ]
   },
   esbuild: {
     jsxFactory: 'h',
@@ -64,26 +66,23 @@ export default defineConfig({
     port: 5174, // 使用5174端口
     strictPort: true,
     proxy: {
-      '/scan': {
-        target: 'http://localhost:3456',
-        changeOrigin: true,
-      },      
       '/search': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
-      '/align': {
-        target: 'http://localhost:3457',
+      '/search_table': {
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },      
       '/chat/api': {
         target: 'http://223.82.75.76:8080',
         changeOrigin: true,
       },
-      '/run-blast': {
-        target: 'http://localhost:3945',
+      // 后端 Engineered_sup_tRNA CRUD 代理
+      '/engineered_sup_trna': {
+        target: 'http://localhost:8000',
         changeOrigin: true,
-      }
+      },
     },
     // 使用 configureServer API 添加中间件来检查请求来源
     configureServer: (server) => {
@@ -100,6 +99,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: [
+      'vue3-video-play',
       '@formkit/vue',
       '@formkit/addons',
       '@formkit/i18n',

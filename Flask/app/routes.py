@@ -9,6 +9,123 @@ from .logic.align import (
 
 bp = Blueprint("routes", __name__)
 
+# ---------------------- 通用工具 ----------------------
+
+def _get_table_columns(table: str):
+    insp = db.inspect(db.engine)
+    if table not in insp.get_table_names():
+        return None, None
+    cols = insp.get_columns(table)  # [{'name':..., 'type':...}, ...]
+    col_names = [c["name"] for c in cols]
+    return cols, col_names
+
+# 针对 Engineered_sup_tRNA 提供简化 CRUD（行级编辑）
+ENGINEERED_TABLE = "Engineered_sup_tRNA"
+
+@bp.route("/engineered_sup_trna/columns", methods=["GET"])
+def engineered_columns():
+    cols, col_names = _get_table_columns(ENGINEERED_TABLE)
+    if not cols:
+        return jsonify({"error": f"Table '{ENGINEERED_TABLE}' does not exist"}), 400
+    return jsonify({
+        "table": ENGINEERED_TABLE,
+        "columns": [{"name": c["name"], "type": str(c["type"])} for c in cols]
+    })
+
+@bp.route("/engineered_sup_trna/create", methods=["POST"])
+def engineered_create():
+    """
+    JSON: {<column>: <value>, ...}
+    必须包含 ENSURE_ID（作为逻辑唯一键），其他字段可选。
+    """
+    payload = request.get_json(silent=True) or {}
+    cols, col_names = _get_table_columns(ENGINEERED_TABLE)
+    if not cols:
+        return jsonify({"error": f"Table '{ENGINEERED_TABLE}' does not exist"}), 400
+
+    if "ENSURE_ID" not in payload:
+        return jsonify({"error": "ENSURE_ID is required"}), 400
+
+    # 仅保留表中存在的字段
+    data = {k: v for k, v in payload.items() if k in col_names}
+    if not data:
+        return jsonify({"error": "No valid columns to insert"}), 400
+
+    col_sql = ", ".join(f"`{k}`" for k in data.keys())
+    placeholders = []
+    params = {}
+    for idx, (k, v) in enumerate(data.items()):
+        ph = f"p{idx}"
+        placeholders.append(f":{ph}")
+        params[ph] = v
+    val_sql = ", ".join(placeholders)
+    sql = text(f"INSERT INTO `{ENGINEERED_TABLE}` ({col_sql}) VALUES ({val_sql})")
+
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(sql, params)
+        return jsonify({"ok": True, "inserted": 1}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@bp.route("/engineered_sup_trna/update", methods=["POST"])
+def engineered_update():
+    """
+    JSON:
+    {
+      "ENSURE_ID": "...",   # 必填，作为更新条件
+      "updates": { <column>: <value>, ... }  # 需要更新的字段
+    }
+    """
+    payload = request.get_json(silent=True) or {}
+    ensure_id = payload.get("ENSURE_ID")
+    updates = payload.get("updates") or {}
+    cols, col_names = _get_table_columns(ENGINEERED_TABLE)
+    if not cols:
+        return jsonify({"error": f"Table '{ENGINEERED_TABLE}' does not exist"}), 400
+    if not ensure_id:
+        return jsonify({"error": "ENSURE_ID is required"}), 400
+
+    updates = {k: v for k, v in updates.items() if k in col_names}
+    if not updates:
+        return jsonify({"error": "No valid columns to update"}), 400
+
+    set_parts = []
+    params = {}
+    for idx, (k, v) in enumerate(updates.items()):
+        ph = f"p{idx}"
+        set_parts.append(f"`{k}` = :{ph}")
+        params[ph] = v
+    params["pk"] = ensure_id
+    sql = text(f"UPDATE `{ENGINEERED_TABLE}` SET {', '.join(set_parts)} WHERE `ENSURE_ID` = :pk")
+
+    try:
+        with db.engine.begin() as conn:
+            res = conn.execute(sql, params)
+        return jsonify({"ok": True, "updated": res.rowcount}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@bp.route("/engineered_sup_trna/delete", methods=["POST"])
+def engineered_delete():
+    """
+    JSON: { "ENSURE_ID": "..." }
+    """
+    payload = request.get_json(silent=True) or {}
+    ensure_id = payload.get("ENSURE_ID")
+    if not ensure_id:
+        return jsonify({"error": "ENSURE_ID is required"}), 400
+
+    sql = text(f"DELETE FROM `{ENGINEERED_TABLE}` WHERE `ENSURE_ID` = :ENSURE_ID")
+    try:
+        with db.engine.begin() as conn:
+            res = conn.execute(sql, {"ENSURE_ID": ensure_id})
+        return jsonify({"ok": True, "deleted": res.rowcount}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 @bp.route("/", methods=["GET"])
 def index():
     return "OK", 200
