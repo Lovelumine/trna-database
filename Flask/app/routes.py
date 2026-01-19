@@ -101,6 +101,125 @@ def _build_search_filter(
     where_sql, params = _build_search_clause(search_text, search_column, columns, ci)
     return where_sql, params, False
 
+def _merge_where(where_sql: str, extra: str) -> str:
+    if not extra:
+        return where_sql
+    if where_sql:
+        return f"{where_sql} AND {extra}"
+    return f"WHERE {extra}"
+
+def _build_stat_filters(filters, columns: list, ci: bool):
+    clauses = []
+    params = {}
+    if not filters:
+        return "", params
+    for idx, f in enumerate(filters):
+        col = f.get("column")
+        op = (f.get("op") or "eq").lower()
+        val = f.get("value")
+        if not col or col not in columns:
+            raise ValueError(f"Invalid filter column '{col}'")
+        collate = " COLLATE utf8mb4_general_ci" if ci else ""
+        if op == "eq":
+            clauses.append(f"CAST(`{col}` AS CHAR){collate} = :f{idx}")
+            params[f"f{idx}"] = val
+        elif op == "neq":
+            clauses.append(f"CAST(`{col}` AS CHAR){collate} <> :f{idx}")
+            params[f"f{idx}"] = val
+        else:
+            raise ValueError(f"Unsupported filter op '{op}'")
+    return " AND ".join(clauses), params
+
+def _value_counts(
+    conn,
+    table: str,
+    column: str,
+    where_sql: str,
+    params: dict,
+    split_regex: str = "",
+    top_n: int = 0,
+):
+    if split_regex:
+        sql = text(f"SELECT `{column}` FROM `{table}` {where_sql}")
+        rows = conn.execute(sql, params).fetchall()
+        counter = {}
+        for row in rows:
+            cell = row[0]
+            if cell is None or cell == "":
+                continue
+            for part in re.split(split_regex, str(cell)):
+                name = part.strip()
+                if not name:
+                    continue
+                counter[name] = counter.get(name, 0) + 1
+        items = sorted(counter.items(), key=lambda x: x[1], reverse=True)
+        if top_n:
+            items = items[:top_n]
+        return [{"name": k, "value": int(v)} for k, v in items]
+
+    sql = text(
+        f"SELECT `{column}` AS name, COUNT(*) AS cnt "
+        f"FROM `{table}` {where_sql} "
+        f"GROUP BY `{column}`"
+    )
+    rows = conn.execute(sql, params).fetchall()
+    items = sorted(((r[0] or "Unknown"), int(r[1])) for r in rows if r[0] not in (None, ""))
+    if top_n:
+        items = sorted(items, key=lambda x: x[1], reverse=True)[:top_n]
+    return [{"name": k, "value": int(v)} for k, v in items]
+
+def _matrix_counts(
+    conn,
+    table: str,
+    x_column: str,
+    y_column: str,
+    where_sql: str,
+    params: dict,
+):
+    sql = text(
+        f"SELECT `{x_column}` AS x, `{y_column}` AS y, COUNT(*) AS cnt "
+        f"FROM `{table}` {where_sql} "
+        f"GROUP BY `{x_column}`, `{y_column}`"
+    )
+    rows = conn.execute(sql, params).fetchall()
+    return [
+        {"x": r[0], "y": r[1], "count": int(r[2])}
+        for r in rows
+        if r[0] not in (None, "") and r[1] not in (None, "")
+    ]
+
+def _codon_change_heatmap(
+    conn,
+    table: str,
+    column: str,
+    where_sql: str,
+    params: dict,
+    exclude_mut_regex: str = "",
+):
+    sql = text(f"SELECT `{column}` FROM `{table}` {where_sql}")
+    rows = conn.execute(sql, params).fetchall()
+    counter = {}
+    for row in rows:
+        cell = row[0]
+        if cell is None or cell == "":
+            continue
+        parts = str(cell).split("-")
+        if len(parts) < 2:
+            continue
+        orig = parts[0].strip()
+        mut = parts[1].strip()
+        if not orig or not mut:
+            continue
+        if exclude_mut_regex and re.search(exclude_mut_regex, mut):
+            continue
+        counter.setdefault(orig, {})
+        counter[orig][mut] = counter[orig].get(mut, 0) + 1
+    data = []
+    for orig, row in counter.items():
+        for mut, cnt in row.items():
+            data.append({"orig": orig, "mut": mut, "count": int(cnt)})
+    return data
+
 # 针对 Engineered_sup_tRNA 提供简化 CRUD（行级编辑）
 ENGINEERED_TABLE = "Engineered_sup_tRNA"
 
@@ -388,6 +507,7 @@ def table_stats():
 
     try:
         with db.engine.connect() as conn:
+            # Backward-compatible string stats
             if "allele_heatmap" in stats:
                 required_cols = ["GENOMIC_REF_ALLELE", "GENOMIC_MUT_ALLELE"]
                 for col in required_cols:
@@ -441,6 +561,63 @@ def table_stats():
                     {"name": k, "value": int(v)} for k, v in items
                 ]
 
+            # New generic stats (dict-based)
+            for stat in stats:
+                if isinstance(stat, str):
+                    continue
+                if not isinstance(stat, dict):
+                    return jsonify({"error": "stats items must be string or object"}), 400
+                stat_type = (stat.get("type") or "").lower()
+                name = stat.get("name") or stat_type
+                filters = stat.get("filters") or []
+
+                try:
+                    filter_sql, filter_params = _build_stat_filters(filters, columns, ci)
+                except ValueError as e:
+                    return jsonify({"error": str(e)}), 400
+
+                stat_where = _merge_where(where_sql, filter_sql)
+                stat_params = {**params, **filter_params}
+
+                if stat_type == "value_counts":
+                    column = stat.get("column")
+                    if not column or column not in columns:
+                        return jsonify({"error": f"Column '{column}' not in table '{table}'"}), 400
+                    extra = f"`{column}` IS NOT NULL AND `{column}` <> ''"
+                    stat_where = _merge_where(stat_where, extra)
+                    split_regex = stat.get("split_regex") or ""
+                    top_n = int(stat.get("top_n") or 0)
+                    result[name] = _value_counts(
+                        conn, table, column, stat_where, stat_params, split_regex, top_n
+                    )
+                elif stat_type == "matrix_counts":
+                    x_col = stat.get("x_column")
+                    y_col = stat.get("y_column")
+                    if not x_col or x_col not in columns:
+                        return jsonify({"error": f"Column '{x_col}' not in table '{table}'"}), 400
+                    if not y_col or y_col not in columns:
+                        return jsonify({"error": f"Column '{y_col}' not in table '{table}'"}), 400
+                    extra = (
+                        f"`{x_col}` IS NOT NULL AND `{x_col}` <> '' "
+                        f"AND `{y_col}` IS NOT NULL AND `{y_col}` <> ''"
+                    )
+                    stat_where = _merge_where(stat_where, extra)
+                    result[name] = _matrix_counts(
+                        conn, table, x_col, y_col, stat_where, stat_params
+                    )
+                elif stat_type == "codon_change_heatmap":
+                    column = stat.get("column")
+                    if not column or column not in columns:
+                        return jsonify({"error": f"Column '{column}' not in table '{table}'"}), 400
+                    extra = f"`{column}` IS NOT NULL AND `{column}` <> ''"
+                    stat_where = _merge_where(stat_where, extra)
+                    exclude_regex = stat.get("exclude_mut_regex") or ""
+                    result[name] = _codon_change_heatmap(
+                        conn, table, column, stat_where, stat_params, exclude_regex
+                    )
+                else:
+                    return jsonify({"error": f"unsupported stats type '{stat_type}'"}), 400
+
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -470,15 +647,10 @@ def table_fulltext_rebuild():
 
     table_columns = [c["name"] for c in insp.get_columns(table)]
     if not cols:
-        cols = table_columns
+        cols = [c for c in table_columns if c != "search_blob"]
     for col in cols:
         if col not in table_columns:
             return jsonify({"error": f"Column '{col}' not in table '{table}'"}), 400
-
-    if len(cols) > 16:
-        return jsonify({"error": "FULLTEXT index supports up to 16 columns"}), 400
-
-    cols_sql = ", ".join(f"`{c}`" for c in cols)
 
     try:
         with db.engine.begin() as conn:
@@ -494,7 +666,54 @@ def table_fulltext_rebuild():
             if check and int(check) > 0:
                 conn.execute(text(f"DROP INDEX `{index_name}` ON `{table}`"))
 
-            conn.execute(text(f"CREATE FULLTEXT INDEX `{index_name}` ON `{table}` ({cols_sql})"))
+            if len(cols) > 16:
+                # Use a single search_blob column for wide tables
+                if "search_blob" not in table_columns:
+                    conn.execute(text(f"ALTER TABLE `{table}` ADD COLUMN `search_blob` TEXT"))
+                    table_columns.append("search_blob")
+
+                cols_sql = ", ".join(f"COALESCE(`{c}`, '')" for c in cols)
+                conn.execute(
+                    text(
+                        f"UPDATE `{table}` SET `search_blob` = CONCAT_WS(' ', {cols_sql})"
+                    )
+                )
+
+                conn.execute(
+                    text(
+                        f"CREATE FULLTEXT INDEX `{index_name}` ON `{table}` (`search_blob`)"
+                    )
+                )
+
+                # Refresh triggers to keep search_blob updated on insert/update
+                trig_ins = f"trg_{table}_bi_ft"
+                trig_upd = f"trg_{table}_bu_ft"
+                conn.execute(text(f"DROP TRIGGER IF EXISTS `{trig_ins}`"))
+                conn.execute(text(f"DROP TRIGGER IF EXISTS `{trig_upd}`"))
+
+                expr = f"CONCAT_WS(' ', {cols_sql})"
+                conn.execute(
+                    text(
+                        f"CREATE TRIGGER `{trig_ins}` BEFORE INSERT ON `{table}` "
+                        f"FOR EACH ROW SET NEW.`search_blob` = {expr}"
+                    )
+                )
+                conn.execute(
+                    text(
+                        f"CREATE TRIGGER `{trig_upd}` BEFORE UPDATE ON `{table}` "
+                        f"FOR EACH ROW SET NEW.`search_blob` = {expr}"
+                    )
+                )
+                return jsonify(
+                    {"ok": True, "index": index_name, "columns": ["search_blob"]}
+                ), 200
+
+            cols_sql = ", ".join(f"`{c}`" for c in cols)
+            conn.execute(
+                text(
+                    f"CREATE FULLTEXT INDEX `{index_name}` ON `{table}` ({cols_sql})"
+                )
+            )
 
         return jsonify({"ok": True, "index": index_name, "columns": cols}), 200
     except Exception as e:

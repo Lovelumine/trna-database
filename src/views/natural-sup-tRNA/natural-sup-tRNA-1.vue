@@ -29,17 +29,16 @@
       <s-table-provider :hover="true" :locale="locale">
         <s-table
           :columns="displayedColumns"
-          :data-source="filteredDataSource"
+          :data-source="rows"
           :row-key="rowKey"
           :stripe="true"
           :show-sorter-tooltip="true"
           :size="tableSize"
           :expand-row-by-click="true"
           :loading="loading"
-          :pagination="paginationView"
-          @update:pagination="(p) => Object.assign(pagination, p)"
-          @sorter-change="onSorterChange"
-          @change="handleTableChange"
+          :pagination="pagination"
+          @update:pagination="handlePaginationUpdate"
+          @change="handleSorterChange"
         >
           <template #bodyCell="{ text, column, record }">
             <template v-if="column.key === 'Species'">
@@ -199,20 +198,17 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed, toRaw, watch } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
-import { useTableData } from '../../assets/js/useTableData.js';
+import { useServerTable } from '../../utils/useServerTable';
 import VueEasyLightbox from 'vue-easy-lightbox';
 import { highlightMutation } from '../../utils/highlightMutation.js';
 import { getTagType } from '../../utils/tag.js';
-import { processCSVData } from '../../utils/processCSVData.js';
-import { sortData } from '../../utils/sort.js';
 import type { EChartsOption } from 'echarts';
 import 'echarts/lib/chart/bar';
 import 'echarts/lib/chart/heatmap';
 import { allColumns, selectedColumns } from './naturalSupTRNAColumns';
-import { createPagination } from '../../utils/table';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
@@ -221,15 +217,22 @@ export default defineComponent({
   name: 'NaturalSupTRNA',
   components: { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption, VueEasyLightbox },
   setup() {
-    const { searchText, filteredDataSource: originalFilteredDataSource, searchColumn, loadData } =
-      useTableData(
-        'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv',
-        (data) => processCSVData(data, ['Stop codon for readthrough', 'Noncanonical charged amino acids', 'Readthrough mechanism'])
-      );
+    const TABLE_NAME = 'nonsense_sup_rna';
+    const {
+      rows,
+      loading,
+      searchText,
+      searchColumn,
+      tableSize,
+      pagination,
+      loadPage,
+      handlePaginationUpdate,
+      handleSorterChange,
+      watchSearch,
+      fetchStats
+    } = useServerTable(TABLE_NAME);
 
-    const tableSize = ref<'small' | 'default' | 'large'>('default');
-    const loading = ref(false);
-    const sortedDataSource = ref<any[]>([]);
+    const stats = ref<Record<string, any[]>>({});
 
     // ✅ Lightbox refs — 之前缺这个才会报 visible 未定义
     const visible = ref(false);
@@ -244,81 +247,71 @@ export default defineComponent({
     };
     const hideLightbox = () => { visible.value = false; };
 
-    // 分页（稳定模式）
-    const pagination = createPagination();
-    const paginationView = computed(() => ({ ...toRaw(pagination) }));
+    const loadStats = async () => {
+      try {
+        const resp = await fetchStats({
+          stats: [
+            { type: 'value_counts', name: 'species_counts', column: 'Species' },
+            {
+              type: 'value_counts',
+              name: 'stop_codon_counts',
+              column: 'Stop codon for readthrough',
+              split_regex: '[;,/]'
+            },
+            {
+              type: 'value_counts',
+              name: 'aa_counts',
+              column: 'Noncanonical charged amino acids',
+              split_regex: '[;,/]'
+            },
+            {
+              type: 'value_counts',
+              name: 'tissue_counts',
+              column: 'Tissue/Organelle of Origin'
+            },
+            {
+              type: 'matrix_counts',
+              name: 'anticodon_heatmap',
+              x_column: 'Anticodon after mutation',
+              y_column: 'Anticodon before mutation'
+            }
+          ],
+          searchText: searchText.value,
+          searchColumn: searchColumn.value,
+          useFulltext: !searchColumn.value
+        });
+        stats.value = resp || {};
+      } catch {
+        stats.value = {};
+      }
+    };
+
+    watchSearch(loadStats);
 
     onMounted(async () => {
-      await loadData();
-      sortedDataSource.value = originalFilteredDataSource.value;
-      selectedColumns.value = [...selectedColumns.value]; // 触发列刷新（可选）
+      await loadPage();
+      await loadStats();
+      selectedColumns.value = [...selectedColumns.value];
     });
 
-    // 排序
-    const onSorterChange = (params: any) => {
-      let sorter: { field?: string; order?: 'ascend' | 'descend' } = Array.isArray(params) ? params[0] : params;
-      loading.value = true;
-      const timer = setTimeout(() => {
-        sortedDataSource.value = sortData(originalFilteredDataSource.value, sorter);
-        loading.value = false;
-        clearTimeout(timer);
-      }, 300);
+    const rowKey = (r: any) => {
+      const parts = [
+        r?.['RNA central ID of tRNA'],
+        r?.['ENSURE ID of tRNA'],
+        r?.['Species ID'],
+        r?.Species,
+        r?.['Anticodon before mutation'],
+        r?.['Anticodon after mutation'],
+        r?.['PMID of references'],
+        r?.pictureid,
+        r?.['tRNA sequence before mutation'],
+        r?.['tRNA sequence after mutation']
+      ]
+        .filter((v) => v != null && v !== '')
+        .map(String);
+      if (parts.length) return parts.join('|');
+      return 'row';
     };
-
-    // 搜索（基于排序后的数据）
-    const filteredDataSource = computed(() => {
-      const q = String(searchText.value ?? '').toLowerCase();
-      if (!q) return sortedDataSource.value;
-
-      if (!searchColumn.value) {
-        return sortedDataSource.value.filter((record: any) =>
-          Object.values(record).some((val) => String(val).toLowerCase().includes(q))
-        );
-      }
-      return sortedDataSource.value.filter((record: any) =>
-        String(record[searchColumn.value]).toLowerCase().includes(q)
-      );
-    });
-
-    // 外部筛选回到第一页
-    watch([searchText, searchColumn, selectedColumns], () => {
-      pagination.current = 1;
-    });
-
-    // 同步 total，夹紧页码
-    watch(
-      () => filteredDataSource.value.length,
-      (len) => {
-        pagination.total = len;
-        const maxPage = Math.max(1, Math.ceil(len / pagination.pageSize));
-        if (pagination.current > maxPage) pagination.current = maxPage;
-      },
-      { immediate: true }
-    );
-
-    // pageSize 变化时夹紧
-    watch(
-      () => pagination.pageSize,
-      () => {
-        const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
-        if (pagination.current > maxPage) pagination.current = maxPage;
-      }
-    );
-
-    // 表格内部变化：维护 total & 夹紧，不整体替换对象
-    const handleTableChange = (page?: any) => {
-      if (page?.current != null) pagination.current = page.current;
-      if (page?.pageSize != null) pagination.pageSize = page.pageSize;
-      pagination.total = filteredDataSource.value.length;
-      const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
-      if (pagination.current > maxPage) pagination.current = maxPage;
-    };
-
-    // rowKey 稳定
-    const rowKey = (r: any, idx: number) =>
-      r?.key ??
-      r?.['RNA central ID of tRNA'] ??
-      `${r?.Species ?? ''}-${r?.['Anticodon after mutation'] ?? ''}-${idx}`;
 
     // 工具函数
     const getPmidList = (pmidString: any) => String(pmidString).split('、');
@@ -330,14 +323,11 @@ export default defineComponent({
 
     // 图表 —— 统计与热图
     const stopCodonOption = computed<EChartsOption>(() => {
-      const counts: Record<string, number> = {};
-      filteredDataSource.value.forEach((r: any) => {
-        const list = Array.isArray(r['Stop codon for readthrough'])
-          ? r['Stop codon for readthrough']
-          : String(r['Stop codon for readthrough']).split(/[;,/]/).map((s) => s.trim()).filter(Boolean);
-        list.forEach((code) => (counts[code] = (counts[code] || 0) + 1));
-      });
-      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const items = (stats.value?.stop_codon_counts || []) as Array<{ name: string; value: number }>;
+      const entries = items
+        .filter((item) => item.name)
+        .map((item) => [item.name, Number(item.value) || 0] as [string, number])
+        .sort((a, b) => b[1] - a[1]);
       return {
         tooltip: { trigger: 'axis' },
         xAxis: { type: 'category', data: entries.map(([k]) => k), axisLabel: { rotate: 0 } },
@@ -347,14 +337,11 @@ export default defineComponent({
     });
 
     const aaOption = computed<EChartsOption>(() => {
-      const counts: Record<string, number> = {};
-      filteredDataSource.value.forEach((r: any) => {
-        const list = Array.isArray(r['Noncanonical charged amino acids'])
-          ? r['Noncanonical charged amino acids']
-          : String(r['Noncanonical charged amino acids']).split(/[;,/]/).map((s) => s.trim()).filter(Boolean);
-        list.forEach((aa) => (counts[aa] = (counts[aa] || 0) + 1));
-      });
-      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const items = (stats.value?.aa_counts || []) as Array<{ name: string; value: number }>;
+      const entries = items
+        .filter((item) => item.name)
+        .map((item) => [item.name, Number(item.value) || 0] as [string, number])
+        .sort((a, b) => b[1] - a[1]);
       return {
         tooltip: { trigger: 'axis' },
         xAxis: { type: 'category', data: entries.map(([k]) => k) },
@@ -364,12 +351,11 @@ export default defineComponent({
     });
 
     const tissueOption = computed<EChartsOption>(() => {
-      const counts: Record<string, number> = {};
-      filteredDataSource.value.forEach((r: any) => {
-        const org = r['Tissue/Organelle of Origin'] || 'Unknown';
-        counts[org] = (counts[org] || 0) + 1;
-      });
-      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const items = (stats.value?.tissue_counts || []) as Array<{ name: string; value: number }>;
+      const entries = items
+        .filter((item) => item.name)
+        .map((item) => [item.name, Number(item.value) || 0] as [string, number])
+        .sort((a, b) => b[1] - a[1]);
       return {
         tooltip: { trigger: 'axis' },
         xAxis: { type: 'category', data: entries.map(([k]) => k) },
@@ -378,58 +364,60 @@ export default defineComponent({
       };
     });
 
-const speciesOption = computed<EChartsOption>(() => {
-  const counts: Record<string, number> = {};
-  filteredDataSource.value.forEach((r: any) => {
-    const species = r['Species'] || 'Unknown';
-    counts[species] = (counts[species] || 0) + 1;
-  });
-  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const speciesOption = computed<EChartsOption>(() => {
+      const items = (stats.value?.species_counts || []) as Array<{ name: string; value: number }>;
+      const entries = items
+        .filter((item) => item.name)
+        .map((item) => [item.name, Number(item.value) || 0] as [string, number])
+        .sort((a, b) => b[1] - a[1]);
 
-  return {
-    tooltip: { trigger: 'axis' },
+      return {
+        tooltip: { trigger: 'axis' },
         grid: {
-      top: '10%',
-      right: '10%',
-      bottom: '50%', // 增加底部的空白区域
-      left: '10%',
-    },
-    xAxis: {
-      type: 'category',
-      data: entries.map(([k]) => k),
-      axisLabel: {
-        rotate: 45, // 让物种名称斜着显示
-        interval: 0, // 显示所有标签
-        fontSize: 12, // 控制字体大小
-        fontStyle: 'italic',
-      },
-    },
-    yAxis: { type: 'value' },
-    series: [
-      {
-        type: 'bar',
-        data: entries.map(([, v]) => v),
-        itemStyle: { borderRadius: 4 },
-      },
-    ],
-  };
-});
-
-
+          top: '10%',
+          right: '10%',
+          bottom: '50%',
+          left: '10%'
+        },
+        xAxis: {
+          type: 'category',
+          data: entries.map(([k]) => k),
+          axisLabel: {
+            rotate: 45,
+            interval: 0,
+            fontSize: 12,
+            fontStyle: 'italic'
+          }
+        },
+        yAxis: { type: 'value' },
+        series: [
+          {
+            type: 'bar',
+            data: entries.map(([, v]) => v),
+            itemStyle: { borderRadius: 4 }
+          }
+        ]
+      };
+    });
 
     const anticodonHeatmapOption = computed<EChartsOption>(() => {
+      const items = (stats.value?.anticodon_heatmap || []) as Array<{
+        x: string;
+        y: string;
+        count: number;
+      }>;
       const beforeList = new Set<string>();
       const afterList = new Set<string>();
       const matrix: Record<string, Record<string, number>> = {};
 
-      filteredDataSource.value.forEach((r: any) => {
-        const b = r['Anticodon before mutation'];
-        const a = r['Anticodon after mutation'];
+      items.forEach((item) => {
+        const b = item.y;
+        const a = item.x;
         if (!b || !a) return;
         beforeList.add(b);
         afterList.add(a);
         matrix[b] = matrix[b] || {};
-        matrix[b][a] = (matrix[b][a] || 0) + 1;
+        matrix[b][a] = (matrix[b][a] || 0) + Number(item.count || 0);
       });
 
       const bs = Array.from(beforeList).sort();
@@ -458,10 +446,11 @@ const speciesOption = computed<EChartsOption>(() => {
       // 数据与列
       allColumns,
       displayedColumns,
-      filteredDataSource,
+      rows,
 
       // 控件
       tableSize,
+      loading,
       searchText,
       searchColumn,
       locale,
@@ -476,14 +465,10 @@ const speciesOption = computed<EChartsOption>(() => {
       hideLightbox,
       highlightMutation,
 
-      // 排序 & 加载
-      onSorterChange,
-      loading,
-
       // 分页（稳定）
       pagination,
-      paginationView,
-      handleTableChange,
+      handlePaginationUpdate,
+      handleSorterChange,
 
       // 其它
       rowKey,

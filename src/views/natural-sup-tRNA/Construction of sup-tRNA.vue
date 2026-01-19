@@ -6,6 +6,14 @@
       <!-- 搜索框 -->
       <div class="search-box" style="margin-bottom: 10px">
         <input v-model="searchText" placeholder="Enter search content" class="search-input">
+        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
+          <el-option :key="'all'" :label="'All columns'" :value="''" />
+          <el-option
+            v-for="column in allColumns"
+            :key="column.key"
+            :value="column.dataIndex"
+          />
+        </el-select>
       </div>
       <!-- 调整尺寸 -->
       <div class="size-controls" style="margin-bottom: 10px">
@@ -26,8 +34,19 @@
     </div>
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :locale="locale">
-      <s-table :columns="displayedColumns" :data-source="filteredDataSource" :row-key="record => record.key"
-        :stripe="true" :show-sorter-tooltip="true" :size="tableSize" :expand-row-by-click="true" :pagination="pagination">
+      <s-table
+        :columns="displayedColumns"
+        :data-source="rows"
+        :row-key="rowKey"
+        :stripe="true"
+        :show-sorter-tooltip="true"
+        :size="tableSize"
+        :expand-row-by-click="true"
+        :pagination="pagination"
+        :loading="loading"
+        @update:pagination="handlePaginationUpdate"
+        @change="handleSorterChange"
+      >
         <template #bodyCell="{ text, column, record }">
           <template v-if="column.key === 'Structure of sup-tRNA'">
             <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
@@ -58,27 +77,11 @@
 
 <script lang="tsx">
 import { defineComponent, ref, onMounted, computed } from 'vue';
-import { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption } from 'element-plus';
+import { ElImage, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
-import type { STableColumnsType } from '@shene/table';
-import { useTableData } from '../../assets/js/useTableData.js';
+import { useServerTable } from '../../utils/useServerTable';
 import { allColumns } from './Constructioncolumns';
-import { pagination } from '../../utils/table'
-
-type DataType = {
-  [key: string]: string | string[];
-  Species: string;
-  'Anticodon before mutation': string;
-  'Anticodon after mutation': string;
-  'Stop codon for readthrough': string;
-  'Noncanonical charged amino acids': string;
-  'tRNA sequence before mutation': string;
-  'tRNA sequence after mutation': string;
-  'Structure of sup-tRNA': string;
-  'Readthrough mechanism': string;
-  'Mutational position of sup-tRNA': string;
-  'PMID of references': string;
-};
+import { highlightMutation } from '../../utils/highlightMutation.js';
 
 import en from '@shene/table/dist/locale/en'
 const locale = ref(en)
@@ -86,77 +89,62 @@ const locale = ref(en)
 export default defineComponent({
   name: 'Construction-of-sup-tRNA',
   components: {
-    ElTooltip,
     ElImage,
     ElSelect,
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource, loadData } = useTableData('/src/assets/data/Construction of sup-tRNA.csv');
+    const TABLE_NAME = 'construction_sup_trna';
+    const {
+      rows,
+      loading,
+      searchText,
+      searchColumn,
+      tableSize,
+      pagination,
+      loadPage,
+      handlePaginationUpdate,
+      handleSorterChange,
+      watchSearch
+    } = useServerTable(TABLE_NAME);
 
-    const tableSize = ref('default');
-    const selectedColumns = ref<string[]>(['Species', 'Anticodon before mutation', 'Anticodon after mutation', 'Stop codon for readthrough', 'Mutational position of sup-tRNA']);
+    const selectedColumns = ref<string[]>([
+      'Species',
+      'Anticodon before mutation',
+      'Anticodon after mutation',
+      'Stop codon for readthrough',
+      'Mutational position of sup-tRNA'
+    ]);
 
-    onMounted(() => {
-      loadData();
+    watchSearch();
+
+    onMounted(async () => {
+      await loadPage();
     });
 
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
-    const highlightMutation = (sequence) => {
-      if (!sequence) return sequence;
-
-      let highlightedSequence = '';
-      let lastIndex = 0;
-
-      const regex = /(\\\\\\[A-Z])|(\\\\[A-Z])|(\\[A-Z])/g;
-      let match;
-
-      while ((match = regex.exec(sequence)) !== null) {
-        const [fullMatch] = match;
-        const index = match.index;
-
-        // 添加非突变部分
-        if (index > lastIndex) {
-          highlightedSequence += sequence.slice(lastIndex, index);
-        }
-
-        // 添加突变部分
-        if (fullMatch.startsWith("\\\\\\\\")) { // 删除
-          const base = fullMatch[4];
-          highlightedSequence += `<span style="text-decoration: line-through; color: black;" title="Deleted ${base}">${base}</span>`;
-        } else if (fullMatch.startsWith("\\\\")) { // 增添
-          const base = fullMatch[2];
-          highlightedSequence += `<span style="color: green;" title="Added ${base}">${base}</span>`;
-        } else if (fullMatch.startsWith("\\")) { // 替换
-          const base = fullMatch[1];
-          highlightedSequence += `<span style="color: red;" title="Replaced with ${base}">${base}</span>`;
-        }
-
-        lastIndex = index + fullMatch.length;
-      }
-
-      // 添加剩余部分
-      if (lastIndex < sequence.length) {
-        highlightedSequence += sequence.slice(lastIndex);
-      }
-
-      return highlightedSequence;
-    };
+    const rowKey = (r: any, idx: number) =>
+      r?.key ?? r?.['RNA central ID of tRNA'] ?? `${r?.Species ?? ''}-${r?.['Anticodon after mutation'] ?? ''}-${idx}`;
 
     return {
       allColumns,
       columns: displayedColumns,
-      filteredDataSource,
+      rows,
       tableSize,
+      loading,
       searchText,
+      searchColumn,
       locale,
       selectedColumns,
       displayedColumns,
       pagination,
-      highlightMutation // 返回highlightMutation方法
+      handlePaginationUpdate,
+      handleSorterChange,
+      rowKey,
+      highlightMutation
     };
   }
 });

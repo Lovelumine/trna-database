@@ -6,7 +6,12 @@
         <input v-model="searchText" placeholder="Enter search content" class="search-input">
         <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
           <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option v-for="column in allColumns" :key="column.key" :value="column.dataIndex" />
+          <el-option
+            v-for="column in searchableColumns"
+            :key="column.key"
+            :label="column.title as string"
+            :value="column.dataIndex"
+          />
         </el-select>
       </div>
 
@@ -22,15 +27,16 @@
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
       <s-table
         :columns="displayedColumns"
-        :data-source="filteredDataSource"
+        :data-source="rows"
         :row-key="rowKey"
         :stripe="true"
         :show-sorter-tooltip="true"
         :size="tableSize"
         :expand-row-by-click="true"
-        :pagination="paginationView"
-        @update:pagination="(p) => Object.assign(pagination, p)"
-        @change="handleTableChange"
+        :pagination="pagination"
+        :loading="loading"
+        @update:pagination="handlePaginationUpdate"
+        @change="handleSorterChange"
       >
         <template #expandedRowRender="{ record }">
           <div>
@@ -56,21 +62,11 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, watch, computed, toRaw } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { ElSelect, ElOption } from 'element-plus';
-import type { STableColumnsType } from '@shene/table';
-import { useTableData } from '../../assets/js/useTableData.js';
+import { useServerTable } from '../../utils/useServerTable';
 import { allColumns, selectedColumns, isPMID } from './aaRScolumns';
 import en from '@shene/table/dist/locale/en';
-
-type DataType = {
-  aaRS: string;
-  AcceptorStem: string;
-  AnticodonArm: string;
-  OtherLocation: string;
-  OtherDomains: string;
-  Reference: string | number;
-};
 
 const locale = ref(en);
 
@@ -78,71 +74,44 @@ export default defineComponent({
   name: 'TrnaElements3',
   components: { ElSelect, ElOption },
   setup() {
-    const { searchText, filteredDataSource, searchColumn, loadData } =
-      useTableData('https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv');
-
-    const tableSize = ref<'small' | 'default' | 'large'>('default');
-
-    // 受控分页对象
-    const pagination = ref({
-      current: 1,
-      pageSize: 10,
-      total: 0,
-      showSizeChanger: true,
-      showQuickJumper: true
-    });
-
-    onMounted(async () => {
-      await loadData();
-      // 触发列显示计算
-      selectedColumns.value = [...selectedColumns.value];
-    });
-
-    // 给子组件一个“新引用”的分页对象，避免内部缓存老引用
-    const paginationView = computed(() => ({ ...toRaw(pagination.value) }));
+    const TABLE_NAME = 'aars_recognition';
+    const {
+      rows,
+      loading,
+      searchText,
+      searchColumn,
+      tableSize,
+      pagination,
+      loadPage,
+      handlePaginationUpdate,
+      handleSorterChange,
+      watchSearch
+    } = useServerTable(TABLE_NAME);
 
     // 稳定的 rowKey（避免用 index）
     const rowKey = (r: any, idx: number) =>
       r?.key ?? `${r?.aaRS ?? ''}-${r?.AcceptorStem ?? ''}-${idx}`;
 
-    // 外部筛选变化 → 回到第 1 页
-    watch([searchText, searchColumn, selectedColumns], () => {
-      pagination.value.current = 1;
+    watchSearch();
+
+    onMounted(async () => {
+      await loadPage();
+      selectedColumns.value = [...selectedColumns.value];
     });
 
-    // 同步 total，并把 current 夹紧到合法页
-    watch(
-      () => filteredDataSource.value.length,
-      (len) => {
-        pagination.value.total = len;
-        const maxPage = Math.max(1, Math.ceil(len / pagination.value.pageSize));
-        if (pagination.value.current > maxPage) pagination.value.current = maxPage;
-      },
-      { immediate: true }
-    );
-
-    // pageSize 变化时也夹紧 current，并刷新 total
-    watch(
-      () => pagination.value.pageSize,
-      () => {
-        const total = filteredDataSource.value.length;
-        pagination.value.total = total;
-        const maxPage = Math.max(1, Math.ceil(total / pagination.value.pageSize));
-        if (pagination.value.current > maxPage) pagination.value.current = maxPage;
-      }
-    );
-
-    // 表格内部翻页/改每页条数：只合并 current/pageSize，并用外部筛选后的 total
-    const handleTableChange = (page: any) => {
-      if (page?.current != null)  pagination.value.current  = page.current;
-      if (page?.pageSize != null) pagination.value.pageSize = page.pageSize;
-
-      const total = filteredDataSource.value.length;
-      pagination.value.total = total;
-
-      const maxPage = Math.max(1, Math.ceil(total / pagination.value.pageSize));
-      if (pagination.value.current > maxPage) pagination.value.current = maxPage;
-    };
+    // 搜索列：只展示带 dataIndex 的叶子列，避免 undefined
+    const searchableColumns = computed(() => {
+      const cols: any[] = [];
+      allColumns.forEach((column: any) => {
+        if (column.dataIndex) cols.push(column);
+        if (Array.isArray(column.children)) {
+          column.children.forEach((child: any) => {
+            if (child?.dataIndex) cols.push(child);
+          });
+        }
+      });
+      return cols;
+    });
 
     // 列显示：父列/子列一起按 selectedColumns 过滤
     const displayedColumns = computed(() =>
@@ -165,19 +134,21 @@ export default defineComponent({
     return {
       // 表格
       displayedColumns,
-      filteredDataSource,
+      rows,
       rowKey,
       tableSize,
+      loading,
       searchText,
       searchColumn,
       locale,
+      searchableColumns,
       selectedColumns,
       allColumns,
       isPMID,
       // 分页
       pagination,
-      paginationView,
-      handleTableChange
+      handlePaginationUpdate,
+      handleSorterChange
     };
   }
 });

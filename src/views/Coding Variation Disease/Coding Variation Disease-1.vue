@@ -45,14 +45,15 @@
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
       <s-table
         :columns="columns"
-        :data-source="filteredDataSource"
+        :data-source="rows"
         :row-key="rowKey"
         :stripe="true"
         :size="tableSize"
         :expand-row-by-click="true"
-        :pagination="paginationView"
-        @update:pagination="(p) => Object.assign(pagination, p)"
-        @change="handleTableChange"
+        :pagination="pagination"
+        :loading="loading"
+        @update:pagination="handlePaginationUpdate"
+        @change="handleSorterChange"
       >
         <template #expandedRowRender="{ record }">
           <div>
@@ -111,12 +112,11 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed, watch, toRaw } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
-import { useTableData } from '../../assets/js/useTableData.js';
+import { useServerTable } from '../../utils/useServerTable';
 import type { EChartsOption } from 'echarts';
-import { createPagination } from '../../utils/table';
 import { allColumns, selectedColumns } from './CodingVariation1Columns';
 
 type DataType = { [key: string]: string };
@@ -128,20 +128,76 @@ export default defineComponent({
   name: 'CodingVariationDisease',
   components: { ElTag, ElSpace, ElSelect, ElOption },
   setup() {
-    const { searchText, filteredDataSource, loadData, searchColumn } =
-      useTableData('https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv');
+    const TABLE_NAME = 'coding_variation_genetic_disease';
+    const {
+      rows,
+      loading,
+      searchText,
+      searchColumn,
+      tableSize,
+      pagination,
+      loadPage,
+      handlePaginationUpdate,
+      handleSorterChange,
+      watchSearch,
+      fetchStats
+    } = useServerTable(TABLE_NAME);
 
-    const tableSize = ref<'small' | 'default' | 'large'>('default');
-    const pagination = createPagination();
+    const stats = ref<Record<string, any[]>>({});
+
+    const loadStats = async () => {
+      try {
+        const resp = await fetchStats({
+          stats: [
+            {
+              type: 'matrix_counts',
+              name: 'type_gene_matrix',
+              x_column: 'gene',
+              y_column: 'mutationType'
+            },
+            {
+              type: 'matrix_counts',
+              name: 'inherit_zygosity',
+              x_column: 'denovoinherited',
+              y_column: 'zygosity'
+            },
+            {
+              type: 'codon_change_heatmap',
+              name: 'nonsense_codon',
+              column: 'Codon Change',
+              exclude_mut_regex: 'TGT',
+              filters: [{ column: 'mutationType', op: 'eq', value: 'nonsense' }]
+            },
+            {
+              type: 'codon_change_heatmap',
+              name: 'missense_codon',
+              column: 'Codon Change',
+              filters: [{ column: 'mutationType', op: 'eq', value: 'missense' }]
+            },
+            {
+              type: 'codon_change_heatmap',
+              name: 'frameshift_codon',
+              column: 'Codon Change',
+              filters: [{ column: 'mutationType', op: 'eq', value: 'frameshift' }]
+            }
+          ],
+          searchText: searchText.value,
+          searchColumn: searchColumn.value,
+          useFulltext: !searchColumn.value
+        });
+        stats.value = resp || {};
+      } catch {
+        stats.value = {};
+      }
+    };
+
+    watchSearch(loadStats);
 
     onMounted(async () => {
-      await loadData();
-      // 触发列选择刷新
+      await loadPage();
+      await loadStats();
       selectedColumns.value = [...selectedColumns.value];
     });
-
-    // ✅ 给子组件新引用，避免浅比较失效
-    const paginationView = computed(() => ({ ...toRaw(pagination) }));
 
     // 稳定 rowKey（不要依赖 index）
     const rowKey = (r: any) =>
@@ -149,52 +205,66 @@ export default defineComponent({
       r?.id ??
       `${r?.gene ?? ''}-${r?.mutationSite ?? ''}-${r?.['Protein Alteration'] ?? ''}-${r?.Genomeposition ?? ''}`;
 
-    // 外部筛选（搜索/列选择）时回到第 1 页
-    watch([searchText, searchColumn, selectedColumns], () => {
-      pagination.current = 1;
-    });
-
-    // 数据源变化时同步 total，并避免 current 落空页
-    watch(
-      () => filteredDataSource.value.length,
-      (len) => {
-        pagination.total = len;
-        const maxPage = Math.max(1, Math.ceil(len / pagination.pageSize));
-        if (pagination.current > maxPage) pagination.current = maxPage; // 仅越界时调整
-      },
-      { immediate: true }
-    );
-
-    // pageSize 变化时夹紧当前页
-    watch(
-      () => pagination.pageSize,
-      () => {
-        const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
-        if (pagination.current > maxPage) pagination.current = maxPage;
-      }
-    );
-
-    // 表格内部筛选/排序/分页：只回写 current/pageSize 和 total，不整体替换对象
-    const handleTableChange = (page?: any) => {
-      if (page?.current != null) pagination.current = page.current;
-      if (page?.pageSize != null) pagination.pageSize = page.pageSize;
-      pagination.total = filteredDataSource.value.length;
-      const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
-      if (pagination.current > maxPage) pagination.current = maxPage;
-    };
-
     const displayedColumns = computed(() =>
       allColumns.filter((column) => selectedColumns.value.includes(column.key as string))
     );
 
+    const buildCodonHeatmap = (
+      items: Array<{ orig: string; mut: string; count: number }>
+    ): EChartsOption => {
+      const originalStops = new Set<string>();
+      const mutatedStops = new Set<string>();
+      const combo: Record<string, Record<string, number>> = {};
+
+      items.forEach((item) => {
+        const orig = item.orig;
+        const mut = item.mut;
+        if (!orig || !mut) return;
+        originalStops.add(orig);
+        mutatedStops.add(mut);
+        combo[orig] = combo[orig] || {};
+        combo[orig][mut] = (combo[orig][mut] || 0) + Number(item.count || 0);
+      });
+
+      const yList = Array.from(originalStops).sort();
+      const xList = Array.from(mutatedStops).sort();
+      const heatData: [number, number, number][] = [];
+      yList.forEach((o, i) => xList.forEach((m, j) => heatData.push([j, i, combo[o]?.[m] || 0])));
+      const maxCount = heatData.length ? Math.max(...heatData.map((d) => d[2])) : 0;
+
+      return {
+        title: { text: 'Stop Codon Changes Frequency Heatmap', left: 'center' },
+        tooltip: {
+          trigger: 'item',
+          formatter: (params: any) => {
+            const [xIdx, yIdx, v] = params.value as number[];
+            return [
+              `Original Codon: ${yList[yIdx]}`,
+              `Mutated Codon: ${xList[xIdx]}`,
+              `Count: ${v}`
+            ].join('<br/>');
+          }
+        },
+        xAxis: { type: 'category', data: xList, name: 'Mutated Codon', axisLabel: { rotate: 45, interval: 0 } },
+        yAxis: { type: 'category', data: yList, name: 'Original Codon' },
+        visualMap: { min: 0, max: maxCount, calculable: true, orient: 'horizontal', left: 'center', bottom: '-1%' },
+        series: [{ type: 'heatmap', data: heatData, label: { show: false } }]
+      };
+    };
+
     // —— 1. Treemap（按 mutationType -> gene）
     const treemapOption = computed<EChartsOption>(() => {
+      const items = (stats.value?.type_gene_matrix || []) as Array<{
+        x: string;
+        y: string;
+        count: number;
+      }>;
       const nested: Record<string, Record<string, number>> = {};
-      filteredDataSource.value.forEach((row: any) => {
-        const type = row.mutationType || 'Unknown';
-        const gene = row.gene || 'Unknown';
+      items.forEach((item) => {
+        const type = item.y || 'Unknown';
+        const gene = item.x || 'Unknown';
         nested[type] = nested[type] || {};
-        nested[type][gene] = (nested[type][gene] || 0) + 1;
+        nested[type][gene] = (nested[type][gene] || 0) + Number(item.count || 0);
       });
 
       const data = Object.entries(nested).map(([type, geneCounts]) => {
@@ -232,13 +302,18 @@ export default defineComponent({
       const zygoTotals: Record<string, number> = {};
       const counter: Record<string, Record<string, number>> = {};
 
-      filteredDataSource.value.forEach((row: any) => {
-        const mode = row.denovoinherited || 'Unknown';
-        const zygo = row.zygosity || 'Unknown';
+      const items = (stats.value?.inherit_zygosity || []) as Array<{
+        x: string;
+        y: string;
+        count: number;
+      }>;
+      items.forEach((item) => {
+        const mode = item.x || 'Unknown';
+        const zygo = item.y || 'Unknown';
         counter[mode] = counter[mode] || {};
-        counter[mode][zygo] = (counter[mode][zygo] || 0) + 1;
-        modeTotals[mode] = (modeTotals[mode] || 0) + 1;
-        zygoTotals[zygo] = (zygoTotals[zygo] || 0) + 1;
+        counter[mode][zygo] = (counter[mode][zygo] || 0) + Number(item.count || 0);
+        modeTotals[mode] = (modeTotals[mode] || 0) + Number(item.count || 0);
+        zygoTotals[zygo] = (zygoTotals[zygo] || 0) + Number(item.count || 0);
       });
 
       const modeList = Object.entries(modeTotals)
@@ -268,128 +343,39 @@ export default defineComponent({
 
     // —— 3. Heatmap（Nonsense）
     const heatmapOption = computed<EChartsOption>(() => {
-      const combo: Record<string, Record<string, number>> = {};
-      const originalStops = new Set<string>();
-      const mutatedStops = new Set<string>();
-
-      filteredDataSource.value
-        .filter((row: any) => (row.mutationType || '').toLowerCase() === 'nonsense')
-        .forEach((row: any) => {
-          const codon = String(row['Codon Change'] || '').trim();
-          const [orig = '', mut = ''] = codon.split('-');
-          if (!orig || !mut) return;
-          originalStops.add(orig);
-          if (!mut.includes('TGT')) mutatedStops.add(mut);
-          combo[orig] = combo[orig] || {};
-          combo[orig][mut] = (combo[orig][mut] || 0) + 1;
-        });
-
-      const yList = Array.from(originalStops).sort();
-      const xList = Array.from(mutatedStops).sort();
-      const heatData: [number, number, number][] = [];
-      yList.forEach((o, i) => xList.forEach((m, j) => heatData.push([j, i, combo[o]?.[m] || 0])));
-      const maxCount = heatData.length ? Math.max(...heatData.map((d) => d[2])) : 0;
-
-      return {
-        title: { text: 'Stop Codon Changes Frequency Heatmap', left: 'center' },
-        tooltip: {
-          trigger: 'item',
-          formatter: (params: any) => {
-            const [xIdx, yIdx, v] = params.value as number[];
-            return [`Original Codon: ${yList[yIdx]}`, `Mutated Codon: ${xList[xIdx]}`, `Count: ${v}`].join('<br/>');
-          }
-        },
-        xAxis: { type: 'category', data: xList, name: 'Mutated Codon', axisLabel: { rotate: 45, interval: 0 } },
-        yAxis: { type: 'category', data: yList, name: 'Original Codon' },
-        visualMap: { min: 0, max: maxCount, calculable: true, orient: 'horizontal', left: 'center', bottom: '-1%' },
-        series: [{ type: 'heatmap', data: heatData, label: { show: false } }]
-      };
+      const items = (stats.value?.nonsense_codon || []) as Array<{
+        orig: string;
+        mut: string;
+        count: number;
+      }>;
+      return buildCodonHeatmap(items);
     });
 
     // —— 4. Heatmap（Frameshift）
     const heatmapOptionFrameshift = computed<EChartsOption>(() => {
-      const combo: Record<string, Record<string, number>> = {};
-      const originalStops = new Set<string>();
-      const mutatedStops = new Set<string>();
-
-      filteredDataSource.value
-        .filter((row: any) => (row.mutationType || '').toLowerCase() === 'frameshift')
-        .forEach((row: any) => {
-          const codon = String(row['Codon Change'] || '').trim();
-          const [orig = '', mut = ''] = codon.split('-');
-          if (!orig || !mut) return;
-          originalStops.add(orig);
-          mutatedStops.add(mut);
-          combo[orig] = combo[orig] || {};
-          combo[orig][mut] = (combo[orig][mut] || 0) + 1;
-        });
-
-      const yList = Array.from(originalStops).sort();
-      const xList = Array.from(mutatedStops).sort();
-      const heatData: [number, number, number][] = [];
-      yList.forEach((o, i) => xList.forEach((m, j) => heatData.push([j, i, combo[o]?.[m] || 0])));
-      const maxCount = heatData.length ? Math.max(...heatData.map((d) => d[2])) : 0;
-
-      return {
-        title: { text: 'Stop Codon Changes Frequency Heatmap', left: 'center' },
-        tooltip: {
-          trigger: 'item',
-          formatter: (params: any) => {
-            const [xIdx, yIdx, v] = params.value as number[];
-            return [`Original Codon: ${yList[yIdx]}`, `Mutated Codon: ${xList[xIdx]}`, `Count: ${v}`].join('<br/>');
-          }
-        },
-        xAxis: { type: 'category', data: xList, name: 'Mutated Codon', axisLabel: { rotate: 45, interval: 0 } },
-        yAxis: { type: 'category', data: yList, name: 'Original Codon' },
-        visualMap: { min: 0, max: maxCount, calculable: true, orient: 'horizontal', left: 'center', bottom: '-1%' },
-        series: [{ type: 'heatmap', data: heatData, label: { show: false } }]
-      };
+      const items = (stats.value?.frameshift_codon || []) as Array<{
+        orig: string;
+        mut: string;
+        count: number;
+      }>;
+      return buildCodonHeatmap(items);
     });
 
     // —— 5. Heatmap（Missense）
     const heatmapOptionMissense = computed<EChartsOption>(() => {
-      const combo: Record<string, Record<string, number>> = {};
-      const originalStops = new Set<string>();
-      const mutatedStops = new Set<string>();
-
-      filteredDataSource.value
-        .filter((row: any) => (row.mutationType || '').toLowerCase() === 'missense')
-        .forEach((row: any) => {
-          const codon = String(row['Codon Change'] || '').trim();
-          const [orig = '', mut = ''] = codon.split('-');
-          if (!orig || !mut) return;
-          originalStops.add(orig);
-          mutatedStops.add(mut);
-          combo[orig] = combo[orig] || {};
-          combo[orig][mut] = (combo[orig][mut] || 0) + 1;
-        });
-
-      const yList = Array.from(originalStops).sort();
-      const xList = Array.from(mutatedStops).sort();
-      const heatData: [number, number, number][] = [];
-      yList.forEach((o, i) => xList.forEach((m, j) => heatData.push([j, i, combo[o]?.[m] || 0])));
-      const maxCount = heatData.length ? Math.max(...heatData.map((d) => d[2])) : 0;
-
-      return {
-        title: { text: 'Stop Codon Changes Frequency Heatmap', left: 'center' },
-        tooltip: {
-          trigger: 'item',
-          formatter: (params: any) => {
-            const [xIdx, yIdx, v] = params.value as number[];
-            return [`Original Codon: ${yList[yIdx]}`, `Mutated Codon: ${xList[xIdx]}`, `Count: ${v}`].join('<br/>');
-          }
-        },
-        xAxis: { type: 'category', data: xList, name: 'Mutated Codon', axisLabel: { rotate: 45, interval: 0 } },
-        yAxis: { type: 'category', data: yList, name: 'Original Codon' },
-        visualMap: { min: 0, max: maxCount, calculable: true, orient: 'horizontal', left: 'center', bottom: '-1%' },
-        series: [{ type: 'heatmap', data: heatData, label: { show: false } }]
-      };
+      const items = (stats.value?.missense_codon || []) as Array<{
+        orig: string;
+        mut: string;
+        count: number;
+      }>;
+      return buildCodonHeatmap(items);
     });
 
     return {
       columns: displayedColumns,
-      filteredDataSource,
+      rows,
       tableSize,
+      loading,
       searchText,
       locale,
       selectedColumns,
@@ -403,8 +389,8 @@ export default defineComponent({
       heatmapOptionFrameshift,
       // 分页
       pagination,
-      paginationView,
-      handleTableChange,
+      handlePaginationUpdate,
+      handleSorterChange,
       rowKey
     };
   }

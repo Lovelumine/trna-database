@@ -3,6 +3,36 @@ import axios from 'axios';
 
 export type SortOrder = 'asc' | 'desc';
 
+export type MysqlStatFilter = {
+  column: string;
+  op?: 'eq' | 'neq';
+  value: string | number;
+};
+
+export type MysqlTableStat =
+  | {
+      type: 'value_counts';
+      name?: string;
+      column: string;
+      split_regex?: string;
+      top_n?: number;
+      filters?: MysqlStatFilter[];
+    }
+  | {
+      type: 'matrix_counts';
+      name?: string;
+      x_column: string;
+      y_column: string;
+      filters?: MysqlStatFilter[];
+    }
+  | {
+      type: 'codon_change_heatmap';
+      name?: string;
+      column: string;
+      exclude_mut_regex?: string;
+      filters?: MysqlStatFilter[];
+    };
+
 export interface MysqlTablePageParams {
   page: number;
   pageSize: number;
@@ -12,14 +42,16 @@ export interface MysqlTablePageParams {
   sortOrder?: SortOrder;
   caseInsensitive?: boolean;
   useFulltext?: boolean;
+  fulltextIndex?: string;
 }
 
 export interface MysqlTableStatsParams {
-  stats: string[];
+  stats: Array<string | MysqlTableStat>;
   searchText?: string;
   searchColumn?: string;
   caseInsensitive?: boolean;
   useFulltext?: boolean;
+  fulltextIndex?: string;
 }
 
 export function useMysqlTableData(table: string) {
@@ -43,7 +75,8 @@ export function useMysqlTableData(table: string) {
       params.sortBy || '',
       params.sortOrder || 'asc',
       params.caseInsensitive === false ? '0' : '1',
-      params.useFulltext === false ? '0' : '1'
+      params.useFulltext === false ? '0' : '1',
+      params.fulltextIndex || ''
     ].join('|');
 
   const setCache = (key: string, payload: { rows: any[]; total: number }) => {
@@ -88,7 +121,8 @@ export function useMysqlTableData(table: string) {
         sort_by: params.sortBy || '',
         sort_order: params.sortOrder || 'asc',
         case_insensitive: params.caseInsensitive !== false,
-        use_fulltext: params.useFulltext !== false
+        use_fulltext: params.useFulltext !== false,
+        fulltext_index: params.fulltextIndex || ''
       };
       const resp = await axios.post('/table_rows', payload);
       const nextRows = resp.data?.rows || [];
@@ -121,7 +155,8 @@ export function useMysqlTableData(table: string) {
         sort_by: params.sortBy || '',
         sort_order: params.sortOrder || 'asc',
         case_insensitive: params.caseInsensitive !== false,
-        use_fulltext: params.useFulltext !== false
+        use_fulltext: params.useFulltext !== false,
+        fulltext_index: params.fulltextIndex || ''
       };
       const resp = await axios.post('/table_rows', payload, {
         signal: controller.signal
@@ -170,7 +205,8 @@ export function useMysqlTableData(table: string) {
       search_text: params.searchText || '',
       search_column: params.searchColumn || '',
       case_insensitive: params.caseInsensitive !== false,
-      use_fulltext: params.useFulltext !== false
+      use_fulltext: params.useFulltext !== false,
+      fulltext_index: params.fulltextIndex || ''
     };
     const resp = await axios.post('/table_stats', payload);
     return resp.data || {};

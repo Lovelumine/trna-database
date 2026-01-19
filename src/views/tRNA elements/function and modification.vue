@@ -39,15 +39,16 @@
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
       <s-table
         :columns="displayedColumns"
-        :data-source="filteredDataSource"
+        :data-source="rows"
         :row-key="rowKey"
         :stripe="true"
         :show-sorter-tooltip="true"
         :size="tableSize"
         :expand-row-by-click="true"
-        :pagination="paginationView"
-        @update:pagination="(p) => Object.assign(pagination, p)"
-        @change="handleTableChange"
+        :pagination="pagination"
+        :loading="loading"
+        @update:pagination="handlePaginationUpdate"
+        @change="handleSorterChange"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'species'">
@@ -74,17 +75,13 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed, watch, toRaw } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
-import type { STableColumnsType } from '@shene/table';
-import { useTableData } from '../../assets/js/useTableData.js';
+import { useServerTable } from '../../utils/useServerTable';
 import { highlightModification } from '../../utils/highlightModification.js'
-import { createPagination } from '../../utils/table'
 import { allColumns ,selectedColumns } from './FunctionAndModificationColumns';
 
-// 定义数据类型
-type DataType = { [key: string]: string };
 import en from '@shene/table/dist/locale/en'
 const locale = ref(en)
 
@@ -95,55 +92,29 @@ export default defineComponent({
     ElOption
   },
   setup() {
-    const { searchText, filteredDataSource, searchColumn, loadData } = useTableData('https://minio.lumoxuan.cn/ensure/Function and Modification.csv');
-    const tableSize = ref<'small' | 'default' | 'large'>('default');
-
-    // 统一可控分页对象
-    const pagination = createPagination();
-
-    onMounted(async () => {
-      await loadData();
-      // 触发列选择刷新（避免首次 columns 为空）
-      selectedColumns.value = [...selectedColumns.value];
-    });
-
-    // 给子表格一个“新引用”的分页对象，避免缓存旧引用
-    const paginationView = computed(() => ({ ...toRaw(pagination) }));
+    const TABLE_NAME = 'function_and_modification';
+    const {
+      rows,
+      loading,
+      searchText,
+      searchColumn,
+      tableSize,
+      pagination,
+      loadPage,
+      handlePaginationUpdate,
+      handleSorterChange,
+      watchSearch
+    } = useServerTable(TABLE_NAME);
 
     // 稳定的 rowKey，避免展开/分页状态丢失
     const rowKey = (r: any, idx: number) => r?.key ?? r?.id ?? `${r?.tRNA_TYPE ?? ''}-${r?.Modification_site ?? ''}-${idx}`;
 
-    // 外部筛选（搜索/列选择）时回到第 1 页
-    watch([searchText, searchColumn, selectedColumns], () => {
-      pagination.current = 1;
+    watchSearch();
+
+    onMounted(async () => {
+      await loadPage();
+      selectedColumns.value = [...selectedColumns.value];
     });
-
-    // 数据源变化时同步 total，并避免 current 落空页
-    watch(
-      () => filteredDataSource.value.length,
-      (len) => {
-        pagination.total = len;
-        const maxPage = Math.max(1, Math.ceil(len / pagination.pageSize));
-        if (pagination.current > maxPage) pagination.current = maxPage; // 仅越界时调整
-      },
-      { immediate: true }
-    );
-
-    // pageSize 变化时夹紧 current
-    watch(
-      () => pagination.pageSize,
-      () => {
-        const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
-        if (pagination.current > maxPage) pagination.current = maxPage;
-      }
-    );
-
-    // 表格内部变化：只维护 current/pageSize，total 始终以外部过滤后的全集为准
-    const handleTableChange = (page: any) => {
-      if (page?.current != null) pagination.current = page.current;
-      if (page?.pageSize != null) pagination.pageSize = page.pageSize;
-      pagination.total = filteredDataSource.value.length;
-    };
 
     const displayedColumns = computed(() =>
       allColumns.filter(column => selectedColumns.value.includes(column.key as string))
@@ -152,8 +123,9 @@ export default defineComponent({
     return {
       // 表格
       displayedColumns,
-      filteredDataSource,
+      rows,
       tableSize,
+      loading,
       searchText,
       locale,
       selectedColumns,
@@ -162,8 +134,8 @@ export default defineComponent({
       highlightModification,
       // 分页
       pagination,
-      paginationView,
-      handleTableChange,
+      handlePaginationUpdate,
+      handleSorterChange,
       rowKey
     };
   }
