@@ -74,6 +74,18 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },      
+      '/table_rows': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/table_stats': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/table_fulltext_rebuild': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
       '/chat/api': {
         target: 'http://223.82.75.76:8080',
         changeOrigin: true,

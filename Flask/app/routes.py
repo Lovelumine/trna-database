@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify
 from sqlalchemy import text, bindparam, Integer
+import re
 from . import db
 
 from .logic.align import (
@@ -18,6 +19,87 @@ def _get_table_columns(table: str):
     cols = insp.get_columns(table)  # [{'name':..., 'type':...}, ...]
     col_names = [c["name"] for c in cols]
     return cols, col_names
+
+# ---------------------- 搜索/分页辅助 ----------------------
+
+def _escape_like(s: str) -> str:
+    return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+def _normalize_sort_order(order: str) -> str:
+    o = str(order or "").lower()
+    if o in ("desc", "descend", "descending"):
+        return "desc"
+    return "asc"
+
+def _build_search_clause(search_text: str, search_column: str, columns: list, ci: bool):
+    if not search_text:
+        return "", {}
+    collate = " COLLATE utf8mb4_general_ci" if ci else ""
+    like_val = f"%{_escape_like(str(search_text))}%"
+    if search_column:
+        clauses = [
+            f"CAST(`{search_column}` AS CHAR){collate} LIKE :search ESCAPE '\\\\'"
+        ]
+    else:
+        clauses = [
+            f"CAST(`{col}` AS CHAR){collate} LIKE :search ESCAPE '\\\\'"
+            for col in columns
+        ]
+    if not clauses:
+        return "", {}
+    return "WHERE " + " OR ".join(clauses), {"search": like_val}
+
+def _build_fulltext_query(search_text: str) -> str:
+    tokens = re.findall(r"[A-Za-z0-9_]+", str(search_text))
+    tokens = [t for t in tokens if len(t) >= 3]
+    if not tokens:
+        return ""
+    return " ".join(f"+{t}*" for t in tokens)
+
+def _get_fulltext_columns(table: str, index_name: str = "ft_all"):
+    db_name = db.engine.url.database
+    sql = text(
+        "SELECT INDEX_NAME, COLUMN_NAME, SEQ_IN_INDEX "
+        "FROM information_schema.statistics "
+        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = :table "
+        "AND INDEX_TYPE = 'FULLTEXT'"
+    )
+    with db.engine.connect() as conn:
+        rows = conn.execute(sql, {"db": db_name, "table": table}).fetchall()
+    if not rows:
+        return []
+    # Prefer a named index if present; otherwise take the first fulltext index.
+    by_index = {}
+    for idx_name, col, seq in rows:
+        by_index.setdefault(idx_name, []).append((seq, col))
+    if index_name in by_index:
+        cols = by_index[index_name]
+    else:
+        first = next(iter(by_index.values()))
+        cols = first
+    return [col for seq, col in sorted(cols)]
+
+def _build_search_filter(
+    search_text: str,
+    search_column: str,
+    columns: list,
+    ci: bool,
+    use_fulltext: bool,
+    fulltext_columns: list,
+):
+    if not search_text:
+        return "", {}, False
+    if use_fulltext and not search_column and fulltext_columns:
+        ft_query = _build_fulltext_query(search_text)
+        if ft_query:
+            cols_sql = ", ".join(f"`{c}`" for c in fulltext_columns)
+            return (
+                f"WHERE MATCH({cols_sql}) AGAINST (:ft IN BOOLEAN MODE)",
+                {"ft": ft_query},
+                True,
+            )
+    where_sql, params = _build_search_clause(search_text, search_column, columns, ci)
+    return where_sql, params, False
 
 # 针对 Engineered_sup_tRNA 提供简化 CRUD（行级编辑）
 ENGINEERED_TABLE = "Engineered_sup_tRNA"
@@ -171,6 +253,252 @@ def table_info():
         "table": table,
         "columns": [{"name": c["name"], "type": str(c["type"])} for c in cols]
     })
+
+
+@bp.route("/table_rows", methods=["POST"])
+def table_rows():
+    """
+    JSON:
+    {
+      "table": "coding_variation_cancer",
+      "page": 1,
+      "page_size": 10,
+      "search_text": "tp53",
+      "search_column": "GENE_NAME",   # 空字符串表示全列
+      "sort_by": "GENE_NAME",
+      "sort_order": "asc",            # asc | desc | ascend | descend
+      "case_insensitive": true
+    }
+    """
+    data = request.get_json(silent=True) or {}
+    table = data.get("table")
+    if not table:
+        return jsonify({"error": "missing table"}), 400
+
+    page = int(data.get("page") or 1)
+    page_size = int(data.get("page_size") or 10)
+    page = max(1, page)
+    page_size = max(1, min(page_size, 500))
+
+    search_text = (data.get("search_text") or "").strip()
+    search_column = data.get("search_column") or ""
+    sort_by = data.get("sort_by") or ""
+    sort_order = _normalize_sort_order(data.get("sort_order"))
+    ci = bool(data.get("case_insensitive", True))
+    use_fulltext = bool(data.get("use_fulltext", True))
+    fulltext_index = data.get("fulltext_index") or "ft_all"
+
+    insp = db.inspect(db.engine)
+    if table not in insp.get_table_names():
+        return jsonify({"error": f"Table '{table}' does not exist"}), 400
+
+    columns = [c["name"] for c in insp.get_columns(table)]
+    if not columns:
+        return jsonify({"error": f"Table '{table}' has no columns"}), 400
+    if search_column and search_column not in columns:
+        return jsonify({"error": f"Column '{search_column}' not in table '{table}'"}), 400
+    if sort_by and sort_by not in columns:
+        return jsonify({"error": f"Column '{sort_by}' not in table '{table}'"}), 400
+    if not sort_by:
+        sort_by = columns[0]
+
+    fulltext_columns = _get_fulltext_columns(table, fulltext_index) if use_fulltext else []
+    where_sql, params, _ = _build_search_filter(
+        search_text, search_column, columns, ci, use_fulltext, fulltext_columns
+    )
+    count_sql = text(f"SELECT COUNT(*) AS total FROM `{table}` {where_sql}")
+    query_sql = (
+        text(
+            f"SELECT * FROM `{table}` {where_sql} "
+            f"ORDER BY `{sort_by}` {sort_order} "
+            f"LIMIT :limit OFFSET :offset"
+        )
+        .bindparams(bindparam("limit", type_=Integer))
+        .bindparams(bindparam("offset", type_=Integer))
+    )
+
+    try:
+        with db.engine.connect() as conn:
+            total = conn.execute(count_sql, params).scalar() or 0
+            rows = conn.execute(
+                query_sql,
+                {**params, "limit": page_size, "offset": (page - 1) * page_size},
+            ).fetchall()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    try:
+        results = [dict(r._mapping) for r in rows]
+    except AttributeError:
+        results = [dict(r) for r in rows]
+
+    return jsonify(
+        {
+            "table": table,
+            "page": page,
+            "page_size": page_size,
+            "total": int(total),
+            "rows": results,
+        }
+    )
+
+
+@bp.route("/table_stats", methods=["POST"])
+def table_stats():
+    """
+    JSON:
+    {
+      "table": "coding_variation_cancer",
+      "stats": ["allele_heatmap", "disease_wordcloud"],
+      "search_text": "",
+      "search_column": "",
+      "case_insensitive": true
+    }
+    """
+    data = request.get_json(silent=True) or {}
+    table = data.get("table")
+    if not table:
+        return jsonify({"error": "missing table"}), 400
+
+    stats = data.get("stats") or []
+    if isinstance(stats, str):
+        stats = [stats]
+    if not stats:
+        return jsonify({"error": "stats is required"}), 400
+
+    search_text = (data.get("search_text") or "").strip()
+    search_column = data.get("search_column") or ""
+    ci = bool(data.get("case_insensitive", True))
+    use_fulltext = bool(data.get("use_fulltext", True))
+    fulltext_index = data.get("fulltext_index") or "ft_all"
+
+    insp = db.inspect(db.engine)
+    if table not in insp.get_table_names():
+        return jsonify({"error": f"Table '{table}' does not exist"}), 400
+
+    columns = [c["name"] for c in insp.get_columns(table)]
+    if search_column and search_column not in columns:
+        return jsonify({"error": f"Column '{search_column}' not in table '{table}'"}), 400
+
+    fulltext_columns = _get_fulltext_columns(table, fulltext_index) if use_fulltext else []
+    where_sql, params, _ = _build_search_filter(
+        search_text, search_column, columns, ci, use_fulltext, fulltext_columns
+    )
+    result = {"table": table}
+
+    try:
+        with db.engine.connect() as conn:
+            if "allele_heatmap" in stats:
+                required_cols = ["GENOMIC_REF_ALLELE", "GENOMIC_MUT_ALLELE"]
+                for col in required_cols:
+                    if col not in columns:
+                        return jsonify({"error": f"Column '{col}' not in table '{table}'"}), 400
+                extra = (
+                    "`GENOMIC_REF_ALLELE` IS NOT NULL AND `GENOMIC_REF_ALLELE` <> '' "
+                    "AND `GENOMIC_MUT_ALLELE` IS NOT NULL AND `GENOMIC_MUT_ALLELE` <> ''"
+                )
+                heatmap_where = where_sql
+                if heatmap_where:
+                    heatmap_where = f"{heatmap_where} AND {extra}"
+                else:
+                    heatmap_where = f"WHERE {extra}"
+                sql = text(
+                    f"SELECT `GENOMIC_REF_ALLELE` AS ref, "
+                    f"`GENOMIC_MUT_ALLELE` AS mut, "
+                    f"COUNT(*) AS count "
+                    f"FROM `{table}` {heatmap_where} "
+                    f"GROUP BY `GENOMIC_REF_ALLELE`, `GENOMIC_MUT_ALLELE`"
+                )
+                rows = conn.execute(sql, params).fetchall()
+                result["allele_heatmap"] = [
+                    {"ref": r[0], "mut": r[1], "count": int(r[2])} for r in rows
+                ]
+
+            if "disease_wordcloud" in stats:
+                if "DISEASE" not in columns:
+                    return jsonify({"error": f"Column 'DISEASE' not in table '{table}'"}), 400
+                extra = "`DISEASE` IS NOT NULL AND `DISEASE` <> ''"
+                disease_where = where_sql
+                if disease_where:
+                    disease_where = f"{disease_where} AND {extra}"
+                else:
+                    disease_where = f"WHERE {extra}"
+                sql = text(f"SELECT `DISEASE` FROM `{table}` {disease_where}")
+                rows = conn.execute(sql, params).fetchall()
+
+                counter = {}
+                for row in rows:
+                    cell = row[0]
+                    if cell is None:
+                        continue
+                    for part in re.split(r"[;/]", str(cell)):
+                        name = part.strip()
+                        if not name:
+                            continue
+                        counter[name] = counter.get(name, 0) + 1
+                items = sorted(counter.items(), key=lambda x: x[1], reverse=True)
+                result["disease_wordcloud"] = [
+                    {"name": k, "value": int(v)} for k, v in items
+                ]
+
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/table_fulltext_rebuild", methods=["POST"])
+def table_fulltext_rebuild():
+    """
+    JSON:
+    {
+      "table": "coding_variation_cancer",
+      "index_name": "ft_all",
+      "columns": ["GENE_NAME", "ENSEMBL_ID", ...]
+    }
+    """
+    data = request.get_json(silent=True) or {}
+    table = data.get("table")
+    if not table:
+        return jsonify({"error": "missing table"}), 400
+
+    index_name = data.get("index_name") or "ft_all"
+    cols = data.get("columns") or []
+
+    insp = db.inspect(db.engine)
+    if table not in insp.get_table_names():
+        return jsonify({"error": f"Table '{table}' does not exist"}), 400
+
+    table_columns = [c["name"] for c in insp.get_columns(table)]
+    if not cols:
+        cols = table_columns
+    for col in cols:
+        if col not in table_columns:
+            return jsonify({"error": f"Column '{col}' not in table '{table}'"}), 400
+
+    if len(cols) > 16:
+        return jsonify({"error": "FULLTEXT index supports up to 16 columns"}), 400
+
+    cols_sql = ", ".join(f"`{c}`" for c in cols)
+
+    try:
+        with db.engine.begin() as conn:
+            # Drop existing fulltext index if present
+            check = conn.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.statistics "
+                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = :table "
+                    "AND INDEX_NAME = :idx AND INDEX_TYPE = 'FULLTEXT'"
+                ),
+                {"db": db.engine.url.database, "table": table, "idx": index_name},
+            ).scalar()
+            if check and int(check) > 0:
+                conn.execute(text(f"DROP INDEX `{index_name}` ON `{table}`"))
+
+            conn.execute(text(f"CREATE FULLTEXT INDEX `{index_name}` ON `{table}` ({cols_sql})"))
+
+        return jsonify({"ok": True, "index": index_name, "columns": cols}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @bp.route("/search_table", methods=["POST"])

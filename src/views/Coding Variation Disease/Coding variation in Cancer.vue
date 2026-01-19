@@ -34,6 +34,12 @@
           />
         </el-select>
       </div>
+
+      <div class="index-controls" style="margin-bottom: 10px">
+        <el-button size="small" :loading="rebuildLoading" @click="rebuildFulltext">
+          Refresh Search Index
+        </el-button>
+      </div>
     </div>
 
     <!-- 表格 -->
@@ -46,8 +52,9 @@
         :show-sorter-tooltip="true"
         :size="tableSize"
         :expand-row-by-click="true"
-        :pagination="paginationView"                
-        @update:pagination="(p) => Object.assign(pagination, p)"  
+        :pagination="pagination"
+        :loading="loading"
+        @update:pagination="handlePaginationUpdate"
         @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }">
@@ -111,10 +118,11 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed, watch, toRaw } from 'vue';   // ✅ 引入 toRaw
-import { ElTooltip, ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
+import { defineComponent, ref, onMounted, computed, watch } from 'vue';
+import { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, ElMessage } from 'element-plus';
+import axios from 'axios';
 import { STableProvider } from '@shene/table';
-import { useTableData } from '../../assets/js/useTableData.js';
+import { useMysqlTableData } from '../../utils/useMysqlTableData';
 import { getTagType } from '../../utils/tag.js';
 import type { EChartsOption } from 'echarts';
 import { createPagination } from '../../utils/table';
@@ -125,83 +133,183 @@ const locale = ref(en);
 
 export default defineComponent({
   name: 'CodingVariationDisease2',
-  components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption },
+  components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton },
   setup() {
-    const { searchText, filteredDataSource, searchColumn, loadData } =
-      useTableData('https://minio.lumoxuan.cn/ensure/Coding Variation in Cancer.csv', (data) =>
-        data.map((item: any) => {
-          if (typeof item.DISEASE === 'string') {
-            item.DISEASE = item.DISEASE.split(';').map((s: string) => s.trim());
-          }
-          return item;
-        })
-      );
-
+    const TABLE_NAME = 'coding_variation_cancer';
+    const { rows, total, loading, fetchRows, prefetchRange, cancelPrefetch, fetchStats } =
+      useMysqlTableData(TABLE_NAME);
+    const searchText = ref('');
+    const searchColumn = ref('');
     const pagination = createPagination();
     const tableSize = ref<'small' | 'default' | 'large'>('default');
+    const stats = ref<{ allele_heatmap?: any[]; disease_wordcloud?: any[] }>({});
+    const sortBy = ref('');
+    const sortOrder = ref<'asc' | 'desc'>('asc');
+    const rebuildLoading = ref(false);
+
+    const normalizeDisease = (item: any) => {
+      if (typeof item.DISEASE === 'string') {
+        item.DISEASE = item.DISEASE
+          .split(';')
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+      }
+      return item;
+    };
+
+    const loadPage = async () => {
+      cancelPrefetch();
+      await fetchRows({
+        page: pagination.current,
+        pageSize: pagination.pageSize,
+        searchText: searchText.value,
+        searchColumn: searchColumn.value,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value,
+        useFulltext: searchColumn.value === ''
+      });
+      rows.value = rows.value.map(normalizeDisease);
+      pagination.total = total.value;
+      const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
+      if (pagination.current > maxPage) pagination.current = maxPage;
+
+      const PREFETCH_PAGES = 10;
+      const remaining = maxPage - pagination.current;
+      const count = Math.min(PREFETCH_PAGES, remaining);
+      if (count > 0) {
+        const baseParams = {
+          page: pagination.current,
+          pageSize: pagination.pageSize,
+          searchText: searchText.value,
+          searchColumn: searchColumn.value,
+          sortBy: sortBy.value,
+          sortOrder: sortOrder.value,
+          useFulltext: searchColumn.value === ''
+        };
+        const run = () => {
+          void prefetchRange(baseParams, count, { concurrency: 6 });
+        };
+        const idle = (window as any).requestIdleCallback;
+        if (typeof idle === 'function') {
+          idle(() => run());
+        } else {
+          window.setTimeout(() => run(), 0);
+        }
+      }
+    };
+
+    const loadStats = async () => {
+      try {
+        const resp = await fetchStats({
+          stats: ['allele_heatmap', 'disease_wordcloud'],
+          searchText: searchText.value,
+          searchColumn: searchColumn.value,
+          useFulltext: searchColumn.value === ''
+        });
+        stats.value = resp || {};
+      } catch (err) {
+        stats.value = {};
+      }
+    };
 
     onMounted(async () => {
-      await loadData();
+      await loadPage();
+      await loadStats();
       selectedColumns.value = [...selectedColumns.value]; // 可留可删
     });
-
-    // ✅ 关键：每次渲染给子组件一个“新引用”的分页对象
-    const paginationView = computed(() => ({ ...toRaw(pagination) }));
 
     // 稳定 rowKey（不要用 index）
     const rowKey = (r: any) =>
       r?.GENOMIC_MUTATION_ID ?? r?.ENSEMBL_ID ?? `${r?.GENE_NAME ?? ''}-${r?.MUTATION_CDS ?? ''}`;
 
-    // 外部筛选（搜索/列选择）时回到第 1 页
-    watch([searchText, searchColumn, selectedColumns], () => {
-      pagination.current = 1;
-    });
+    let searchTimer: number | null = null;
+    const scheduleSearch = () => {
+      if (searchTimer) window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(async () => {
+        pagination.current = 1;
+        await loadPage();
+        await loadStats();
+      }, 300);
+    };
 
-    // 数据源长度变化时，同步 total，并把 current 夹紧到合法页
-    watch(
-      () => filteredDataSource.value.length,
-      (len) => {
-        pagination.total = len;
-        const maxPage = Math.max(1, Math.ceil(len / pagination.pageSize));
-        if (pagination.current > maxPage) pagination.current = maxPage;
-      },
-      { immediate: true }
-    );
+    watch([searchText, searchColumn], scheduleSearch);
 
-    // ✅ 额外：监听 pageSize，用户改每页条数时同步夹紧
-    watch(
-      () => pagination.pageSize,
-      () => {
-        const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
-        if (pagination.current > maxPage) pagination.current = maxPage;
+    const extractSorter = (sorter: any) => {
+      if (!sorter) return null;
+      const normalized = Array.isArray(sorter) ? sorter[0] : sorter;
+      const field =
+        normalized?.field || normalized?.columnKey || normalized?.dataIndex || normalized?.key;
+      const orderRaw = normalized?.order || normalized?.sortOrder;
+      if (!field || !orderRaw) return null;
+      const order =
+        orderRaw === 'ascend'
+          ? 'asc'
+          : orderRaw === 'descend'
+          ? 'desc'
+          : orderRaw === 'asc' || orderRaw === 'desc'
+          ? orderRaw
+          : null;
+      if (!order) return null;
+      return { field, order };
+    };
+
+    const handlePaginationUpdate = (p: any) => {
+      if (p) Object.assign(pagination, p);
+      loadPage();
+    };
+
+    const handleTableChange = (page?: any, _filters?: any, sorter?: any) => {
+      if (page) Object.assign(pagination, page);
+      const s = extractSorter(sorter);
+      if (s) {
+        sortBy.value = s.field;
+        sortOrder.value = s.order;
+        pagination.current = 1;
+      } else {
+        sortBy.value = '';
+        sortOrder.value = 'asc';
       }
-    );
+      loadPage();
+    };
 
-    // 表格内部变化：只维护 total 与越界夹紧（不要整体替换 pagination）
-    const handleTableChange = () => {
-      pagination.total = filteredDataSource.value.length;
-      const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
-      if (pagination.current > maxPage) pagination.current = maxPage;
+    const rebuildFulltext = async () => {
+      rebuildLoading.value = true;
+      try {
+        await axios.post('/table_fulltext_rebuild', {
+          table: TABLE_NAME,
+          index_name: 'ft_all'
+        });
+        ElMessage.success('Search index refreshed');
+      } catch (err: any) {
+        ElMessage.error(err?.response?.data?.error || err?.message || 'Refresh failed');
+      } finally {
+        rebuildLoading.value = false;
+      }
     };
 
     const displayedColumns = computed(() =>
       allColumns.filter((c) => selectedColumns.value.includes(c.key as string))
     );
+    const filteredDataSource = computed(() => rows.value);
 
     // 1) Ref→Mut Heatmap
     const alleleHeatmapOption = computed<EChartsOption>(() => {
-      const combo: Record<string, Record<string, number>> = {};
+      const items = (stats.value?.allele_heatmap || []) as Array<{
+        ref: string;
+        mut: string;
+        count: number;
+      }>;
       const refSet = new Set<string>();
       const mutSet = new Set<string>();
+      const combo = new Map<string, number>();
 
-      filteredDataSource.value.forEach((r: any) => {
-        const ref = r.GENOMIC_REF_ALLELE || '';
-        const mut = r.GENOMIC_MUT_ALLELE || '';
+      items.forEach((item) => {
+        const ref = item.ref || '';
+        const mut = item.mut || '';
         if (!ref || !mut) return;
         refSet.add(ref);
         mutSet.add(mut);
-        combo[ref] = combo[ref] || {};
-        combo[ref][mut] = (combo[ref][mut] || 0) + 1;
+        combo.set(`${ref}|||${mut}`, Number(item.count) || 0);
       });
 
       const refList = Array.from(refSet).sort();
@@ -209,7 +317,10 @@ export default defineComponent({
 
       const data: [number, number, number][] = [];
       refList.forEach((ref, i) => {
-        mutList.forEach((mut, j) => data.push([j, i, combo[ref]?.[mut] || 0]));
+        mutList.forEach((mut, j) => {
+          const count = combo.get(`${ref}|||${mut}`) || 0;
+          data.push([j, i, count]);
+        });
       });
 
       const maxCount = data.length ? Math.max(...data.map((d) => d[2])) : 0;
@@ -231,17 +342,10 @@ export default defineComponent({
 
     // 2) Disease Word Cloud
     const diseaseWordcloudOption = computed<EChartsOption>(() => {
-      const counter: Record<string, number> = {};
-      filteredDataSource.value.forEach((r: any) => {
-        const arr = Array.isArray(r.DISEASE)
-          ? r.DISEASE
-          : String(r.DISEASE)
-              .split(/[;/]/)
-              .map((s) => s.trim())
-              .filter(Boolean);
-        arr.forEach((d: string) => (counter[d] = (counter[d] || 0) + 1));
-      });
-      const wordData = Object.entries(counter).map(([name, value]) => ({ name, value }));
+      const wordData = (stats.value?.disease_wordcloud || []).map((item: any) => ({
+        name: String(item.name ?? ''),
+        value: Number(item.value ?? 0)
+      }));
       return {
         tooltip: { show: false },
         series: [
@@ -274,6 +378,7 @@ export default defineComponent({
       // 表格
       displayedColumns,
       filteredDataSource,
+      loading,
       tableSize,
       searchText,
       locale,
@@ -281,9 +386,11 @@ export default defineComponent({
       selectedColumns,
       allColumns,
       getTagType,
+      rebuildLoading,
+      rebuildFulltext,
       // 分页
       pagination,
-      paginationView,     // ✅ 暴露出去给模板用
+      handlePaginationUpdate,
       handleTableChange,
       rowKey,
       // 图表

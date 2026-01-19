@@ -1,6 +1,6 @@
 <template>
   <!-- 透传所有属性/事件/插槽，只把 pagination 换成“实例私有”的 -->
-  <STable v-bind="forwardProps" v-on="$attrs">
+  <STable v-bind="forwardProps">
     <template v-for="(_, name) in $slots" #[name]="slotProps">
       <slot :name="name" v-bind="slotProps" />
     </template>
@@ -11,6 +11,8 @@
 import { computed, reactive, toRaw, watch, useAttrs } from 'vue'
 import { STable } from '@shene/table'
 import cloneDeep from 'lodash.clonedeep'
+
+defineOptions({ inheritAttrs: false })
 
 const attrs = useAttrs() as any
 
@@ -29,7 +31,7 @@ watch(
   { immediate: true, deep: true }
 )
 
-// 透传其余属性，仅替换 pagination
+// 透传其余属性/事件，仅替换 pagination
 const forwardProps = computed(() => {
   const { pagination: _omit, ...rest } = attrs
   return { ...rest, pagination: innerPagination }
