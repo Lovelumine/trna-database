@@ -18,12 +18,12 @@
         <span v-else-if="column.dataIndex === 'open'">
           <a
             v-if="getRecordLink(record)"
-            class="result-link"
+            class="link-primary"
             :href="getRecordLink(record)"
             target="_blank"
             rel="noopener noreferrer"
           >View in page</a>
-          <span v-else class="result-link disabled">Unavailable</span>
+          <span v-else class="link-disabled">Unavailable</span>
         </span>
         <span v-else>{{ cleanString(text) }}</span>
       </template>
@@ -481,18 +481,6 @@ function cellClass(idx: number, text: string) {
   background: var(--app-surface-2);
   border: 1px solid var(--app-border);
   overflow: auto;
-}
-
-.result-link {
-  color: #4b74ff;
-  text-decoration: none;
-}
-.result-link:hover {
-  text-decoration: underline;
-}
-.result-link.disabled {
-  color: var(--app-text-faint);
-  cursor: not-allowed;
 }
 
 :global(:root[data-theme="dark"]) .row-data-table,

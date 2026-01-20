@@ -1,98 +1,38 @@
-/* 缩放背景色动画 */
-a.scale-background {
-    color: #e74c3c;
-    font-weight: 500;
-    transition: transform 0.2s;
-    display: inline-block;
-    text-decoration: none;
-    position: relative;
-}
-a.scale-background::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -10px;
-    width: 100%;
-    height: 100%;
-    background-color: #fff;
-    border-radius: 5px;
-    opacity: 0;
-    transform: scale(0);
-    transition: transform 0.4s, opacity 0.3s;
-}
-a.scale-background:hover::before {
-    opacity: 1;
-    transform: scale(1);
-}
-
-/* 方括号装饰动画 */
-a.bracket-links {
-    color: #213999;
-    font-weight: 500;
-    padding: 0 0.25em;
-    display: inline-block;
-    text-decoration: none;
-    position: relative;
-    transition: color 0.2s, transform 0.2s;
-    line-height: 0;
-}
-a.bracket-links::before, a.bracket-links::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    font-weight: 100;
-    font-size: 150%;
-    opacity: 0;
-    transition: opacity 0.2s, transform 0.2s;
-}
-a.bracket-links::before {
-    left: -0.1em;
-    content: '[';
-    transform: translateX(-100%);
-}
-a.bracket-links::after {
-    right: -0.1em;
-    content: ']';
-    transform: translateX(100%);
-}
-a.bracket-links:hover::before, a.bracket-links:hover::after {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-/* 倾斜动画 */
-a.tilt-hover {
-    display: inline-block;
-    transition: .3s;
-    text-decoration: none;
-}
-a.tilt-hover:hover {
-    transform: rotate(15deg);
-    color: green;
-}
-
-/* 渐显下划线动画 */
+/* Legacy link classes mapped to the unified palette */
+a.scale-background,
+a.bracket-links,
+a.tilt-hover,
 a.fade-underline {
-    position: relative;
-    display: inline-block;
-    transition: .3s;
     text-decoration: none;
+    text-decoration-color: currentColor;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
 }
-a.fade-underline::after {
-    content: '';
-    position: absolute;
-    bottom: .3em;
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background-color: green;
-    opacity: 0;
-    transition: .3s;
+
+a.bracket-links {
+    color: var(--link-meta);
+    font-weight: 500;
 }
-a.fade-underline:hover::after {
-    bottom: 0;
-    opacity: 1;
+a.bracket-links:hover {
+    color: var(--link-meta-hover);
+    text-decoration: underline;
 }
+
+a.tilt-hover,
+a.fade-underline {
+    color: var(--link-inline);
+    font-weight: 500;
+}
+a.tilt-hover:hover,
 a.fade-underline:hover {
-    color: green;
+    color: var(--link-inline-hover);
+    text-decoration: underline;
+}
+
+a.scale-background {
+    color: var(--link-primary);
+    font-weight: 600;
+}
+a.scale-background:hover {
+    color: var(--link-primary-hover);
+    text-decoration: underline;
 }

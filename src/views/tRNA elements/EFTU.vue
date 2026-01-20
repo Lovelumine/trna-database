@@ -124,11 +124,12 @@ export default defineComponent({
 }
 
 .bracket-links {
-  color: #00ACF5;
+  color: var(--link-meta);
   text-decoration: none;
 }
 
 .bracket-links:hover {
+  color: var(--link-meta-hover);
   text-decoration: underline;
 }
 

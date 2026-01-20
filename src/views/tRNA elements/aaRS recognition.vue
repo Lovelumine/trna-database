@@ -168,6 +168,6 @@ export default defineComponent({
 
 <style scoped>
 .site--main { padding: 20px; }
-.bracket-links { color: #00ACF5; text-decoration: none; margin-right: 5px; }
-.bracket-links:hover { text-decoration: underline; }
+.bracket-links { color: var(--link-meta); text-decoration: none; margin-right: 5px; }
+.bracket-links:hover { color: var(--link-meta-hover); text-decoration: underline; }
 </style>
