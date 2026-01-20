@@ -12,11 +12,7 @@
     </div>
 
     <div v-if="showSizeControl" class="table-toolbar__size">
-      <el-radio-group v-model="sizeValue" :disabled="disabled">
-        <el-radio-button value="small">{{ sizeLabels.small }}</el-radio-button>
-        <el-radio-button value="default">{{ sizeLabels.default }}</el-radio-button>
-        <el-radio-button value="large">{{ sizeLabels.large }}</el-radio-button>
-      </el-radio-group>
+      <el-segmented v-model="sizeValue" :options="sizeOptions" :disabled="disabled" />
     </div>
 
     <div v-if="showColumnsControl" class="table-toolbar__columns">
@@ -45,7 +41,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ElRadioGroup, ElRadioButton, ElSelect, ElOption } from 'element-plus';
+import { ElSegmented, ElSelect, ElOption } from 'element-plus';
 import TableSearchBar from '@/components/TableSearchBar.vue';
 
 type ColumnLike = {
@@ -89,9 +85,9 @@ const props = withDefaults(
     searchColumnPlaceholder: 'Select column to search',
     columnSelectPlaceholder: 'Select columns to display',
     sizeLabels: () => ({
-      small: 'Small Size',
-      default: 'Default Size',
-      large: 'Large Size'
+      small: 'Compact',
+      default: 'Comfortable',
+      large: 'Spacious'
     })
   }
 );
@@ -144,6 +140,12 @@ const showColumnsControl = computed(() => {
   if (props.showColumns !== undefined) return props.showColumns;
   return Array.isArray(props.selectedColumns);
 });
+
+const sizeOptions = computed(() => [
+  { label: props.sizeLabels.small, value: 'small' },
+  { label: props.sizeLabels.default, value: 'default' },
+  { label: props.sizeLabels.large, value: 'large' }
+]);
 </script>
 
 <style scoped>

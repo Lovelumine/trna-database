@@ -96,7 +96,7 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed, watch } from 'vue';
+import { defineComponent, ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, ElMessage } from 'element-plus';
 import axios from 'axios';
 import { STableProvider } from '@shene/table';
@@ -138,6 +138,56 @@ export default defineComponent({
     });
     const stats = ref<{ allele_heatmap?: any[]; disease_wordcloud?: any[] }>({});
     const rebuildLoading = ref(false);
+    const themeVersion = ref(0);
+    let themeObserver: MutationObserver | null = null;
+    let mediaQuery: MediaQueryList | null = null;
+    const mediaHandler = () => {
+      themeVersion.value += 1;
+    };
+
+    const isDarkTheme = () => {
+      const root = document.documentElement;
+      return (
+        root.classList.contains('dark') ||
+        root.getAttribute('data-theme') === 'dark' ||
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+      );
+    };
+
+    const wordCloudPalettes = {
+      dark: [
+        '#93c5fd',
+        '#fca5a5',
+        '#fdba74',
+        '#fde68a',
+        '#86efac',
+        '#67e8f9',
+        '#a5b4fc',
+        '#f9a8d4',
+        '#5eead4',
+        '#c4b5fd'
+      ],
+      light: [
+        '#1d4ed8',
+        '#b91c1c',
+        '#c2410c',
+        '#b45309',
+        '#15803d',
+        '#0e7490',
+        '#4338ca',
+        '#be185d',
+        '#0f766e',
+        '#6d28d9'
+      ]
+    };
+
+    const hashString = (value: string) => {
+      let hash = 0;
+      for (let i = 0; i < value.length; i += 1) {
+        hash = (hash * 31 + value.charCodeAt(i)) | 0;
+      }
+      return hash;
+    };
 
     const normalizeDisease = (item: any) => {
       if (typeof item.DISEASE === 'string') {
@@ -212,6 +262,33 @@ export default defineComponent({
       await loadPage();
       await loadStats();
       selectedColumns.value = [...selectedColumns.value]; // 可留可删
+
+      const root = document.documentElement;
+      themeObserver = new MutationObserver(() => {
+        themeVersion.value += 1;
+      });
+      themeObserver.observe(root, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      if ('addEventListener' in mediaQuery) {
+        mediaQuery.addEventListener('change', mediaHandler);
+      } else if ('addListener' in mediaQuery) {
+        mediaQuery.addListener(mediaHandler);
+      }
+    });
+    onBeforeUnmount(() => {
+      if (themeObserver) {
+        themeObserver.disconnect();
+        themeObserver = null;
+      }
+      if (mediaQuery) {
+        if ('removeEventListener' in mediaQuery) {
+          mediaQuery.removeEventListener('change', mediaHandler);
+        } else if ('removeListener' in mediaQuery) {
+          mediaQuery.removeListener(mediaHandler);
+        }
+        mediaQuery = null;
+      }
     });
 
     // 稳定 rowKey（不要用 index）
@@ -391,10 +468,12 @@ export default defineComponent({
 
     // 2) Disease Word Cloud
     const diseaseWordcloudOption = computed<EChartsOption>(() => {
+      themeVersion.value;
       const wordData = (stats.value?.disease_wordcloud || []).map((item: any) => ({
         name: String(item.name ?? ''),
         value: Number(item.value ?? 0)
       }));
+      const palette = isDarkTheme() ? wordCloudPalettes.dark : wordCloudPalettes.light;
       return {
         tooltip: { show: false },
         series: [
@@ -410,11 +489,10 @@ export default defineComponent({
             width: '100%',
             height: '100%',
             textStyle: {
-              color: () => {
-                const r = Math.round(Math.random() * 160);
-                const g = Math.round(Math.random() * 160);
-                const b = Math.round(Math.random() * 160);
-                return `rgb(${r},${g},${b})`;
+              color: (params: any) => {
+                const label = String(params?.name ?? '');
+                const index = Math.abs(hashString(label)) % palette.length;
+                return palette[index];
               }
             },
             data: wordData
