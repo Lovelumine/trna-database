@@ -25,8 +25,8 @@
           <div class="align-legend">
             <span class="legend-item"><i class="legend-dot match"></i>Match</span>
             <span class="legend-item"><i class="legend-dot mismatch"></i>Mismatch</span>
-            <span class="legend-item"><i class="legend-dot insertion"></i>Insertion (相对 Target)</span>
-            <span class="legend-item"><i class="legend-dot deletion"></i>Deletion (相对 Target)</span>
+            <span class="legend-item"><i class="legend-dot insertion"></i>Insertion (relative to Target)</span>
+            <span class="legend-item"><i class="legend-dot deletion"></i>Deletion (relative to Target)</span>
           </div>
 
           <!-- 对齐可视化 -->
@@ -266,7 +266,8 @@ function cellClass(idx: number, text: string) {
 <style scoped>
 .expanded-content {
   padding: 0.5rem 1rem;
-  background: #fdfdfd;
+  background: var(--app-surface);
+  color: var(--app-text);
 }
 
 /* 图例 */
@@ -276,7 +277,7 @@ function cellClass(idx: number, text: string) {
   align-items: center;
   font-size: 12px;
   margin-bottom: 6px;
-  color: #555;
+  color: var(--app-text-muted);
 }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .legend-dot {
@@ -309,7 +310,7 @@ function cellClass(idx: number, text: string) {
   margin-right: 8px;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   font-size: 12px;
-  color: #666;
+  color: var(--app-text-muted);
 }
 .seq-label.target { font-weight: 600; }
 .seq-label.query  { font-weight: 600; }
@@ -333,26 +334,54 @@ function cellClass(idx: number, text: string) {
   width: 100%;
   border-collapse: collapse;
   margin-top: 8px;
+  --blast-highlight: #fff7cc;
+  --blast-highlight-text: #111827;
 }
 .row-data-table td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--app-border);
   padding: 4px 8px;
   vertical-align: top;
 }
 .key-cell {
   width: 200px;
   font-weight: bold;
-  background: #f5f5f5;
+  background: var(--app-surface-2);
+}
+.row-data-table {
+  --blast-highlight: #fff7cc;
 }
 .highlighted .key-cell,
 .highlighted .val-cell {
-  background: #ffffcc;
+  background: var(--blast-highlight) !important;
+  color: var(--blast-highlight-text) !important;
 }
-.val-cell { background: #fff; }
+.row-data-table tr:hover .key-cell,
+.row-data-table tr:hover .val-cell {
+  background: var(--app-surface-2);
+}
+.row-data-table tr.highlighted:hover .key-cell,
+.row-data-table tr.highlighted:hover .val-cell {
+  background: var(--blast-highlight) !important;
+}
+
+:global(.s-table__row:hover) .row-data-table .key-cell {
+  background: var(--app-surface-2) !important;
+  color: var(--app-text) !important;
+}
+:global(.s-table__row:hover) .row-data-table .val-cell {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+}
+:global(.s-table__row:hover) .row-data-table tr.highlighted .key-cell,
+:global(.s-table__row:hover) .row-data-table tr.highlighted .val-cell {
+  background: var(--blast-highlight) !important;
+  color: var(--blast-highlight-text) !important;
+}
+.val-cell { background: var(--app-surface); }
 .no-results {
   text-align: center;
   padding: 1rem;
-  color: #666;
+  color: var(--app-text-muted);
 }
 
 /* pairwise_alignment 专用样式 */
@@ -361,8 +390,14 @@ function cellClass(idx: number, text: string) {
   white-space: pre;
   margin: 0;
   padding: 0.5em;
-  background: #f9f9f9;
-  border: 1px solid #ddd;
+  background: var(--app-surface-2);
+  border: 1px solid var(--app-border);
   overflow: auto;
+}
+
+:global(:root[data-theme="dark"]) .row-data-table,
+:global(html.dark) .row-data-table {
+  --blast-highlight: #f7d580;
+  --blast-highlight-text: #1f2937;
 }
 </style>
