@@ -3,6 +3,7 @@ import { ref } from "vue";
 export type DataType = { [key: string]: string };
 
 export     const allColumns: STableColumnsType<DataType> = [
+      { title: 'ID', dataIndex: 'id', width: 90, ellipsis: true, key: 'id', resizable: true },
       { title: 'Mutation Type', dataIndex: 'MUTATION_TYPE', width: 150, ellipsis: true, key: 'MUTATION_TYPE', resizable: true ,        filter: {
           type: 'multiple',
           list: [

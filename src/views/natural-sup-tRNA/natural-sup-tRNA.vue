@@ -1,11 +1,11 @@
 <template>
     <div class="site--main">
       <h2>Natural sup-tRNA</h2>
-        <div class="table-section">
+      <div class="table-section" id="nonsense-sup-trna">
         <naturalsuptRNA1 />
       </div>
   
-      <div class="table-section">
+      <div class="table-section" id="frameshift-sup-trna">
         <FrameshiftsuptRNA />
       </div>
   

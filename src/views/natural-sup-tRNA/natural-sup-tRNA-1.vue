@@ -21,11 +21,12 @@
           :stripe="true"
           :show-sorter-tooltip="true"
           :size="tableSize"
-        :expand-row-by-click="true"
-        :loading="loading"
-        :pagination="pagination"
-        @update:pagination="handlePaginationUpdate"
-        @change="handleTableChange"
+          :expand-row-by-click="true"
+          v-model:expandedRowKeys="expandedRowKeys"
+          :loading="loading"
+          :pagination="pagination"
+          @update:pagination="handlePaginationUpdate"
+          @change="handleTableChange"
         >
           <template #bodyCell="{ text, column, record }">
             <template v-if="column.key === 'Species'">
@@ -285,7 +286,10 @@ export default defineComponent({
       }
     };
 
-    watchSearch(loadStats);
+    watchSearch(async () => {
+      await loadStats();
+      tryAutoExpand();
+    });
     watch(
       () => filters.value,
       () => {
@@ -298,9 +302,11 @@ export default defineComponent({
       await loadPage();
       await loadStats();
       selectedColumns.value = [...selectedColumns.value];
+      tryAutoExpand();
     });
 
     const rowKey = (r: any) => {
+      if (r?.id != null) return String(r.id);
       if (r?.__rowid != null) return String(r.__rowid);
       const parts = [
         r?.['RNA central ID of tRNA'],
@@ -318,6 +324,27 @@ export default defineComponent({
         .map(String);
       if (parts.length) return parts.join('|');
       return 'row';
+    };
+
+    const expandedRowKeys = ref<any[]>([]);
+
+    const shouldAutoExpand = () => {
+      if (typeof window === 'undefined') return false;
+      const params = new URLSearchParams(window.location.search);
+      const tableParam = params.get('table');
+      if (tableParam && tableParam !== TABLE_NAME) return false;
+      return params.get('expand') === '1';
+    };
+
+    const tryAutoExpand = () => {
+      if (!shouldAutoExpand() || expandedRowKeys.value.length) return;
+      if (!searchColumn.value || searchText.value === '') return;
+      const target = rows.value.find(
+        (row: any) => String(row?.[searchColumn.value]) === String(searchText.value)
+      );
+      if (target) {
+        expandedRowKeys.value = [rowKey(target)];
+      }
     };
 
     // 工具函数
@@ -583,6 +610,7 @@ export default defineComponent({
       handlePaginationUpdate,
       handleSorterChange,
       handleTableChange,
+      expandedRowKeys,
 
       // 其它
       rowKey,

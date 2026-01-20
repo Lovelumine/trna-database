@@ -101,7 +101,13 @@ const routes: RouteRecordRaw[] = [
 // 创建路由器实例
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to) {
+    if (to.hash) {
+      return { el: to.hash, behavior: 'smooth' };
+    }
+    return { top: 0 };
+  }
 });
 
 // 添加路由钩子来控制 NProgress

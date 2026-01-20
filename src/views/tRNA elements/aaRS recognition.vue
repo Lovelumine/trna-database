@@ -18,6 +18,7 @@
         :show-sorter-tooltip="true"
         :size="tableSize"
         :expand-row-by-click="true"
+        v-model:expandedRowKeys="expandedRowKeys"
         :pagination="pagination"
         :loading="loading"
         @update:pagination="handlePaginationUpdate"
@@ -76,13 +77,37 @@ export default defineComponent({
 
     // 稳定的 rowKey（避免用 index）
     const rowKey = (r: any, idx: number) =>
-      r?.key ?? `${r?.aaRS ?? ''}-${r?.AcceptorStem ?? ''}-${idx}`;
+      r?.id ?? r?.key ?? `${r?.aaRS ?? ''}-${r?.AcceptorStem ?? ''}-${idx}`;
 
-    watchSearch();
+    const expandedRowKeys = ref<any[]>([]);
+
+    const shouldAutoExpand = () => {
+      if (typeof window === 'undefined') return false;
+      const params = new URLSearchParams(window.location.search);
+      const tableParam = params.get('table');
+      if (tableParam && tableParam !== TABLE_NAME) return false;
+      return params.get('expand') === '1';
+    };
+
+    const tryAutoExpand = () => {
+      if (!shouldAutoExpand() || expandedRowKeys.value.length) return;
+      if (!searchColumn.value || searchText.value === '') return;
+      const target = rows.value.find(
+        (row: any) => String(row?.[searchColumn.value]) === String(searchText.value)
+      );
+      if (target) {
+        expandedRowKeys.value = [rowKey(target, 0)];
+      }
+    };
+
+    watchSearch(() => {
+      tryAutoExpand();
+    });
 
     onMounted(async () => {
       await loadPage();
       selectedColumns.value = [...selectedColumns.value];
+      tryAutoExpand();
     });
 
     // 搜索列：只展示带 dataIndex 的叶子列，避免 undefined
@@ -122,6 +147,7 @@ export default defineComponent({
       displayedColumns,
       rows,
       rowKey,
+      expandedRowKeys,
       tableSize,
       loading,
       searchText,

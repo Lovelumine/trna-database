@@ -115,6 +115,13 @@ def _build_search_filter(
     if not search_text:
         if not search_values:
             return "", {}, False
+    if search_text and search_column:
+        if search_column.lower() == "id" and re.fullmatch(r"\d+", str(search_text)):
+            return (
+                f"WHERE `{search_column}` = :search_exact",
+                {"search_exact": int(search_text)},
+                False,
+            )
     if search_values and search_column:
         where_sql, params = _build_search_clause_values(
             search_values, search_column, columns, ci

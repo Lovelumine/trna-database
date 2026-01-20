@@ -2,11 +2,11 @@
   <div class="site--main">
     <h2>Mutation-induced Disease</h2>
 
-    <div class="table-section">
+    <div class="table-section" id="coding-variation-disease">
       <CodingVariationDisease1 />
     </div>
 
-    <div class="table-section">
+    <div class="table-section" id="coding-variation-cancer">
       <CodingVariationinCancer />
     </div>
   </div>

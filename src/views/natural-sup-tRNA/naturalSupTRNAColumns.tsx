@@ -4,6 +4,7 @@ import { ref } from 'vue';
 export type DataType = { [key: string]: string };
 
 export     const allColumns: STableColumnsType<DataType> = [
+      { title: 'ID', dataIndex: 'id', width: 90, ellipsis: true, key: 'id', resizable: true },
       { title: 'Species', dataIndex: 'Species', width: 280, ellipsis: true, key: 'Species', resizable: true, sorter: true ,customRender: ({ text }) => <em>{text}</em>,},
       { title: 'Species ID', dataIndex: 'Species ID', width: 280, ellipsis: true, key: 'Species ID', resizable: true, sorter: true },
       { title: 'Tissue/Organelle of Origin', dataIndex: 'Tissue/Organelle of Origin', width: 280, ellipsis: true, key: 'Tissue/Organelle of Origin', resizable: true, sorter: true },

@@ -3,6 +3,7 @@ import { ref } from "vue";
 export type DataType = { [key: string]: string };
 
 export  const allColumns: STableColumnsType<DataType> = [
+      { title: 'ID', dataIndex: 'id', width: 90, ellipsis: true, key: 'id', resizable: true },
       { title: 'Modification Type', dataIndex: 'Modification_Type', width: 140, ellipsis: true, key: 'Modification_Type', resizable: true },
       { title: 'Modomics CODE', dataIndex: 'Modomics_CODE', width: 140, ellipsis: true, key: 'Modomics_CODE', resizable: true },
       { title: 'Modification site', dataIndex: 'Modification_site', width: 500, ellipsis: true, key: 'Modification_site', resizable: true },

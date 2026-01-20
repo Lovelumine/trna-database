@@ -15,6 +15,14 @@ export const selectedColumns = ref<string[]>([
 // 所有列定义
 export const allColumns: STableColumnsType<DataType> = [
   {
+    title: 'ID',
+    dataIndex: 'id',
+    width: 90,
+    ellipsis: true,
+    key: 'id',
+    resizable: true
+  },
+  {
     title: 'Mutation Type',
     dataIndex: 'mutationType',
     width: 140,

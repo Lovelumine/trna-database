@@ -7,16 +7,16 @@
       <div class="center-align">
         <ConceptMap />
       </div>
-      <div class="table-section">
+      <div class="table-section" id="aars-recognition">
         <trna-elements-2 />
       </div>
-                  <div class="table-section">
+                  <div class="table-section" id="eftu">
         <trna-elements-3 />
       </div>
-          <div class="table-section">
+          <div class="table-section" id="ribosome-interaction">
       <trna-ribosome-interaction-sites />
     </div>
-      <div class="table-section">
+      <div class="table-section" id="function-modification">
         <trna-elements-1 />
       </div>
 

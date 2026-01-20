@@ -11,10 +11,20 @@
       :expand-row-by-click="true"
     >
       <!-- 主表格单元格渲染 -->
-      <template #bodyCell="{ column, text }">
+      <template #bodyCell="{ column, text, record }">
         <span v-if="column.dataIndex === 'file'">{{ mapFileToDb(text) }}</span>
         <span v-else-if="column.dataIndex === 'score'">{{ (text as number).toFixed(1) }}</span>
         <span v-else-if="column.dataIndex === 'column'">{{ cleanString(text) }}</span>
+        <span v-else-if="column.dataIndex === 'open'">
+          <a
+            v-if="getRecordLink(record)"
+            class="result-link"
+            :href="getRecordLink(record)"
+            target="_blank"
+            rel="noopener noreferrer"
+          >View in page</a>
+          <span v-else class="result-link disabled">Unavailable</span>
+        </span>
         <span v-else>{{ cleanString(text) }}</span>
       </template>
 
@@ -150,7 +160,8 @@ const columns = [
   { title: 'Database', dataIndex: 'file', key: 'file', width: 120 },
   { title: 'Row', dataIndex: 'row', key: 'row', width: 60 },
   { title: 'Column', dataIndex: 'column', key: 'column', width: 150 },
-  { title: 'Score', dataIndex: 'score', key: 'score', width: 80, sorter: (a, b) => a.score - b.score }
+  { title: 'Score', dataIndex: 'score', key: 'score', width: 80, sorter: (a, b) => a.score - b.score },
+  { title: 'View in page', dataIndex: 'open', key: 'open', width: 140 }
 ] as STableColumnsType<any>;
 
 const excludeKeys = [
@@ -177,9 +188,86 @@ const fileToDbMap: Record<string, string> = {
   function_and_modification: 'Function & Modification',
   aars_recognition: 'aaRS Recognition',
 };
+const fileToTableMap: Record<string, string> = {
+  'Coding Variation in Cancer.csv': 'coding_variation_cancer',
+  'Coding Variation in Genetic Disease.csv': 'coding_variation_genetic_disease',
+  'Nonsense Sup-RNA.csv': 'nonsense_sup_rna',
+  'Frameshift sup-tRNA.csv': 'frameshift_sup_trna',
+  'Engineered Sup-tRNA.csv': 'Engineered_sup_tRNA',
+  'Function of Modification.csv': 'function_and_modification',
+  'aaRS Recognition.csv': 'aars_recognition',
+  'Coding Variation in Cancer': 'coding_variation_cancer',
+  'Coding Variation in Disease': 'coding_variation_genetic_disease',
+  'Nonsense Suppressors': 'nonsense_sup_rna',
+  'Frameshift sup-tRNA': 'frameshift_sup_trna',
+  'Engineered sup-tRNA': 'Engineered_sup_tRNA',
+  'Function & Modification': 'function_and_modification',
+  'aaRS Recognition': 'aars_recognition'
+};
+const tableLinkMap: Record<
+  string,
+  { path: string; hash?: string; table?: string; type?: 'expanded' }
+> = {
+  coding_variation_cancer: {
+    path: '/CodingVariationDisease',
+    hash: 'coding-variation-cancer',
+    table: 'coding_variation_cancer'
+  },
+  coding_variation_genetic_disease: {
+    path: '/CodingVariationDisease',
+    hash: 'coding-variation-disease',
+    table: 'coding_variation_genetic_disease'
+  },
+  nonsense_sup_rna: {
+    path: '/naturalsuptRNA',
+    hash: 'nonsense-sup-trna',
+    table: 'nonsense_sup_rna'
+  },
+  frameshift_sup_trna: {
+    path: '/naturalsuptRNA',
+    hash: 'frameshift-sup-trna',
+    table: 'frameshift_sup_trna'
+  },
+  Engineered_sup_tRNA: {
+    path: '/expanded',
+    type: 'expanded'
+  },
+  function_and_modification: {
+    path: '/tRNAElements',
+    hash: 'function-modification',
+    table: 'function_and_modification'
+  },
+  aars_recognition: {
+    path: '/tRNAElements',
+    hash: 'aars-recognition',
+    table: 'aars_recognition'
+  }
+};
 function mapFileToDb(file: string): string {
   const clean = file.replace(/^\ufeff/, '');
   return fileToDbMap[clean] || clean;
+}
+
+function getRecordLink(record: ResultRow): string | null {
+  const rawFile = cleanString(record.file);
+  const tableKey = fileToTableMap[rawFile] || rawFile;
+  const config = tableLinkMap[tableKey];
+  if (!config) return null;
+  if (config.type === 'expanded') {
+    const ensureId = record.row_data?.ENSURE_ID || record.row_data?.ensure_id;
+    if (!ensureId) return null;
+    return `/expanded/${encodeURIComponent(String(ensureId))}`;
+  }
+  const rowId = record.row_data?.id ?? record.row_data?.ID;
+  if (rowId == null || rowId === '') return null;
+  const params = new URLSearchParams({
+    table: config.table || tableKey,
+    search_column: 'id',
+    search_text: String(rowId),
+    expand: '1'
+  });
+  const hash = config.hash ? `#${config.hash}` : '';
+  return `${config.path}?${params.toString()}${hash}`;
 }
 
 // 去掉 pairwise_alignment 中的 Score= 行
@@ -393,6 +481,18 @@ function cellClass(idx: number, text: string) {
   background: var(--app-surface-2);
   border: 1px solid var(--app-border);
   overflow: auto;
+}
+
+.result-link {
+  color: #4b74ff;
+  text-decoration: none;
+}
+.result-link:hover {
+  text-decoration: underline;
+}
+.result-link.disabled {
+  color: var(--app-text-faint);
+  cursor: not-allowed;
 }
 
 :global(:root[data-theme="dark"]) .row-data-table,

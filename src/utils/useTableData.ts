@@ -40,6 +40,51 @@ export function useTableData(table: string, options: ServerTableOptions = {}) {
   const pagination = createPagination();
   if (pageSize) pagination.pageSize = pageSize;
 
+  const applyQueryParams = () => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const tableParam = params.get('table');
+    if (tableParam && tableParam !== table) return;
+
+    const columnParam =
+      params.get('search_column') || params.get('searchColumn') || params.get('column') || '';
+    const textParam =
+      params.get('search_text') || params.get('searchText') || params.get('text') || '';
+    const idParam = params.get('id') || '';
+
+    if (idParam && !textParam) {
+      searchColumn.value = 'id';
+      searchText.value = idParam;
+    } else {
+      if (columnParam) searchColumn.value = columnParam;
+      if (textParam) searchText.value = textParam;
+    }
+
+    const pageParam = params.get('page');
+    const pageSizeParam = params.get('page_size') || params.get('pageSize');
+    const sortByParam = params.get('sort_by') || params.get('sortBy');
+    const sortOrderParam = params.get('sort_order') || params.get('sortOrder');
+
+    if (pageParam) {
+      const pageNumber = Number.parseInt(pageParam, 10);
+      if (Number.isFinite(pageNumber) && pageNumber > 0) {
+        pagination.current = pageNumber;
+      }
+    }
+    if (pageSizeParam) {
+      const pageSizeNumber = Number.parseInt(pageSizeParam, 10);
+      if (Number.isFinite(pageSizeNumber) && pageSizeNumber > 0) {
+        pagination.pageSize = pageSizeNumber;
+      }
+    }
+    if (sortByParam) sortBy.value = sortByParam;
+    if (sortOrderParam === 'asc' || sortOrderParam === 'desc') {
+      sortOrder.value = sortOrderParam;
+    }
+  };
+
+  applyQueryParams();
+
   const {
     rows,
     total,

@@ -21,6 +21,7 @@
         :stripe="true"
         :size="tableSize"
         :expand-row-by-click="true"
+        v-model:expandedRowKeys="expandedRowKeys"
         :pagination="pagination"
         :loading="loading"
         @update:pagination="handlePaginationUpdate"
@@ -117,6 +118,7 @@ export default defineComponent({
     } = useTableData(TABLE_NAME);
 
     const stats = ref<Record<string, any[]>>({});
+    const expandedRowKeys = ref<any[]>([]);
     const chartTextColor = ref('#e5e7eb');
     const chartMutedColor = ref('#cbd5f5');
     const chartSurfaceColor = ref('#111827');
@@ -193,7 +195,10 @@ export default defineComponent({
       }
     };
 
-    watchSearch(loadStats);
+    watchSearch(async () => {
+      await loadStats();
+      tryAutoExpand();
+    });
 
     const applyMutationTypeFilter = (filters?: Record<string, any>) => {
       const raw = filters?.mutationType;
@@ -230,6 +235,7 @@ export default defineComponent({
       await loadPage();
       await loadStats();
       selectedColumns.value = [...selectedColumns.value];
+      tryAutoExpand();
     });
 
     let themeObserver: MutationObserver | null = null;
@@ -264,9 +270,28 @@ export default defineComponent({
 
     // 稳定 rowKey（不要依赖 index）
     const rowKey = (r: any) =>
-      r?.key ??
       r?.id ??
+      r?.key ??
       `${r?.gene ?? ''}-${r?.mutationSite ?? ''}-${r?.['Protein Alteration'] ?? ''}-${r?.Genomeposition ?? ''}`;
+
+    const shouldAutoExpand = () => {
+      if (typeof window === 'undefined') return false;
+      const params = new URLSearchParams(window.location.search);
+      const tableParam = params.get('table');
+      if (tableParam && tableParam !== TABLE_NAME) return false;
+      return params.get('expand') === '1';
+    };
+
+    const tryAutoExpand = () => {
+      if (!shouldAutoExpand() || expandedRowKeys.value.length) return;
+      if (!searchColumn.value || searchText.value === '') return;
+      const target = rows.value.find(
+        (row: any) => String(row?.[searchColumn.value]) === String(searchText.value)
+      );
+      if (target) {
+        expandedRowKeys.value = [rowKey(target)];
+      }
+    };
 
     const mutationTypeFilters = computed(() => {
       const items = (stats.value?.mutation_type_counts || []) as Array<{
@@ -553,7 +578,8 @@ export default defineComponent({
       handlePaginationUpdate,
       handleSorterChange,
       handleTableChange,
-      rowKey
+      rowKey,
+      expandedRowKeys
     };
   }
 });

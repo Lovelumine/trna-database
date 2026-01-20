@@ -11,6 +11,15 @@ export function isPMID(reference) {
 
 export const allColumns: STableColumnsType<DataType> = [
       {
+        title: 'ID',
+        ellipsis: true,
+        dataIndex: 'id',
+        resizable: true,
+        key: 'id',
+        width: 90,
+        align: 'center'
+      },
+      {
         title: 'AARS',
         ellipsis: true,
         dataIndex: 'aaRS',
