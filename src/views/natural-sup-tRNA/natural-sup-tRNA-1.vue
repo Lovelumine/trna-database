@@ -21,11 +21,11 @@
           :stripe="true"
           :show-sorter-tooltip="true"
           :size="tableSize"
-          :expand-row-by-click="true"
-          :loading="loading"
-          :pagination="pagination"
-          @update:pagination="handlePaginationUpdate"
-          @change="handleSorterChange"
+        :expand-row-by-click="true"
+        :loading="loading"
+        :pagination="pagination"
+        @update:pagination="handlePaginationUpdate"
+        @change="handleTableChange"
         >
           <template #bodyCell="{ text, column, record }">
             <template v-if="column.key === 'Species'">
@@ -185,10 +185,10 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, computed, watch } from 'vue';
 import { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
-import { useServerTable } from '../../utils/useServerTable';
+import { useTableData } from '../../utils/useTableData';
 import VueEasyLightbox from 'vue-easy-lightbox';
 import { highlightMutation } from '../../utils/highlightMutation.js';
 import { getTagType } from '../../utils/tag.js';
@@ -211,14 +211,17 @@ export default defineComponent({
       loading,
       searchText,
       searchColumn,
+      searchValues,
+      filters,
       tableSize,
       pagination,
       loadPage,
       handlePaginationUpdate,
       handleSorterChange,
+      handleTableChange: handleTableChangeBase,
       watchSearch,
       fetchStats
-    } = useServerTable(TABLE_NAME);
+    } = useTableData(TABLE_NAME);
 
     const stats = ref<Record<string, any[]>>({});
 
@@ -262,10 +265,18 @@ export default defineComponent({
               name: 'anticodon_heatmap',
               x_column: 'Anticodon after mutation',
               y_column: 'Anticodon before mutation'
+            },
+            {
+              type: 'value_counts',
+              name: 'mechanism_counts',
+              column: 'Readthrough mechanism',
+              split_regex: '[;]'
             }
           ],
           searchText: searchText.value,
           searchColumn: searchColumn.value,
+          searchValues: searchValues.value,
+          filters: filters.value,
           useFulltext: !searchColumn.value
         });
         stats.value = resp || {};
@@ -275,6 +286,13 @@ export default defineComponent({
     };
 
     watchSearch(loadStats);
+    watch(
+      () => filters.value,
+      () => {
+        void loadStats();
+      },
+      { deep: true }
+    );
 
     onMounted(async () => {
       await loadPage();
@@ -306,9 +324,115 @@ export default defineComponent({
     const getPmidList = (pmidString: any) => String(pmidString).split('、');
 
     // 列选择
+    const stopCodonFilters = computed(() => {
+      const items = (stats.value?.stop_codon_counts || []) as Array<{
+        name: string;
+        value: number;
+      }>;
+      return items
+        .filter((item) => item.name)
+        .sort((a, b) => b.value - a.value)
+        .map((item) => ({ text: `${item.name} (${item.value})`, value: item.name }));
+    });
+
+    const aaFilters = computed(() => {
+      const items = (stats.value?.aa_counts || []) as Array<{ name: string; value: number }>;
+      return items
+        .filter((item) => item.name)
+        .sort((a, b) => b.value - a.value)
+        .map((item) => ({ text: `${item.name} (${item.value})`, value: item.name }));
+    });
+
+    const mechanismFilters = computed(() => {
+      const items = (stats.value?.mechanism_counts || []) as Array<{
+        name: string;
+        value: number;
+      }>;
+      return items
+        .filter((item) => item.name)
+        .sort((a, b) => b.value - a.value)
+        .map((item) => ({ text: `${item.name} (${item.value})`, value: item.name }));
+    });
+
     const displayedColumns = computed(() =>
-      allColumns.filter((column) => selectedColumns.value.includes(column.key as string))
+      allColumns
+        .filter((column) => selectedColumns.value.includes(column.key as string))
+        .map((column) => {
+          if (column.key === 'Stop codon for readthrough') {
+            const baseFilter = column.filter || { type: 'multiple' };
+            return {
+              ...column,
+              filter: {
+                ...baseFilter,
+                list:
+                  stopCodonFilters.value.length > 0
+                    ? stopCodonFilters.value
+                    : baseFilter.list
+              }
+            };
+          }
+          if (column.key === 'Noncanonical charged amino acids') {
+            const baseFilter = column.filter || { type: 'multiple' };
+            return {
+              ...column,
+              filter: {
+                ...baseFilter,
+                list: aaFilters.value.length > 0 ? aaFilters.value : baseFilter.list
+              }
+            };
+          }
+          if (column.key === 'Readthrough mechanism') {
+            const baseFilter = column.filter || { type: 'multiple' };
+            return {
+              ...column,
+              filter: {
+                ...baseFilter,
+                list:
+                  mechanismFilters.value.length > 0
+                    ? mechanismFilters.value
+                    : baseFilter.list
+              }
+            };
+          }
+          return column;
+        })
     );
+
+    const normalizeFilterKey = (
+      list: Array<{ column: string; values: string[]; mode?: string }>
+    ) => {
+      return list
+        .map((item) => {
+          const values = [...item.values].sort().join(',');
+          return `${item.column}:${values}:${item.mode || 'contains'}`;
+        })
+        .sort()
+        .join('|');
+    };
+
+    const applyTableFilters = (tableFilters?: Record<string, any>) => {
+      const nextFilters = Object.entries(tableFilters || {})
+        .map(([column, raw]) => {
+          const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
+          const cleaned = values.map((v) => String(v)).filter(Boolean);
+          if (!cleaned.length) return null;
+          return { column, values: cleaned, mode: 'contains' as const };
+        })
+        .filter(Boolean) as Array<{ column: string; values: string[]; mode: 'contains' }>;
+      const prevKey = normalizeFilterKey(filters.value);
+      const nextKey = normalizeFilterKey(nextFilters);
+      if (prevKey !== nextKey) {
+        filters.value = nextFilters;
+        pagination.current = 1;
+        return true;
+      }
+      return false;
+    };
+
+    const handleTableChange = (page?: any, tableFilters?: any, sorter?: any) => {
+      const changed = applyTableFilters(tableFilters);
+      handleTableChangeBase(changed ? undefined : page, tableFilters, sorter);
+    };
 
     // 图表 —— 统计与热图
     const stopCodonOption = computed<EChartsOption>(() => {
@@ -458,6 +582,7 @@ export default defineComponent({
       pagination,
       handlePaginationUpdate,
       handleSorterChange,
+      handleTableChange,
 
       // 其它
       rowKey,

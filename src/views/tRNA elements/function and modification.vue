@@ -53,7 +53,7 @@
 import { defineComponent, ref, onMounted, computed } from 'vue';
 import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
-import { useServerTable } from '../../utils/useServerTable';
+import { useTableData } from '../../utils/useTableData';
 import { highlightModification } from '../../utils/highlightModification.js'
 import { allColumns ,selectedColumns } from './FunctionAndModificationColumns';
 import TableToolbar from '@/components/TableToolbar.vue';
@@ -81,7 +81,7 @@ export default defineComponent({
       handlePaginationUpdate,
       handleSorterChange,
       watchSearch
-    } = useServerTable(TABLE_NAME);
+    } = useTableData(TABLE_NAME);
 
     // 稳定的 rowKey，避免展开/分页状态丢失
     const rowKey = (r: any, idx: number) => r?.key ?? r?.id ?? `${r?.tRNA_TYPE ?? ''}-${r?.Modification_site ?? ''}-${idx}`;

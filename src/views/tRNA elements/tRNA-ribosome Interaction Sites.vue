@@ -83,7 +83,7 @@ import { defineComponent, ref, computed, onMounted } from 'vue';
 import { ElSelect, ElOption, ElRadioGroup, ElRadioButton, ElAlert } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
-import { useServerTable } from '../../utils/useServerTable';
+import { useTableData } from '../../utils/useTableData';
 import VueEasyLightbox from 'vue-easy-lightbox';
 import TableToolbar from '@/components/TableToolbar.vue';
 
@@ -116,7 +116,7 @@ export default defineComponent({
       handlePaginationUpdate,
       handleSorterChange,
       watchSearch
-    } = useServerTable(TABLE_NAME);
+    } = useTableData(TABLE_NAME);
 
     const triggerColumnChange = () => {
       selectedColumns.value = [...selectedColumns.value];

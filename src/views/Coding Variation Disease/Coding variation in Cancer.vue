@@ -100,10 +100,9 @@ import { defineComponent, ref, onMounted, computed, watch } from 'vue';
 import { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, ElMessage } from 'element-plus';
 import axios from 'axios';
 import { STableProvider } from '@shene/table';
-import { useMysqlTableData } from '../../utils/useMysqlTableData';
+import { useTableData } from '../../utils/useTableData';
 import { getTagType } from '../../utils/tag.js';
 import type { EChartsOption } from 'echarts';
-import { createPagination } from '../../utils/table';
 import { allColumns, selectedColumns } from './CodingVariationCancerColumns';
 import TableToolbar from '@/components/TableToolbar.vue';
 
@@ -115,8 +114,21 @@ export default defineComponent({
   components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, TableToolbar },
   setup() {
     const TABLE_NAME = 'coding_variation_cancer';
-    const { rows, total, loading, fetchRows, prefetchRange, cancelPrefetch, fetchStats } =
-      useMysqlTableData(TABLE_NAME);
+    const {
+      rows,
+      total,
+      loading,
+      fetchRows,
+      prefetchRange,
+      cancelPrefetch,
+      fetchStats,
+      searchText,
+      searchColumn,
+      pagination,
+      tableSize,
+      sortBy,
+      sortOrder
+    } = useTableData(TABLE_NAME);
     const isAdmin = computed(() => {
       try {
         return new URLSearchParams(window.location.search).get('admin') === '1';
@@ -124,13 +136,7 @@ export default defineComponent({
         return false;
       }
     });
-    const searchText = ref('');
-    const searchColumn = ref('');
-    const pagination = createPagination();
-    const tableSize = ref<'small' | 'default' | 'large'>('default');
     const stats = ref<{ allele_heatmap?: any[]; disease_wordcloud?: any[] }>({});
-    const sortBy = ref('');
-    const sortOrder = ref<'asc' | 'desc'>('asc');
     const rebuildLoading = ref(false);
 
     const normalizeDisease = (item: any) => {
@@ -187,7 +193,11 @@ export default defineComponent({
     const loadStats = async () => {
       try {
         const resp = await fetchStats({
-          stats: ['allele_heatmap', 'disease_wordcloud'],
+          stats: [
+            'allele_heatmap',
+            'disease_wordcloud',
+            { type: 'value_counts', name: 'mutation_type_counts', column: 'MUTATION_TYPE' }
+          ],
           searchText: searchText.value,
           searchColumn: searchColumn.value,
           useFulltext: searchColumn.value === ''
@@ -244,8 +254,35 @@ export default defineComponent({
       loadPage();
     };
 
-    const handleTableChange = (page?: any, _filters?: any, sorter?: any) => {
+    const applyMutationTypeFilter = (filters?: Record<string, any>) => {
+      const raw = filters?.MUTATION_TYPE;
+      const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      if (!values.length && searchColumn.value === 'MUTATION_TYPE') {
+        const shouldClear = searchText.value !== '';
+        if (shouldClear) {
+          searchText.value = '';
+          searchColumn.value = '';
+          pagination.current = 1;
+        }
+        return shouldClear;
+      }
+      if (!values.length) return false;
+
+      const next = String(values[0]);
+      const changed =
+        searchText.value !== next || searchColumn.value !== 'MUTATION_TYPE';
+      if (changed) {
+        searchText.value = next;
+        searchColumn.value = 'MUTATION_TYPE';
+        pagination.current = 1;
+      }
+      return changed;
+    };
+
+    const handleTableChange = (page?: any, filters?: any, sorter?: any) => {
       if (page) Object.assign(pagination, page);
+      const filterChanged = applyMutationTypeFilter(filters);
+      if (filterChanged) return;
       const s = extractSorter(sorter);
       if (s) {
         sortBy.value = s.field;
@@ -273,8 +310,34 @@ export default defineComponent({
       }
     };
 
+    const mutationTypeFilters = computed(() => {
+      const items = (stats.value?.mutation_type_counts || []) as Array<{
+        name: string;
+        value: number;
+      }>;
+      return items
+        .slice()
+        .sort((a, b) => b.value - a.value)
+        .map((item) => ({
+          text: `${item.name} (${item.value})`,
+          value: item.name
+        }));
+    });
+
     const displayedColumns = computed(() =>
-      allColumns.filter((c) => selectedColumns.value.includes(c.key as string))
+      allColumns
+        .filter((c) => selectedColumns.value.includes(c.key as string))
+        .map((col) => {
+          if (col.key !== 'MUTATION_TYPE') return col;
+          const baseFilter = col.filter || { type: 'multiple' };
+          return {
+            ...col,
+            filter: {
+              ...baseFilter,
+              list: mutationTypeFilters.value
+            }
+          };
+        })
     );
     const filteredDataSource = computed(() => rows.value);
 

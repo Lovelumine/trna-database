@@ -9,6 +9,12 @@ export type MysqlStatFilter = {
   value: string | number;
 };
 
+export type MysqlTableFilter = {
+  column: string;
+  values: Array<string | number>;
+  mode?: 'contains';
+};
+
 export type MysqlTableStat =
   | {
       type: 'value_counts';
@@ -38,6 +44,8 @@ export interface MysqlTablePageParams {
   pageSize: number;
   searchText?: string;
   searchColumn?: string;
+  searchValues?: string[];
+  filters?: MysqlTableFilter[];
   sortBy?: string;
   sortOrder?: SortOrder;
   caseInsensitive?: boolean;
@@ -49,6 +57,8 @@ export interface MysqlTableStatsParams {
   stats: Array<string | MysqlTableStat>;
   searchText?: string;
   searchColumn?: string;
+  searchValues?: string[];
+  filters?: MysqlTableFilter[];
   caseInsensitive?: boolean;
   useFulltext?: boolean;
   fulltextIndex?: string;
@@ -65,6 +75,17 @@ export function useMysqlTableData(table: string) {
   const prefetchControllers = new Set<AbortController>();
   let prefetchToken = 0;
 
+  const serializeFilters = (filters?: MysqlTableFilter[]) => {
+    if (!filters || !filters.length) return '';
+    const normalized = filters
+      .map((f) => {
+        const values = (f.values || []).map(String).sort().join(',');
+        return `${f.column}:${values}:${f.mode || 'contains'}`;
+      })
+      .sort();
+    return normalized.join(';');
+  };
+
   const buildKey = (params: MysqlTablePageParams) =>
     [
       table,
@@ -72,6 +93,8 @@ export function useMysqlTableData(table: string) {
       params.pageSize,
       params.searchText || '',
       params.searchColumn || '',
+      (params.searchValues || []).join(','),
+      serializeFilters(params.filters),
       params.sortBy || '',
       params.sortOrder || 'asc',
       params.caseInsensitive === false ? '0' : '1',
@@ -118,6 +141,8 @@ export function useMysqlTableData(table: string) {
         page_size: params.pageSize,
         search_text: params.searchText || '',
         search_column: params.searchColumn || '',
+        search_values: params.searchValues || [],
+        filters: params.filters || [],
         sort_by: params.sortBy || '',
         sort_order: params.sortOrder || 'asc',
         case_insensitive: params.caseInsensitive !== false,
@@ -152,6 +177,8 @@ export function useMysqlTableData(table: string) {
         page_size: params.pageSize,
         search_text: params.searchText || '',
         search_column: params.searchColumn || '',
+        search_values: params.searchValues || [],
+        filters: params.filters || [],
         sort_by: params.sortBy || '',
         sort_order: params.sortOrder || 'asc',
         case_insensitive: params.caseInsensitive !== false,
@@ -204,6 +231,8 @@ export function useMysqlTableData(table: string) {
       stats: params.stats || [],
       search_text: params.searchText || '',
       search_column: params.searchColumn || '',
+      search_values: params.searchValues || [],
+      filters: params.filters || [],
       case_insensitive: params.caseInsensitive !== false,
       use_fulltext: params.useFulltext !== false,
       fulltext_index: params.fulltextIndex || ''

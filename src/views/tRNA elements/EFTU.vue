@@ -48,7 +48,7 @@
 import { defineComponent, ref, onMounted, computed } from 'vue';
 import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
-import { useServerTable } from '../../utils/useServerTable';
+import { useTableData } from '../../utils/useTableData';
 import { allColumns ,selectedColumns} from './EFTUcolumns';
 import TableToolbar from '@/components/TableToolbar.vue';
 
@@ -75,7 +75,7 @@ export default defineComponent({
       handlePaginationUpdate,
       handleSorterChange,
       watchSearch
-    } = useServerTable(TABLE_NAME);
+    } = useTableData(TABLE_NAME);
 
     // Stable rowKey
     const rowKey = (r: any, idx: number) =>

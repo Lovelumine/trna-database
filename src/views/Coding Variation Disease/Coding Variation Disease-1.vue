@@ -24,7 +24,7 @@
         :pagination="pagination"
         :loading="loading"
         @update:pagination="handlePaginationUpdate"
-        @change="handleSorterChange"
+        @change="handleTableChange"
       >
         <template #expandedRowRender="{ record }">
           <div>
@@ -86,7 +86,7 @@
 import { defineComponent, ref, onMounted, onUnmounted, computed } from 'vue';
 import { ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
-import { useServerTable } from '../../utils/useServerTable';
+import { useTableData } from '../../utils/useTableData';
 import type { EChartsOption } from 'echarts';
 import { allColumns, selectedColumns } from './CodingVariation1Columns';
 import TableToolbar from '@/components/TableToolbar.vue';
@@ -111,9 +111,10 @@ export default defineComponent({
       loadPage,
       handlePaginationUpdate,
       handleSorterChange,
+      handleTableChange: handleTableChangeBase,
       watchSearch,
       fetchStats
-    } = useServerTable(TABLE_NAME);
+    } = useTableData(TABLE_NAME);
 
     const stats = ref<Record<string, any[]>>({});
     const chartTextColor = ref('#e5e7eb');
@@ -175,6 +176,11 @@ export default defineComponent({
               name: 'frameshift_codon',
               column: 'Codon Change',
               filters: [{ column: 'mutationType', op: 'eq', value: 'frameshift' }]
+            },
+            {
+              type: 'value_counts',
+              name: 'mutation_type_counts',
+              column: 'mutationType'
             }
           ],
           searchText: searchText.value,
@@ -188,6 +194,37 @@ export default defineComponent({
     };
 
     watchSearch(loadStats);
+
+    const applyMutationTypeFilter = (filters?: Record<string, any>) => {
+      const raw = filters?.mutationType;
+      const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      if (!values.length && searchColumn.value === 'mutationType') {
+        const shouldClear = searchText.value !== '';
+        if (shouldClear) {
+          searchText.value = '';
+          searchColumn.value = '';
+          pagination.current = 1;
+        }
+        return shouldClear;
+      }
+      if (!values.length) return false;
+
+      const next = String(values[0]);
+      const changed =
+        searchText.value !== next || searchColumn.value !== 'mutationType';
+      if (changed) {
+        searchText.value = next;
+        searchColumn.value = 'mutationType';
+        pagination.current = 1;
+      }
+      return changed;
+    };
+
+    const handleTableChange = (page?: any, filters?: any, sorter?: any) => {
+      const filterChanged = applyMutationTypeFilter(filters);
+      if (filterChanged) return;
+      handleTableChangeBase(page, filters, sorter);
+    };
 
     onMounted(async () => {
       await loadPage();
@@ -231,8 +268,34 @@ export default defineComponent({
       r?.id ??
       `${r?.gene ?? ''}-${r?.mutationSite ?? ''}-${r?.['Protein Alteration'] ?? ''}-${r?.Genomeposition ?? ''}`;
 
+    const mutationTypeFilters = computed(() => {
+      const items = (stats.value?.mutation_type_counts || []) as Array<{
+        name: string;
+        value: number;
+      }>;
+      return items
+        .slice()
+        .sort((a, b) => b.value - a.value)
+        .map((item) => ({
+          text: `${item.name} (${item.value})`,
+          value: item.name
+        }));
+    });
+
     const displayedColumns = computed(() =>
-      allColumns.filter((column) => selectedColumns.value.includes(column.key as string))
+      allColumns
+        .filter((column) => selectedColumns.value.includes(column.key as string))
+        .map((column) => {
+          if (column.key !== 'mutationType') return column;
+          const baseFilter = column.filter || { type: 'multiple' };
+          return {
+            ...column,
+            filter: {
+              ...baseFilter,
+              list: mutationTypeFilters.value
+            }
+          };
+        })
     );
 
     const buildCodonHeatmap = (
@@ -489,6 +552,7 @@ export default defineComponent({
       pagination,
       handlePaginationUpdate,
       handleSorterChange,
+      handleTableChange,
       rowKey
     };
   }

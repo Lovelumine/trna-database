@@ -50,6 +50,29 @@ def _build_search_clause(search_text: str, search_column: str, columns: list, ci
         return "", {}
     return "WHERE " + " OR ".join(clauses), {"search": like_val}
 
+def _build_search_clause_values(
+    search_values: list,
+    search_column: str,
+    columns: list,
+    ci: bool,
+):
+    if not search_values:
+        return "", {}
+    collate = " COLLATE utf8mb4_general_ci" if ci else ""
+    if not search_column:
+        return "", {}
+    clauses = []
+    params = {}
+    for idx, value in enumerate(search_values):
+        like_val = f"%{_escape_like(str(value))}%"
+        clauses.append(
+            f"CAST(`{search_column}` AS CHAR){collate} LIKE :search{idx} ESCAPE '\\\\'"
+        )
+        params[f"search{idx}"] = like_val
+    if not clauses:
+        return "", {}
+    return "WHERE " + " OR ".join(clauses), params
+
 def _build_fulltext_query(search_text: str) -> str:
     tokens = re.findall(r"[A-Za-z0-9_]+", str(search_text))
     tokens = [t for t in tokens if len(t) >= 3]
@@ -87,9 +110,16 @@ def _build_search_filter(
     ci: bool,
     use_fulltext: bool,
     fulltext_columns: list,
+    search_values=None,
 ):
     if not search_text:
-        return "", {}, False
+        if not search_values:
+            return "", {}, False
+    if search_values and search_column:
+        where_sql, params = _build_search_clause_values(
+            search_values, search_column, columns, ci
+        )
+        return where_sql, params, False
     if use_fulltext and not search_column and fulltext_columns:
         ft_query = _build_fulltext_query(search_text)
         if ft_query:
@@ -108,6 +138,31 @@ def _merge_where(where_sql: str, extra: str) -> str:
     if where_sql:
         return f"{where_sql} AND {extra}"
     return f"WHERE {extra}"
+
+def _build_filters_clause(filters, columns: list, ci: bool):
+    if not filters:
+        return "", {}
+    collate = " COLLATE utf8mb4_general_ci" if ci else ""
+    clauses = []
+    params = {}
+    for idx, f in enumerate(filters):
+        col = f.get("column")
+        values = f.get("values") or []
+        if not col or col not in columns or not values:
+            continue
+        sub_clauses = []
+        for jdx, value in enumerate(values):
+            key = f"fv{idx}_{jdx}"
+            like_val = f"%{_escape_like(str(value))}%"
+            sub_clauses.append(
+                f"CAST(`{col}` AS CHAR){collate} LIKE :{key} ESCAPE '\\\\'"
+            )
+            params[key] = like_val
+        if sub_clauses:
+            clauses.append("(" + " OR ".join(sub_clauses) + ")")
+    if not clauses:
+        return "", {}
+    return " AND ".join(clauses), params
 
 def _build_stat_filters(filters, columns: list, ci: bool):
     clauses = []
@@ -405,6 +460,10 @@ def table_rows():
 
     search_text = (data.get("search_text") or "").strip()
     search_column = data.get("search_column") or ""
+    search_values = data.get("search_values") or []
+    if isinstance(search_values, str):
+        search_values = [v for v in search_values.split(",") if v.strip()]
+    search_values = [str(v) for v in search_values if v is not None and str(v).strip()]
     sort_by = data.get("sort_by") or ""
     sort_order = _normalize_sort_order(data.get("sort_order"))
     ci = bool(data.get("case_insensitive", True))
@@ -427,8 +486,24 @@ def table_rows():
 
     fulltext_columns = _get_fulltext_columns(table, fulltext_index) if use_fulltext else []
     where_sql, params, _ = _build_search_filter(
-        search_text, search_column, columns, ci, use_fulltext, fulltext_columns
+        search_text,
+        search_column,
+        columns,
+        ci,
+        use_fulltext,
+        fulltext_columns,
+        search_values,
     )
+    filters = data.get("filters") or []
+    if not isinstance(filters, list):
+        return jsonify({"error": "filters must be a list"}), 400
+    for f in filters:
+        col = f.get("column")
+        if col and col not in columns:
+            return jsonify({"error": f"Column '{col}' not in table '{table}'"}), 400
+    filter_sql, filter_params = _build_filters_clause(filters, columns, ci)
+    where_sql = _merge_where(where_sql, filter_sql)
+    params = {**params, **filter_params}
     count_sql = text(f"SELECT COUNT(*) AS total FROM `{table}` {where_sql}")
     row_offset = (page - 1) * page_size
     query_sql = (
@@ -496,6 +571,10 @@ def table_stats():
 
     search_text = (data.get("search_text") or "").strip()
     search_column = data.get("search_column") or ""
+    search_values = data.get("search_values") or []
+    if isinstance(search_values, str):
+        search_values = [v for v in search_values.split(",") if v.strip()]
+    search_values = [str(v) for v in search_values if v is not None and str(v).strip()]
     ci = bool(data.get("case_insensitive", True))
     use_fulltext = bool(data.get("use_fulltext", True))
     fulltext_index = data.get("fulltext_index") or "ft_all"
@@ -510,8 +589,24 @@ def table_stats():
 
     fulltext_columns = _get_fulltext_columns(table, fulltext_index) if use_fulltext else []
     where_sql, params, _ = _build_search_filter(
-        search_text, search_column, columns, ci, use_fulltext, fulltext_columns
+        search_text,
+        search_column,
+        columns,
+        ci,
+        use_fulltext,
+        fulltext_columns,
+        search_values,
     )
+    filters = data.get("filters") or []
+    if not isinstance(filters, list):
+        return jsonify({"error": "filters must be a list"}), 400
+    for f in filters:
+        col = f.get("column")
+        if col and col not in columns:
+            return jsonify({"error": f"Column '{col}' not in table '{table}'"}), 400
+    filter_sql, filter_params = _build_filters_clause(filters, columns, ci)
+    where_sql = _merge_where(where_sql, filter_sql)
+    params = {**params, **filter_params}
     result = {"table": table}
 
     try:

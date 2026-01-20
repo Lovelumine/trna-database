@@ -49,7 +49,7 @@
 <script lang="tsx">
 import { defineComponent, ref, onMounted, computed } from 'vue';
 import { ElSelect, ElOption } from 'element-plus';
-import { useServerTable } from '../../utils/useServerTable';
+import { useTableData } from '../../utils/useTableData';
 import { allColumns, selectedColumns, isPMID } from './aaRScolumns';
 import en from '@shene/table/dist/locale/en';
 import TableToolbar from '@/components/TableToolbar.vue';
@@ -72,7 +72,7 @@ export default defineComponent({
       handlePaginationUpdate,
       handleSorterChange,
       watchSearch
-    } = useServerTable(TABLE_NAME);
+    } = useTableData(TABLE_NAME);
 
     // 稳定的 rowKey（避免用 index）
     const rowKey = (r: any, idx: number) =>
