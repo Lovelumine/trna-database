@@ -11,48 +11,20 @@
     />
 
     <div class="content-wrapper">
-      <div class="top-controls">
-        <!-- 搜索框 -->
-        <div class="search-box">
-          <TableSearchBar
-            v-model="searchText"
-            v-model:column="searchColumn"
-            :columns="allColumns"
-          />
-        </div>
-
-        <!-- 大小切换 -->
-        <div class="size-controls">
-          <el-radio-group v-model="tableSize">
-            <el-radio-button value="small">Small Size</el-radio-button>
-            <el-radio-button value="default">Default Size</el-radio-button>
-            <el-radio-button value="large">Large Size</el-radio-button>
-          </el-radio-group>
-        </div>
-
-        <!-- 选择显示列 -->
-        <div class="column-controls">
-          <el-select
-            v-model="selectedColumns"
-            multiple
-            placeholder="Select columns to display"
-            collapse-tags
-            class="column-select"
-          >
-            <el-option
-              v-for="column in allColumns"
-              :key="column.key"
-              :label="column.title as string"
-              :value="column.key"
-            />
-          </el-select>
-        </div>
-
-        <!-- 编辑模式下显示新增按钮 -->
-        <div v-if="EDIT_MODE" class="edit-controls">
-          <el-button type="primary" @click="openCreate">New Entry</el-button>
-        </div>
-      </div>
+      <TableToolbar
+        v-model="searchText"
+        v-model:column="searchColumn"
+        v-model:size="tableSize"
+        v-model:selected-columns="selectedColumns"
+        :search-columns="allColumns"
+        :display-columns="allColumns"
+      >
+        <template #actions>
+          <div v-if="EDIT_MODE" class="edit-controls">
+            <el-button type="primary" @click="openCreate">New Entry</el-button>
+          </div>
+        </template>
+      </TableToolbar>
 
       <s-table-provider :hover="true" :locale="locale">
         <s-table
@@ -122,7 +94,7 @@ import { STableProvider } from '@shene/table';
 import { allColumns } from './columns';
 import TranStructure from '@/components/TranStructure.vue';
 import en from '@shene/table/dist/locale/en';
-import TableSearchBar from '@/components/TableSearchBar.vue';
+import TableToolbar from '@/components/TableToolbar.vue';
 
 const locale = ref(en);
 const API_BASE = ''; // 同源部署时留空，否则填后端域名
@@ -142,7 +114,7 @@ export default defineComponent({
     ElInput,
     TranStructure,
     STableProvider,
-    TableSearchBar,
+    TableToolbar,
   },
   props: {
     selectedPmids:  { type: Array as () => string[], required: true },
@@ -341,44 +313,8 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
 }
-.top-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.search-box {
-  flex-grow: 1;
-  margin-right: 10px;
-}
-.size-controls,
-.column-controls {
-  display: flex;
-  align-items: center;
-}
 .edit-controls {
   margin-left: 12px;
-}
-.column-select {
-  margin-left: 10px;
-  width: 200px;
-}
-.search-input {
-  padding: 10px 20px;
-  font-size: 16px;
-  border: 2px solid #007cf07d;
-  border-radius: 25px;
-  width: 150px;
-  transition: all 0.4s ease-in-out;
-}
-.search-input:focus {
-  width: 300px;
-  outline: none;
-  border-color: #0056b3;
-}
-.search-column-select {
-  margin-left: 10px;
-  width: 150px;
 }
 .action-cell {
   display: flex;

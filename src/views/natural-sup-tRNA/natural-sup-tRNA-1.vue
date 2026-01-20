@@ -2,27 +2,14 @@
   <div class="site--main">
     <h2>Nonsense sup-tRNA</h2>
     <!-- 顶部行包含尺寸调整、搜索框和列选择 -->
-    <div class="top-controls">
-      <div class="search-box">
-        <TableSearchBar
-          v-model="searchText"
-          v-model:column="searchColumn"
-          :columns="allColumns"
-        />
-      </div>
-      <div class="size-controls" style="margin-bottom: 10px">
-        <el-radio-group v-model="tableSize">
-          <el-radio-button value="small">Small Size</el-radio-button>
-          <el-radio-button value="default">Default Size</el-radio-button>
-          <el-radio-button value="large">Large Size</el-radio-button>
-        </el-radio-group>
-      </div>
-      <div class="column-controls" style="margin-bottom: 10px">
-        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
-          <el-option v-for="column in allColumns" :key="column.key" :label="column.title as string" :value="column.key" />
-        </el-select>
-      </div>
-    </div>
+    <TableToolbar
+      v-model="searchText"
+      v-model:column="searchColumn"
+      v-model:size="tableSize"
+      v-model:selected-columns="selectedColumns"
+      :search-columns="allColumns"
+      :display-columns="allColumns"
+    />
 
     <!-- 表格 -->
     <div class="custom-tag-styles">
@@ -209,14 +196,14 @@ import type { EChartsOption } from 'echarts';
 import 'echarts/lib/chart/bar';
 import 'echarts/lib/chart/heatmap';
 import { allColumns, selectedColumns } from './naturalSupTRNAColumns';
-import TableSearchBar from '@/components/TableSearchBar.vue';
+import TableToolbar from '@/components/TableToolbar.vue';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
 
 export default defineComponent({
   name: 'NaturalSupTRNA',
-  components: { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption, VueEasyLightbox, TableSearchBar },
+  components: { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption, VueEasyLightbox, TableToolbar },
   setup() {
     const TABLE_NAME = 'nonsense_sup_rna';
     const {
@@ -491,12 +478,6 @@ export default defineComponent({
 .s-table__filter-dropdown-content { overflow-y: auto; }
 
 .site--main { padding: 20px; }
-
-.top-controls { display: flex; justify-content: space-between; align-items: center; }
-.search-box { flex-grow: 1; margin-right: 10px; }
-.size-controls, .column-controls { display: flex; align-items: center; }
-
-.column-select { margin-left: 10px; width: 200px; }
 
 .custom-tag-styles .el-tag.el-tag--info {
   --el-tag-bg-color:#f5e1f8;

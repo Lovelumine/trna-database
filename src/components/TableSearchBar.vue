@@ -91,7 +91,9 @@ const normalizedColumns = computed(() => {
       const value =
         (column.dataIndex ?? column.value ?? column.key ?? '') as string | number;
       const label =
-        column.title ?? column.label ?? String(column.dataIndex ?? column.key ?? '');
+        (typeof column.title === 'string' && column.title) ||
+        (typeof column.label === 'string' && column.label) ||
+        String(column.dataIndex ?? column.key ?? '');
       const key = column.key ?? value ?? label;
       return { key, label: String(label), value: String(value) };
     })

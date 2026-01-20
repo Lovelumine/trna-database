@@ -18,34 +18,16 @@
     </el-alert>
 
     <!-- 顶部控件：搜索、表格尺寸、列选择 -->
-    <div class="top-controls">
-      <div class="search-box">
-        <TableSearchBar
-          v-model="searchText"
-          v-model:column="searchColumn"
-          :columns="allColumns"
-        />
-      </div>
-
-      <div class="size-controls">
-        <el-radio-group v-model="tableSize">
-          <el-radio-button value="small">Small</el-radio-button>
-          <el-radio-button value="default">Default</el-radio-button>
-          <el-radio-button value="large">Large</el-radio-button>
-        </el-radio-group>
-      </div>
-
-      <div class="column-controls">
-        <el-select v-model="selectedColumns" multiple collapse-tags placeholder="Select columns" class="column-select">
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :label="typeof column.title === 'string' ? column.title : String(column.key)"
-            :value="column.key"
-          />
-        </el-select>
-      </div>
-    </div>
+    <TableToolbar
+      v-model="searchText"
+      v-model:column="searchColumn"
+      v-model:size="tableSize"
+      v-model:selected-columns="selectedColumns"
+      :search-columns="allColumns"
+      :display-columns="allColumns"
+      :size-labels="{ small: 'Small', default: 'Default', large: 'Large' }"
+      column-select-placeholder="Select columns"
+    />
 
     <!-- 表格 -->
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
@@ -103,7 +85,7 @@ import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useServerTable } from '../../utils/useServerTable';
 import VueEasyLightbox from 'vue-easy-lightbox';
-import TableSearchBar from '@/components/TableSearchBar.vue';
+import TableToolbar from '@/components/TableToolbar.vue';
 
 // 列配置（TSX 拆分）
 import en from '@shene/table/dist/locale/en';
@@ -118,7 +100,7 @@ export default defineComponent({
     ElRadioButton,
     ElAlert,
     VueEasyLightbox,
-    TableSearchBar
+    TableToolbar
   },
   setup() {
     const locale = ref(en);
@@ -202,14 +184,6 @@ export default defineComponent({
 .legend-alert {
   margin: 8px 0 14px;
 }
-
-.top-controls {
-  display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;
-}
-.search-box { display: flex; gap: 8px; align-items: center; }
-.search-input { width: 260px; height: 32px; padding: 0 10px; border: 1px solid #ddd; border-radius: 6px; }
-.search-column-select { width: 200px; }
-.column-select { width: 260px; }
 
 .expanded p { margin: 4px 0; }
 

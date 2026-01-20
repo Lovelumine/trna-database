@@ -8,22 +8,13 @@
     <!-- 2. PMID 表格 -->
     <div v-else class="table-section">
       <h2>Engineered sup-tRNA</h2>
-      <div class="top-controls">
-        <div class="search-box">
-          <TableSearchBar
-            v-model="searchText"
-            v-model:column="searchColumn"
-            :columns="pmidSearchableColumns"
-          />
-        </div>
-        <div class="size-controls">
-          <el-radio-group v-model="tableSize">
-            <el-radio-button value="small">Small Size</el-radio-button>
-            <el-radio-button value="default">Default Size</el-radio-button>
-            <el-radio-button value="large">Large Size</el-radio-button>
-          </el-radio-group>
-        </div>
-      </div>
+      <TableToolbar
+        v-model="searchText"
+        v-model:column="searchColumn"
+        v-model:size="tableSize"
+        :search-columns="pmidSearchableColumns"
+        :show-columns="false"
+      />
 
       <s-table-provider :hover="true" theme-color="#00ACF5" :locale="locale">
         <s-table
@@ -76,7 +67,7 @@ import tRNAtherapeutics1 from './tRNAtherapeutics-1.vue';
 import en from '@shene/table/dist/locale/en';
 import type { EChartsOption } from 'echarts';
 import { ElSkeleton } from 'element-plus';
-import TableSearchBar from '@/components/TableSearchBar.vue';
+import TableToolbar from '@/components/TableToolbar.vue';
 
 const locale = ref(en);
 
@@ -87,7 +78,7 @@ const PERPOS_TABLE = 'engineered_sup_trna_perpos_counts';
 
 export default {
   name: 'tRNAtherapeutics',
-  components: { tRNAtherapeutics1, STableProvider, ElSkeleton, TableSearchBar },
+  components: { tRNAtherapeutics1, STableProvider, ElSkeleton, TableToolbar },
   setup() {
     // ===== 加载状态 =====
     const loadingPmid = ref(true);  // PMID 主表格（MySQL）
@@ -399,27 +390,6 @@ export default {
 h2 { margin-bottom: 16px; color: var(--app-text); }
 h3 { margin-bottom: 12px; color: var(--app-text); }
 .el-skeleton__wrapper { background-color: var(--thera-skeleton-bg); }
-.top-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.search-box { flex: 1; margin-right: 10px; display: flex; gap: 8px; }
-.size-controls { display: flex; }
-.search-input {
-  flex: 1;
-  padding: 4px 8px;
-  border: 1px solid var(--thera-input-border);
-  border-radius: 4px;
-  background: var(--thera-input-bg);
-  color: var(--thera-input-text);
-}
-.search-input::placeholder {
-  color: var(--app-text-faint);
-}
-.search-column-select { width: 180px; }
-
 @media (prefers-color-scheme: dark) {
   .site--main {
     --thera-card-bg: var(--app-surface);

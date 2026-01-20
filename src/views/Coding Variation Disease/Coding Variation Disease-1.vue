@@ -3,43 +3,14 @@
     <h2>Coding Variation in Genetic Disorders</h2>
 
     <!-- 顶部行包含尺寸调整和搜索框 -->
-    <div class="top-controls">
-      <!-- 搜索框 -->
-      <div class="search-box">
-        <TableSearchBar
-          v-model="searchText"
-          v-model:column="searchColumn"
-          :columns="allColumns"
-        />
-      </div>
-
-      <!-- 调整尺寸 -->
-      <div class="size-controls" style="margin-bottom: 10px">
-        <el-radio-group v-model="tableSize">
-          <el-radio-button value="small">Small Size</el-radio-button>
-          <el-radio-button value="default">Default Size</el-radio-button>
-          <el-radio-button value="large">Large Size</el-radio-button>
-        </el-radio-group>
-      </div>
-
-      <!-- 选择显示列 -->
-      <div class="column-controls" style="margin-bottom: 10px">
-        <el-select
-          v-model="selectedColumns"
-          multiple
-          placeholder="Select columns to display"
-          collapse-tags
-          class="column-select"
-        >
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :label="typeof column.title === 'string' ? column.title : String(column.key)"
-            :value="column.key"
-          />
-        </el-select>
-      </div>
-    </div>
+    <TableToolbar
+      v-model="searchText"
+      v-model:column="searchColumn"
+      v-model:size="tableSize"
+      v-model:selected-columns="selectedColumns"
+      :search-columns="allColumns"
+      :display-columns="allColumns"
+    />
 
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
@@ -118,7 +89,7 @@ import { STableProvider } from '@shene/table';
 import { useServerTable } from '../../utils/useServerTable';
 import type { EChartsOption } from 'echarts';
 import { allColumns, selectedColumns } from './CodingVariation1Columns';
-import TableSearchBar from '@/components/TableSearchBar.vue';
+import TableToolbar from '@/components/TableToolbar.vue';
 
 type DataType = { [key: string]: string };
 
@@ -127,7 +98,7 @@ const locale = ref(en);
 
 export default defineComponent({
   name: 'CodingVariationDisease',
-  components: { ElTag, ElSpace, ElSelect, ElOption, TableSearchBar },
+  components: { ElTag, ElSpace, ElSelect, ElOption, TableToolbar },
   setup() {
     const TABLE_NAME = 'coding_variation_genetic_disease';
     const {
@@ -529,26 +500,6 @@ export default defineComponent({
   padding: 20px;
 }
 
-.top-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.search-box {
-  flex-grow: 1;
-  margin-right: 10px;
-}
-
-.size-controls, .column-controls {
-  display: flex;
-  align-items: center;
-}
-
-.column-select {
-  margin-left: 10px;
-  width: 200px; /* 设置选择框的宽度 */
-}
 .chart-section-wrapper {
   /* 横向滚动的外层不用改 */
   overflow-x: auto;

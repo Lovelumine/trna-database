@@ -1,23 +1,13 @@
 <template>
   <div class="site--main">
     <h2>aaRS Recognition</h2>
-    <div class="top-controls">
-      <div class="search-box">
-        <TableSearchBar
-          v-model="searchText"
-          v-model:column="searchColumn"
-          :columns="searchableColumns"
-        />
-      </div>
-
-      <div class="size-controls" style="margin-bottom: 10px">
-        <el-radio-group v-model="tableSize">
-          <el-radio-button value="small">Small Size</el-radio-button>
-          <el-radio-button value="default">Default Size</el-radio-button>
-          <el-radio-button value="large">Large Size</el-radio-button>
-        </el-radio-group>
-      </div>
-    </div>
+    <TableToolbar
+      v-model="searchText"
+      v-model:column="searchColumn"
+      v-model:size="tableSize"
+      :search-columns="searchableColumns"
+      :show-columns="false"
+    />
 
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
       <s-table
@@ -62,13 +52,13 @@ import { ElSelect, ElOption } from 'element-plus';
 import { useServerTable } from '../../utils/useServerTable';
 import { allColumns, selectedColumns, isPMID } from './aaRScolumns';
 import en from '@shene/table/dist/locale/en';
-import TableSearchBar from '@/components/TableSearchBar.vue';
+import TableToolbar from '@/components/TableToolbar.vue';
 
 const locale = ref(en);
 
 export default defineComponent({
   name: 'TrnaElements3',
-  components: { ElSelect, ElOption, TableSearchBar },
+  components: { ElSelect, ElOption, TableToolbar },
   setup() {
     const TABLE_NAME = 'aars_recognition';
     const {
@@ -152,10 +142,6 @@ export default defineComponent({
 
 <style scoped>
 .site--main { padding: 20px; }
-.top-controls { display: flex; justify-content: space-between; align-items: center; }
-.search-box { flex-grow: 1; margin-right: 10px; display: flex; gap: 8px; }
-.size-controls, .column-controls { display: flex; align-items: center; }
-.column-select { margin-left: 10px; width: 200px; }
 .bracket-links { color: #00ACF5; text-decoration: none; margin-right: 5px; }
 .bracket-links:hover { text-decoration: underline; }
 </style>

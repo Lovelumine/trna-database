@@ -3,40 +3,22 @@
     <h2>Coding Variation in Cancers</h2>
 
     <!-- 顶部行 -->
-    <div class="top-controls">
-      <div class="search-box">
-        <TableSearchBar
-          v-model="searchText"
-          v-model:column="searchColumn"
-          :columns="allColumns"
-        />
-      </div>
-
-      <div class="size-controls" style="margin-bottom: 10px">
-        <el-radio-group v-model="tableSize">
-          <el-radio-button value="small">Small Size</el-radio-button>
-          <el-radio-button value="default">Default Size</el-radio-button>
-          <el-radio-button value="large">Large Size</el-radio-button>
-        </el-radio-group>
-      </div>
-
-      <div class="column-controls" style="margin-bottom: 10px">
-        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :label="column.title as string"
-            :value="column.key"
-          />
-        </el-select>
-      </div>
-
-      <div v-if="isAdmin" class="index-controls" style="margin-bottom: 10px">
-        <el-button size="small" :loading="rebuildLoading" @click="rebuildFulltext">
-          Refresh Search Index
-        </el-button>
-      </div>
-    </div>
+    <TableToolbar
+      v-model="searchText"
+      v-model:column="searchColumn"
+      v-model:size="tableSize"
+      v-model:selected-columns="selectedColumns"
+      :search-columns="allColumns"
+      :display-columns="allColumns"
+    >
+      <template #actions>
+        <div v-if="isAdmin" class="index-controls">
+          <el-button size="small" :loading="rebuildLoading" @click="rebuildFulltext">
+            Refresh Search Index
+          </el-button>
+        </div>
+      </template>
+    </TableToolbar>
 
     <!-- 表格 -->
     <s-table-provider :hover="true" :locale="locale">
@@ -123,14 +105,14 @@ import { getTagType } from '../../utils/tag.js';
 import type { EChartsOption } from 'echarts';
 import { createPagination } from '../../utils/table';
 import { allColumns, selectedColumns } from './CodingVariationCancerColumns';
-import TableSearchBar from '@/components/TableSearchBar.vue';
+import TableToolbar from '@/components/TableToolbar.vue';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
 
 export default defineComponent({
   name: 'CodingVariationDisease2',
-  components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, TableSearchBar },
+  components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, TableToolbar },
   setup() {
     const TABLE_NAME = 'coding_variation_cancer';
     const { rows, total, loading, fetchRows, prefetchRange, cancelPrefetch, fetchStats } =
@@ -408,10 +390,6 @@ export default defineComponent({
 
 <style scoped>
 .site--main { padding: 20px; }
-.top-controls { display: flex; justify-content: space-between; align-items: center; }
-.search-box { flex-grow: 1; margin-right: 10px; }
-.size-controls, .column-controls { display: flex; align-items: center; }
-.column-select { margin-left: 10px; width: 200px; }
 .chart-section-wrapper { overflow-x: auto; padding: 10px 0; }
 .chart-row { display: flex; flex-direction: column; gap: 20px; }
 .chart-col { width: 100%; }

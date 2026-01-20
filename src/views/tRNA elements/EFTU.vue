@@ -2,35 +2,14 @@
   <div class="site--main">
     <h2>Elongation Factor Recognition site</h2>
     <!-- 顶部行包含尺寸调整和搜索框 -->
-    <div class="top-controls">
-      <!-- 搜索框 -->
-      <div class="search-box">
-        <TableSearchBar
-          v-model="searchText"
-          v-model:column="searchColumn"
-          :columns="allColumns"
-        />
-      </div>
-      <!-- 调整尺寸 -->
-      <div class="size-controls" style="margin-bottom: 10px">
-        <el-radio-group v-model="tableSize">
-          <el-radio-button value="small">Small Size</el-radio-button>
-          <el-radio-button value="default">Default Size</el-radio-button>
-          <el-radio-button value="large">Large Size</el-radio-button>
-        </el-radio-group>
-      </div>
-      <!-- 选择显示列 -->
-      <div class="column-controls" style="margin-bottom: 10px">
-        <el-select v-model="selectedColumns" multiple placeholder="Select columns to display" collapse-tags class="column-select">
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :label="column.title as string"
-            :value="column.key"
-          />
-        </el-select>
-      </div>
-    </div>
+    <TableToolbar
+      v-model="searchText"
+      v-model:column="searchColumn"
+      v-model:size="tableSize"
+      v-model:selected-columns="selectedColumns"
+      :search-columns="allColumns"
+      :display-columns="allColumns"
+    />
     <!-- 表格组件 -->
     <s-table-provider :hover="true" :theme-color="'#00ACF5'" :locale="locale">
       <s-table
@@ -71,7 +50,7 @@ import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
 import { useServerTable } from '../../utils/useServerTable';
 import { allColumns ,selectedColumns} from './EFTUcolumns';
-import TableSearchBar from '@/components/TableSearchBar.vue';
+import TableToolbar from '@/components/TableToolbar.vue';
 
 import en from '@shene/table/dist/locale/en'
 const locale = ref(en)
@@ -81,7 +60,7 @@ export default defineComponent({
   components: {
     ElSelect,
     ElOption,
-    TableSearchBar
+    TableToolbar
   },
   setup() {
     const TABLE_NAME = 'ef_tu';
@@ -142,27 +121,6 @@ export default defineComponent({
 <style scoped>
 .site--main {
   padding: 20px;
-}
-
-.top-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.search-box {
-  flex-grow: 1;
-  margin-right: 10px;
-}
-
-.size-controls, .column-controls {
-  display: flex;
-  align-items: center;
-}
-
-.column-select {
-  margin-left: 10px;
-  width: 200px; /* 设置选择框的宽度 */
 }
 
 .bracket-links {
