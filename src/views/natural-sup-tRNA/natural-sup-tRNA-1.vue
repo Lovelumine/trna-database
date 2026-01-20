@@ -4,11 +4,11 @@
     <!-- 顶部行包含尺寸调整、搜索框和列选择 -->
     <div class="top-controls">
       <div class="search-box">
-        <input v-model="searchText" placeholder="Enter search content" class="search-input">
-        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
-          <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option v-for="column in allColumns" :key="column.key" :value="column.dataIndex" />
-        </el-select>
+        <TableSearchBar
+          v-model="searchText"
+          v-model:column="searchColumn"
+          :columns="allColumns"
+        />
       </div>
       <div class="size-controls" style="margin-bottom: 10px">
         <el-radio-group v-model="tableSize">
@@ -209,13 +209,14 @@ import type { EChartsOption } from 'echarts';
 import 'echarts/lib/chart/bar';
 import 'echarts/lib/chart/heatmap';
 import { allColumns, selectedColumns } from './naturalSupTRNAColumns';
+import TableSearchBar from '@/components/TableSearchBar.vue';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
 
 export default defineComponent({
   name: 'NaturalSupTRNA',
-  components: { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption, VueEasyLightbox },
+  components: { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption, VueEasyLightbox, TableSearchBar },
   setup() {
     const TABLE_NAME = 'nonsense_sup_rna';
     const {
@@ -295,6 +296,7 @@ export default defineComponent({
     });
 
     const rowKey = (r: any) => {
+      if (r?.__rowid != null) return String(r.__rowid);
       const parts = [
         r?.['RNA central ID of tRNA'],
         r?.['ENSURE ID of tRNA'],

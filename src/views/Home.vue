@@ -27,11 +27,15 @@
     </div>
     
     <div class="image-container">
-      <img :src="'https://minio.lumoxuan.cn/ensure/picture/structure.png'" @click="openLightbox(0)" class="centered-image" alt="Structure">
+      <div class="image-card">
+        <img :src="'https://minio.lumoxuan.cn/ensure/picture/structure.png'" @click="openLightbox(0)" class="centered-image" alt="Structure">
+      </div>
     </div>
     
     <div class="image-container">
-      <img :src="'https://minio.lumoxuan.cn/ensure/picture/flowchart-ENSURE.png'" @click="openLightbox(1)" class="centered-image" alt="Flowchart ENSURE">
+      <div class="image-card">
+        <img :src="'https://minio.lumoxuan.cn/ensure/picture/flowchart-ENSURE.png'" @click="openLightbox(1)" class="centered-image" alt="Flowchart ENSURE">
+      </div>
     </div>
     
     <h2>Key Features</h2>
@@ -98,12 +102,29 @@ export default {
 <style scoped>
 .site--main {
   padding: 20px;
+  color: var(--home-body);
+  --home-heading: var(--app-text);
+  --home-body: var(--app-text-muted);
+  --home-subtle: var(--app-text-faint);
+  --home-banner-bg: #fff3cd;
+  --home-banner-border: #ffc107;
+  --home-banner-text: #856404;
+  --home-card-bg: #f6f8fa;
+  --home-card-border: #1a73e8;
+  --home-card-outline: rgba(15, 23, 42, 0.12);
+  --home-card-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  --home-image-bg: #f8fafc;
+  --home-image-border: rgba(15, 23, 42, 0.12);
+  --home-image-shadow: 0 20px 40px rgba(15, 23, 42, 0.14);
+  --home-link: #1a73e8;
+  --home-link-hover: #1558c0;
+  --home-focus-ring: rgba(26, 115, 232, 0.25);
 }
 
 /* 顶部免责声明横幅 */
 .ensure-banner {
-  background-color: #fff3cd;
-  border-left: 6px solid #ffc107;
+  background-color: var(--home-banner-bg);
+  border-left: 6px solid var(--home-banner-border);
   padding: 12px 18px;
   margin-bottom: 18px;
   border-radius: 4px;
@@ -112,7 +133,7 @@ export default {
 .ensure-disclaimer {
   margin: 0;
   font-size: 14px;
-  color: #856404;
+  color: var(--home-banner-text);
   font-weight: 600;
   line-height: 1.5;
 }
@@ -123,47 +144,50 @@ export default {
   margin: 20px 0;
 }
 
+.image-card {
+  background: var(--home-image-bg);
+  border: 1px solid var(--home-image-border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--home-image-shadow);
+  max-width: 100%;
+}
+
 .centered-image {
   width: 800px;
-  object-fit: cover; 
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
   cursor: pointer;
 }
 
 h1, h2, h3 {
-  color: #333;
+  color: var(--home-heading);
 }
 
 p, ul {
-  color: #555;
+  color: var(--home-body);
 }
 
 a {
-  color: #1a73e8;
+  color: var(--home-link);
   text-decoration: none;
 }
 
 a:hover {
+  color: var(--home-link-hover);
   text-decoration: underline;
 }
 
-.image-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0px 0; /* Add some margin for spacing */
-}
-
-.centered-image {
-  cursor: pointer;
-  max-width: 80%;
-}
-
 .citation-card {
-  background: #f6f8fa;
-  border-left: 6px solid #1a73e8;
+  background: var(--home-card-bg);
+  border: 1px solid var(--home-card-outline);
+  border-left: 6px solid var(--home-card-border);
   border-radius: 4px;
   padding: 14px 18px;
   margin: 14px 0 26px;
+  box-shadow: var(--home-card-shadow);
 }
 
 .citation-hint {
@@ -173,12 +197,14 @@ a:hover {
   gap: 10px;
   align-items: baseline;
   justify-content: space-between;
+  color: var(--home-heading);
 }
 
 .citation-text {
   margin: 0;
   line-height: 1.6;
   word-break: break-word;
+  color: var(--home-body);
 }
 
 .citation-card--fold {
@@ -188,13 +214,13 @@ a:hover {
 }
 
 .citation-card--fold:focus-visible {
-  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.25);
+  box-shadow: 0 0 0 3px var(--home-focus-ring);
 }
 
 .citation-expand-indicator {
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--home-subtle);
   white-space: nowrap;
 }
 
@@ -203,7 +229,7 @@ a:hover {
   position: absolute;
   right: 14px;
   top: 14px;
-  color: #1a73e8;
+  color: var(--home-link);
   transition: transform 180ms ease;
   pointer-events: none;
 }
@@ -239,5 +265,89 @@ a:hover {
   .citation-card--fold::after {
     display: none;
   }
+}
+
+@media (prefers-color-scheme: dark) {
+  .site--main {
+    --home-heading: rgba(242, 244, 248, 0.96);
+    --home-body: rgba(231, 233, 239, 0.78);
+    --home-subtle: rgba(231, 233, 239, 0.6);
+    --home-banner-bg: #2a2112;
+    --home-banner-border: #d2a347;
+    --home-banner-text: rgba(248, 231, 181, 0.95);
+    --home-card-bg: #141a24;
+    --home-card-border: rgba(126, 165, 255, 0.75);
+    --home-card-outline: rgba(226, 232, 240, 0.14);
+    --home-card-shadow: 0 18px 36px rgba(3, 7, 18, 0.45);
+    --home-image-bg: #111827;
+    --home-image-border: rgba(148, 163, 184, 0.24);
+    --home-image-shadow: 0 24px 48px rgba(2, 6, 23, 0.6);
+    --home-link: #8ab4ff;
+    --home-link-hover: #b7d1ff;
+    --home-focus-ring: rgba(138, 180, 255, 0.35);
+  }
+
+  .ensure-banner {
+    background-color: #2a2112;
+    border-left-color: #d2a347;
+  }
+
+  .ensure-disclaimer {
+    color: rgba(248, 231, 181, 0.95);
+  }
+
+  .citation-card {
+    background: #141a24;
+    border-color: rgba(226, 232, 240, 0.14);
+    border-left-color: rgba(126, 165, 255, 0.75);
+    box-shadow: 0 18px 36px rgba(3, 7, 18, 0.45);
+  }
+
+  .image-card {
+    background: #111827;
+    border-color: rgba(148, 163, 184, 0.24);
+    box-shadow: 0 24px 48px rgba(2, 6, 23, 0.6);
+  }
+}
+
+:global(:root[data-theme="dark"]) .site--main {
+  --home-heading: rgba(242, 244, 248, 0.96);
+  --home-body: rgba(231, 233, 239, 0.78);
+  --home-subtle: rgba(231, 233, 239, 0.6);
+  --home-banner-bg: #2a2112;
+  --home-banner-border: #d2a347;
+  --home-banner-text: rgba(248, 231, 181, 0.95);
+  --home-card-bg: #141a24;
+  --home-card-border: rgba(126, 165, 255, 0.75);
+  --home-card-outline: rgba(226, 232, 240, 0.14);
+  --home-card-shadow: 0 18px 36px rgba(3, 7, 18, 0.45);
+  --home-image-bg: #111827;
+  --home-image-border: rgba(148, 163, 184, 0.24);
+  --home-image-shadow: 0 24px 48px rgba(2, 6, 23, 0.6);
+  --home-link: #8ab4ff;
+  --home-link-hover: #b7d1ff;
+  --home-focus-ring: rgba(138, 180, 255, 0.35);
+}
+
+:global(:root[data-theme="dark"]) .ensure-banner {
+  background-color: #2a2112;
+  border-left-color: #d2a347;
+}
+
+:global(:root[data-theme="dark"]) .ensure-disclaimer {
+  color: rgba(248, 231, 181, 0.95);
+}
+
+:global(:root[data-theme="dark"]) .citation-card {
+  background: #141a24;
+  border-color: rgba(226, 232, 240, 0.14);
+  border-left-color: rgba(126, 165, 255, 0.75);
+  box-shadow: 0 18px 36px rgba(3, 7, 18, 0.45);
+}
+
+:global(:root[data-theme="dark"]) .image-card {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.24);
+  box-shadow: 0 24px 48px rgba(2, 6, 23, 0.6);
 }
 </style>

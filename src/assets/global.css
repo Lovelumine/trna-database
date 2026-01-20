@@ -5,20 +5,126 @@
   
 
 :root {
-    --farallon-main-color: #4370f5;
-    --farallon-hover-color: #3a5f9a;
-    --farallon-text-color: rgba(0,0,0,.84);
-    --farallon-text-light: rgba(0,0,0,.68);
-    --farallon-text-gray: rgba(0,0,0,.6);
-    --farallon-text-gray-lightest: rgba(0,0,0,.5);
-    --farallon-background-white: #fff;
-    --farallon-background-gray: #fafafa;
-    --farallon-griedent-start: #007cf0;
-    --farallon-griedent-end: #00dfd8;
-    --farallon-border-color: rgba(0,0,0,.1);
-    --farallon-border-color-light: rgba(0,0,0,.05);
+    color-scheme: light;
+    --app-bg: #f7f8fb;
+    --app-surface: #ffffff;
+    --app-surface-2: #f3f4f7;
+    --app-text: rgba(0, 0, 0, 0.88);
+    --app-text-muted: rgba(0, 0, 0, 0.64);
+    --app-text-faint: rgba(0, 0, 0, 0.5);
+    --app-border: rgba(0, 0, 0, 0.12);
+    --app-border-light: rgba(0, 0, 0, 0.06);
+    --app-accent: #4370f5;
+    --app-accent-strong: #3a5f9a;
+    --app-gradient-start: #007cf0;
+    --app-gradient-end: #00dfd8;
+
+    --farallon-main-color: var(--app-accent);
+    --farallon-hover-color: var(--app-accent-strong);
+    --farallon-text-color: var(--app-text);
+    --farallon-text-light: var(--app-text-muted);
+    --farallon-text-gray: var(--app-text-muted);
+    --farallon-text-gray-lightest: var(--app-text-faint);
+    --farallon-text-light-hover: #2f3e50;
+    --farallon-background-white: var(--app-surface);
+    --farallon-background-gray: var(--app-bg);
+    --farallon-griedent-start: var(--app-gradient-start);
+    --farallon-griedent-end: var(--app-gradient-end);
+    --farallon-border-color: var(--app-border);
+    --farallon-border-color-light: var(--app-border-light);
     --block-separator-color: #244654;
     --article-target-color: #283c50;
+
+    --el-color-primary: var(--app-accent);
+    --el-bg-color: var(--app-surface);
+    --el-bg-color-page: var(--app-bg);
+    --el-bg-color-overlay: var(--app-surface);
+    --el-text-color-primary: var(--app-text);
+    --el-text-color-regular: var(--app-text-muted);
+    --el-text-color-secondary: var(--app-text-faint);
+    --el-border-color: var(--app-border);
+    --el-border-color-light: var(--app-border-light);
+    --el-fill-color: var(--app-surface-2);
+    --el-fill-color-light: var(--app-surface-2);
+    --el-fill-color-blank: var(--app-surface);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --app-bg: #0f1115;
+    --app-surface: #171a21;
+    --app-surface-2: #1f2430;
+    --app-text: rgba(231, 233, 239, 0.92);
+    --app-text-muted: rgba(231, 233, 239, 0.72);
+    --app-text-faint: rgba(231, 233, 239, 0.56);
+    --app-border: rgba(255, 255, 255, 0.14);
+    --app-border-light: rgba(255, 255, 255, 0.08);
+    --app-accent: #6ea8ff;
+    --app-accent-strong: #8ab4ff;
+    --app-gradient-start: #3b82f6;
+    --app-gradient-end: #22d3ee;
+    --farallon-text-light-hover: #d9e2f1;
+
+    --el-bg-color: var(--app-surface);
+    --el-bg-color-page: var(--app-bg);
+    --el-bg-color-overlay: var(--app-surface-2);
+    --el-text-color-primary: var(--app-text);
+    --el-text-color-regular: var(--app-text-muted);
+    --el-text-color-secondary: var(--app-text-faint);
+    --el-border-color: var(--app-border);
+    --el-border-color-light: var(--app-border-light);
+    --el-fill-color: var(--app-surface-2);
+    --el-fill-color-light: var(--app-surface-2);
+    --el-fill-color-blank: var(--app-surface);
+    --el-mask-color: rgba(0, 0, 0, 0.72);
+  }
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+    --app-bg: #f7f8fb;
+    --app-surface: #ffffff;
+    --app-surface-2: #f3f4f7;
+    --app-text: rgba(0, 0, 0, 0.88);
+    --app-text-muted: rgba(0, 0, 0, 0.64);
+    --app-text-faint: rgba(0, 0, 0, 0.5);
+    --app-border: rgba(0, 0, 0, 0.12);
+    --app-border-light: rgba(0, 0, 0, 0.06);
+    --app-accent: #4370f5;
+    --app-accent-strong: #3a5f9a;
+    --app-gradient-start: #007cf0;
+    --app-gradient-end: #00dfd8;
+    --farallon-text-light-hover: #2f3e50;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --app-bg: #0f1115;
+    --app-surface: #171a21;
+    --app-surface-2: #1f2430;
+    --app-text: rgba(231, 233, 239, 0.92);
+    --app-text-muted: rgba(231, 233, 239, 0.72);
+    --app-text-faint: rgba(231, 233, 239, 0.56);
+    --app-border: rgba(255, 255, 255, 0.14);
+    --app-border-light: rgba(255, 255, 255, 0.08);
+    --app-accent: #6ea8ff;
+    --app-accent-strong: #8ab4ff;
+    --app-gradient-start: #3b82f6;
+    --app-gradient-end: #22d3ee;
+    --farallon-text-light-hover: #d9e2f1;
+    --el-bg-color: var(--app-surface);
+    --el-bg-color-page: var(--app-bg);
+    --el-bg-color-overlay: var(--app-surface-2);
+    --el-text-color-primary: var(--app-text);
+    --el-text-color-regular: var(--app-text-muted);
+    --el-text-color-secondary: var(--app-text-faint);
+    --el-border-color: var(--app-border);
+    --el-border-color-light: var(--app-border-light);
+    --el-fill-color: var(--app-surface-2);
+    --el-fill-color-light: var(--app-surface-2);
+    --el-fill-color-blank: var(--app-surface);
+    --el-mask-color: rgba(0, 0, 0, 0.72);
 }
 
 body {
@@ -27,7 +133,7 @@ body {
     font-size: 16px;
     line-height: 1.8;
     color: var(--farallon-text-color);
-    /* background-color: var(--farallon-background-gray); */
+    background-color: var(--farallon-background-gray);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -38,6 +144,11 @@ body {
     min-height: 100vh;
     position: relative;
 
+}
+
+.main,
+.site--main {
+    color: var(--farallon-text-color);
 }
 
 .main:after {
@@ -52,6 +163,322 @@ body {
     right: 0;
     left: 0;
     content: "";
+}
+
+@media (prefers-color-scheme: dark) {
+  .main:after {
+    opacity: 0.1;
+  }
+}
+
+:root[data-theme="dark"] .main:after {
+  opacity: 0.1;
+}
+
+a {
+    color: var(--app-accent);
+}
+
+a:hover {
+    color: var(--app-accent-strong);
+}
+
+input,
+textarea,
+select {
+    background-color: var(--app-surface);
+    color: var(--app-text);
+    border: 1px solid var(--app-border);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--app-text-faint);
+}
+
+@media (prefers-color-scheme: dark) {
+  .s-table,
+  .s-table__table,
+  .s-table__header,
+  .s-table__body,
+  .s-table__row,
+  .s-table__cell,
+  .s-table__header-cell,
+  .s-table__expand-row {
+    background-color: var(--app-surface);
+    color: var(--app-text);
+  }
+
+  .s-table__row:hover td {
+    background-color: var(--app-surface-2);
+  }
+
+  .s-table__cell,
+  .s-table__header-cell {
+    border-color: var(--app-border);
+  }
+
+  .el-input__wrapper,
+  .el-select .el-input__wrapper,
+  .el-pagination__sizes .el-input__wrapper,
+  .el-pagination__jump .el-input__wrapper {
+    background-color: var(--app-surface-2);
+    box-shadow: 0 0 0 1px var(--app-border) inset;
+    color: var(--app-text);
+  }
+
+  .el-input__inner {
+    color: var(--app-text);
+  }
+
+  .el-input__inner::placeholder {
+    color: var(--app-text-faint);
+  }
+
+  .el-select-dropdown,
+  .el-popper.is-light {
+    background-color: var(--app-surface);
+    border-color: var(--app-border);
+  }
+
+  .el-popper.is-light .el-popper__arrow::before {
+    background-color: var(--app-surface);
+    border-color: var(--app-border);
+  }
+
+  .el-select-dropdown__item {
+    color: var(--app-text);
+  }
+
+  .el-select-dropdown__item.is-hovering,
+  .el-select-dropdown__item:hover {
+    background-color: var(--app-surface-2);
+  }
+
+  .el-pagination {
+    color: var(--app-text-muted);
+  }
+
+  .el-pagination button,
+  .el-pagination .el-pager li {
+    background-color: var(--app-surface);
+    color: var(--app-text);
+    border: 1px solid var(--app-border);
+  }
+
+  .el-pagination .el-pager li.is-active {
+    background-color: var(--app-accent);
+    border-color: var(--app-accent);
+    color: #ffffff;
+  }
+
+  .el-select__wrapper,
+  .el-select__wrapper.is-disabled {
+    background-color: var(--app-surface-2);
+    box-shadow: 0 0 0 1px var(--app-border) inset;
+    color: var(--app-text);
+  }
+
+  .el-select__placeholder,
+  .el-select__tags-text,
+  .el-select__selected-item {
+    color: var(--app-text-muted);
+  }
+
+  .el-select__caret {
+    color: var(--app-text-faint);
+  }
+
+  .el-radio-button__inner {
+    background-color: var(--app-surface-2);
+    border-color: var(--app-border);
+    color: var(--app-text);
+  }
+
+  .el-radio-button__inner:hover {
+    color: var(--app-text);
+  }
+
+  .el-select__selection .el-tag,
+  .el-tag {
+    background-color: rgba(148, 163, 184, 0.16);
+    border-color: rgba(148, 163, 184, 0.28);
+    color: var(--app-text);
+  }
+
+  .site--main .table-section {
+    background-color: var(--app-surface);
+    border-color: var(--app-border);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  }
+
+  .site--main .table-section h2,
+  .site--main .table-section h3 {
+    color: var(--app-text);
+  }
+
+  .site--main .ensure-banner {
+    background-color: #2a2112;
+    border-left-color: #d2a347;
+  }
+
+  .site--main .ensure-disclaimer {
+    color: rgba(248, 231, 181, 0.95);
+  }
+
+  .site--main .citation-card {
+    background-color: #141a24;
+    border-color: rgba(226, 232, 240, 0.14);
+    border-left-color: rgba(126, 165, 255, 0.75);
+  }
+
+  .site--main .image-card {
+    background-color: #111827;
+    border-color: rgba(148, 163, 184, 0.24);
+  }
+}
+
+:root[data-theme="dark"] .s-table,
+:root[data-theme="dark"] .s-table__table,
+:root[data-theme="dark"] .s-table__header,
+:root[data-theme="dark"] .s-table__body,
+:root[data-theme="dark"] .s-table__row,
+:root[data-theme="dark"] .s-table__cell,
+:root[data-theme="dark"] .s-table__header-cell,
+:root[data-theme="dark"] .s-table__expand-row {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] .s-table__row:hover td {
+  background-color: var(--app-surface-2);
+}
+
+:root[data-theme="dark"] .s-table__cell,
+:root[data-theme="dark"] .s-table__header-cell {
+  border-color: var(--app-border);
+}
+
+:root[data-theme="dark"] .el-input__wrapper,
+:root[data-theme="dark"] .el-select .el-input__wrapper,
+:root[data-theme="dark"] .el-pagination__sizes .el-input__wrapper,
+:root[data-theme="dark"] .el-pagination__jump .el-input__wrapper {
+  background-color: var(--app-surface-2);
+  box-shadow: 0 0 0 1px var(--app-border) inset;
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] .el-input__inner {
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] .el-input__inner::placeholder {
+  color: var(--app-text-faint);
+}
+
+:root[data-theme="dark"] .el-select-dropdown,
+:root[data-theme="dark"] .el-popper.is-light {
+  background-color: var(--app-surface);
+  border-color: var(--app-border);
+}
+
+:root[data-theme="dark"] .el-popper.is-light .el-popper__arrow::before {
+  background-color: var(--app-surface);
+  border-color: var(--app-border);
+}
+
+:root[data-theme="dark"] .el-select-dropdown__item {
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] .el-select-dropdown__item.is-hovering,
+:root[data-theme="dark"] .el-select-dropdown__item:hover {
+  background-color: var(--app-surface-2);
+}
+
+:root[data-theme="dark"] .el-pagination {
+  color: var(--app-text-muted);
+}
+
+:root[data-theme="dark"] .el-pagination button,
+:root[data-theme="dark"] .el-pagination .el-pager li {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+}
+
+:root[data-theme="dark"] .el-pagination .el-pager li.is-active {
+  background-color: var(--app-accent);
+  border-color: var(--app-accent);
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .el-select__wrapper,
+:root[data-theme="dark"] .el-select__wrapper.is-disabled {
+  background-color: var(--app-surface-2);
+  box-shadow: 0 0 0 1px var(--app-border) inset;
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] .el-select__placeholder,
+:root[data-theme="dark"] .el-select__tags-text,
+:root[data-theme="dark"] .el-select__selected-item {
+  color: var(--app-text-muted);
+}
+
+:root[data-theme="dark"] .el-select__caret {
+  color: var(--app-text-faint);
+}
+
+:root[data-theme="dark"] .el-radio-button__inner {
+  background-color: var(--app-surface-2);
+  border-color: var(--app-border);
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] .el-radio-button__inner:hover {
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] .el-select__selection .el-tag,
+:root[data-theme="dark"] .el-tag {
+  background-color: rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.28);
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] .site--main .table-section,
+html.dark .site--main .table-section {
+  background-color: var(--app-surface);
+  border-color: var(--app-border);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .site--main .table-section h2,
+:root[data-theme="dark"] .site--main .table-section h3,
+html.dark .site--main .table-section h2,
+html.dark .site--main .table-section h3 {
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] .site--main .ensure-banner {
+  background-color: #2a2112;
+  border-left-color: #d2a347;
+}
+
+:root[data-theme="dark"] .site--main .ensure-disclaimer {
+  color: rgba(248, 231, 181, 0.95);
+}
+
+:root[data-theme="dark"] .site--main .citation-card {
+  background-color: #141a24;
+  border-color: rgba(226, 232, 240, 0.14);
+  border-left-color: rgba(126, 165, 255, 0.75);
+}
+
+:root[data-theme="dark"] .site--main .image-card {
+  background-color: #111827;
+  border-color: rgba(148, 163, 184, 0.24);
 }
 
 .site--main {

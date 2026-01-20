@@ -168,7 +168,14 @@ const fileToDbMap: Record<string, string> = {
   'Frameshift sup-tRNA.csv': 'Frameshift sup-tRNA',
   'Engineered Sup-tRNA.csv': 'Engineered sup-tRNA',
   'Function of Modification.csv': 'Function & Modification',
-  'aaRS Recognition.csv': 'aaRS Recognition'
+  'aaRS Recognition.csv': 'aaRS Recognition',
+  coding_variation_cancer: 'Coding Variation in Cancer',
+  coding_variation_genetic_disease: 'Coding Variation in Disease',
+  nonsense_sup_rna: 'Nonsense Suppressors',
+  frameshift_sup_trna: 'Frameshift sup-tRNA',
+  Engineered_sup_tRNA: 'Engineered sup-tRNA',
+  function_and_modification: 'Function & Modification',
+  aars_recognition: 'aaRS Recognition',
 };
 function mapFileToDb(file: string): string {
   const clean = file.replace(/^\ufeff/, '');

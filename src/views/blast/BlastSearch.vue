@@ -150,21 +150,21 @@ function resetDefaults() {
 
 // 数据库 Pills
 const databases = [
-  { name: 'Coding Variation in Cancer', url: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Cancer.csv' },
-  { name: 'Coding Variation in Disease', url: 'https://minio.lumoxuan.cn/ensure/Coding Variation in Genetic Disease.csv' },
-  { name: 'Nonsense Sup-RNA', url: 'https://minio.lumoxuan.cn/ensure/Nonsense Sup-RNA.csv' },
-  { name: 'Frameshift sup-tRNA', url: 'https://minio.lumoxuan.cn/ensure/Frameshift sup-tRNA.csv' },
-  { name: 'Engineered sup-tRNA', url: 'https://minio.lumoxuan.cn/ensure/Engineered Sup-tRNA.csv' },
-  { name: 'Function of Modification', url: 'https://minio.lumoxuan.cn/ensure/Function and Modification.csv' },
-  { name: 'aaRS Recognition', url: 'https://minio.lumoxuan.cn/ensure/aaRS%20Recognition.csv' },
+  { name: 'Coding Variation in Cancer', table: 'coding_variation_cancer' },
+  { name: 'Coding Variation in Disease', table: 'coding_variation_genetic_disease' },
+  { name: 'Nonsense Sup-RNA', table: 'nonsense_sup_rna' },
+  { name: 'Frameshift sup-tRNA', table: 'frameshift_sup_trna' },
+  { name: 'Engineered sup-tRNA', table: 'Engineered_sup_tRNA' },
+  { name: 'Function of Modification', table: 'function_and_modification' },
+  { name: 'aaRS Recognition', table: 'aars_recognition' },
 ];
 const selectedDbs = ref(databases.map(d=>d.name));
 const toggleDb = (n: string) => {
   const i = selectedDbs.value.indexOf(n);
   i<0 ? selectedDbs.value.push(n) : selectedDbs.value.splice(i,1);
 };
-const csvLinks = computed(() => 
-  databases.filter(d=>selectedDbs.value.includes(d.name)).map(d=>d.url)
+const tableNames = computed(() =>
+  databases.filter(d => selectedDbs.value.includes(d.name)).map(d => d.table)
 );
 
 // 重置进度
@@ -181,7 +181,7 @@ async function runSearch(){
   try {
     const payload = {
       query_seq: querySeq.value,
-      csv_paths: csvLinks.value,
+      tables:    tableNames.value,
       number:    numResults.value,
       match:     match.value,
       mismatch:  mismatch.value,
@@ -206,17 +206,34 @@ async function runSearch(){
   max-width: 900px;
   margin: 2rem auto;
   font-family: Arial, sans-serif;
-  color: #333;
+  color: var(--app-text);
+  --blast-panel-bg: #fafafa;
+  --blast-panel-border: #e5e7eb;
+  --blast-input-bg: #ffffff;
+  --blast-input-border: #cccccc;
+  --blast-input-text: var(--app-text);
+  --blast-pill-bg: #ffffff;
+  --blast-pill-border: #cccccc;
+  --blast-pill-text: var(--app-text);
+  --blast-pill-active-bg: #007acc;
+  --blast-pill-active-text: #ffffff;
+  --blast-slider-track: #d1d5db;
+  --blast-slider-fill: #007acc;
+  --blast-progress-bg: #dddddd;
+  --blast-reset-bg: #cccccc;
+  --blast-reset-hover: #999999;
 }
 h2 {
   text-align: center;
   margin-bottom: 1rem;
+  color: var(--app-text);
 }
 .controls {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1rem;
-  background: #fafafa;
+  background: var(--blast-panel-bg);
+  border: 1px solid var(--blast-panel-border);
   padding: 1rem;
   border-radius: 6px;
 }
@@ -240,10 +257,12 @@ h2 {
 .query-input {
   font-family: monospace;
   padding: 0.5rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--blast-input-border);
   border-radius: 4px;
   min-height: 100px;
   resize: vertical;
+  background: var(--blast-input-bg);
+  color: var(--blast-input-text);
 }
 
 /* 滑块 */
@@ -258,6 +277,26 @@ h2 {
 }
 .slider-control input {
   width: 100%;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--blast-slider-track);
+  outline: none;
+}
+.slider-control input::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--blast-slider-fill);
+  border: 2px solid #ffffff;
+}
+.slider-control input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--blast-slider-fill);
+  border: 2px solid #ffffff;
 }
 
 /* Pills */
@@ -271,17 +310,18 @@ h2 {
 }
 .pill {
   padding: 0.3rem 0.7rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--blast-pill-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--blast-pill-bg);
+  color: var(--blast-pill-text);
   cursor: pointer;
   transition: 0.2s;
   font-size: 0.9rem;
 }
 .pill.active {
-  background: #007acc;
-  color: #fff;
-  border-color: #007acc;
+  background: var(--blast-pill-active-bg);
+  color: var(--blast-pill-active-text);
+  border-color: var(--blast-pill-active-bg);
 }
 .pill.disabled {
   opacity: 0.6;
@@ -292,8 +332,10 @@ h2 {
 .number-input {
   width: 4rem;
   padding: 0.3rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--blast-input-border);
   border-radius: 4px;
+  background: var(--blast-input-bg);
+  color: var(--blast-input-text);
 }
 
 /* 按钮 + 进度 */
@@ -325,7 +367,7 @@ h2 {
   margin-top: 0.4rem;
   width: 60%;
   height: 6px;
-  background: #ddd;
+  background: var(--blast-progress-bg);
   border-radius: 3px;
   margin-left: auto;
   margin-right: auto;
@@ -359,17 +401,48 @@ h2 {
 .inline .reset-button {
   margin-left: 0.5rem;
   padding: 0.3rem 0.6rem;
-  background: #ccc;
+  background: var(--blast-reset-bg);
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s;
 }
 .inline .reset-button:hover:not(:disabled) {
-  background: #999;
+  background: var(--blast-reset-hover);
 }
 .reset-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  .search-service {
+    --blast-panel-bg: var(--app-surface);
+    --blast-panel-border: var(--app-border);
+    --blast-input-bg: var(--app-surface-2);
+    --blast-input-border: var(--app-border);
+    --blast-pill-bg: var(--app-surface-2);
+    --blast-pill-border: var(--app-border);
+    --blast-pill-text: var(--app-text);
+    --blast-slider-track: var(--app-border);
+    --blast-progress-bg: var(--app-border);
+    --blast-reset-bg: var(--app-surface-2);
+    --blast-reset-hover: rgba(148, 163, 184, 0.4);
+  }
+}
+
+:global(:root[data-theme="dark"]) .search-service,
+html.dark .search-service {
+  --blast-panel-bg: var(--app-surface);
+  --blast-panel-border: var(--app-border);
+  --blast-input-bg: var(--app-surface-2);
+  --blast-input-border: var(--app-border);
+  --blast-pill-bg: var(--app-surface-2);
+  --blast-pill-border: var(--app-border);
+  --blast-pill-text: var(--app-text);
+  --blast-slider-track: var(--app-border);
+  --blast-progress-bg: var(--app-border);
+  --blast-reset-bg: var(--app-surface-2);
+  --blast-reset-hover: rgba(148, 163, 184, 0.4);
 }
 </style>

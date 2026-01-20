@@ -5,11 +5,11 @@
     <!-- 顶部行：搜索 / 尺寸 / 列选择 -->
     <div class="top-controls">
       <div class="search-box">
-        <input v-model="searchText" placeholder="Enter search content" class="search-input" />
-        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
-          <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option v-for="column in allColumns" :key="column.key" :value="column.dataIndex" />
-        </el-select>
+        <TableSearchBar
+          v-model="searchText"
+          v-model:column="searchColumn"
+          :columns="allColumns"
+        />
       </div>
 
       <div class="size-controls" style="margin-bottom: 10px">
@@ -232,11 +232,12 @@ import { getTagType } from '../../utils/tag.js';
 import { allColumns, selectedColumns } from './Frameshiftcolumns';
 import type { EChartsOption } from 'echarts';
 import en from '@shene/table/dist/locale/en';
+import TableSearchBar from '@/components/TableSearchBar.vue';
 const locale = ref(en);
 
 export default defineComponent({
   name: 'NaturalSupTRNA',
-  components: { ElTooltip, ElImage, ElSelect, ElOption, VueEasyLightbox },
+  components: { ElTooltip, ElImage, ElSelect, ElOption, VueEasyLightbox, TableSearchBar },
   setup() {
     const TABLE_NAME = 'frameshift_sup_trna';
     const {
@@ -316,6 +317,7 @@ export default defineComponent({
     });
 
     const rowKey = (r: any) => {
+      if (r?.__rowid != null) return String(r.__rowid);
       const parts = [
         r?.['RNA central ID of tRNA'],
         r?.['ENSURE ID of tRNA'],

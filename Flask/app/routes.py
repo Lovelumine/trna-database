@@ -5,7 +5,8 @@ import re
 from . import db
 
 from .logic.align import (
-    search_in_csvs,  # 统一封装的业务逻辑入口
+    search_in_csvs,
+    search_in_mysql,
 )
 
 bp = Blueprint("routes", __name__)
@@ -346,7 +347,10 @@ def search():
     data = request.get_json(silent=True) or {}
 
     try:
-        topn = search_in_csvs(data)
+        if data.get("tables"):
+            topn = search_in_mysql(data, db.engine)
+        else:
+            topn = search_in_csvs(data)
         return jsonify(topn), 200
     except Exception as e:
         # 尽量返回可读错误
@@ -426,6 +430,7 @@ def table_rows():
         search_text, search_column, columns, ci, use_fulltext, fulltext_columns
     )
     count_sql = text(f"SELECT COUNT(*) AS total FROM `{table}` {where_sql}")
+    row_offset = (page - 1) * page_size
     query_sql = (
         text(
             f"SELECT * FROM `{table}` {where_sql} "
@@ -441,7 +446,7 @@ def table_rows():
             total = conn.execute(count_sql, params).scalar() or 0
             rows = conn.execute(
                 query_sql,
-                {**params, "limit": page_size, "offset": (page - 1) * page_size},
+                {**params, "limit": page_size, "offset": row_offset},
             ).fetchall()
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -450,6 +455,10 @@ def table_rows():
         results = [dict(r._mapping) for r in rows]
     except AttributeError:
         results = [dict(r) for r in rows]
+
+    for idx, row in enumerate(results):
+        if "__rowid" not in row:
+            row["__rowid"] = row_offset + idx + 1
 
     return jsonify(
         {

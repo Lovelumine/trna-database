@@ -26,6 +26,30 @@
   border-color: #0056b3;
 }
 
+@media (prefers-color-scheme: dark) {
+  .search-input {
+    background-color: var(--app-surface);
+    color: var(--app-text);
+    border-color: rgba(110, 168, 255, 0.45);
+  }
+
+  .search-input:focus {
+    border-color: var(--app-accent);
+    box-shadow: 0 0 0 2px rgba(110, 168, 255, 0.2);
+  }
+}
+
+:root[data-theme="dark"] .search-input {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+  border-color: rgba(110, 168, 255, 0.45);
+}
+
+:root[data-theme="dark"] .search-input:focus {
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 2px rgba(110, 168, 255, 0.2);
+}
+
 .search-column-select {
   margin-left: 10px; /* 与搜索框之间的间距 */
   width: 150px; /* 设置选择框的宽度 */

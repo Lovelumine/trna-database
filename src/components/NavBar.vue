@@ -19,6 +19,17 @@
     </nav>
     <nav class="site--header__right">
       <ul class="topNav-items right">
+        <li>
+          <button
+            class="theme-toggle"
+            type="button"
+            :aria-label="`Theme: ${themeLabel}`"
+            :title="`Theme: ${themeLabel}`"
+            @click="toggleTheme"
+          >
+            <font-awesome-icon :icon="themeIcon" />
+          </button>
+        </li>
         <li><router-link to="/download" active-class="active-link"><font-awesome-icon :icon="['fas', 'download']" title="Download" /></router-link></li>
         <li><router-link to="/help" active-class="active-link"><font-awesome-icon :icon="['fas', 'book']" title="Help" /></router-link></li>
         <li><router-link to="/about" active-class="active-link"><font-awesome-icon :icon="['fas', 'info-circle']" title="About" /></router-link></li>
@@ -30,9 +41,35 @@
 
 
 
-<script>
+<script lang="ts">
+import { computed, ref } from 'vue';
+import { getThemeMode, nextThemeMode, setThemeMode } from '../utils/theme';
+
 export default {
-  name: 'NavBar'
+  name: 'NavBar',
+  setup() {
+    const themeMode = ref(getThemeMode());
+
+    const themeLabel = computed(() => {
+      if (themeMode.value === 'dark') return 'Dark';
+      if (themeMode.value === 'light') return 'Light';
+      return 'System';
+    });
+
+    const themeIcon = computed(() => {
+      if (themeMode.value === 'dark') return ['fas', 'moon'];
+      if (themeMode.value === 'light') return ['fas', 'sun'];
+      return ['fas', 'circle-half-stroke'];
+    });
+
+    const toggleTheme = () => {
+      const next = nextThemeMode(themeMode.value);
+      themeMode.value = next;
+      setThemeMode(next);
+    };
+
+    return { themeLabel, themeIcon, toggleTheme };
+  }
 }
 </script>
 
@@ -122,11 +159,13 @@ export default {
   height: 39px;
   top: 25px;
   z-index: 1;
-  box-shadow: 0 0 #fff, 0 0 0 1px hsla(240, 5%, 96%, .1), 0 10px 15px -3px rgba(39, 39, 42, .05), 0 4px 6px -4px rgba(39, 39, 42, .05);
+  box-shadow: 0 0 0 1px var(--farallon-border-color-light),
+    0 10px 15px -3px rgba(39, 39, 42, 0.08),
+    0 4px 6px -4px rgba(39, 39, 42, 0.08);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  background-color: hsla(0, 0%, 100%, .5);
-  border: 1px solid hsla(0, 0%, 100%, .5);
+  background-color: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--farallon-border-color-light);
   border-radius: 999rem;
   overflow: hidden;
 }
@@ -175,12 +214,12 @@ export default {
 }
 
 .topNav-items li a {
-  color: rgba(0, 0, 0, 0.84); /* 默认颜色，未选中 */
+  color: var(--farallon-text-color); /* 默认颜色，未选中 */
   text-decoration: none; /* 移除下划线 */
 }
 
 .topNav-items li .active-link {
-  color: #3a5f9a; /* 选中颜色 */
+  color: var(--farallon-hover-color); /* 选中颜色 */
 }
 
 .topNav-items li {
@@ -190,20 +229,53 @@ export default {
 }
 
 .topNav-items li a {
-  color: rgba(0, 0, 0, 0.84);
+  color: var(--farallon-text-color);
   text-decoration: none;
   border-bottom: 2px solid transparent;
   transition: border-color 0.3s;
 }
 
 .topNav-items li a:hover {
-  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+  border-bottom: 2px solid var(--farallon-border-color);
 }
 
 .topNav-items li .active-link {
-  color: #3a5f9a;
-  border-bottom: 2px solid #3a5f9a;
+  color: var(--farallon-hover-color);
+  border-bottom: 2px solid var(--farallon-hover-color);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--farallon-border-color);
+  background-color: var(--farallon-background-white);
+  color: var(--farallon-text-color);
+  padding: 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.theme-toggle:hover {
+  background-color: var(--farallon-background-gray);
+  border-color: var(--farallon-border-color);
+}
+
+@media (prefers-color-scheme: dark) {
+  .site--header__center {
+    background-color: rgba(23, 26, 33, 0.85);
+    box-shadow: 0 0 0 1px var(--farallon-border-color-light),
+      0 10px 20px -8px rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] .site--header__center {
+  background-color: rgba(23, 26, 33, 0.85);
+  box-shadow: 0 0 0 1px var(--farallon-border-color-light),
+    0 10px 20px -8px rgba(0, 0, 0, 0.6);
 }
 
 </style>
-

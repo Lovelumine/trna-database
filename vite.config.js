@@ -6,7 +6,11 @@ import terser from '@rollup/plugin-terser'; // 引入 terser 插件
 import { viteStaticCopy } from 'vite-plugin-static-copy'; // 引入 vite-plugin-static-copy 插件
 
 // 允许的来源站点
-const allowedOrigin = 'https://trna.lumoxuan.cn/';
+const allowedOrigins = new Set([
+  'https://trna.lumoxuan.cn/',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+]);
 
 export default defineConfig({
   plugins: [
@@ -100,7 +104,7 @@ export default defineConfig({
     configureServer: (server) => {
       server.middlewares.use((req, res, next) => {
         const origin = req.headers.origin;
-        if (origin && origin !== allowedOrigin) {
+        if (origin && !allowedOrigins.has(origin)) {
           res.statusCode = 403;
           res.end('Forbidden');
         } else {

@@ -1,5 +1,6 @@
 import { createApp } from 'vue';
 import App from './App.vue';
+import { initTheme } from './utils/theme';
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import PageNotFound from './views/404.vue'; // 引入404组件
 import EnsureSTable from './components/EnsureSTable.vue'
@@ -115,6 +116,8 @@ router.afterEach(() => {
 
 // 创建 Vue 应用实例
 const app = createApp(App);
+
+initTheme();
 
 app.component('VChart', VChart)
 

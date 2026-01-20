@@ -220,6 +220,86 @@
   justify-content: flex-start;
 }
 
+@media (prefers-color-scheme: dark) {
+  #bot-icon img {
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+  }
+
+  #chat-box {
+    background-color: var(--app-surface);
+    color: var(--app-text);
+    box-shadow: 0 0 16px rgba(0, 0, 0, 0.6);
+  }
+
+  #chat-header {
+    background-color: var(--app-accent);
+  }
+
+  #chat-content .bot .message {
+    background-color: var(--app-surface-2);
+    color: var(--app-text);
+  }
+
+  #chat-input-container {
+    border-top: 1px solid var(--app-border);
+  }
+
+  #chat-input {
+    background-color: var(--app-surface-2);
+    color: var(--app-text);
+    border-color: var(--app-border);
+  }
+
+  #send-button,
+  #image-button {
+    background-color: var(--app-accent);
+  }
+
+  #send-button:hover,
+  #image-button:hover {
+    background-color: var(--app-accent-strong);
+  }
+}
+
+:root[data-theme="dark"] #bot-icon img {
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="dark"] #chat-box {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="dark"] #chat-header {
+  background-color: var(--app-accent);
+}
+
+:root[data-theme="dark"] #chat-content .bot .message {
+  background-color: var(--app-surface-2);
+  color: var(--app-text);
+}
+
+:root[data-theme="dark"] #chat-input-container {
+  border-top: 1px solid var(--app-border);
+}
+
+:root[data-theme="dark"] #chat-input {
+  background-color: var(--app-surface-2);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+:root[data-theme="dark"] #send-button,
+:root[data-theme="dark"] #image-button {
+  background-color: var(--app-accent);
+}
+
+:root[data-theme="dark"] #send-button:hover,
+:root[data-theme="dark"] #image-button:hover {
+  background-color: var(--app-accent-strong);
+}
+
 .message {
   max-width: 60%;
   padding: 8px;

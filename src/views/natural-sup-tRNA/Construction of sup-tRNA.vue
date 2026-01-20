@@ -5,15 +5,11 @@
     <div class="top-controls">
       <!-- 搜索框 -->
       <div class="search-box" style="margin-bottom: 10px">
-        <input v-model="searchText" placeholder="Enter search content" class="search-input">
-        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
-          <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :value="column.dataIndex"
-          />
-        </el-select>
+        <TableSearchBar
+          v-model="searchText"
+          v-model:column="searchColumn"
+          :columns="allColumns"
+        />
       </div>
       <!-- 调整尺寸 -->
       <div class="size-controls" style="margin-bottom: 10px">
@@ -82,6 +78,7 @@ import { STableProvider } from '@shene/table';
 import { useServerTable } from '../../utils/useServerTable';
 import { allColumns } from './Constructioncolumns';
 import { highlightMutation } from '../../utils/highlightMutation.js';
+import TableSearchBar from '@/components/TableSearchBar.vue';
 
 import en from '@shene/table/dist/locale/en'
 const locale = ref(en)
@@ -91,7 +88,8 @@ export default defineComponent({
   components: {
     ElImage,
     ElSelect,
-    ElOption
+    ElOption,
+    TableSearchBar
   },
   setup() {
     const TABLE_NAME = 'construction_sup_trna';

@@ -14,23 +14,11 @@
       <div class="top-controls">
         <!-- 搜索框 -->
         <div class="search-box">
-          <input
+          <TableSearchBar
             v-model="searchText"
-            placeholder="Enter search content"
-            class="search-input"
+            v-model:column="searchColumn"
+            :columns="allColumns"
           />
-          <el-select
-            v-model="searchColumn"
-            placeholder="Select column to search"
-            class="search-column-select"
-          >
-            <el-option key="all" label="All columns" :value="''" />
-            <el-option
-              v-for="column in allColumns"
-              :key="column.key"
-              :value="column.dataIndex"
-            />
-          </el-select>
         </div>
 
         <!-- 大小切换 -->
@@ -134,6 +122,7 @@ import { STableProvider } from '@shene/table';
 import { allColumns } from './columns';
 import TranStructure from '@/components/TranStructure.vue';
 import en from '@shene/table/dist/locale/en';
+import TableSearchBar from '@/components/TableSearchBar.vue';
 
 const locale = ref(en);
 const API_BASE = ''; // 同源部署时留空，否则填后端域名
@@ -153,6 +142,7 @@ export default defineComponent({
     ElInput,
     TranStructure,
     STableProvider,
+    TableSearchBar,
   },
   props: {
     selectedPmids:  { type: Array as () => string[], required: true },

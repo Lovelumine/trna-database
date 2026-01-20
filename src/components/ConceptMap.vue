@@ -446,7 +446,8 @@ export default {
           .attr("y", 20)
           .text(function(d) { return 'Type '+d.typeData.type; })
           .style("font-size", "14px")
-          .style("font-weight", "bold");
+          .style("font-weight", "bold")
+          .attr("fill", "#1a1a1a");
 
       textGroup.append("foreignObject")
           .attr("x", function(d) { return d.typeData.visualParams.direction === "right" ? 10 :-d.typeData.visualParams.rectWidth+10; })
@@ -459,6 +460,7 @@ export default {
           .style("height", "100%")
           .style("display", "flex")       // 使用 flex 布局
           .style("flex-wrap", "wrap")     // 自动换行
+          .style("color", "#1a1a1a")
           .html(function(d) {
             // 使用数组中的每个元素创建换行文本
             return d.typeData.AAs.map(function(item) {

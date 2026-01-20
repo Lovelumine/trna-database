@@ -6,11 +6,11 @@
     <div class="top-controls">
       <!-- 搜索框 -->
       <div class="search-box">
-        <input v-model="searchText" placeholder="Enter search content" class="search-input" />
-        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
-          <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option v-for="column in allColumns" :key="column.key" :value="column.dataIndex" />
-        </el-select>
+        <TableSearchBar
+          v-model="searchText"
+          v-model:column="searchColumn"
+          :columns="allColumns"
+        />
       </div>
 
       <!-- 调整尺寸 -->
@@ -112,12 +112,13 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, onUnmounted, computed } from 'vue';
 import { ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import { useServerTable } from '../../utils/useServerTable';
 import type { EChartsOption } from 'echarts';
 import { allColumns, selectedColumns } from './CodingVariation1Columns';
+import TableSearchBar from '@/components/TableSearchBar.vue';
 
 type DataType = { [key: string]: string };
 
@@ -126,7 +127,7 @@ const locale = ref(en);
 
 export default defineComponent({
   name: 'CodingVariationDisease',
-  components: { ElTag, ElSpace, ElSelect, ElOption },
+  components: { ElTag, ElSpace, ElSelect, ElOption, TableSearchBar },
   setup() {
     const TABLE_NAME = 'coding_variation_genetic_disease';
     const {
@@ -144,6 +145,30 @@ export default defineComponent({
     } = useServerTable(TABLE_NAME);
 
     const stats = ref<Record<string, any[]>>({});
+    const chartTextColor = ref('#e5e7eb');
+    const chartMutedColor = ref('#cbd5f5');
+    const chartSurfaceColor = ref('#111827');
+    const chartBorderColor = ref('rgba(148, 163, 184, 0.35)');
+    const chartIsDark = ref(false);
+
+    const readCssVar = (name: string, fallback: string) => {
+      if (typeof window === 'undefined') return fallback;
+      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return value || fallback;
+    };
+
+    const refreshChartColors = () => {
+      const root = document.documentElement;
+      chartTextColor.value = readCssVar('--app-text', '#e5e7eb');
+      chartMutedColor.value = readCssVar('--app-text-muted', '#cbd5f5');
+      chartSurfaceColor.value = readCssVar('--app-surface', '#111827');
+      chartBorderColor.value = readCssVar('--app-border', 'rgba(148, 163, 184, 0.35)');
+      chartIsDark.value =
+        root.classList.contains('dark') ||
+        root.getAttribute('data-theme') === 'dark' ||
+        (root.getAttribute('data-theme') !== 'light' &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches);
+    };
 
     const loadStats = async () => {
       try {
@@ -199,6 +224,36 @@ export default defineComponent({
       selectedColumns.value = [...selectedColumns.value];
     });
 
+    let themeObserver: MutationObserver | null = null;
+    let mediaQuery: MediaQueryList | null = null;
+    const handleMediaChange = () => refreshChartColors();
+
+    onMounted(() => {
+      refreshChartColors();
+      themeObserver = new MutationObserver(refreshChartColors);
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'data-theme']
+      });
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      if ('addEventListener' in mediaQuery) {
+        mediaQuery.addEventListener('change', handleMediaChange);
+      } else if ('addListener' in mediaQuery) {
+        mediaQuery.addListener(handleMediaChange);
+      }
+    });
+
+    onUnmounted(() => {
+      if (themeObserver) themeObserver.disconnect();
+      if (mediaQuery) {
+        if ('removeEventListener' in mediaQuery) {
+          mediaQuery.removeEventListener('change', handleMediaChange);
+        } else if ('removeListener' in mediaQuery) {
+          mediaQuery.removeListener(handleMediaChange);
+        }
+      }
+    });
+
     // 稳定 rowKey（不要依赖 index）
     const rowKey = (r: any) =>
       r?.key ??
@@ -231,9 +286,15 @@ export default defineComponent({
       const heatData: [number, number, number][] = [];
       yList.forEach((o, i) => xList.forEach((m, j) => heatData.push([j, i, combo[o]?.[m] || 0])));
       const maxCount = heatData.length ? Math.max(...heatData.map((d) => d[2])) : 0;
+      const textColor = chartTextColor.value;
+      const mutedColor = chartMutedColor.value;
 
       return {
-        title: { text: 'Stop Codon Changes Frequency Heatmap', left: 'center' },
+        title: {
+          text: 'Stop Codon Changes Frequency Heatmap',
+          left: 'center',
+          textStyle: { color: textColor }
+        },
         tooltip: {
           trigger: 'item',
           formatter: (params: any) => {
@@ -245,9 +306,33 @@ export default defineComponent({
             ].join('<br/>');
           }
         },
-        xAxis: { type: 'category', data: xList, name: 'Mutated Codon', axisLabel: { rotate: 45, interval: 0 } },
-        yAxis: { type: 'category', data: yList, name: 'Original Codon' },
-        visualMap: { min: 0, max: maxCount, calculable: true, orient: 'horizontal', left: 'center', bottom: '-1%' },
+        xAxis: {
+          type: 'category',
+          data: xList,
+          name: 'Mutated Codon',
+          axisLabel: { rotate: 45, interval: 0, color: textColor },
+          nameTextStyle: { color: textColor },
+          axisLine: { lineStyle: { color: mutedColor } },
+          axisTick: { lineStyle: { color: mutedColor } }
+        },
+        yAxis: {
+          type: 'category',
+          data: yList,
+          name: 'Original Codon',
+          axisLabel: { color: textColor },
+          nameTextStyle: { color: textColor },
+          axisLine: { lineStyle: { color: mutedColor } },
+          axisTick: { lineStyle: { color: mutedColor } }
+        },
+        visualMap: {
+          min: 0,
+          max: maxCount,
+          calculable: true,
+          orient: 'horizontal',
+          left: 'center',
+          bottom: '-1%',
+          textStyle: { color: textColor }
+        },
         series: [{ type: 'heatmap', data: heatData, label: { show: false } }]
       };
     };
@@ -276,8 +361,15 @@ export default defineComponent({
         return { name: type, children };
       });
 
+      const textColor = chartTextColor.value;
+      const treemapBorderColor = chartBorderColor.value;
+      const treemapColors = chartIsDark.value
+        ? ['#6aa7ff', '#7fe3a2', '#f8d07a']
+        : ['#3a6ee8', '#4dbb6b', '#e8b44a'];
+
       return {
         tooltip: { trigger: 'item', formatter: (info: any) => `${info.name}: ${info.value}` },
+        color: treemapColors,
         series: [
           {
             type: 'treemap',
@@ -287,10 +379,31 @@ export default defineComponent({
               show: true,
               height: 30,
               formatter: (info: any) => (info.treePathInfo.length === 2 ? `${info.name}: ${info.value}` : ''),
-              textStyle: { fontSize: 14, fontWeight: 'bold' }
+              textStyle: { fontSize: 14, fontWeight: 'bold', color: textColor }
             },
-            label: { show: true, formatter: (info: any) => `${info.name}: ${info.value}`, position: 'inside' },
-            breadcrumb: { show: true, left: 'center', top: '5px' }
+            label: {
+              show: true,
+              formatter: (info: any) => `${info.name}: ${info.value}`,
+              position: 'inside',
+              color: textColor
+            },
+            breadcrumb: { show: true, left: 'center', top: '5px', textStyle: { color: textColor } },
+            levels: [
+              {
+                itemStyle: {
+                  borderColor: treemapBorderColor,
+                  borderWidth: 1,
+                  gapWidth: 2
+                }
+              },
+              {
+                itemStyle: {
+                  borderColor: treemapBorderColor,
+                  borderWidth: 1,
+                  gapWidth: 1
+                }
+              }
+            ]
           }
         ]
       };
@@ -324,12 +437,26 @@ export default defineComponent({
         .sort((a, b) => b[1] - a[1])
         .map(([zygo]) => zygo);
 
+      const textColor = chartTextColor.value;
+      const mutedColor = chartMutedColor.value;
+
       return {
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-        legend: { data: zygoList, top: 30 },
+        legend: { data: zygoList, top: 30, textStyle: { color: textColor } },
         grid: { top: 60, bottom: 40, left: 80, right: 20, containLabel: true },
-        xAxis: { type: 'category', data: modeList, axisLabel: { rotate: 30 } },
-        yAxis: { type: 'value' },
+        xAxis: {
+          type: 'category',
+          data: modeList,
+          axisLabel: { rotate: 30, color: textColor },
+          axisLine: { lineStyle: { color: mutedColor } },
+          axisTick: { lineStyle: { color: mutedColor } }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { color: textColor },
+          axisLine: { lineStyle: { color: mutedColor } },
+          splitLine: { lineStyle: { color: mutedColor, opacity: 0.25 } }
+        },
         series: zygoList.map((zygo) => ({
           name: zygo,
           type: 'bar',
@@ -426,6 +553,10 @@ export default defineComponent({
   /* 横向滚动的外层不用改 */
   overflow-x: auto;
   padding: 10px 0;
+}
+
+.chart-section-wrapper h3 {
+  color: var(--app-text);
 }
 
 /* 把原来的横向 flex 换成纵向 flex */

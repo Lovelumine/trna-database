@@ -3,16 +3,11 @@
     <h2>aaRS Recognition</h2>
     <div class="top-controls">
       <div class="search-box">
-        <input v-model="searchText" placeholder="Enter search content" class="search-input">
-        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
-          <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option
-            v-for="column in searchableColumns"
-            :key="column.key"
-            :label="column.title as string"
-            :value="column.dataIndex"
-          />
-        </el-select>
+        <TableSearchBar
+          v-model="searchText"
+          v-model:column="searchColumn"
+          :columns="searchableColumns"
+        />
       </div>
 
       <div class="size-controls" style="margin-bottom: 10px">
@@ -67,12 +62,13 @@ import { ElSelect, ElOption } from 'element-plus';
 import { useServerTable } from '../../utils/useServerTable';
 import { allColumns, selectedColumns, isPMID } from './aaRScolumns';
 import en from '@shene/table/dist/locale/en';
+import TableSearchBar from '@/components/TableSearchBar.vue';
 
 const locale = ref(en);
 
 export default defineComponent({
   name: 'TrnaElements3',
-  components: { ElSelect, ElOption },
+  components: { ElSelect, ElOption, TableSearchBar },
   setup() {
     const TABLE_NAME = 'aars_recognition';
     const {

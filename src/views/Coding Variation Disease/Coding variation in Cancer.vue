@@ -5,15 +5,11 @@
     <!-- 顶部行 -->
     <div class="top-controls">
       <div class="search-box">
-        <input v-model="searchText" placeholder="Enter search content" class="search-input">
-        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
-          <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :value="column.dataIndex"
-          />
-        </el-select>
+        <TableSearchBar
+          v-model="searchText"
+          v-model:column="searchColumn"
+          :columns="allColumns"
+        />
       </div>
 
       <div class="size-controls" style="margin-bottom: 10px">
@@ -35,7 +31,7 @@
         </el-select>
       </div>
 
-      <div class="index-controls" style="margin-bottom: 10px">
+      <div v-if="isAdmin" class="index-controls" style="margin-bottom: 10px">
         <el-button size="small" :loading="rebuildLoading" @click="rebuildFulltext">
           Refresh Search Index
         </el-button>
@@ -127,17 +123,25 @@ import { getTagType } from '../../utils/tag.js';
 import type { EChartsOption } from 'echarts';
 import { createPagination } from '../../utils/table';
 import { allColumns, selectedColumns } from './CodingVariationCancerColumns';
+import TableSearchBar from '@/components/TableSearchBar.vue';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
 
 export default defineComponent({
   name: 'CodingVariationDisease2',
-  components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton },
+  components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, TableSearchBar },
   setup() {
     const TABLE_NAME = 'coding_variation_cancer';
     const { rows, total, loading, fetchRows, prefetchRange, cancelPrefetch, fetchStats } =
       useMysqlTableData(TABLE_NAME);
+    const isAdmin = computed(() => {
+      try {
+        return new URLSearchParams(window.location.search).get('admin') === '1';
+      } catch {
+        return false;
+      }
+    });
     const searchText = ref('');
     const searchColumn = ref('');
     const pagination = createPagination();
@@ -388,6 +392,7 @@ export default defineComponent({
       getTagType,
       rebuildLoading,
       rebuildFulltext,
+      isAdmin,
       // 分页
       pagination,
       handlePaginationUpdate,

@@ -142,3 +142,59 @@
 .d3-context-menu-theme li.is-parent:hover > ul.is-children {
 	display: block;
 }
+
+@media (prefers-color-scheme: dark) {
+	.d3-context-menu-theme {
+		background-color: var(--app-surface);
+		border-color: var(--app-border);
+		color: var(--app-text);
+	}
+
+	.d3-context-menu-theme ul li:hover {
+		background-color: var(--app-accent);
+		color: var(--app-text);
+	}
+
+	.d3-context-menu-theme ul li.is-header,
+	.d3-context-menu-theme ul li.is-header:hover,
+	.d3-context-menu-theme ul li.is-disabled,
+	.d3-context-menu-theme ul li.is-disabled:hover,
+	.d3-context-menu-theme ul li.is-divider:hover,
+	.d3-context-menu-theme ul.is-children {
+		background-color: var(--app-surface);
+		color: var(--app-text-muted);
+		border-color: var(--app-border);
+	}
+
+	.d3-context-menu-theme ul hr {
+		border-top: 1px solid var(--app-border);
+		border-bottom: 0;
+	}
+}
+
+:root[data-theme="dark"] .d3-context-menu-theme {
+	background-color: var(--app-surface);
+	border-color: var(--app-border);
+	color: var(--app-text);
+}
+
+:root[data-theme="dark"] .d3-context-menu-theme ul li:hover {
+	background-color: var(--app-accent);
+	color: var(--app-text);
+}
+
+:root[data-theme="dark"] .d3-context-menu-theme ul li.is-header,
+:root[data-theme="dark"] .d3-context-menu-theme ul li.is-header:hover,
+:root[data-theme="dark"] .d3-context-menu-theme ul li.is-disabled,
+:root[data-theme="dark"] .d3-context-menu-theme ul li.is-disabled:hover,
+:root[data-theme="dark"] .d3-context-menu-theme ul li.is-divider:hover,
+:root[data-theme="dark"] .d3-context-menu-theme ul.is-children {
+	background-color: var(--app-surface);
+	color: var(--app-text-muted);
+	border-color: var(--app-border);
+}
+
+:root[data-theme="dark"] .d3-context-menu-theme ul hr {
+	border-top: 1px solid var(--app-border);
+	border-bottom: 0;
+}

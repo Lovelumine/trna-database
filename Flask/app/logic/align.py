@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 import os
 import io
+import re
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Tuple, Optional, Iterable, Set, List, Dict, Any
 
 import pandas as pd
 import requests
 from Bio.Align import PairwiseAligner
+from sqlalchemy import text, inspect
 
 # -----------------------------
 # 工具函数（编码鲁棒读取 + 乱码修复）
@@ -228,6 +232,172 @@ def search_in_csvs(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                         "alignment": best_align.replace("\n", "\\n"),
                     }
                 )
+
+    topn = sorted(results, key=lambda x: x["score"], reverse=True)[:number]
+    return topn
+
+
+# -----------------------------
+# MySQL 搜索（按序列相关列对齐）
+# -----------------------------
+
+TABLE_NAME_ALIASES = {
+    "Coding Variation in Cancer": "coding_variation_cancer",
+    "Coding Variation in Disease": "coding_variation_genetic_disease",
+    "Nonsense Sup-RNA": "nonsense_sup_rna",
+    "Frameshift sup-tRNA": "frameshift_sup_trna",
+    "Engineered sup-tRNA": "Engineered_sup_tRNA",
+    "Function of Modification": "function_and_modification",
+    "aaRS Recognition": "aars_recognition",
+}
+
+DEFAULT_SEQUENCE_COLUMNS = {
+    "coding_variation_cancer": [
+        "MUTATION_CDS",
+        "MUTATION_AA",
+    ],
+    "coding_variation_genetic_disease": ["Codon Change"],
+    "nonsense_sup_rna": [
+        "tRNA sequence before mutation",
+        "tRNA sequence after mutation",
+        "Anticodon before mutation",
+        "Anticodon after mutation",
+        "Stop codon for readthrough",
+    ],
+    "frameshift_sup_trna": [
+        "tRNA sequence before mutation",
+        "tRNA sequence after mutation",
+        "Anticodon before mutation",
+        "Anticodon after mutation",
+        "Codon for readthrough",
+    ],
+    "Engineered_sup_tRNA": [
+        "Sequence_of_origin_tRNA",
+        "Sequence_of_sup-tRNA",
+        "aa_and_anticodon_of_origin_tRNA",
+        "aa_and_anticodon_of_sup-tRNA",
+        "PTC_codon",
+        "Origin_aa_and_codon_of_PTC_site",
+        "Secondary structure of sup-trna",
+    ],
+    "function_and_modification": ["tRNA_TYPE"],
+    "aars_recognition": ["AnticodonArm"],
+    "ef_tu": ["Anticodon branch"],
+}
+
+SEQUENCE_KEYWORDS = ("sequence", "seq", "anticodon", "codon")
+
+
+def _normalize_table_name(name: str) -> str:
+    return TABLE_NAME_ALIASES.get(name, name)
+
+
+def _pick_sequence_columns(table: str, columns: List[str]) -> List[str]:
+    if table in DEFAULT_SEQUENCE_COLUMNS:
+        return [c for c in DEFAULT_SEQUENCE_COLUMNS[table] if c in columns]
+    hits: List[str] = []
+    for col in columns:
+        lower = col.lower()
+        if any(key in lower for key in SEQUENCE_KEYWORDS):
+            hits.append(col)
+    return hits
+
+
+def _jsonify_value(value: Any) -> Any:
+    if isinstance(value, (datetime, date, Decimal)):
+        return str(value)
+    if isinstance(value, (bytes, bytearray)):
+        try:
+            return value.decode("utf-8")
+        except Exception:
+            return value.decode("latin1", errors="ignore")
+    return value
+
+
+def search_in_mysql(data: Dict[str, Any], engine) -> List[Dict[str, Any]]:
+    """
+    输入：
+      - tables: MySQL 表名列表（或显示名）
+      - query_seq, number, match, mismatch, gap_open, gap_extend
+    输出：排序后前 N 条结果
+    """
+    query_seq = data.get("query_seq", "")
+    tables = data.get("tables", [])
+    number = int(data.get("number", 5))
+    match = float(data.get("match", 2.0))
+    mismatch = float(data.get("mismatch", -0.5))
+    gap_open = float(data.get("gap_open", -2.0))
+    gap_extend = float(data.get("gap_extend", -1.0))
+
+    if not isinstance(tables, (list, tuple)) or not tables:
+        raise ValueError("tables 不能为空；请提供 MySQL 表名列表。")
+    if not isinstance(query_seq, str) or not query_seq:
+        raise ValueError("query_seq 不能为空。")
+
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+
+    # 使用 query 序列的前 6 个字符做粗过滤（避免全表扫描过慢）
+    probe = re.sub(r"[^A-Za-z]", "", query_seq).upper()
+    probe = probe[:6] if len(probe) >= 6 else ""
+
+    results: List[Dict[str, Any]] = []
+
+    with engine.connect() as conn:
+        for raw_table in tables:
+            table = _normalize_table_name(raw_table)
+            if table not in existing_tables:
+                continue
+
+            columns = [c["name"] for c in inspector.get_columns(table)]
+            seq_cols = _pick_sequence_columns(table, columns)
+            if not seq_cols:
+                continue
+
+            select_sql = ", ".join([f"`{c}`" for c in columns])
+            where_sql = ""
+            params: Dict[str, Any] = {}
+            if probe:
+                like_clauses = [
+                    f"INSTR(UPPER(CAST(`{c}` AS CHAR)), :probe) > 0" for c in seq_cols
+                ]
+                where_sql = " WHERE " + " OR ".join(like_clauses)
+                params["probe"] = probe
+
+            sql = text(f"SELECT {select_sql} FROM `{table}`{where_sql}")
+            res = conn.execution_options(stream_results=True).execute(sql, params)
+
+            row_num = 0
+            for row in res.mappings():
+                row_num += 1
+                row_data = {k: _jsonify_value(v) for k, v in row.items()}
+
+                best_score = None
+                best_col = None
+                best_align = ""
+
+                for col in seq_cols:
+                    cell = row_data.get(col)
+                    if not isinstance(cell, str) or not cell:
+                        continue
+                    score, aln = alignment_score_and_str(
+                        query_seq, cell, match, mismatch, gap_open, gap_extend
+                    )
+                    if best_score is None or score > best_score:
+                        best_score, best_col, best_align = score, col, aln
+
+                if best_score is not None:
+                    results.append(
+                        {
+                            "file": table,
+                            "row": row_num,
+                            "column": best_col,
+                            "score": best_score,
+                            "columns": columns,
+                            "row_data": row_data,
+                            "alignment": best_align.replace("\n", "\\n"),
+                        }
+                    )
 
     topn = sorted(results, key=lambda x: x["score"], reverse=True)[:number]
     return topn

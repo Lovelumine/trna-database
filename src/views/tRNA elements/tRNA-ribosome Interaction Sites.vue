@@ -20,15 +20,11 @@
     <!-- 顶部控件：搜索、表格尺寸、列选择 -->
     <div class="top-controls">
       <div class="search-box">
-        <input v-model="searchText" placeholder="Enter search content" class="search-input">
-        <el-select v-model="searchColumn" placeholder="Select column to search" class="search-column-select">
-          <el-option :key="'all'" :label="'All columns'" :value="''" />
-          <el-option
-            v-for="column in allColumns"
-            :key="column.key"
-            :value="column.dataIndex"
-          />
-        </el-select>
+        <TableSearchBar
+          v-model="searchText"
+          v-model:column="searchColumn"
+          :columns="allColumns"
+        />
       </div>
 
       <div class="size-controls">
@@ -107,6 +103,7 @@ import { STableProvider } from '@shene/table';
 import type { STableColumnsType } from '@shene/table';
 import { useServerTable } from '../../utils/useServerTable';
 import VueEasyLightbox from 'vue-easy-lightbox';
+import TableSearchBar from '@/components/TableSearchBar.vue';
 
 // 列配置（TSX 拆分）
 import en from '@shene/table/dist/locale/en';
@@ -120,7 +117,8 @@ export default defineComponent({
     ElRadioGroup,
     ElRadioButton,
     ElAlert,
-    VueEasyLightbox
+    VueEasyLightbox,
+    TableSearchBar
   },
   setup() {
     const locale = ref(en);
