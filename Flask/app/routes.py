@@ -1,5 +1,20 @@
 # -*- coding: utf-8 -*-
-from flask import Blueprint, request, jsonify
+from flask import (
+    Blueprint,
+    request,
+    jsonify,
+    send_file,
+    current_app,
+    Response,
+    stream_with_context,
+    after_this_request,
+    redirect,
+)
+import csv
+import hashlib
+import os
+import threading
+import zipfile
 from sqlalchemy import text, bindparam, Integer
 import re
 from . import db
@@ -11,6 +26,31 @@ from .logic.align import (
 
 bp = Blueprint("routes", __name__)
 
+EXPORT_TABLES = [
+    "coding_variation_cancer",
+    "coding_variation_genetic_disease",
+    "nonsense_sup_rna",
+    "frameshift_sup_trna",
+    "Engineered_sup_tRNA",
+    "function_and_modification",
+    "aars_recognition",
+    "ef_tu",
+]
+
+EXPORT_NAME_BY_TABLE = {
+    "coding_variation_cancer": "Coding Variation in Cancer",
+    "coding_variation_genetic_disease": "Coding Variation in Disease",
+    "nonsense_sup_rna": "Nonsense Sup-RNA",
+    "frameshift_sup_trna": "Frameshift sup-tRNA",
+    "Engineered_sup_tRNA": "Engineered sup-tRNA",
+    "function_and_modification": "Function of Modification",
+    "aars_recognition": "aaRS Recognition",
+    "ef_tu": "EF-Tu recognition site",
+}
+
+_EXPORT_TASK_LOCK = threading.Lock()
+_EXPORT_TASKS = {}
+
 # ---------------------- 通用工具 ----------------------
 
 def _get_table_columns(table: str):
@@ -20,6 +60,377 @@ def _get_table_columns(table: str):
     cols = insp.get_columns(table)  # [{'name':..., 'type':...}, ...]
     col_names = [c["name"] for c in cols]
     return cols, col_names
+
+def _get_export_cache_dir() -> str:
+    cache_dir = current_app.config.get("EXPORT_CACHE_DIR")
+    if not cache_dir:
+        cache_dir = os.path.join(os.path.dirname(__file__), "cache", "exports")
+    return cache_dir
+
+def _normalize_minio_endpoint(endpoint: str) -> str:
+    if not endpoint:
+        return ""
+    return (
+        endpoint.replace("https://", "")
+        .replace("http://", "")
+        .rstrip("/")
+    )
+
+def _get_minio_client():
+    endpoint = current_app.config.get("MINIO_ENDPOINT") or ""
+    access_key = current_app.config.get("MINIO_ACCESS_KEY") or ""
+    secret_key = current_app.config.get("MINIO_SECRET_KEY") or ""
+    if not (endpoint and access_key and secret_key):
+        return None
+    try:
+        from minio import Minio
+    except Exception as exc:  # pragma: no cover - environment-specific
+        raise RuntimeError("minio package is not installed") from exc
+    secure = current_app.config.get("MINIO_SECURE")
+    if secure is None:
+        secure = str(endpoint).startswith("https://")
+    endpoint = _normalize_minio_endpoint(endpoint)
+    return Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
+
+def _minio_object_key(table: str, fmt: str, signature: str) -> str:
+    prefix = current_app.config.get("MINIO_EXPORT_PREFIX") or "exports"
+    prefix = prefix.strip("/")
+    return f"{prefix}/{table}/{table}_{fmt}_{signature}.{fmt}"
+
+def _get_minio_public_base() -> str:
+    base = current_app.config.get("MINIO_PUBLIC_BASE") or ""
+    if base:
+        return base.rstrip("/")
+    endpoint = current_app.config.get("MINIO_ENDPOINT") or ""
+    bucket = current_app.config.get("MINIO_BUCKET") or ""
+    if not (endpoint and bucket):
+        return ""
+    secure = current_app.config.get("MINIO_SECURE")
+    scheme = "https" if secure is True or str(endpoint).startswith("https://") else "http"
+    endpoint = _normalize_minio_endpoint(endpoint)
+    return f"{scheme}://{endpoint}/{bucket}"
+
+def _minio_public_url(key: str) -> str:
+    base = _get_minio_public_base()
+    if not base:
+        return ""
+    return f"{base}/{key}"
+
+def _minio_stream_response(client, bucket: str, key: str, table: str, fmt: str):
+    obj = client.get_object(bucket, key)
+
+    def generate():
+        try:
+            for data in obj.stream(32 * 1024):
+                yield data
+        finally:
+            obj.close()
+            obj.release_conn()
+
+    mimetype = (
+        "text/csv; charset=utf-8"
+        if fmt == "csv"
+        else "text/tab-separated-values; charset=utf-8"
+    )
+    headers = {
+        "Content-Disposition": f'attachment; filename="{table}.{fmt}"'
+    }
+    return Response(stream_with_context(generate()), mimetype=mimetype, headers=headers)
+
+def _minio_object_status(client, bucket: str, key: str):
+    try:
+        client.stat_object(bucket, key)
+        return True, None
+    except Exception as exc:
+        try:
+            from minio.error import S3Error
+            if isinstance(exc, S3Error):
+                if exc.code in ("NoSuchKey", "NoSuchObject", "NoSuchBucket"):
+                    return False, None
+        except Exception:
+            pass
+        return False, str(exc)
+
+def _get_table_signature(table: str) -> str:
+    with db.engine.connect() as conn:
+        try:
+            meta = conn.execute(
+                text("SELECT updated_at FROM table_meta WHERE table_name = :table"),
+                {"table": table},
+            ).fetchone()
+            if meta and meta[0]:
+                return hashlib.sha1(
+                    f"{table}|{meta[0]}".encode("utf-8")
+                ).hexdigest()
+        except Exception:
+            pass
+
+        db_name = db.engine.url.database
+        sql = text(
+            "SELECT UPDATE_TIME, TABLE_ROWS, DATA_LENGTH, INDEX_LENGTH "
+            "FROM information_schema.tables "
+            "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = :table"
+        )
+        row = conn.execute(sql, {"db": db_name, "table": table}).fetchone()
+    if not row:
+        return ""
+    parts = [
+        table,
+        str(row[0] or ""),
+        str(row[1] or 0),
+        str(row[2] or 0),
+        str(row[3] or 0),
+    ]
+    return hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()
+
+def _csv_safe(value):
+    if value is None:
+        return ""
+    if isinstance(value, (bytes, bytearray)):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+def _export_table_to_local(
+    table: str,
+    fmt: str,
+    signature: str,
+    export_dir: str,
+    task_key: str = None,
+) -> str:
+    os.makedirs(export_dir, exist_ok=True)
+    cache_name = f"{table}_{fmt}_{signature}.{fmt}"
+    cache_path = os.path.join(export_dir, cache_name)
+    delimiter = "," if fmt == "csv" else "\t"
+    tmp_path = f"{cache_path}.tmp-{os.getpid()}"
+    sql = text(f"SELECT * FROM `{table}`")
+    total = None
+    if task_key:
+        try:
+            with db.engine.connect() as conn:
+                total = conn.execute(text(f"SELECT COUNT(*) FROM `{table}`")).scalar() or 0
+            _update_task(task_key, progress=1, message="exporting rows")
+        except Exception:
+            total = None
+    with db.engine.connect() as conn:
+        result = conn.execution_options(stream_results=True).execute(sql)
+        with open(tmp_path, "w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle, delimiter=delimiter, lineterminator="\n")
+            writer.writerow(result.keys())
+            row_count = 0
+            for row in result:
+                writer.writerow([_csv_safe(v) for v in row])
+                row_count += 1
+                if task_key and total:
+                    if row_count % 1000 == 0 or row_count == total:
+                        progress = int((row_count / total) * 90)
+                        _update_task(task_key, progress=progress)
+    os.replace(tmp_path, cache_path)
+    return cache_path
+
+def _ensure_table_export(
+    table: str,
+    fmt: str,
+    signature: str = None,
+    task_key: str = None,
+) -> str:
+    if signature is None:
+        signature = _get_table_signature(table)
+    if not signature:
+        raise RuntimeError("could not determine table signature")
+    export_dir = _get_export_cache_dir()
+    minio_client = _get_minio_client()
+    bucket = current_app.config.get("MINIO_BUCKET")
+    minio_key = _minio_object_key(table, fmt, signature)
+    public_url = _minio_public_url(minio_key)
+    if minio_client and bucket and public_url:
+        exists, err = _minio_object_status(minio_client, bucket, minio_key)
+        if err:
+            raise RuntimeError(f"minio stat failed: {err}")
+        if exists:
+            if task_key:
+                _update_task(task_key, progress=100, message="ready")
+            return public_url
+    cache_path = _export_table_to_local(table, fmt, signature, export_dir, task_key=task_key)
+    if minio_client and bucket and public_url:
+        if task_key:
+            _update_task(task_key, progress=95, message="uploading")
+        minio_client.fput_object(
+            bucket,
+            minio_key,
+            cache_path,
+            content_type="text/csv" if fmt == "csv" else "text/tab-separated-values",
+        )
+        try:
+            os.remove(cache_path)
+        except OSError:
+            pass
+        if task_key:
+            _update_task(task_key, progress=100, message="ready")
+        return public_url
+    return cache_path
+
+def _get_table_signature_map(tables: list) -> dict:
+    signatures = {}
+    for table in tables:
+        signatures[table] = _get_table_signature(table)
+    return signatures
+
+def _bundle_signature_from_map(signature_map: dict, fmt: str) -> str:
+    parts = [f"{table}:{signature_map[table]}" for table in sorted(signature_map)]
+    raw = "|".join(parts + [fmt])
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+def _get_bundle_signature(tables: list, fmt: str) -> str:
+    signature_map = _get_table_signature_map(tables)
+    return _bundle_signature_from_map(signature_map, fmt)
+
+def _bundle_object_key(fmt: str, signature: str) -> str:
+    prefix = current_app.config.get("MINIO_EXPORT_PREFIX") or "exports"
+    prefix = prefix.strip("/")
+    return f"{prefix}/bundles/all_{fmt}_{signature}.zip"
+
+def _ensure_bundle_export(
+    fmt: str,
+    signature_map: dict = None,
+    task_key: str = None,
+) -> str:
+    if signature_map is None:
+        signature_map = _get_table_signature_map(EXPORT_TABLES)
+    signature = _bundle_signature_from_map(signature_map, fmt)
+    export_dir = _get_export_cache_dir()
+    minio_client = _get_minio_client()
+    bucket = current_app.config.get("MINIO_BUCKET")
+    bundle_key = _bundle_object_key(fmt, signature)
+    public_url = _minio_public_url(bundle_key)
+    if minio_client and bucket and public_url:
+        exists, err = _minio_object_status(minio_client, bucket, bundle_key)
+        if err:
+            raise RuntimeError(f"minio stat failed: {err}")
+        if exists:
+            if task_key:
+                _update_task(task_key, progress=100, message="ready")
+            return public_url
+    os.makedirs(export_dir, exist_ok=True)
+    zip_path = os.path.join(export_dir, f"all_{fmt}_{signature}.zip")
+    tmp_zip = f"{zip_path}.tmp-{os.getpid()}"
+    with zipfile.ZipFile(tmp_zip, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        total_tables = len(EXPORT_TABLES)
+        for idx, table in enumerate(EXPORT_TABLES, start=1):
+            if task_key:
+                progress = int((idx - 1) / total_tables * 80)
+                _update_task(task_key, progress=progress, message=f"exporting {table}")
+            url_or_path = _ensure_table_export(table, fmt, signature_map.get(table))
+            if url_or_path.startswith("http"):
+                if not minio_client or not bucket:
+                    raise RuntimeError("minio client not available for bundle")
+                table_sig = signature_map.get(table)
+                if not table_sig:
+                    raise RuntimeError(f"missing signature for {table}")
+                obj_key = _minio_object_key(table, fmt, table_sig)
+                tmp_file = os.path.join(export_dir, f"{table}_{fmt}_{table_sig}.tmp")
+                minio_client.fget_object(bucket, obj_key, tmp_file)
+                name = EXPORT_NAME_BY_TABLE.get(table, table)
+                bundle.write(tmp_file, arcname=f"{name}.{fmt}")
+                try:
+                    os.remove(tmp_file)
+                except OSError:
+                    pass
+            else:
+                name = EXPORT_NAME_BY_TABLE.get(table, table)
+                bundle.write(url_or_path, arcname=f"{name}.{fmt}")
+                try:
+                    os.remove(url_or_path)
+                except OSError:
+                    pass
+    os.replace(tmp_zip, zip_path)
+    if minio_client and bucket and public_url:
+        if task_key:
+            _update_task(task_key, progress=95, message="uploading bundle")
+        minio_client.fput_object(
+            bucket,
+            bundle_key,
+            zip_path,
+            content_type="application/zip",
+        )
+        try:
+            os.remove(zip_path)
+        except OSError:
+            pass
+        if task_key:
+            _update_task(task_key, progress=100, message="ready")
+        return public_url
+    return zip_path
+
+def _start_task(task_key: str, target, *args):
+    with _EXPORT_TASK_LOCK:
+        state = _EXPORT_TASKS.get(task_key)
+        if state and state.get("status") == "running":
+            return False
+        _EXPORT_TASKS[task_key] = {
+            "status": "running",
+            "error": None,
+            "progress": 0,
+            "message": "starting",
+        }
+    thread = threading.Thread(target=target, args=args, daemon=True)
+    thread.start()
+    return True
+
+def _update_task(task_key: str, progress: int = None, message: str = None):
+    with _EXPORT_TASK_LOCK:
+        state = _EXPORT_TASKS.get(task_key) or {}
+        if progress is not None:
+            state["progress"] = max(0, min(100, int(progress)))
+        if message is not None:
+            state["message"] = message
+        _EXPORT_TASKS[task_key] = state
+
+def _mark_task_done(task_key: str, status: str, error: str = None):
+    with _EXPORT_TASK_LOCK:
+        state = _EXPORT_TASKS.get(task_key) or {}
+        state["status"] = status
+        state["error"] = error
+        if status == "done":
+            state["progress"] = 100
+            state["message"] = "ready"
+        _EXPORT_TASKS[task_key] = state
+
+def _run_table_export(app, table: str, fmt: str, signature: str, task_key: str):
+    with app.app_context():
+        try:
+            _ensure_table_export(table, fmt, signature, task_key=task_key)
+            _mark_task_done(task_key, "done")
+        except Exception as exc:
+            app.logger.exception("table export failed: %s %s", table, fmt)
+            _mark_task_done(task_key, "error", str(exc))
+
+def _run_bundle_export(app, fmt: str, signature_map: dict, task_key: str):
+    with app.app_context():
+        try:
+            _ensure_bundle_export(fmt, signature_map, task_key=task_key)
+            _mark_task_done(task_key, "done")
+        except Exception as exc:
+            app.logger.exception("bundle export failed: %s", fmt)
+            _mark_task_done(task_key, "error", str(exc))
+
+def start_export_warmup(app, tables=None, formats=None):
+    tables = tables or EXPORT_TABLES
+    formats = formats or ["csv"]
+
+    def _warm():
+        with app.app_context():
+            for fmt in formats:
+                for table in tables:
+                    try:
+                        _ensure_table_export(table, fmt)
+                    except Exception:
+                        continue
+                try:
+                    _ensure_bundle_export(fmt)
+                except Exception:
+                    continue
+
+    threading.Thread(target=_warm, daemon=True).start()
 
 # ---------------------- 搜索/分页辅助 ----------------------
 
@@ -732,6 +1143,256 @@ def table_stats():
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/download_table", methods=["GET"])
+def download_table():
+    table = (request.args.get("table") or "").strip()
+    fmt = (request.args.get("format") or "csv").strip().lower()
+    force = str(request.args.get("force") or "").lower() in ("1", "true", "yes")
+    direct = str(request.args.get("direct") or "").lower() in ("1", "true", "yes")
+    async_mode = str(request.args.get("async") or "").lower() in ("1", "true", "yes")
+    if fmt not in ("csv", "tsv"):
+        return jsonify({"error": "format must be csv or tsv"}), 400
+    if not table:
+        return jsonify({"error": "table is required"}), 400
+    if table in {"alembic_version", "table_meta"}:
+        return jsonify({"error": "table not allowed"}), 400
+
+    _, col_names = _get_table_columns(table)
+    if not col_names:
+        return jsonify({"error": f"table '{table}' not found"}), 404
+
+    signature = _get_table_signature(table)
+    if not signature:
+        return jsonify({"error": "could not determine table signature"}), 500
+
+    export_dir = _get_export_cache_dir()
+    os.makedirs(export_dir, exist_ok=True)
+    cache_name = f"{table}_{fmt}_{signature}.{fmt}"
+    cache_path = os.path.join(export_dir, cache_name)
+
+    minio_client = None
+    bucket = current_app.config.get("MINIO_BUCKET")
+    minio_key = _minio_object_key(table, fmt, signature)
+    public_url = _minio_public_url(minio_key)
+    try:
+        minio_client = _get_minio_client()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    if minio_client and bucket and public_url and not force:
+        exists, err = _minio_object_status(minio_client, bucket, minio_key)
+        if err:
+            return jsonify({"error": f"minio stat failed: {err}"}), 500
+        if exists:
+            if direct:
+                return redirect(public_url, code=302)
+            return _minio_stream_response(minio_client, bucket, minio_key, table, fmt)
+
+    if async_mode and minio_client and bucket and public_url:
+        task_key = f"table:{table}:{fmt}:{signature}"
+        _start_task(
+            task_key,
+            _run_table_export,
+            current_app._get_current_object(),
+            table,
+            fmt,
+            signature,
+            task_key,
+        )
+        return jsonify({"status": "generating"}), 202
+
+    if os.path.exists(cache_path) and not force and not minio_client:
+        return send_file(
+            cache_path,
+            as_attachment=True,
+            download_name=f"{table}.{fmt}",
+            mimetype="text/csv; charset=utf-8"
+            if fmt == "csv"
+            else "text/tab-separated-values; charset=utf-8",
+        )
+
+    delimiter = "," if fmt == "csv" else "\t"
+    tmp_path = f"{cache_path}.tmp-{os.getpid()}"
+    sql = text(f"SELECT * FROM `{table}`")
+    with db.engine.connect() as conn:
+        result = conn.execution_options(stream_results=True).execute(sql)
+        with open(tmp_path, "w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle, delimiter=delimiter, lineterminator="\n")
+            writer.writerow(result.keys())
+            for row in result:
+                writer.writerow([_csv_safe(v) for v in row])
+    os.replace(tmp_path, cache_path)
+
+    if minio_client and bucket and public_url:
+        try:
+            minio_client.fput_object(
+                bucket,
+                minio_key,
+                cache_path,
+                content_type="text/csv" if fmt == "csv" else "text/tab-separated-values",
+            )
+            @after_this_request
+            def _cleanup(response):
+                try:
+                    os.remove(cache_path)
+                except OSError:
+                    pass
+                return response
+            if direct:
+                return redirect(public_url, code=302)
+            return _minio_stream_response(minio_client, bucket, minio_key, table, fmt)
+        except Exception as exc:
+            return jsonify({"error": f"minio upload failed: {exc}"}), 500
+
+    return send_file(
+        cache_path,
+        as_attachment=True,
+        download_name=f"{table}.{fmt}",
+        mimetype="text/csv; charset=utf-8"
+        if fmt == "csv"
+        else "text/tab-separated-values; charset=utf-8",
+    )
+
+
+@bp.route("/download_table_status", methods=["GET"])
+def download_table_status():
+    table = (request.args.get("table") or "").strip()
+    fmt = (request.args.get("format") or "csv").strip().lower()
+    if fmt not in ("csv", "tsv"):
+        return jsonify({"error": "format must be csv or tsv"}), 400
+    if not table:
+        return jsonify({"error": "table is required"}), 400
+    if table in {"alembic_version", "table_meta"}:
+        return jsonify({"error": "table not allowed"}), 400
+
+    signature = _get_table_signature(table)
+    if not signature:
+        return jsonify({"error": "could not determine table signature"}), 500
+
+    try:
+        minio_client = _get_minio_client()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 500
+    bucket = current_app.config.get("MINIO_BUCKET")
+    minio_key = _minio_object_key(table, fmt, signature)
+    public_url = _minio_public_url(minio_key)
+    if minio_client and bucket and public_url:
+        exists, err = _minio_object_status(minio_client, bucket, minio_key)
+        if err:
+            return jsonify({
+                "status": "error",
+                "error": err,
+                "signature": signature,
+                "key": minio_key,
+                "url": public_url,
+            }), 500
+        if exists:
+            return jsonify({"status": "ready", "url": public_url})
+
+    task_key = f"table:{table}:{fmt}:{signature}"
+    state = _EXPORT_TASKS.get(task_key)
+    if state and state.get("status") == "error":
+        return jsonify({
+            "status": "error",
+            "error": state.get("error"),
+            "signature": signature,
+            "key": minio_key,
+            "url": public_url,
+            "progress": state.get("progress", 0),
+            "message": state.get("message"),
+        }), 500
+    _start_task(
+        task_key,
+        _run_table_export,
+        current_app._get_current_object(),
+        table,
+        fmt,
+        signature,
+        task_key,
+    )
+    state = _EXPORT_TASKS.get(task_key) or {}
+    return jsonify({
+        "status": "generating",
+        "signature": signature,
+        "key": minio_key,
+        "url": public_url,
+        "progress": state.get("progress", 0),
+        "message": state.get("message"),
+    }), 202
+
+
+@bp.route("/download_bundle_status", methods=["GET"])
+def download_bundle_status():
+    fmt = (request.args.get("format") or "csv").strip().lower()
+    if fmt not in ("csv", "tsv"):
+        return jsonify({"error": "format must be csv or tsv"}), 400
+
+    signature_map = _get_table_signature_map(EXPORT_TABLES)
+    signature = _bundle_signature_from_map(signature_map, fmt)
+    try:
+        minio_client = _get_minio_client()
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 500
+    bucket = current_app.config.get("MINIO_BUCKET")
+    bundle_key = _bundle_object_key(fmt, signature)
+    public_url = _minio_public_url(bundle_key)
+    if minio_client and bucket and public_url:
+        exists, err = _minio_object_status(minio_client, bucket, bundle_key)
+        if err:
+            return jsonify({
+                "status": "error",
+                "error": err,
+                "signature": signature,
+                "key": bundle_key,
+                "url": public_url,
+            }), 500
+        if exists:
+            return jsonify({"status": "ready", "url": public_url})
+
+    task_key = f"bundle:{fmt}:{signature}"
+    state = _EXPORT_TASKS.get(task_key)
+    if state and state.get("status") == "error":
+        return jsonify({
+            "status": "error",
+            "error": state.get("error"),
+            "signature": signature,
+            "key": bundle_key,
+            "url": public_url,
+            "progress": state.get("progress", 0),
+            "message": state.get("message"),
+        }), 500
+    _start_task(
+        task_key,
+        _run_bundle_export,
+        current_app._get_current_object(),
+        fmt,
+        signature_map,
+        task_key,
+    )
+    state = _EXPORT_TASKS.get(task_key) or {}
+    return jsonify({
+        "status": "generating",
+        "signature": signature,
+        "key": bundle_key,
+        "url": public_url,
+        "progress": state.get("progress", 0),
+        "message": state.get("message"),
+    }), 202
+
+
+@bp.route("/export_warm", methods=["POST"])
+def export_warm():
+    data = request.get_json(silent=True) or {}
+    tables = data.get("tables") or EXPORT_TABLES
+    if isinstance(tables, str):
+        tables = [t.strip() for t in tables.split(",") if t.strip()]
+    formats = data.get("formats") or ["csv"]
+    if isinstance(formats, str):
+        formats = [f.strip() for f in formats.split(",") if f.strip()]
+    start_export_warmup(current_app._get_current_object(), tables, formats)
+    return jsonify({"status": "started", "tables": tables, "formats": formats}), 202
 
 
 @bp.route("/table_fulltext_rebuild", methods=["POST"])

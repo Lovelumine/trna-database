@@ -40,6 +40,7 @@ pdb
 
 data/tmp/*
 updated_tRNAtherapeutics.csv
+Flask/app/cache/exports
 
 python scripts
 

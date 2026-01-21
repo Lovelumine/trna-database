@@ -90,6 +90,18 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/download_table': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/download_table_status': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/download_bundle_status': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
       '/chat/api': {
         target: 'http://223.82.75.76:8080',
         changeOrigin: true,

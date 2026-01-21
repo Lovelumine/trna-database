@@ -25,3 +25,18 @@ class Config:
         "max_overflow": 10,
     }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    EXPORT_CACHE_DIR = os.getenv(
+        "EXPORT_CACHE_DIR",
+        os.path.join(os.path.dirname(__file__), "app", "cache", "exports"),
+    )
+    MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT")
+    MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
+    MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
+    MINIO_BUCKET = os.getenv("MINIO_BUCKET")
+    MINIO_EXPORT_PREFIX = os.getenv("MINIO_EXPORT_PREFIX", "exports")
+    MINIO_PUBLIC_BASE = os.getenv("MINIO_PUBLIC_BASE")
+    _minio_secure = os.getenv("MINIO_SECURE")
+    if _minio_secure is None:
+        MINIO_SECURE = None
+    else:
+        MINIO_SECURE = _minio_secure.strip().lower() in ("1", "true", "yes")
