@@ -624,10 +624,12 @@ export default defineComponent({
 <style scoped>
 .site--main {
   padding: 20px;
+  color: var(--app-text);
 }
 
 .expanded-row {
-  border: 1px solid #ccc;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -643,22 +645,29 @@ export default defineComponent({
 
 .section h2 {
   margin-bottom: 8px;
+  color: var(--app-text);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  background: var(--app-surface);
+  color: var(--app-text);
 }
 
 td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--app-border);
   padding: 8px;
   vertical-align: top;
+  color: var(--app-text);
 }
 
 a {
-  color: #0d6efd;
+  color: var(--link-inline);
   text-decoration: underline;
+}
+a:hover {
+  color: var(--link-inline-hover);
 }
 
 .loading-message {
@@ -683,23 +692,24 @@ a {
 .toggle-group {
   margin: 8px 0 12px;
   display: inline-flex;
-  border: 1px solid #ddd;
+  border: 1px solid var(--app-border);
   border-radius: 4px;
   overflow: hidden;
 }
 .toggle-btn {
   padding: 6px 14px;
   border: none;
-  background: #f5f5f5;
+  background: var(--app-surface-2);
+  color: var(--app-text);
   cursor: pointer;
   font-size: 14px;
   transition: background-color .2s, color .2s;
 }
 .toggle-btn:not(.active):hover {
-  background: #eee;
+  background: var(--app-surface);
 }
 .toggle-btn.active {
-  background: #1976d2;
+  background: var(--app-accent);
   color: #fff;
 }
 
@@ -711,13 +721,16 @@ a {
   display: flex;
   justify-content: center;
   align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 /* ===== Citation badge ===== */
 .cite-badge {
   position: relative;
   display: inline-block;
-  background: #1976d2;
+  background: var(--app-accent);
   color: #fff;
   font-size: 0.72em;
   width: 1.25em;
@@ -834,7 +847,7 @@ a {
 .references {
   margin-top: 16px;
   font-size: 0.9em;
-  color: #555;
+  color: var(--app-text-muted);
 }
 .references ol {
   padding-left: 20px;
@@ -842,6 +855,12 @@ a {
 }
 .references li {
   margin-bottom: 4px;
+}
+.references a {
+  color: var(--link-inline);
+}
+.references a:hover {
+  color: var(--link-inline-hover);
 }
 .af3-warning {
   margin-top: 6px;

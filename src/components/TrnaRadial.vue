@@ -3,7 +3,7 @@
     <!-- Main SVG chart -->
     <svg :width="width" :height="height">
             <g :transform="`translate(0, ${yOffset})`">
-      <g font-size="12" text-anchor="middle" stroke="#333" stroke-width="1">
+      <g class="trna-group" font-size="12" text-anchor="middle">
         <g
           v-for="node in nodes"
           :key="node.id"
@@ -19,9 +19,8 @@
               'base-hovered': hoverNode && hoverNode.id === node.id,
               'overflow-node': node.isOverflow
             }"
-            fill="#fff"
           />
-          <text :x="node.x" :y="node.y + 4">{{ node.base }}</text>
+          <text class="base-text" :x="node.x" :y="node.y + 4">{{ node.base }}</text>
         </g>
       </g></g>
     </svg>
@@ -241,22 +240,51 @@ const hoverNode = ref(null)
 </script>
 
 <style scoped>
+.trna-container {
+  --trna-bg: transparent;
+  --trna-border: transparent;
+  --trna-node-fill: #f1f5f9;
+  --trna-stroke: #64748b;
+  --trna-text: #1f2937;
+  --trna-hover-stroke: #60a5fa;
+  --trna-hover-fill: #bfdbfe;
+  --trna-overflow-fill: #fef3c7;
+  --trna-overflow-stroke: #f59e0b;
+  background: var(--trna-bg);
+  border: 1px solid var(--trna-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
 svg {
   display: block;
   margin: 0 auto;
-  background: #f9f9f9;
+  background: transparent;
+}
+.trna-group {
+  stroke: var(--trna-stroke);
+  stroke-width: 1;
+}
+.trna-group circle {
+  stroke: var(--trna-stroke);
+}
+.base-group circle {
+  fill: var(--trna-node-fill);
+  stroke: var(--trna-stroke);
+}
+.base-text {
+  fill: var(--trna-text);
 }
 .base-group {
   cursor: pointer;
 }
-.base-hovered {
-  stroke: #ff9800;
+.base-group circle.base-hovered {
+  stroke: var(--trna-hover-stroke);
   stroke-width: 2;
-  fill: #fff5e6;
+  fill: var(--trna-hover-fill);
 }
-.overflow-node {
-  fill: yellow;
-  stroke: goldenrod;
+.base-group circle.overflow-node {
+  fill: var(--trna-overflow-fill);
+  stroke: var(--trna-overflow-stroke);
   stroke-width: 1.5;
 }
 .tooltip {
@@ -270,5 +298,52 @@ svg {
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   white-space: nowrap;
   z-index: 10;
+}
+
+@media (prefers-color-scheme: dark) {
+  .trna-container {
+    --trna-bg: transparent !important;
+    --trna-border: transparent !important;
+    --trna-node-fill: #e2e8f0;
+    --trna-stroke: #475569;
+    --trna-text: #0f172a;
+    --trna-hover-stroke: #60a5fa;
+    --trna-hover-fill: #dbeafe;
+    --trna-overflow-fill: #fef3c7;
+    --trna-overflow-stroke: #f59e0b;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none;
+  }
+}
+
+:global(:root[data-theme="dark"]) .trna-container {
+  --trna-bg: transparent !important;
+  --trna-border: transparent !important;
+  --trna-node-fill: #e2e8f0;
+  --trna-stroke: #475569;
+  --trna-text: #0f172a;
+  --trna-hover-stroke: #60a5fa;
+  --trna-hover-fill: #dbeafe;
+  --trna-overflow-fill: #fef3c7;
+  --trna-overflow-stroke: #f59e0b;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none;
+}
+
+:global(html.dark) .trna-container {
+  --trna-bg: transparent !important;
+  --trna-border: transparent !important;
+  --trna-node-fill: #e2e8f0;
+  --trna-stroke: #475569;
+  --trna-text: #0f172a;
+  --trna-hover-stroke: #60a5fa;
+  --trna-hover-fill: #dbeafe;
+  --trna-overflow-fill: #fef3c7;
+  --trna-overflow-stroke: #f59e0b;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none;
 }
 </style>

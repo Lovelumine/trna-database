@@ -3,7 +3,7 @@
     <!-- Main SVG chart -->
     <svg :width="width" :height="height">
       <g :transform="`translate(0, ${yOffset})`">
-        <g font-size="12" text-anchor="middle" stroke="#333" stroke-width="1">
+        <g class="trna-group" font-size="12" text-anchor="middle">
           <g
             v-for="node in nodes"
             :key="node.id"
@@ -22,9 +22,8 @@
                 'deletion-node': node.type === 'deletion',
                 'mismatch-node': node.type === 'mismatch'
               }"
-              fill="#fff"
             />
-            <text :x="node.x" :y="node.y + 4">{{ node.sup_base }}</text>
+            <text class="base-text" :x="node.x" :y="node.y + 4">{{ node.sup_base }}</text>
           </g>
         </g>
       </g>
@@ -160,12 +159,110 @@ const hoverNode = ref(null)
 </script>
 
 <style scoped>
-svg { display: block; margin: 0 auto; background: #f9f9f9; }
+.trna-container {
+  --trna-bg: transparent;
+  --trna-border: transparent;
+  --trna-node-fill: #f1f5f9;
+  --trna-stroke: #64748b;
+  --trna-text: #1f2937;
+  --trna-hover-stroke: #60a5fa;
+  --trna-hover-fill: #bfdbfe;
+  --trna-overflow-fill: #fef3c7;
+  --trna-overflow-stroke: #f59e0b;
+  --trna-insertion-fill: #bbf7d0;
+  --trna-insertion-stroke: #16a34a;
+  --trna-deletion-fill: #fecaca;
+  --trna-deletion-stroke: #ef4444;
+  --trna-mismatch-fill: #fde68a;
+  --trna-mismatch-stroke: #f59e0b;
+  background: var(--trna-bg);
+  border: 1px solid var(--trna-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+svg { display: block; margin: 0 auto; background: transparent; }
+.trna-group {
+  stroke: var(--trna-stroke);
+  stroke-width: 1;
+}
+.trna-group circle {
+  stroke: var(--trna-stroke);
+}
+.base-group circle {
+  fill: var(--trna-node-fill);
+  stroke: var(--trna-stroke);
+}
+.base-text { fill: var(--trna-text); }
 .base-group { cursor: pointer; }
-.base-hovered { stroke: #ff9800; stroke-width: 2; fill: #fff5e6; }
-.overflow-node { fill: yellow; stroke: goldenrod; stroke-width: 1.5; }
+.base-group circle.base-hovered { stroke: var(--trna-hover-stroke); stroke-width: 2; fill: var(--trna-hover-fill); }
+.base-group circle.overflow-node { fill: var(--trna-overflow-fill); stroke: var(--trna-overflow-stroke); stroke-width: 1.5; }
 .tooltip { position: absolute; background: rgba(0,0,0,0.7); color: #fff; padding: 6px 10px; pointer-events: none; font-size: 14px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); white-space: nowrap; z-index: 10; }
-.insertion-node { fill: #dcedc8; stroke: #388e3c; }
-.deletion-node { fill: #ffcdd2; stroke: #d32f2f; }
-.mismatch-node { fill: #fff9c4; stroke: #fbc02d; }
+.base-group circle.insertion-node { fill: var(--trna-insertion-fill); stroke: var(--trna-insertion-stroke); }
+.base-group circle.deletion-node { fill: var(--trna-deletion-fill); stroke: var(--trna-deletion-stroke); }
+.base-group circle.mismatch-node { fill: var(--trna-mismatch-fill); stroke: var(--trna-mismatch-stroke); }
+
+@media (prefers-color-scheme: dark) {
+  .trna-container {
+    --trna-bg: transparent !important;
+    --trna-border: transparent !important;
+    --trna-node-fill: #e2e8f0;
+    --trna-stroke: #475569;
+    --trna-text: #0f172a;
+    --trna-hover-stroke: #60a5fa;
+    --trna-hover-fill: #dbeafe;
+    --trna-overflow-fill: #fef3c7;
+    --trna-overflow-stroke: #f59e0b;
+    --trna-insertion-fill: #bbf7d0;
+    --trna-insertion-stroke: #16a34a;
+    --trna-deletion-fill: #fecaca;
+    --trna-deletion-stroke: #ef4444;
+    --trna-mismatch-fill: #fde68a;
+    --trna-mismatch-stroke: #f59e0b;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none;
+  }
+}
+
+:global(:root[data-theme="dark"]) .trna-container {
+  --trna-bg: transparent !important;
+  --trna-border: transparent !important;
+  --trna-node-fill: #e2e8f0;
+  --trna-stroke: #475569;
+  --trna-text: #0f172a;
+  --trna-hover-stroke: #60a5fa;
+  --trna-hover-fill: #dbeafe;
+  --trna-overflow-fill: #fef3c7;
+  --trna-overflow-stroke: #f59e0b;
+  --trna-insertion-fill: #bbf7d0;
+  --trna-insertion-stroke: #16a34a;
+  --trna-deletion-fill: #fecaca;
+  --trna-deletion-stroke: #ef4444;
+  --trna-mismatch-fill: #fde68a;
+  --trna-mismatch-stroke: #f59e0b;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none;
+}
+
+:global(html.dark) .trna-container {
+  --trna-bg: transparent !important;
+  --trna-border: transparent !important;
+  --trna-node-fill: #e2e8f0;
+  --trna-stroke: #475569;
+  --trna-text: #0f172a;
+  --trna-hover-stroke: #60a5fa;
+  --trna-hover-fill: #dbeafe;
+  --trna-overflow-fill: #fef3c7;
+  --trna-overflow-stroke: #f59e0b;
+  --trna-insertion-fill: #bbf7d0;
+  --trna-insertion-stroke: #16a34a;
+  --trna-deletion-fill: #fecaca;
+  --trna-deletion-stroke: #ef4444;
+  --trna-mismatch-fill: #fde68a;
+  --trna-mismatch-stroke: #f59e0b;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none;
+}
 </style>
