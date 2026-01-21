@@ -257,7 +257,7 @@ const navigateToHeading = (id) => {
   justify-content: center;
   padding: 20px;
   box-sizing: border-box;
-  background-color: #f5f5f5;
+  background-color: var(--farallon-background-gray);
 }
 
 .help-container {
@@ -268,9 +268,10 @@ const navigateToHeading = (id) => {
   width: 100%;
   padding: 20px;
   box-sizing: border-box;
-  background-color: #ffffff;
+  background-color: var(--farallon-background-white);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
+  border: 1px solid var(--farallon-border-color-light);
 }
 
 .help-title {
@@ -280,13 +281,13 @@ const navigateToHeading = (id) => {
 
 .help-title h1 {
   font-size: 2em;
-  color: #2c3e50;
+  color: var(--farallon-text-color);
   margin: 0;
 }
 
 .help-title p {
   font-size: 1em;
-  color: #7f8c8d;
+  color: var(--farallon-text-light);
   margin: 0;
 }
 
@@ -301,9 +302,11 @@ const navigateToHeading = (id) => {
 
 .markdown-body {
   padding: 20px;
-  background-color: #fff;
+  background-color: var(--farallon-background-white);
+  color: var(--farallon-text-color);
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--farallon-border-color-light);
   overflow-wrap: break-word;
   box-sizing: border-box;
 }

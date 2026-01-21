@@ -21,14 +21,14 @@ For a particular disease, users can click on the "\+" to display detailed inform
 
 ![](https://minio.lumoxuan.cn/ensure/help/Find%20disease-specific%20information.png)
 
-![](https://minio.lumoxuan.cn/ensure/help/Coding Variation in Genetic Disease.jpeg)
+![](https://minio.lumoxuan.cn/ensure/help/Coding%20Variation%20in%20Genetic%20Disease.jpeg)
 
-![](https://minio.lumoxuan.cn/ensure/help/Coding Variation in Cancer.jpeg)
+![](https://minio.lumoxuan.cn/ensure/help/Coding%20Variation%20in%20Cancer.jpeg)
 
-![](https://minio.lumoxuan.cn/ensure/help/AI assistant yingying.jpeg)
+![](https://minio.lumoxuan.cn/ensure/help/AI%20assistant%20yingying.jpeg)
 
 Note: The descriptions of variants in this module are all using the HGV Format \([https://hgvs\-nomenclature\.org/stable/background/simple/](https://hgvs-nomenclature.org/stable/background/simple/)\), e\.g\.;
 
-![](https://minio.lumoxuan.cn/ensure/help/HGV Format1.png)
+![](https://minio.lumoxuan.cn/ensure/help/HGV%20Format1.png)
 
-![](https://minio.lumoxuan.cn/ensure/help/HGV Format2.png)
+![](https://minio.lumoxuan.cn/ensure/help/HGV%20Format2.png)

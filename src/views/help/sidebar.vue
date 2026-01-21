@@ -88,16 +88,17 @@ const handleHeadingClick = (id) => {
 <style>
 .custom-menu {
   width: 100%;
-  background-color: #f5f5f5;
-  color: #2c3e50;
+  background-color: var(--farallon-background-white);
+  color: var(--farallon-text-color);
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--farallon-border-color-light);
 }
 
 .custom-menu .el-menu-item,
 .custom-menu .el-sub-menu__title {
   font-size: 14px;
-  color: #2c3e50;
+  color: var(--farallon-text-color);
   white-space: normal !important; /* 确保文本自动换行 */
   word-break: break-word !important; /* 防止长单词溢出 */
   overflow-wrap: break-word !important; /* 处理长单词或URL */
@@ -109,14 +110,14 @@ const handleHeadingClick = (id) => {
 .custom-menu .el-sub-menu__title.is-activated,
 .custom-menu .el-menu-item.is-activated:hover,
 .custom-menu .el-sub-menu__title.is-activated:hover {
-  background-color: #3498db !important;
+  background-color: var(--farallon-main-color) !important;
   color: #ffffff !important;
 }
 
 .custom-menu .el-menu-item:hover,
 .custom-menu .el-sub-menu__title:hover {
-  background-color: #d3d3d3;
-  color: #2c3e50;
+  background-color: var(--farallon-background-gray);
+  color: var(--farallon-text-color);
 }
 
 .custom-menu .el-menu-item {
@@ -132,7 +133,7 @@ const handleHeadingClick = (id) => {
 }
 
 :deep(.el-sub-menu__title) {
-  background-color: #3498db;
+  background-color: var(--farallon-main-color);
   color: #ffffff;
 }
 

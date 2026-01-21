@@ -177,7 +177,6 @@ const prefetchRoutes = [
   '/naturalsuptRNA',
   '/tRNAElements',
   '/about',
-  '/help',
   '/download'
 ];
 

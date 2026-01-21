@@ -93,7 +93,7 @@ export const allColumns: STableColumnsType<DataType> = [
       <span class="column-title">
         Protein Alteration&nbsp;
         <a
-          href="/help?file=2-Coding+Variation+Disease.md#bottom"
+          href="/help.html?file=2-Coding+Variation+Disease.md#bottom"
           target="_blank"
           class="help-icon"
           title="View help for Protein Alteration"

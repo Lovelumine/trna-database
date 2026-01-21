@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="https://minio.lumoxuan.cn/ensure/bot/favicon.ico" />
+    <link rel="stylesheet" href="https://minio.lumoxuan.cn/ensure/css/all.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ENSURE About</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --app-bg: #f7f8fb;
+        --app-surface: #ffffff;
+        --app-surface-2: #f3f4f7;
+        --app-text: rgba(0, 0, 0, 0.88);
+        --app-text-muted: rgba(0, 0, 0, 0.64);
+        --app-text-faint: rgba(0, 0, 0, 0.5);
+        --app-border: rgba(0, 0, 0, 0.12);
+        --app-border-light: rgba(0, 0, 0, 0.06);
+        --app-accent: #4370f5;
+        --app-accent-strong: #3a5f9a;
+        --link-primary: #1d4ed8;
+        --link-primary-hover: #1e40af;
+        --link-inline: #2563eb;
+        --link-inline-hover: #1d4ed8;
+        --link-meta: #334155;
+        --link-meta-hover: #0f172a;
+        --link-nav: var(--app-text);
+        --link-nav-hover: var(--app-accent);
+        --app-gradient-start: #007cf0;
+        --app-gradient-end: #00dfd8;
+
+        --farallon-main-color: var(--app-accent);
+        --farallon-hover-color: var(--app-accent-strong);
+        --farallon-text-color: var(--app-text);
+        --farallon-text-light: var(--app-text-muted);
+        --farallon-text-gray: var(--app-text-muted);
+        --farallon-text-gray-lightest: var(--app-text-faint);
+        --farallon-text-light-hover: #2f3e50;
+        --farallon-background-white: var(--app-surface);
+        --farallon-background-gray: var(--app-bg);
+        --farallon-griedent-start: var(--app-gradient-start);
+        --farallon-griedent-end: var(--app-gradient-end);
+        --farallon-border-color: var(--app-border);
+        --farallon-border-color-light: var(--app-border-light);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --app-bg: #0f1115;
+          --app-surface: #171a21;
+          --app-surface-2: #1f2430;
+          --app-text: rgba(231, 233, 239, 0.92);
+          --app-text-muted: rgba(231, 233, 239, 0.72);
+          --app-text-faint: rgba(231, 233, 239, 0.56);
+          --app-border: rgba(255, 255, 255, 0.14);
+          --app-border-light: rgba(255, 255, 255, 0.08);
+          --app-accent: #6ea8ff;
+          --app-accent-strong: #8ab4ff;
+          --link-primary: #93c5fd;
+          --link-primary-hover: #bfdbfe;
+          --link-inline: #8ab4ff;
+          --link-inline-hover: #b7d1ff;
+          --link-meta: #cbd5f5;
+          --link-meta-hover: #e2e8f0;
+          --link-nav: var(--app-text);
+          --link-nav-hover: #93c5fd;
+          --app-gradient-start: #3b82f6;
+          --app-gradient-end: #22d3ee;
+          --farallon-text-light-hover: #d9e2f1;
+        }
+      }
+
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --app-bg: #f7f8fb;
+        --app-surface: #ffffff;
+        --app-surface-2: #f3f4f7;
+        --app-text: rgba(0, 0, 0, 0.88);
+        --app-text-muted: rgba(0, 0, 0, 0.64);
+        --app-text-faint: rgba(0, 0, 0, 0.5);
+        --app-border: rgba(0, 0, 0, 0.12);
+        --app-border-light: rgba(0, 0, 0, 0.06);
+        --app-accent: #4370f5;
+        --app-accent-strong: #3a5f9a;
+        --link-primary: #1d4ed8;
+        --link-primary-hover: #1e40af;
+        --link-inline: #2563eb;
+        --link-inline-hover: #1d4ed8;
+        --link-meta: #334155;
+        --link-meta-hover: #0f172a;
+        --link-nav: var(--app-text);
+        --link-nav-hover: var(--app-accent);
+        --app-gradient-start: #007cf0;
+        --app-gradient-end: #00dfd8;
+        --farallon-text-light-hover: #2f3e50;
+      }
+
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --app-bg: #0f1115;
+        --app-surface: #171a21;
+        --app-surface-2: #1f2430;
+        --app-text: rgba(231, 233, 239, 0.92);
+        --app-text-muted: rgba(231, 233, 239, 0.72);
+        --app-text-faint: rgba(231, 233, 239, 0.56);
+        --app-border: rgba(255, 255, 255, 0.14);
+        --app-border-light: rgba(255, 255, 255, 0.08);
+        --app-accent: #6ea8ff;
+        --app-accent-strong: #8ab4ff;
+        --link-primary: #93c5fd;
+        --link-primary-hover: #bfdbfe;
+        --link-inline: #8ab4ff;
+        --link-inline-hover: #b7d1ff;
+        --link-meta: #cbd5f5;
+        --link-meta-hover: #e2e8f0;
+        --link-nav: var(--app-text);
+        --link-nav-hover: #93c5fd;
+        --app-gradient-start: #3b82f6;
+        --app-gradient-end: #22d3ee;
+        --farallon-text-light-hover: #d9e2f1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Play", "MArima Madurai", Microsoft JhengHei, Georgia, Times, serif, Microsoft Yahei, Open Sans,
+          sans-serif;
+        font-size: 16px;
+        line-height: 1.8;
+        color: var(--farallon-text-color);
+        background-color: var(--farallon-background-gray);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+
+      a {
+        color: var(--link-inline);
+        text-decoration: none;
+      }
+
+      a:hover {
+        color: var(--link-inline-hover);
+      }
+
+      .main {
+        background-color: var(--farallon-background-white);
+        min-height: 100vh;
+        position: relative;
+      }
+
+      .main:after {
+        aspect-ratio: 1/3;
+        background-image: linear-gradient(90deg, var(--farallon-griedent-start), var(--farallon-griedent-end));
+        border: 0;
+        border-radius: 9999px;
+        bottom: calc(100% - 100px);
+        filter: blur(44px);
+        opacity: 0.2;
+        position: absolute;
+        right: 0;
+        left: 0;
+        content: "";
+      }
+
+      .site--main {
+        color: var(--farallon-text-color);
+        padding: 20px;
+      }
+
+      .site--header {
+        padding: 20px 80px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .site--url {
+        align-items: center;
+        font-size: 18px;
+        font-weight: 700;
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .site--url .avatar {
+        margin-right: 10px;
+        height: 64px;
+        width: 64px;
+        border: 3px solid var(--farallon-background-white);
+        border-radius: 50%;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+        transition: 0.5s ease-in-out;
+        overflow: hidden;
+        background-color: var(--farallon-background-white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .site--header__center {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        height: 39px;
+        top: 25px;
+        z-index: 1;
+        box-shadow: 0 0 0 1px var(--farallon-border-color-light), 0 10px 15px -3px rgba(39, 39, 42, 0.08),
+          0 4px 6px -4px rgba(39, 39, 42, 0.08);
+        backdrop-filter: blur(12px);
+        background-color: rgba(255, 255, 255, 0.75);
+        border: 1px solid var(--farallon-border-color-light);
+        border-radius: 999rem;
+        overflow: hidden;
+      }
+
+      .site--header__right {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        position: absolute;
+        right: 0;
+        top: 25px;
+      }
+
+      .topNav-items {
+        display: flex;
+        align-items: center;
+        height: 39px;
+        box-sizing: border-box;
+        padding: 5px 30px;
+        margin: 0;
+        list-style: none;
+        overflow-x: auto;
+        white-space: nowrap;
+        overflow-y: hidden;
+      }
+
+      .topNav-items li {
+        display: inline-block;
+        margin-right: 10px;
+        padding: 10px;
+      }
+
+      .topNav-items li a {
+        color: var(--farallon-text-color);
+        text-decoration: none;
+        border-bottom: 2px solid transparent;
+        transition: border-color 0.3s;
+      }
+
+      .topNav-items li a:hover {
+        border-bottom: 2px solid var(--farallon-border-color);
+      }
+
+      .topNav-items li .active-link {
+        color: var(--farallon-hover-color);
+        border-bottom: 2px solid var(--farallon-hover-color);
+      }
+
+      .topNav-items .mobile-only {
+        display: inline-block;
+      }
+
+      .theme-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid var(--farallon-border-color);
+        background-color: var(--farallon-background-white);
+        color: var(--farallon-text-color);
+        padding: 0;
+        cursor: pointer;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+      }
+
+      .theme-toggle:hover {
+        background-color: var(--farallon-background-gray);
+        border-color: var(--farallon-border-color);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .site--header__center {
+          background-color: rgba(23, 26, 33, 0.85);
+          box-shadow: 0 0 0 1px var(--farallon-border-color-light), 0 10px 20px -8px rgba(0, 0, 0, 0.6);
+        }
+      }
+
+      :root[data-theme="dark"] .site--header__center {
+        background-color: rgba(23, 26, 33, 0.85);
+        box-shadow: 0 0 0 1px var(--farallon-border-color-light), 0 10px 20px -8px rgba(0, 0, 0, 0.6);
+      }
+
+      @media (min-width: 1101px) {
+        .topNav-items .mobile-only {
+          display: none;
+        }
+      }
+
+      @media (max-width: 1100px) {
+        .site--header {
+          padding: 15px 20px;
+          flex-direction: column;
+        }
+
+        header.site--header {
+          padding-top: 80px;
+        }
+
+        .site--header__center {
+          position: static;
+          transform: none;
+          width: 100%;
+          top: auto;
+          box-shadow: none;
+          border-radius: 0;
+          padding: 0;
+        }
+
+        .topNav-items {
+          justify-content: flex-start;
+          overflow-x: auto;
+          white-space: nowrap;
+          overflow-y: hidden;
+          padding-left: 20px;
+          padding-right: 20px;
+        }
+
+        .topNav-items li {
+          display: inline-block;
+          padding: 10px;
+        }
+      }
+
+      .about-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .card {
+        background-color: var(--farallon-background-white);
+        border-radius: 12px;
+        border: 1px solid var(--farallon-border-color-light);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        padding: 24px;
+      }
+
+      .card h2 {
+        margin: 0 0 12px;
+        color: var(--farallon-text-color);
+      }
+
+      .info-text {
+        font-size: 14px;
+        color: var(--farallon-text-light);
+        margin: 0 0 16px;
+      }
+
+      .contact-info .mail {
+        margin: 0 0 12px;
+        color: var(--farallon-text-color);
+      }
+
+      .contact-info .mail a {
+        color: var(--link-primary);
+        font-weight: 600;
+      }
+
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+      }
+
+      .tool-card {
+        background-color: var(--app-surface-2);
+        border-radius: 12px;
+        border: 1px solid var(--farallon-border-color-light);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        transition: transform 0.2s ease;
+      }
+
+      .tool-card:hover {
+        transform: translateY(-4px);
+      }
+
+      .tool-card img {
+        width: 100%;
+        max-width: 180px;
+        height: 90px;
+        object-fit: contain;
+        background-color: var(--farallon-background-white);
+        border-radius: 8px;
+        padding: 6px;
+        border: 1px solid var(--farallon-border-color-light);
+        margin-bottom: 12px;
+      }
+
+      .tool-card h4 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        color: var(--farallon-text-color);
+      }
+
+      .site--footer {
+        position: relative;
+        bottom: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 14px;
+        padding: 20px 80px;
+        border-top: 1px dotted var(--farallon-border-color);
+        color: var(--farallon-text-light);
+        background-color: var(--farallon-background-white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .site--footer .footer-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .site--footer .footer-content .copyright,
+      .site--footer .footer-content .hosted-by {
+        margin: 5px 0;
+      }
+
+      .site--footer .footer-content .beian-source-code {
+        display: flex;
+        align-items: center;
+        margin: 5px 0;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .site--footer .footer-content .beian-source-code .separator {
+        margin: 0 10px;
+        color: var(--farallon-text-light);
+      }
+
+      .site--footer .footer-content .beian-link,
+      .site--footer .footer-content .about-link {
+        color: var(--farallon-text-light);
+        text-decoration: none;
+        border-bottom: 1px dashed var(--farallon-text-light);
+      }
+
+      .site--footer .footer-content .beian-link:hover,
+      .site--footer .footer-content .about-link:hover {
+        color: var(--farallon-text-light-hover);
+      }
+
+      .site--footer .footer-content .source-code-link {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        color: var(--farallon-text-light);
+      }
+
+      .site--footer .footer-content .source-code-link:hover {
+        color: var(--farallon-text-light-hover);
+      }
+
+      .site--footer .footer-content .source-code-link .github-logo {
+        width: 20px;
+        height: 20px;
+        margin-right: 5px;
+      }
+    </style>
+  </head>
+  <body class="home page-template-default page page-id-2 logged-in admin-bar customize-support">
+    <div class="main">
+      <header class="site--header">
+        <a href="/" class="site--url" aria-label="18-tRNA therapeutics database">
+          <img src="https://minio.lumoxuan.cn/ensure/bot/logo.webp" class="avatar" alt="18-tRNA therapeutics database" />
+        </a>
+        <nav class="site--header__center">
+          <ul class="topNav-items">
+            <li><a href="/">Home</a></li>
+            <li><a href="/CodingVariationDisease">Mutation-induced Disease</a></li>
+            <li><a href="/naturalsuptRNA">Natural sup-tRNA</a></li>
+            <li><a href="/tRNAtherapeutics">Engineered sup-tRNA</a></li>
+            <li><a href="/tRNAElements">tRNA Elements</a></li>
+            <li><a href="/blast">Blast Search</a></li>
+            <li><a href="/AIyingying">AI Assistant</a></li>
+            <li class="mobile-only"><a href="/download">Download</a></li>
+            <li class="mobile-only"><a href="/help.html">Help</a></li>
+            <li class="mobile-only"><a class="active-link" href="/about.html">About</a></li>
+          </ul>
+        </nav>
+        <nav class="site--header__right">
+          <ul class="topNav-items right">
+            <li>
+              <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Theme">
+                <i class="fas fa-adjust"></i>
+              </button>
+            </li>
+            <li><a href="/download" title="Download"><i class="fas fa-download"></i></a></li>
+            <li><a href="/help.html" title="Help"><i class="fas fa-book"></i></a></li>
+            <li><a class="active-link" href="/about.html" title="About"><i class="fas fa-info-circle"></i></a></li>
+          </ul>
+        </nav>
+      </header>
+
+      <main class="site--main">
+        <div class="about-container">
+          <section class="card">
+            <h2>Contact Us</h2>
+            <p class="info-text">
+              ENSURE v1.0 is under constant maintenance and improvement. Any questions about the usage, comments or
+              suggestions are appreciated.
+            </p>
+            <div class="contact-info">
+              <p class="mail">
+                <strong>Lingling Zheng:</strong>
+                <a href="mailto:zhengll33@mail.sysu.edu.cn">zhengll33@mail.sysu.edu.cn</a>
+                <br />
+                RNA Information Center, State Key Laboratory for Biocontrol, Sun Yat-sen University, Guangzhou 510275,
+                P. R. China
+              </p>
+              <p class="mail">
+                <strong>Zhuo Ouyang:</strong>
+                <a href="mailto:shendekoudai@lovelumine.com">shendekoudai@lovelumine.com</a>
+                <br />
+                RNA Information Center, State Key Laboratory for Biocontrol, Sun Yat-sen University, Guangzhou 510275,
+                P. R. China
+              </p>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Our Tools</h2>
+            <p class="info-text">
+              In addition to ENSURE v1.0, we have developed several databases and software to investigate the biological
+              functions and mechanisms of various RNA in biological processes.
+            </p>
+            <div class="tools-grid">
+              <article class="tool-card">
+                <a href="https://bioinformaticsscience.cn/rmbase/" target="_blank" rel="noopener noreferrer">
+                  <img src="https://minio.lumoxuan.cn/ensure/about/logoRMBase3.png" alt="RMBase Logo" />
+                </a>
+                <h4>RMBase V3.0</h4>
+                <p class="info-text">
+                  Deciphering the Map of RNA Modifications from Epitranscriptome Sequencing Data. (Xuan et al. Nucleic
+                  Acids Res. 2018 Jan 4;46(D1):D327-34.)
+                </p>
+              </article>
+              <article class="tool-card">
+                <a href="https://rnasysu.com/encori/" target="_blank" rel="noopener noreferrer">
+                  <img src="https://minio.lumoxuan.cn/ensure/about/starBase_logo.png" alt="StarBase Logo" />
+                </a>
+                <h4>ENCORI</h4>
+                <p class="info-text">
+                  A database for exploring miRNA-mRNA and miRNA-ncRNA interaction maps from Argonaute and other RBP
+                  CLIP-Seq data. (Li et al. Nucleic Acids Res. 2014;42:D92-7.)
+                </p>
+              </article>
+              <article class="tool-card">
+                <a href="http://rna.sysu.edu.cn/chipbase" target="_blank" rel="noopener noreferrer">
+                  <img src="https://minio.lumoxuan.cn/ensure/about/ChIPBase Logo.png" alt="ChIPBase Logo" />
+                </a>
+                <h4>ChIPBase v3.0</h4>
+                <p class="info-text">
+                  Decoding transcriptional regulatory networks of non-coding RNAs and protein-coding genes from ChIP-seq
+                  data. (Zhou et al. Nucleic Acids Res. 2017 Jan 04;45(D1):D43-D50.)
+                </p>
+              </article>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <footer class="site--footer">
+        <div class="footer-content">
+          <div class="copyright">
+            © Copyright 2024 Zheng Lab. School of Life Science, Sun Yat-sen University, China.
+            <br />
+            ⚠️ The ENSURE database is provided for academic and non-commercial research use only.
+            <br />
+            Commercial use requires prior written permission from the authors and Sun Yat-sen University.
+          </div>
+          <div class="beian-source-code">
+            <a href="https://beian.miit.gov.cn" target="_blank" class="beian-link">赣ICP备2024033025号</a>
+            <span class="separator">|</span>
+            <a href="https://github.com/Lovelumine/trna-database" target="_blank" class="source-code-link">
+              <img
+                src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+                alt="GitHub"
+                class="github-logo"
+              />
+              Source Code
+            </a>
+            <span class="separator">|</span>
+            <a href="/about.html" class="about-link">About</a>
+          </div>
+          <div class="hosted-by">Server provided by Yongxin County Aiying Technology Co., Ltd.</div>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      const STORAGE_KEY = 'theme-mode';
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      const themeToggle = document.getElementById('theme-toggle');
+
+      const getThemeMode = () => {
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        if (stored === 'light' || stored === 'dark' || stored === 'system') {
+          return stored;
+        }
+        return 'system';
+      };
+
+      const applyThemeMode = (mode) => {
+        const root = document.documentElement;
+        const isDark = mode === 'dark' || (mode === 'system' && media.matches);
+        root.classList.toggle('dark', isDark);
+        if (mode === 'system') {
+          root.removeAttribute('data-theme');
+          root.style.colorScheme = media.matches ? 'dark' : 'light';
+        } else {
+          root.setAttribute('data-theme', mode);
+          root.style.colorScheme = mode;
+        }
+        const icon = themeToggle.querySelector('i');
+        if (icon) {
+          icon.className = mode === 'dark' ? 'fas fa-moon' : mode === 'light' ? 'fas fa-sun' : 'fas fa-adjust';
+        }
+        themeToggle.setAttribute('title', `Theme: ${mode}`);
+        themeToggle.setAttribute('aria-label', `Theme: ${mode}`);
+      };
+
+      const nextThemeMode = (mode) => {
+        if (mode === 'system') return 'dark';
+        if (mode === 'dark') return 'light';
+        return 'system';
+      };
+
+      const initTheme = () => {
+        const mode = getThemeMode();
+        applyThemeMode(mode);
+        const handler = () => {
+          if (getThemeMode() === 'system') {
+            applyThemeMode('system');
+          }
+        };
+        if ('addEventListener' in media) {
+          media.addEventListener('change', handler);
+        } else if ('addListener' in media) {
+          media.addListener(handler);
+        }
+      };
+
+      themeToggle.addEventListener('click', () => {
+        const current = getThemeMode();
+        const next = nextThemeMode(current);
+        window.localStorage.setItem(STORAGE_KEY, next);
+        applyThemeMode(next);
+      });
+
+      initTheme();
+    </script>
+  </body>
+</html>
