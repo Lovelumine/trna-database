@@ -355,15 +355,20 @@
 <tr v-if="hasEngineeredData(record) || isEditing(record)">
   <td><b>3D Structure:</b></td>
   <td>
-    <div class="sample-switcher">
-      <div
-        v-for="i in 5"
-        :key="i"
-        class="seg-btn"
-        :class="{ active: record._selectedSample === (i-1) }"
-        @click="switchSample(record, i-1)"
-      >
-        {{ i-1 }}
+    <div class="sample-switcher" role="group" aria-label="3D structure samples">
+      <span class="sample-label">Sample</span>
+      <div class="segmented-control">
+        <button
+          v-for="i in 5"
+          :key="i"
+          type="button"
+          class="seg-btn"
+          :class="{ active: record._selectedSample === (i-1) }"
+          :aria-pressed="record._selectedSample === (i-1)"
+          @click="switchSample(record, i-1)"
+        >
+          {{ i-1 }}
+        </button>
       </div>
     </div>
 
@@ -421,7 +426,7 @@ import TranStructure from '@/components/TranStructure.vue';
 import * as d3 from 'd3';
 import { draw_cloverleaf, draw_base_distro } from '@/utils/tRNAviz/js/consensusESM.js';
 import "@/utils/tRNAviz/css/explorer.css";
-import { formatAlignment, loadCIFFile } from './expandedRowLogic';
+import { formatAlignment, loadCIFFile, preloadCIFSamples } from './expandedRowLogic';
 import TrnaRadial from '@/components/TrnaRadial.vue';
 import supTrnaRadial from '@/components/supTrnaRadial.vue';
 import AlignmentTable from '@/components/AlignmentTable.vue';
@@ -574,6 +579,7 @@ export default defineComponent({
           record._selectedSample = 0;
           if (record.pdbid) {
             loadCIFFile(record.pdbid, record.ENSURE_ID, 0);
+            preloadCIFSamples(record.pdbid, [1, 2, 3, 4]);
           }
           try {
             if (record.Alignment) {
@@ -819,28 +825,49 @@ a:hover {
 /* sample switcher */
 .sample-switcher {
   display: inline-flex;
-  border: 1px solid #ccc;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+.sample-switcher .sample-label {
+  color: var(--app-text-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+.sample-switcher .segmented-control {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  background: var(--app-surface-2);
+  border: 1px solid var(--app-border);
   border-radius: 999px;
-  overflow: hidden;
-  font-size: 0.875rem;
-  margin-bottom: 6px;
+  gap: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 .sample-switcher .seg-btn {
-  padding: 4px 12px;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
   cursor: pointer;
   user-select: none;
-  transition: background-color .2s, color .2s;
-  color: #555;
-}
-.sample-switcher .seg-btn:not(:last-child) {
-  border-right: 1px solid #ccc;
+  font-size: 0.8rem;
+  color: var(--app-text-muted);
+  transition: background-color .2s, color .2s, box-shadow .2s, transform .2s;
 }
 .sample-switcher .seg-btn:hover {
-  background-color: #f0f0f0;
+  color: var(--app-text);
+  background-color: rgba(67, 112, 245, 0.12);
 }
 .sample-switcher .seg-btn.active {
-  background-color: #1976d2;
+  background-color: var(--app-accent);
   color: #fff;
+  box-shadow: 0 6px 14px rgba(67, 112, 245, 0.35);
+  transform: translateY(-1px);
 }
 
 /* references */

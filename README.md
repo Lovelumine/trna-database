@@ -19,14 +19,12 @@ ENSURE is an academic database focused on suppressor tRNAs. It combines visualiz
 - `src/`: 前端源码（Vue 3、TypeScript、Element Plus）  
 - `public/`: 静态资源与站点图标  
 - `searchservice.py`: Flask 搜索/比对服务，默认监听 8000  
-- `restart_searchservice.sh`: 定时重启 `searchservice.py` 的辅助脚本  
-- `scan.py`: 打印项目目录树的工具脚本  
+- `tools/data-prep/`: 离线数据准备脚本与工具归档  
 - 其他：`package.json`、`vite.config.js`、`tsconfig.json` 等构建配置  
 - `src/`: Frontend source (Vue 3, TypeScript, Element Plus)  
 - `public/`: Static assets and icons  
 - `searchservice.py`: Flask search/alignment service (default port 8000)  
-- `restart_searchservice.sh`: Helper to periodically restart the service  
-- `scan.py`: Utility to print the project tree  
+- `tools/data-prep/`: Archived offline data-prep scripts/tools  
 - Build configs: `package.json`, `vite.config.js`, `tsconfig.json`, etc.
 
 ## 快速开始（前端）| Frontend Quickstart
@@ -51,11 +49,6 @@ pip install flask flask-cors biopython pandas requests
 2) 启动服务（默认 8000）：Run the service  
 ```bash
 python searchservice.py
-```
-3) 守护/定时重启：Daemon-like restart  
-```bash
-chmod +x restart_searchservice.sh
-./restart_searchservice.sh
 ```
 接口：`/health`（GET，存活检查），`/search`（POST，字段 `query_seq`、`csv_paths`、`pmids`、`ensure_ids` 及打分参数）。  
 Endpoints: `/health` for liveness; `/search` POST with `query_seq`, `csv_paths`, `pmids`, `ensure_ids`, and scoring params.

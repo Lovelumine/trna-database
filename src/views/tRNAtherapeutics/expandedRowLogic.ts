@@ -132,6 +132,38 @@ export function getSymbolClass(symbol: string): string {
 
 interface StageMap { [containerId: string]: NGL.Stage; }
 const stageMap: StageMap = {};
+const cifCache = new Map<string, Promise<Blob | null>>();
+
+const buildCifUrl = (fileId: string, sampleIndex: number) => {
+  const lowerId = fileId.toLowerCase();
+  const baseUrl = `https://minio.lumoxuan.cn/ensure/ensure-af3/${lowerId}fold`;
+  return `${baseUrl}/seed-1_sample-${sampleIndex}/model.cif`;
+};
+
+const fetchCifBlob = async (url: string): Promise<Blob | null> => {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return await resp.blob();
+  } catch {
+    return null;
+  }
+};
+
+const getCifBlob = (fileId: string, sampleIndex: number) => {
+  const url = buildCifUrl(fileId, sampleIndex);
+  if (!cifCache.has(url)) {
+    cifCache.set(url, fetchCifBlob(url));
+  }
+  return { url, blobPromise: cifCache.get(url)! };
+};
+
+export const preloadCIFSamples = (fileId: string, sampleIndices: number[]) => {
+  if (!fileId) return;
+  sampleIndices.forEach((idx) => {
+    getCifBlob(fileId, idx);
+  });
+};
 
 /**
  * 加载指定 CIF 文件，并在对应 DOM 容器中创建 NGL viewer
@@ -144,9 +176,7 @@ export async function loadCIFFile(
   containerId: string,
   sampleIndex: number = 0
 ): Promise<void> {
-  const lowerId = fileId.toLowerCase();
-  const baseUrl = `https://minio.lumoxuan.cn/ensure/ensure-af3/${lowerId}fold`;
-  const cifUrl  = `${baseUrl}/seed-1_sample-${sampleIndex}/model.cif`;
+  const { url: cifUrl, blobPromise } = getCifBlob(fileId, sampleIndex);
 
   const elementId = 'pdb-container-' + containerId;
   const element = document.getElementById(elementId);
@@ -166,7 +196,17 @@ export async function loadCIFFile(
   }
 
   try {
-    const comp = await stage.loadFile(cifUrl, { ext: 'cif' }) as NGL.StructureComponent | undefined;
+    let source: string | Blob = cifUrl;
+    try {
+      const blob = await blobPromise;
+      if (blob) {
+        source = blob;
+      }
+    } catch {
+      // fallback to URL
+    }
+
+    const comp = await stage.loadFile(source, { ext: 'cif' }) as NGL.StructureComponent | undefined;
 
     // —— 空值保护 —— 
     if (!comp || !comp.structure) {
