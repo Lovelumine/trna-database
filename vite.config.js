@@ -54,12 +54,28 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules')) {
-            return 'vendor';  // 将第三方库拆分到单独的 vendor 文件
+          if (!id.includes('node_modules')) {
+            return;
           }
-          if (id.includes('views')) {
-            return 'views';  // 页面级组件放到一个 views chunk
+          if (id.includes('element-plus')) {
+            return 'element-plus';
           }
+          if (id.includes('echarts')) {
+            return 'echarts';
+          }
+          if (id.includes('d3')) {
+            return 'd3';
+          }
+          if (id.includes('ngl')) {
+            return 'ngl';
+          }
+          if (id.includes('markdown-it') || id.includes('marked')) {
+            return 'markdown';
+          }
+          if (id.includes('vue-easy-lightbox') || id.includes('vue3-video-play')) {
+            return 'media';
+          }
+          return 'vendor'; // 其他第三方库
         }
       }
     }
@@ -103,7 +119,7 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/chat/api': {
-        target: 'http://223.82.75.76:8080',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       // 后端 Engineered_sup_tRNA CRUD 代理

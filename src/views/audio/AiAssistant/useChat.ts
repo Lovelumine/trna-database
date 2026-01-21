@@ -14,7 +14,7 @@ export function useChat(apiKey: string) {
   const imagePreview = ref('');
 
   // ✅ 必须带前导斜杠，确保可被 dev/prod 代理命中
-  const apiBaseURL = 'https://speedtest.lumoxuan.cn/chat/api';
+  const apiBaseURL = import.meta.env.VITE_CHAT_API_BASE || '/chat/api';
   let applicationId = '';
   let chatId = '';
 

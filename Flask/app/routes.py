@@ -11,12 +11,16 @@ from flask import (
     redirect,
 )
 import csv
+import json
 import hashlib
 import os
 import threading
+import time
+import uuid
 import zipfile
 from sqlalchemy import text, bindparam, Integer
 import re
+import requests
 from . import db
 
 from .logic.align import (
@@ -50,6 +54,64 @@ EXPORT_NAME_BY_TABLE = {
 
 _EXPORT_TASK_LOCK = threading.Lock()
 _EXPORT_TASKS = {}
+
+_CHAT_LOCK = threading.Lock()
+_CHAT_SESSIONS = {}
+
+def _get_ollama_config():
+    base = current_app.config.get("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"
+    model = current_app.config.get("OLLAMA_MODEL") or "qwen3:32b"
+    timeout = current_app.config.get("OLLAMA_TIMEOUT") or 120
+    system_prompt = current_app.config.get("OLLAMA_SYSTEM_PROMPT") or ""
+    max_messages = current_app.config.get("OLLAMA_MAX_MESSAGES") or 20
+    try:
+        timeout = float(timeout)
+    except Exception:
+        timeout = 120
+    try:
+        max_messages = int(max_messages)
+    except Exception:
+        max_messages = 20
+    return base, model, timeout, system_prompt, max_messages
+
+def _get_chat_session(chat_id: str):
+    with _CHAT_LOCK:
+        session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": time.time()})
+        session["updated_at"] = time.time()
+        return session
+
+def _append_chat_message(chat_id: str, role: str, content: str, max_messages: int):
+    if not content:
+        return
+    with _CHAT_LOCK:
+        session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": time.time()})
+        session["messages"].append({"role": role, "content": content})
+        if max_messages and len(session["messages"]) > max_messages:
+            session["messages"] = session["messages"][-max_messages:]
+        session["updated_at"] = time.time()
+
+def _build_ollama_messages(session_messages, system_prompt: str):
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.extend(session_messages or [])
+    return messages
+
+def _ollama_stream(base: str, model: str, messages: list, timeout: float):
+    url = base.rstrip("/") + "/api/chat"
+    payload = {"model": model, "messages": messages, "stream": True}
+    resp = requests.post(url, json=payload, stream=True, timeout=timeout)
+    resp.raise_for_status()
+    for line in resp.iter_lines(decode_unicode=True):
+        if not line:
+            continue
+        data = json.loads(line)
+        if data.get("error"):
+            raise RuntimeError(data["error"])
+        msg = data.get("message") or {}
+        content = msg.get("content") or ""
+        done = bool(data.get("done"))
+        yield content, done
 
 # ---------------------- 通用工具 ----------------------
 
@@ -808,6 +870,54 @@ def index():
 @bp.route("/health", methods=["GET"])
 def health():
     return "OK", 200
+
+
+@bp.route("/chat/api/application/profile", methods=["GET"])
+def chat_application_profile():
+    return jsonify({"data": {"id": "ollama-local"}}), 200
+
+
+@bp.route("/chat/api/open", methods=["GET"])
+def chat_open():
+    chat_id = uuid.uuid4().hex
+    _get_chat_session(chat_id)
+    return jsonify({"data": chat_id}), 200
+
+
+@bp.route("/chat/api/chat_message/<chat_id>", methods=["POST"])
+def chat_message(chat_id):
+    payload = request.get_json(silent=True) or {}
+    message = (payload.get("message") or "").strip()
+    if not message:
+        return jsonify({"error": "missing message"}), 400
+
+    base, model, timeout, system_prompt, max_messages = _get_ollama_config()
+    _append_chat_message(chat_id, "user", message, max_messages)
+    session = _get_chat_session(chat_id)
+    messages = _build_ollama_messages(session.get("messages"), system_prompt)
+
+    def generate():
+        complete = ""
+        try:
+            for chunk, done in _ollama_stream(base, model, messages, timeout):
+                if chunk:
+                    complete += chunk
+                    data = json.dumps({"content": chunk}, ensure_ascii=False)
+                    yield f"data: {data}\n\n"
+                if done:
+                    break
+            if complete:
+                _append_chat_message(chat_id, "assistant", complete, max_messages)
+        except Exception as exc:
+            data = json.dumps({"content": f"Error: {exc}"}, ensure_ascii=False)
+            yield f"data: {data}\n\n"
+        yield "data: [DONE]\n\n"
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    }
+    return Response(stream_with_context(generate()), mimetype="text/event-stream", headers=headers)
 
 @bp.route("/search", methods=["GET", "POST"])
 @bp.route("/search/", methods=["GET", "POST"])

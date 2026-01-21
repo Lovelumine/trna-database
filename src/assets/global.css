@@ -26,6 +26,11 @@
     --link-nav-hover: var(--app-accent);
     --app-gradient-start: #007cf0;
     --app-gradient-end: #00dfd8;
+    --app-glow-start: rgba(0, 124, 240, 0.12);
+    --app-glow-end: rgba(0, 223, 216, 0.08);
+    --app-glow-size-x: 54vmax;
+    --app-glow-size-y: 46vmax;
+    --app-glow-pos-y: -28vmax;
 
     --farallon-main-color: var(--app-accent);
     --farallon-hover-color: var(--app-accent-strong);
@@ -80,6 +85,11 @@
     --link-nav-hover: #93c5fd;
     --app-gradient-start: #3b82f6;
     --app-gradient-end: #22d3ee;
+    --app-glow-start: rgba(59, 130, 246, 0.22);
+    --app-glow-end: rgba(34, 211, 238, 0.16);
+    --app-glow-size-x: 80vmax;
+    --app-glow-size-y: 60vmax;
+    --app-glow-pos-y: -20vmax;
     --farallon-text-light-hover: #d9e2f1;
 
     --el-bg-color: var(--app-surface);
@@ -119,6 +129,11 @@
     --link-nav-hover: var(--app-accent);
     --app-gradient-start: #007cf0;
     --app-gradient-end: #00dfd8;
+    --app-glow-start: rgba(0, 124, 240, 0.12);
+    --app-glow-end: rgba(0, 223, 216, 0.08);
+    --app-glow-size-x: 54vmax;
+    --app-glow-size-y: 46vmax;
+    --app-glow-pos-y: -28vmax;
     --farallon-text-light-hover: #2f3e50;
 }
 
@@ -144,6 +159,11 @@
     --link-nav-hover: #93c5fd;
     --app-gradient-start: #3b82f6;
     --app-gradient-end: #22d3ee;
+    --app-glow-start: rgba(59, 130, 246, 0.22);
+    --app-glow-end: rgba(34, 211, 238, 0.16);
+    --app-glow-size-x: 80vmax;
+    --app-glow-size-y: 60vmax;
+    --app-glow-pos-y: -20vmax;
     --farallon-text-light-hover: #d9e2f1;
     --el-bg-color: var(--app-surface);
     --el-bg-color-page: var(--app-bg);
@@ -173,6 +193,9 @@ body {
 
 .main {
     background-color: var(--farallon-background-white);
+    background-image: radial-gradient(var(--app-glow-size-x) var(--app-glow-size-y) at 50% var(--app-glow-pos-y), var(--app-glow-start), var(--app-glow-end) 40%, transparent 72%);
+    background-repeat: no-repeat;
+    background-position: top center;
     min-height: 100vh;
     position: relative;
 
@@ -181,30 +204,6 @@ body {
 .main,
 .site--main {
     color: var(--farallon-text-color);
-}
-
-.main:after {
-    aspect-ratio: 1/3;
-    background-image: linear-gradient(90deg,var(--farallon-griedent-start),var(--farallon-griedent-end));
-    border: 0;
-    border-radius: 9999px;
-    bottom: calc(100% - 100px);
-    filter: blur(44px);
-    opacity: .2;
-    position: absolute;
-    right: 0;
-    left: 0;
-    content: "";
-}
-
-@media (prefers-color-scheme: dark) {
-  .main:after {
-    opacity: 0.1;
-  }
-}
-
-:root[data-theme="dark"] .main:after {
-  opacity: 0.1;
 }
 
 a {

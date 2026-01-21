@@ -106,6 +106,20 @@ export default {
     display: inline-block; /* 内联显示项目 */
     padding: 10px; /* 调整链接周围的内边距 */
   }
+
+  .site--header__right {
+    position: static;
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+
+  .topNav-items.right {
+    justify-content: flex-end;
+    padding: 0 20px 10px;
+    overflow: visible;
+    height: auto;
+  }
 }
 
 @media (max-width: 1100px) {
