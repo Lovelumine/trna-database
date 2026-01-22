@@ -1,37 +1,82 @@
-import { ref } from 'vue';
+import { ref, type Ref } from 'vue';
 
-export function useChat(apiKey: string) {
-  const isChatOpen = ref(false);
-  const messages = ref<Array<{ id: number; text: string; sender: string; image?: string | null }>>([
-    { id: 1, text: 'Hello, I am your virtual assistant YingYing. How can I assist you today?', sender: 'bot' }
-  ]);
+type ChatMessage = {
+  id: number;
+  text: string;
+  sender: string;
+  image?: string | null;
+};
 
-  const newMessage = ref('');
-  const newImage = ref<File | null>(null);
-  const imagePreview = ref('');
+type ChatSession = {
+  apiKey: string;
+  isChatOpen: Ref<boolean>;
+  messages: Ref<ChatMessage[]>;
+  newMessage: Ref<string>;
+  newImage: Ref<File | null>;
+  imagePreview: Ref<string>;
+  applicationId: string;
+  chatId: string;
+  initialized: boolean;
+  initializing: Promise<void> | null;
+};
+
+type SendOptions = {
+  skipUserPush?: boolean;
+  overrideText?: string;
+  model?: string;
+};
+
+const defaultGreeting = 'Hello, I am your virtual assistant YingYing. How can I assist you today?';
+const sessions = new Map<string, ChatSession>();
+
+const getSession = (key: string, apiKey: string): ChatSession => {
+  const existing = sessions.get(key);
+  if (existing) return existing;
+  const session: ChatSession = {
+    apiKey,
+    isChatOpen: ref(false),
+    messages: ref<ChatMessage[]>([{ id: 1, text: defaultGreeting, sender: 'bot' }]),
+    newMessage: ref(''),
+    newImage: ref<File | null>(null),
+    imagePreview: ref(''),
+    applicationId: '',
+    chatId: '',
+    initialized: false,
+    initializing: null
+  };
+  sessions.set(key, session);
+  return session;
+};
+
+type UseChatOptions = {
+  key?: string;
+};
+
+export function useChat(apiKey: string, options: UseChatOptions = {}) {
+  const key = options.key || 'default';
+  const session = getSession(key, apiKey);
+  session.apiKey = apiKey;
 
   // ✅ 必须带前导斜杠
   const apiBaseURL = import.meta.env.VITE_CHAT_API_BASE || '/chat/api';
-  let applicationId = '';
-  let chatId = '';
 
   // 日志与打码
   const mask = (s?: string) => (s ? s.replace(/.(?=.{4})/g, '*') : '');
   const logAuth = (where: string, url: string, method: string) => {
     console.log(`[useChat] ${method} ${url}`);
-    console.log(`[useChat] ${where} Authorization(m): ${mask(apiKey)}`);
+    console.log(`[useChat] ${where} Authorization(m): ${mask(session.apiKey)}`);
     // @ts-ignore
     if (import.meta.env?.VITE_DEBUG_LOG_FULL_AUTH === '1') {
-      console.warn('[useChat] Authorization(FULL,DEBUG): Bearer ' + apiKey);
+      console.warn('[useChat] Authorization(FULL,DEBUG): Bearer ' + session.apiKey);
     }
   };
   const authHeaders = () => ({
     // ✅ 用标准头 + Bearer 前缀
-    Authorization: `Bearer ${apiKey}`,
+    Authorization: `Bearer ${session.apiKey}`,
     accept: 'application/json'
   });
 
-  const toggleChat = () => { isChatOpen.value = !isChatOpen.value; };
+  const toggleChat = () => { session.isChatOpen.value = !session.isChatOpen.value; };
 
   // 1) 获取应用信息
   const fetchApplicationProfile = async () => {
@@ -42,8 +87,8 @@ export function useChat(apiKey: string) {
       const response = await fetch(url, { method: 'GET', headers: authHeaders() });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      applicationId = data?.data?.id || '';
-      console.log('[useChat] applicationId:', applicationId);
+      session.applicationId = data?.data?.id || '';
+      console.log('[useChat] applicationId:', session.applicationId);
     } catch (e) {
       console.error('Error fetching application profile:', e);
     }
@@ -53,7 +98,7 @@ export function useChat(apiKey: string) {
   const openChatSession = async () => {
     try {
       // 可带 application_id，也可不带；先带上
-      const url = `${apiBaseURL}/open?application_id=${encodeURIComponent(applicationId)}&ts=${Date.now()}`;
+      const url = `${apiBaseURL}/open?application_id=${encodeURIComponent(session.applicationId)}&ts=${Date.now()}`;
       logAuth('open', url, 'GET');
 
       let response = await fetch(url, { method: 'GET', headers: authHeaders(), cache: 'no-store' });
@@ -66,47 +111,72 @@ export function useChat(apiKey: string) {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
-      chatId = data?.data || '';
-      console.log('[useChat] chatId:', chatId);
+      session.chatId = data?.data || '';
+      console.log('[useChat] chatId:', session.chatId);
     } catch (e) {
       console.error('Error opening chat session:', e);
     }
   };
 
+  const ensureReady = async () => {
+    if (session.chatId) return;
+    if (session.initializing) {
+      await session.initializing;
+    }
+    if (!session.applicationId) {
+      await fetchApplicationProfile();
+    }
+    if (!session.chatId) {
+      await openChatSession();
+    }
+  };
+
   // 3) 发送消息（POST /chat/api/chat_message/{chat_id}）
-  const sendMessage = async () => {
-    if (!newMessage.value.trim() && !newImage.value) return;
-    if (!chatId) {
+  const sendMessage = async (options: SendOptions = {}) => {
+    const overrideText = options.overrideText ?? '';
+    const pendingText = overrideText ? overrideText : session.newMessage.value;
+    if (!pendingText.trim() && !session.newImage.value) return;
+    await ensureReady();
+    if (!session.chatId) {
       console.error('Chat ID is not available. Unable to send message.');
+      session.messages.value.push({
+        id: Date.now(),
+        text: 'Sorry, I could not process your request.',
+        sender: 'bot'
+      });
       return;
     }
 
-    const textContent = newMessage.value.trim();
-    const imageBase64 = newImage.value ? await toBase64(newImage.value) : null;
+    const textContent = pendingText.trim();
+    const imageBase64 = session.newImage.value ? await toBase64(session.newImage.value) : null;
 
-    messages.value.push({
-      id: Date.now(),
-      sender: 'user',
-      text: textContent,
-      image: imageBase64
-    });
-    newMessage.value = '';
-    newImage.value = null;
-    imagePreview.value = '';
+    if (!options.skipUserPush) {
+      session.messages.value.push({
+        id: Date.now(),
+        sender: 'user',
+        text: textContent,
+        image: imageBase64
+      });
+    }
+    session.newMessage.value = '';
+    session.newImage.value = null;
+    session.imagePreview.value = '';
 
     try {
-      const url = `${apiBaseURL}/chat_message/${encodeURIComponent(chatId)}`;
+      const url = `${apiBaseURL}/chat_message/${encodeURIComponent(session.chatId)}`;
       logAuth('sendMessage', url, 'POST');
+
+      const payload: Record<string, any> = {
+        message: textContent,
+        re_chat: false,
+        stream: true
+      };
+      if (options.model) payload.model = options.model;
 
       const response = await fetch(url, {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: textContent,
-          re_chat: false,
-          stream: true
-          // 若需要看图，这里把 imageBase64 一起传：image: imageBase64
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.body) throw new Error('ReadableStream not supported.');
@@ -114,7 +184,7 @@ export function useChat(apiKey: string) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       const botMessageId = Date.now();
-      messages.value.push({ id: botMessageId, text: '', sender: 'bot' });
+      session.messages.value.push({ id: botMessageId, text: '', sender: 'bot' });
 
       let buffer = '';
       let complete = '';
@@ -135,7 +205,7 @@ export function useChat(apiKey: string) {
             const content = parsed?.content ?? '';
             if (content) {
               complete += content;
-              const m = messages.value.find(v => v.id === botMessageId);
+              const m = session.messages.value.find(v => v.id === botMessageId);
               if (m) m.text = complete.trim();
             }
           } catch (err) {
@@ -146,7 +216,7 @@ export function useChat(apiKey: string) {
       console.log('[useChat] stream ended');
     } catch (e: any) {
       console.error('Error communicating with API:', e?.message || e);
-      messages.value.push({ id: Date.now(), text: 'Sorry, I could not process your request.', sender: 'bot' });
+      session.messages.value.push({ id: Date.now(), text: 'Sorry, I could not process your request.', sender: 'bot' });
     }
   };
 
@@ -163,28 +233,52 @@ export function useChat(apiKey: string) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] || null;
     if (!file) return;
-    newImage.value = file;
+    session.newImage.value = file;
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => { if (typeof reader.result === 'string') imagePreview.value = reader.result; };
+    reader.onload = () => { if (typeof reader.result === 'string') session.imagePreview.value = reader.result; };
   };
 
   const initializeChat = async () => {
+    if (session.initialized) return;
+    if (session.initializing) return session.initializing;
     console.log('[useChat] apiBaseURL:', apiBaseURL);
-    await fetchApplicationProfile();
-    await openChatSession();
+    session.initializing = (async () => {
+      await fetchApplicationProfile();
+      await openChatSession();
+      session.initialized = true;
+      session.initializing = null;
+    })();
+    return session.initializing;
   };
 
   const resetChat = async (newApiKey: string) => {
-    apiKey = newApiKey;
-    messages.value = [];
-    console.log('[useChat] resetChat with new apiKey(m):', mask(apiKey));
+    session.apiKey = newApiKey;
+    session.applicationId = '';
+    session.chatId = '';
+    session.initialized = false;
+    session.initializing = null;
+    session.messages.value = [];
+    console.log('[useChat] resetChat with new apiKey(m):', mask(session.apiKey));
     await fetchApplicationProfile();
     await openChatSession();
-    messages.value.push({ id: 1, text: 'Hello, I am your virtual assistant YingYing. How can I assist you today?', sender: 'bot' });
+    session.initialized = true;
+    session.initializing = null;
+    session.messages.value.push({ id: 1, text: defaultGreeting, sender: 'bot' });
   };
 
   initializeChat();
 
-  return { isChatOpen, messages, newMessage, newImage, imagePreview, toggleChat, sendMessage, triggerImageUpload, previewImage, resetChat };
+  return {
+    isChatOpen: session.isChatOpen,
+    messages: session.messages,
+    newMessage: session.newMessage,
+    newImage: session.newImage,
+    imagePreview: session.imagePreview,
+    toggleChat,
+    sendMessage,
+    triggerImageUpload,
+    previewImage,
+    resetChat
+  };
 }
