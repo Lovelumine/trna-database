@@ -14,7 +14,6 @@
     <div class="citation-card citation-card--fold" tabindex="0" title="Hover to expand">
       <p class="citation-hint">
         If you use ENSURE in your research, please cite:
-        <span class="citation-expand-indicator">Hover to expand</span>
       </p>
       <p class="citation-text">
         Zhuo Ouyang, Yifeng Zhang, Fan Feng, Xudong Zeng, Qiuhui Wu, Abdul Hafeez, Wenkai Teng, Yixin Kong, Xuan Bu,
@@ -197,6 +196,7 @@ a:hover {
   gap: 10px;
   align-items: baseline;
   justify-content: space-between;
+  padding-right: 30px;
   color: var(--home-heading);
 }
 
@@ -211,6 +211,7 @@ a:hover {
   cursor: pointer;
   outline: none;
   position: relative;
+  padding-right: 42px;
 }
 
 .citation-card--fold:focus-visible {
@@ -227,8 +228,10 @@ a:hover {
 .citation-card--fold::after {
   content: "▾";
   position: absolute;
-  right: 14px;
-  top: 14px;
+  right: 16px;
+  top: 12px;
+  font-size: 18px;
+  line-height: 1;
   color: var(--home-link);
   transition: transform 180ms ease;
   pointer-events: none;

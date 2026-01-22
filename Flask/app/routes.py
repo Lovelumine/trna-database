@@ -18,6 +18,8 @@ import threading
 import time
 import uuid
 import zipfile
+import math
+import subprocess
 from sqlalchemy import text, bindparam, Integer
 import re
 import requests
@@ -57,6 +59,10 @@ _EXPORT_TASKS = {}
 
 _CHAT_LOCK = threading.Lock()
 _CHAT_SESSIONS = {}
+_EMBED_LOCK = threading.Lock()
+_EMBED_INDEX = []
+_EMBED_INDEX_MTIME = 0.0
+_ALLOWED_CHAT_MODELS = {"qwen3:32b", "gemma3:27b"}
 
 def _get_ollama_config():
     base = current_app.config.get("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"
@@ -74,6 +80,14 @@ def _get_ollama_config():
         max_messages = 20
     return base, model, timeout, system_prompt, max_messages
 
+def _select_ollama_model(requested: str, fallback: str) -> str:
+    if not isinstance(requested, str):
+        return fallback
+    candidate = requested.strip()
+    if not candidate:
+        return fallback
+    return candidate if candidate in _ALLOWED_CHAT_MODELS else fallback
+
 def _get_chat_session(chat_id: str):
     with _CHAT_LOCK:
         session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": time.time()})
@@ -90,10 +104,12 @@ def _append_chat_message(chat_id: str, role: str, content: str, max_messages: in
             session["messages"] = session["messages"][-max_messages:]
         session["updated_at"] = time.time()
 
-def _build_ollama_messages(session_messages, system_prompt: str):
+def _build_ollama_messages(session_messages, system_prompt: str, extra_system: str = ""):
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
+    if extra_system:
+        messages.append({"role": "system", "content": extra_system})
     messages.extend(session_messages or [])
     return messages
 
@@ -112,6 +128,790 @@ def _ollama_stream(base: str, model: str, messages: list, timeout: float):
         content = msg.get("content") or ""
         done = bool(data.get("done"))
         yield content, done
+
+def _get_embedding_config():
+    enable = current_app.config.get("EMBEDDING_ENABLE", True)
+    model = current_app.config.get("EMBEDDING_MODEL") or "nomic-embed-text:latest"
+    index_path = current_app.config.get("EMBEDDING_INDEX_PATH") or ""
+    auto_build = current_app.config.get("EMBEDDING_AUTO_BUILD", False)
+    max_rows = int(current_app.config.get("EMBEDDING_MAX_ROWS") or 8000)
+    per_table = int(current_app.config.get("EMBEDDING_PER_TABLE") or 2000)
+    docs_dir = current_app.config.get("EMBEDDING_DOCS_DIR") or ""
+    docs_max_chunks = int(current_app.config.get("EMBEDDING_DOCS_MAX_CHUNKS") or 120)
+    docs_chunk_size = int(current_app.config.get("EMBEDDING_DOCS_CHUNK_SIZE") or 1200)
+    docs_chunk_overlap = int(current_app.config.get("EMBEDDING_DOCS_CHUNK_OVERLAP") or 150)
+    return (
+        enable,
+        model,
+        index_path,
+        auto_build,
+        max_rows,
+        per_table,
+        docs_dir,
+        docs_max_chunks,
+        docs_chunk_size,
+        docs_chunk_overlap,
+    )
+
+def _ollama_embed(base: str, model: str, text_value: str, timeout: float):
+    url = base.rstrip("/") + "/api/embeddings"
+    payload = {"model": model, "prompt": text_value}
+    resp = requests.post(url, json=payload, timeout=timeout)
+    resp.raise_for_status()
+    data = resp.json()
+    embedding = data.get("embedding")
+    if not isinstance(embedding, list):
+        raise RuntimeError("embedding response missing vector")
+    return embedding
+
+def _cosine_similarity(a, b):
+    if not a or not b:
+        return 0.0
+    if len(a) != len(b):
+        return 0.0
+    dot = 0.0
+    na = 0.0
+    nb = 0.0
+    for i in range(len(a)):
+        va = float(a[i])
+        vb = float(b[i])
+        dot += va * vb
+        na += va * va
+        nb += vb * vb
+    if na == 0.0 or nb == 0.0:
+        return 0.0
+    return dot / (math.sqrt(na) * math.sqrt(nb))
+
+def _split_text(text: str, chunk_size: int, overlap: int):
+    s = str(text or "").strip()
+    if not s:
+        return []
+    if chunk_size <= 0:
+        return [s]
+    if overlap < 0:
+        overlap = 0
+    chunks = []
+    start = 0
+    while start < len(s):
+        end = min(len(s), start + chunk_size)
+        chunks.append(s[start:end])
+        if end >= len(s):
+            break
+        start = max(0, end - overlap)
+    return chunks
+
+def _markdown_to_text(markdown: str):
+    s = str(markdown or "")
+    # Keep image URLs so the assistant knows screenshots exist.
+    s = re.sub(r"!\[[^\]]*\]\(([^)]+)\)", r"Image: \1", s)
+    # Replace links with text + url.
+    s = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", s)
+    # Strip code fences.
+    s = re.sub(r"```[\s\S]*?```", "", s)
+    # Basic cleanup.
+    s = re.sub(r"[\t\r]+", " ", s)
+    return s
+
+def _read_pdf_text(path: str) -> str:
+    try:
+        from pypdf import PdfReader
+    except Exception:
+        try:
+            from PyPDF2 import PdfReader
+        except Exception:
+            PdfReader = None
+    try:
+        if PdfReader:
+            reader = PdfReader(path)
+            parts = []
+            for page in reader.pages:
+                try:
+                    parts.append(page.extract_text() or "")
+                except Exception:
+                    continue
+            return "\n".join(parts)
+    except Exception:
+        pass
+    try:
+        result = subprocess.run(
+            ["pdftotext", "-layout", path, "-"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        return result.stdout or ""
+    except Exception:
+        return ""
+
+def _iter_doc_chunks(docs_dir: str, max_chunks: int, chunk_size: int, overlap: int):
+    if not docs_dir or not os.path.isdir(docs_dir):
+        return []
+    items = []
+    files = [f for f in os.listdir(docs_dir) if f.lower().endswith((".md", ".pdf"))]
+    files.sort()
+    for fname in files:
+        fpath = os.path.join(docs_dir, fname)
+        text = ""
+        if fname.lower().endswith(".md"):
+            try:
+                with open(fpath, "r", encoding="utf-8") as handle:
+                    raw = handle.read()
+                text = _markdown_to_text(raw)
+            except Exception:
+                text = ""
+        else:
+            text = _read_pdf_text(fpath)
+        if not text:
+            continue
+        header = f"Doc: {fname}\n"
+        chunks = _split_text(header + text, chunk_size, overlap)
+        for chunk in chunks:
+            items.append({"source": f"public/docs/{fname}", "text": chunk})
+            if max_chunks and len(items) >= max_chunks:
+                return items
+    return items
+
+def _load_embedding_index(path: str):
+    global _EMBED_INDEX, _EMBED_INDEX_MTIME
+    if not path or not os.path.exists(path):
+        return []
+    mtime = os.path.getmtime(path)
+    with _EMBED_LOCK:
+        if _EMBED_INDEX and _EMBED_INDEX_MTIME == mtime:
+            return _EMBED_INDEX
+        items = []
+        with open(path, "r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    items.append(json.loads(line))
+                except Exception:
+                    continue
+        _EMBED_INDEX = items
+        _EMBED_INDEX_MTIME = mtime
+        return items
+
+def _build_embedding_index(base: str, model: str, timeout: float):
+    (
+        enable,
+        _,
+        index_path,
+        _,
+        max_rows,
+        per_table,
+        docs_dir,
+        docs_max_chunks,
+        docs_chunk_size,
+        docs_chunk_overlap,
+    ) = _get_embedding_config()
+    if not enable or not index_path:
+        return []
+    os.makedirs(os.path.dirname(index_path), exist_ok=True)
+
+    rag_tables = current_app.config.get("RAG_TABLES") or ""
+    if rag_tables:
+        tables = [t.strip() for t in rag_tables.split(",") if t.strip()]
+    else:
+        tables = list(EXPORT_TABLES)
+
+    written = 0
+    items = []
+    try:
+        with db.engine.connect() as conn:
+            for table in tables:
+                cols, col_names = _get_table_columns(table)
+                if not col_names:
+                    continue
+                limit = min(per_table, max_rows - written)
+                if limit <= 0:
+                    break
+                sql = text(f"SELECT * FROM `{table}` LIMIT {int(limit)}")
+                try:
+                    rows = conn.execute(sql).fetchall()
+                except Exception:
+                    continue
+                for row in rows:
+                    fields = _pick_row_fields(row, col_names, 10, 300)
+                    if not fields:
+                        continue
+                    text_parts = [f"{k}: {v}" for k, v in fields]
+                    text_value = f"table: {table}\n" + "\n".join(text_parts)
+                    try:
+                        emb = _ollama_embed(base, model, text_value, timeout)
+                    except Exception:
+                        continue
+                    record = {
+                        "type": "row",
+                        "table": table,
+                        "fields": fields,
+                        "embedding": emb,
+                    }
+                    items.append(record)
+                    written += 1
+                    if written >= max_rows:
+                        break
+                if written >= max_rows:
+                    break
+    except Exception:
+        pass
+
+    if written < max_rows:
+        doc_chunks = _iter_doc_chunks(
+            docs_dir,
+            docs_max_chunks,
+            docs_chunk_size,
+            docs_chunk_overlap,
+        )
+        for chunk in doc_chunks:
+            if written >= max_rows:
+                break
+            try:
+                emb = _ollama_embed(base, model, chunk["text"], timeout)
+            except Exception:
+                continue
+            record = {
+                "type": "doc",
+                "source": chunk["source"],
+                "text": _compact_value(chunk["text"], 400),
+                "embedding": emb,
+            }
+            items.append(record)
+            written += 1
+
+    with open(index_path, "w", encoding="utf-8") as handle:
+        for item in items:
+            handle.write(json.dumps(item, ensure_ascii=False) + "\n")
+
+    with _EMBED_LOCK:
+        _EMBED_INDEX[:] = items
+        _EMBED_INDEX_MTIME = os.path.getmtime(index_path)
+    return items
+
+def _semantic_retrieve(question: str):
+    enable, model, index_path, auto_build, _, _, _, _, _, _ = _get_embedding_config()
+    if not enable:
+        return "", ""
+    base, _, timeout, _, _ = _get_ollama_config()
+
+    index = _load_embedding_index(index_path)
+    if not index and auto_build:
+        index = _build_embedding_index(base, model, timeout)
+    if not index:
+        return "", ""
+
+    qtext = _normalize_query_text(question, 200)
+    if not qtext:
+        return "", ""
+
+    try:
+        qvec = _ollama_embed(base, model, qtext, timeout)
+    except Exception:
+        return "", ""
+
+    scored = []
+    for item in index:
+        sim = _cosine_similarity(qvec, item.get("embedding") or [])
+        scored.append((sim, item))
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    max_results = int(current_app.config.get("RAG_MAX_RESULTS") or 6)
+    top_items = [it for _, it in scored[:max_results] if _ > 0]
+    if not top_items:
+        return "", ""
+
+    context_lines = []
+    evidence_lines = []
+    for idx, item in enumerate(top_items, 1):
+        if item.get("type") == "doc":
+            source = item.get("source") or "docs"
+            snippet = item.get("text") or ""
+            context_lines.append(f"[{idx}] doc: {source}; {snippet}")
+            evidence_lines.append(f"{idx}. Doc `{source}` — {snippet}")
+        else:
+            fields = item.get("fields") or []
+            context_lines.append(
+                f"[{idx}] table: {item.get('table')}; "
+                + "; ".join(f"{k}: {v}" for k, v in fields)
+            )
+            evidence_lines.append(
+                f"{idx}. Table `{item.get('table')}` — "
+                + "; ".join(f"{k}: {v}" for k, v in fields)
+            )
+
+    context = "Retrieved records (semantic match):\n" + "\n".join(context_lines)
+    evidence = "\n".join(evidence_lines)
+    return context, evidence
+
+def _normalize_query_text(text: str, max_len: int = 200) -> str:
+    s = str(text or "").strip()
+    if len(s) > max_len:
+        s = s[:max_len]
+    return s
+
+def _find_column(columns: list, keywords: list) -> str:
+    for col in columns:
+        low = str(col).lower()
+        if any(k in low for k in keywords):
+            return col
+    return ""
+
+def _compact_value(value, max_len: int) -> str:
+    if value is None:
+        return ""
+    s = str(value)
+    s = s.replace("\n", " ").replace("\r", " ").strip()
+    if len(s) > max_len:
+        return s[: max_len - 3] + "..."
+    return s
+
+def _doc_snippet(path: str, max_len: int = 600) -> str:
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            raw = handle.read()
+    except Exception:
+        return ""
+    text = _markdown_to_text(raw)
+    text = text.strip()
+    if not text:
+        return ""
+    if len(text) > max_len:
+        return text[: max_len - 3] + "..."
+    return text
+
+def _natural_doc_context(question: str):
+    if not re.search(r"natural|天然|sup-?trna|sup trna", str(question or ""), flags=re.IGNORECASE):
+        return "", ""
+    docs_dir = current_app.config.get("EMBEDDING_DOCS_DIR") or ""
+    if not docs_dir:
+        return "", ""
+    path = os.path.join(docs_dir, "3-Natural Sup-tRNA.md")
+    if not os.path.exists(path):
+        return "", ""
+    snippet = _doc_snippet(path, 700)
+    if not snippet:
+        return "", ""
+    context = "Natural sup-tRNA definition and features (from Help docs):\n" + snippet
+    evidence = f"Doc `public/docs/3-Natural Sup-tRNA.md` — {snippet}"
+    return context, evidence
+
+def _paper_meta_context(question: str):
+    if not re.search(r"author|authors|作者|论文|paper|pmid|doi|发表", str(question or ""), flags=re.IGNORECASE):
+        return "", ""
+    docs_dir = current_app.config.get("EMBEDDING_DOCS_DIR") or ""
+    if not docs_dir:
+        return "", ""
+    path = os.path.join(docs_dir, "0-ENSURE-Overview.md")
+    if not os.path.exists(path):
+        return "", ""
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+    except Exception:
+        return "", ""
+
+    authors_match = re.search(r"^Authors:\\s*(.+)$", content, flags=re.MULTILINE)
+    doi_match = re.search(r"DOI\\s+([^,\\n]+)", content, flags=re.IGNORECASE)
+    pmid_match = re.search(r"PMID\\s+(\\d+)", content, flags=re.IGNORECASE)
+
+    parts = []
+    evidence = []
+    if authors_match:
+        authors = authors_match.group(1).strip()
+        parts.append(f"Authors: {authors}")
+        evidence.append(f"Doc `public/docs/0-ENSURE-Overview.md` — Authors: {authors}")
+    if doi_match:
+        doi = doi_match.group(1).strip()
+        parts.append(f"DOI: {doi}")
+        evidence.append(f"Doc `public/docs/0-ENSURE-Overview.md` — DOI: {doi}")
+    if pmid_match:
+        pmid = pmid_match.group(1).strip()
+        parts.append(f"PMID: {pmid}")
+        evidence.append(f"Doc `public/docs/0-ENSURE-Overview.md` — PMID: {pmid}")
+
+    if not parts:
+        return "", ""
+    context = "ENSURE paper metadata:\n" + "\n".join(parts)
+    return context, "\n".join(evidence)
+
+def _is_count_question(text: str) -> bool:
+    return bool(re.search(r"\bhow many\b|count|数量|多少|有几", str(text or ""), flags=re.IGNORECASE))
+
+def _is_identity_question(text: str) -> bool:
+    return bool(re.search(r"你是谁|你叫什么|名字|who are you|your name", str(text or ""), flags=re.IGNORECASE))
+
+def _is_greeting(text: str) -> bool:
+    return bool(re.search(r"\bhi\b|\bhello\b|你好|您好|hey", str(text or ""), flags=re.IGNORECASE))
+
+def _mentions_platform(text: str) -> bool:
+    return bool(re.search(r"\bensure\b|数据库|网站|平台|this site|this database", str(text or ""), flags=re.IGNORECASE))
+
+def _evidence_required(text: str) -> bool:
+    if _is_identity_question(text) or _is_greeting(text):
+        return False
+    if _is_count_question(text):
+        return True
+    if re.search(r"作者|authors|pmid|doi|发表|哪年|when was|published|publication", str(text or ""), flags=re.IGNORECASE):
+        return True
+    if re.search(r"条目|记录|统计|页面|功能|特点|特征|操作|帮助|文档|怎么用|如何使用|下载|搜索|blast|api|物种|species", str(text or ""), flags=re.IGNORECASE):
+        return True
+    if re.search(r"ENSURE[_-]?\\d+|\\bpmid\\b", str(text or ""), flags=re.IGNORECASE):
+        return True
+    if _mentions_platform(text):
+        return True
+    return False
+
+def _strict_allowed_response(question: str) -> str:
+    if _is_identity_question(question):
+        return "我是Yingying（荧荧），ENSURE 数据库的助手。"
+    if _is_greeting(question):
+        return "你好，我是Yingying（荧荧）。可以帮你查询 ENSURE 的内容。"
+    return ""
+
+def _format_evidence_block(evidence: str) -> str:
+    if evidence:
+        return "\n\nSearch results:\n" + evidence
+    return "\n\nSearch results:\nNo relevant records found."
+
+def _count_table_rows(conn, table: str) -> int:
+    sql = text(f"SELECT COUNT(*) FROM `{table}`")
+    try:
+        return int(conn.execute(sql).scalar() or 0)
+    except Exception:
+        return 0
+
+def _rag_count(question: str):
+    if not _is_count_question(question):
+        return "", ""
+
+    q = str(question or "").lower()
+    targets = []
+    include_natural = any(k in q for k in ["natural", "天然", "自然"])
+    include_engineered = any(k in q for k in ["engineered", "工程", "人工", "设计"])
+    include_nonsense = any(k in q for k in ["nonsense", "无义", "终止"])
+    include_frameshift = any(k in q for k in ["frameshift", "移码"])
+
+    if include_nonsense:
+        targets.append("nonsense_sup_rna")
+    if include_frameshift:
+        targets.append("frameshift_sup_trna")
+    if include_engineered:
+        targets.append("Engineered_sup_tRNA")
+
+    if include_natural and "nonsense_sup_rna" not in targets:
+        targets.append("nonsense_sup_rna")
+    if include_natural and "frameshift_sup_trna" not in targets:
+        targets.append("frameshift_sup_trna")
+
+    if ("sup-trna" in q or "sup trna" in q or "sup-tRNA".lower() in q) and not targets:
+        targets = ["nonsense_sup_rna", "frameshift_sup_trna", "Engineered_sup_tRNA"]
+
+    if not targets:
+        return "", ""
+
+    counts = {}
+    with db.engine.connect() as conn:
+        for table in targets:
+            counts[table] = _count_table_rows(conn, table)
+
+    context_lines = []
+    evidence_lines = []
+
+    if "nonsense_sup_rna" in counts or "frameshift_sup_trna" in counts:
+        natural_total = counts.get("nonsense_sup_rna", 0) + counts.get("frameshift_sup_trna", 0)
+        context_lines.append(f"Natural sup-tRNA total (nonsense + frameshift) = {natural_total}")
+        evidence_lines.append(f"Natural sup-tRNA total = {natural_total} (nonsense_sup_rna + frameshift_sup_trna)")
+
+    if "Engineered_sup_tRNA" in counts:
+        context_lines.append(f"Engineered sup-tRNA total = {counts.get('Engineered_sup_tRNA', 0)}")
+        evidence_lines.append(f"Table `Engineered_sup_tRNA` count = {counts.get('Engineered_sup_tRNA', 0)}")
+
+    if len(counts) > 0:
+        for table, count in counts.items():
+            evidence_lines.append(f"Table `{table}` count = {count}")
+
+    if not context_lines:
+        return "", ""
+
+    context = "Live counts from ENSURE database tables:\n" + "\n".join(context_lines)
+    evidence = "\n".join(dict.fromkeys(evidence_lines))
+    return context, evidence
+
+def _parse_species_values(values: list):
+    species = set()
+    for val in values:
+        if not val:
+            continue
+        raw = str(val)
+        parts = re.split(r"[;,/|]|\\band\\b", raw, flags=re.IGNORECASE)
+        for part in parts:
+            name = part.strip()
+            if not name:
+                continue
+            species.add(name)
+    return sorted(species)
+
+def _rag_species(question: str):
+    if not re.search(r"物种|species", str(question or ""), flags=re.IGNORECASE):
+        return "", ""
+    if not re.search(r"natural|天然|sup-?trna|sup trna", str(question or ""), flags=re.IGNORECASE):
+        return "", ""
+
+    tables = ["nonsense_sup_rna", "frameshift_sup_trna"]
+    max_items = int(current_app.config.get("RAG_SPECIES_MAX") or 30)
+    all_species = set()
+    evidence_lines = []
+
+    with db.engine.connect() as conn:
+        for table in tables:
+            cols, col_names = _get_table_columns(table)
+            if not col_names:
+                continue
+            col = _find_column(col_names, ["species", "organism"])
+            if not col:
+                continue
+            sql = text(
+                f"SELECT DISTINCT `{col}` FROM `{table}` "
+                f"WHERE `{col}` IS NOT NULL AND `{col}` <> '' LIMIT 500"
+            )
+            try:
+                rows = conn.execute(sql).fetchall()
+            except Exception:
+                continue
+            values = [r[0] for r in rows]
+            species = _parse_species_values(values)
+            for s in species:
+                all_species.add(s)
+            sample = ", ".join(species[: min(len(species), max_items)])
+            evidence_lines.append(f"Table `{table}` column `{col}` sample species: {sample}")
+
+    if not all_species:
+        return "", ""
+
+    species_list = sorted(all_species)
+    shown = species_list[: max_items]
+    context = (
+        "Species list for natural sup-tRNAs (sample):\n"
+        + ", ".join(shown)
+    )
+    evidence = "\n".join(evidence_lines)
+    return context, evidence
+
+def _pick_row_fields(row, columns: list, max_fields: int, max_len: int):
+    row_map = dict(row._mapping) if hasattr(row, "_mapping") else dict(row)
+    priority = [
+        "ENSURE_ID",
+        "PMID",
+        "Gene",
+        "GENE",
+        "GENE_NAME",
+        "Variant",
+        "VARIANT",
+        "Mutation",
+        "MUTATION",
+        "Disease",
+        "DISEASE",
+        "Cancer",
+        "CANCER",
+        "Organism",
+        "ORGANISM",
+        "Species",
+        "SPECIES",
+        "tRNA",
+        "TRNA",
+        "AA",
+        "Amino",
+    ]
+    picked = []
+    seen = set()
+
+    for key in priority:
+        for col in columns:
+            if col in seen:
+                continue
+            if str(col).lower() == str(key).lower() and row_map.get(col) not in (None, ""):
+                picked.append((col, row_map.get(col)))
+                seen.add(col)
+        if len(picked) >= max_fields:
+            break
+
+    if len(picked) < max_fields:
+        for col in columns:
+            if col in seen:
+                continue
+            val = row_map.get(col)
+            if val in (None, ""):
+                continue
+            picked.append((col, val))
+            seen.add(col)
+            if len(picked) >= max_fields:
+                break
+
+    return [(k, _compact_value(v, max_len)) for k, v in picked]
+
+def _rag_retrieve(question: str):
+    if not current_app.config.get("RAG_ENABLE", True):
+        return "", ""
+
+    count_context, count_evidence = _rag_count(question)
+    paper_context, paper_evidence = _paper_meta_context(question)
+    natural_context, natural_evidence = _natural_doc_context(question)
+    species_context, species_evidence = _rag_species(question)
+    semantic_context, semantic_evidence = _semantic_retrieve(question)
+
+    search_text = _normalize_query_text(question, 200)
+    if not search_text:
+        context_parts = [
+            c for c in [
+                paper_context,
+                count_context,
+                natural_context,
+                species_context,
+                semantic_context
+            ] if c
+        ]
+        evidence_parts = [
+            e for e in [
+                paper_evidence,
+                count_evidence,
+                natural_evidence,
+                species_evidence,
+                semantic_evidence
+            ] if e
+        ]
+        return "\n\n".join(context_parts), "\n".join(evidence_parts)
+
+    rag_tables = current_app.config.get("RAG_TABLES") or ""
+    if rag_tables:
+        tables = [t.strip() for t in rag_tables.split(",") if t.strip()]
+    else:
+        tables = list(EXPORT_TABLES)
+
+    max_results = int(current_app.config.get("RAG_MAX_RESULTS") or 6)
+    per_table = int(current_app.config.get("RAG_PER_TABLE") or 2)
+    max_len = int(current_app.config.get("RAG_MAX_FIELD_LEN") or 160)
+    max_fields = 6
+
+    ensure_ids = re.findall(r"ENSURE[_-]?\d+", search_text, flags=re.IGNORECASE)
+    pmids = re.findall(r"\b\d{6,9}\b", search_text)
+
+    results = []
+    context_lines = []
+
+    with db.engine.connect() as conn:
+        for table in tables:
+            cols, col_names = _get_table_columns(table)
+            if not col_names:
+                continue
+
+            search_column = ""
+            search_values = None
+            if ensure_ids:
+                ensure_col = _find_column(col_names, ["ensure_id", "ensureid", "ensure"])
+                if ensure_col:
+                    search_column = ensure_col
+                    search_values = ensure_ids
+            if not search_column and pmids:
+                pmid_col = _find_column(col_names, ["pmid", "pubmed"])
+                if pmid_col:
+                    search_column = pmid_col
+                    search_values = pmids
+
+            use_fulltext = True
+            fulltext_cols = _get_fulltext_columns(table, "ft_all") if use_fulltext else []
+
+            where_sql, params, used_fulltext = _build_search_filter(
+                search_text,
+                search_column,
+                col_names,
+                True,
+                use_fulltext,
+                fulltext_cols,
+                search_values=search_values,
+            )
+            if not where_sql:
+                continue
+
+            order_sql = ""
+            if used_fulltext and fulltext_cols:
+                cols_sql = ", ".join(f"`{c}`" for c in fulltext_cols)
+                order_sql = f" ORDER BY MATCH({cols_sql}) AGAINST (:ft IN BOOLEAN MODE) DESC"
+
+            limit = max(1, per_table)
+            sql = text(f"SELECT * FROM `{table}` {where_sql}{order_sql} LIMIT {limit}")
+            try:
+                rows = conn.execute(sql, params).fetchall()
+            except Exception:
+                continue
+
+            for row in rows:
+                fields = _pick_row_fields(row, col_names, max_fields, max_len)
+                if not fields:
+                    continue
+                results.append({"table": table, "fields": fields})
+                context_lines.append(
+                    f"[{len(results)}] table: {table}; "
+                    + "; ".join(f"{k}: {v}" for k, v in fields)
+                )
+                if len(results) >= max_results:
+                    break
+            if len(results) >= max_results:
+                break
+
+    if not results:
+        context_parts = [
+            c for c in [
+                paper_context,
+                count_context,
+                natural_context,
+                species_context,
+                semantic_context
+            ] if c
+        ]
+        evidence_parts = [
+            e for e in [
+                paper_evidence,
+                count_evidence,
+                natural_evidence,
+                species_evidence,
+                semantic_evidence
+            ] if e
+        ]
+        return "\n\n".join(context_parts), "\n".join(evidence_parts)
+
+    context = "Retrieved records (may be partial):\n" + "\n".join(context_lines)
+    evidence_lines = [
+        f"{idx}. Table `{item['table']}` — "
+        + "; ".join(f"{k}: {v}" for k, v in item["fields"])
+        for idx, item in enumerate(results, 1)
+    ]
+    evidence = "\n".join(evidence_lines)
+
+    merged_contexts = [
+        c for c in [
+            paper_context,
+            count_context,
+            natural_context,
+            species_context,
+            semantic_context,
+            context
+        ] if c
+    ]
+    merged_evidence = [
+        e for e in [
+            paper_evidence,
+            count_evidence,
+            natural_evidence,
+            species_evidence,
+            semantic_evidence,
+            evidence
+        ] if e
+    ]
+    context = "\n\n".join(merged_contexts)
+    evidence = "\n".join(merged_evidence)
+    return context, evidence
 
 # ---------------------- 通用工具 ----------------------
 
@@ -884,6 +1684,72 @@ def chat_open():
     return jsonify({"data": chat_id}), 200
 
 
+@bp.route("/chat/api/title", methods=["POST"])
+def chat_title():
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("messages") or []
+    if not isinstance(items, list):
+        items = []
+
+    parts = []
+    user_parts = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        content = (item.get("content") or item.get("text") or "").strip()
+        if not content:
+            continue
+        role = item.get("role") or item.get("sender") or "user"
+        role = "User" if role == "user" else "Assistant"
+        if role == "User":
+            user_parts.append(content)
+        parts.append(f"{role}: {content}")
+        if len(parts) >= 10:
+            break
+
+    summary_input = "\n".join(parts).strip()
+    if not summary_input:
+        return jsonify({"title": "New chat"}), 200
+
+    base, model, timeout, _, _ = _get_ollama_config()
+    model = _select_ollama_model(payload.get("model"), model)
+    user_text = " ".join(user_parts).strip()
+    sample = user_text if user_text else summary_input
+    cjk_count = len(re.findall(r"[\u4e00-\u9fff]", sample))
+    latin_count = len(re.findall(r"[A-Za-z]", sample))
+    use_chinese = cjk_count >= 6 and cjk_count >= latin_count
+    if use_chinese:
+        system_prompt = (
+            "You are a title generator. Use Chinese only. "
+            "Return only a short title (max 14 Chinese characters). No quotes."
+        )
+    else:
+        system_prompt = (
+            "You are a title generator. Use English only. "
+            "Return only a short title (max 10 words). No quotes."
+        )
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": summary_input},
+    ]
+    title = ""
+    try:
+        for chunk, done in _ollama_stream(base, model, messages, timeout):
+            if chunk:
+                title += chunk
+            if done:
+                break
+    except Exception:
+        title = ""
+
+    title = title.replace("\n", " ").strip().strip('"').strip()
+    if len(title) > 60:
+        title = title[:60].rstrip() + "..."
+    if not title:
+        title = "New chat"
+    return jsonify({"title": title}), 200
+
+
 @bp.route("/chat/api/chat_message/<chat_id>", methods=["POST"])
 def chat_message(chat_id):
     payload = request.get_json(silent=True) or {}
@@ -892,13 +1758,27 @@ def chat_message(chat_id):
         return jsonify({"error": "missing message"}), 400
 
     base, model, timeout, system_prompt, max_messages = _get_ollama_config()
+    model = _select_ollama_model(payload.get("model"), model)
+    rag_context, rag_evidence = _rag_retrieve(message)
+    strict_evidence = bool(current_app.config.get("STRICT_EVIDENCE_MODE", False))
     _append_chat_message(chat_id, "user", message, max_messages)
     session = _get_chat_session(chat_id)
-    messages = _build_ollama_messages(session.get("messages"), system_prompt)
+    messages = _build_ollama_messages(session.get("messages"), system_prompt, rag_context)
 
     def generate():
         complete = ""
         try:
+            if strict_evidence and _evidence_required(message) and not rag_evidence:
+                allowed = _strict_allowed_response(message)
+                fallback = allowed or "当前数据中找不到"
+                _append_chat_message(chat_id, "assistant", fallback, max_messages)
+                data = json.dumps({"content": fallback}, ensure_ascii=False)
+                yield f"data: {data}\n\n"
+                evidence_text = _format_evidence_block(rag_evidence)
+                data = json.dumps({"content": evidence_text}, ensure_ascii=False)
+                yield f"data: {data}\n\n"
+                yield "data: [DONE]\n\n"
+                return
             for chunk, done in _ollama_stream(base, model, messages, timeout):
                 if chunk:
                     complete += chunk
@@ -908,6 +1788,9 @@ def chat_message(chat_id):
                     break
             if complete:
                 _append_chat_message(chat_id, "assistant", complete, max_messages)
+            evidence_text = _format_evidence_block(rag_evidence)
+            data = json.dumps({"content": evidence_text}, ensure_ascii=False)
+            yield f"data: {data}\n\n"
         except Exception as exc:
             data = json.dumps({"content": f"Error: {exc}"}, ensure_ascii=False)
             yield f"data: {data}\n\n"
@@ -918,6 +1801,16 @@ def chat_message(chat_id):
         "X-Accel-Buffering": "no",
     }
     return Response(stream_with_context(generate()), mimetype="text/event-stream", headers=headers)
+
+
+@bp.route("/embedding/rebuild", methods=["POST"])
+def embedding_rebuild():
+    enable, model, index_path, _, _, _ = _get_embedding_config()
+    if not enable:
+        return jsonify({"error": "embedding disabled"}), 400
+    base, _, timeout, _, _ = _get_ollama_config()
+    items = _build_embedding_index(base, model, timeout)
+    return jsonify({"ok": True, "count": len(items), "index_path": index_path}), 200
 
 @bp.route("/search", methods=["GET", "POST"])
 @bp.route("/search/", methods=["GET", "POST"])

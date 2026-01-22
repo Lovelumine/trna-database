@@ -6,6 +6,7 @@ import PageNotFound from './views/404.vue'; // 引入404组件
 import EnsureSTable from './components/EnsureSTable.vue'
 
 // 引入样式
+import './style.css';
 import './assets/global.css';
 import './assets/herf.css';
 import './assets/bot.css';
