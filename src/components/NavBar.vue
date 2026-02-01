@@ -292,4 +292,72 @@ export default {
     0 10px 20px -8px rgba(0, 0, 0, 0.6);
 }
 
+/* Re-assert mobile layout after base absolute rules */
+@media (max-width: 1100px) {
+  .site--header {
+    padding: 10px 12px 8px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "logo right"
+      "nav nav";
+    align-items: center;
+    row-gap: 4px;
+  }
+
+  header.site--header {
+    padding-top: 10px;
+  }
+
+  .site--url {
+    grid-area: logo;
+  }
+
+  .site--header__center {
+    grid-area: nav;
+    position: static;
+    transform: none;
+    width: 100%;
+    top: auto;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .site--header__right {
+    grid-area: right;
+    position: static;
+    width: auto;
+    justify-content: flex-end;
+    margin-top: 0;
+  }
+
+  .topNav-items.right {
+    justify-content: flex-end;
+    padding: 0;
+    overflow: visible;
+    height: auto;
+    gap: 6px;
+  }
+
+  .topNav-items {
+    padding: 4px 8px;
+  }
+
+  .topNav-items li {
+    padding: 6px 6px;
+  }
+
+  .theme-toggle {
+    width: 28px;
+    height: 28px;
+  }
+
+  .site--url .avatar {
+    height: 44px;
+    width: 44px;
+    margin-right: 0;
+  }
+}
+
 </style>
