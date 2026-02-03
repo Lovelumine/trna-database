@@ -23,6 +23,12 @@ class Config:
         "pool_recycle": 1800,
         "pool_size": 5,
         "max_overflow": 10,
+        "pool_timeout": int(os.getenv("MYSQL_POOL_TIMEOUT", "10")),
+        "connect_args": {
+            "connect_timeout": int(os.getenv("MYSQL_CONNECT_TIMEOUT", "5")),
+            "read_timeout": int(os.getenv("MYSQL_READ_TIMEOUT", "30")),
+            "write_timeout": int(os.getenv("MYSQL_WRITE_TIMEOUT", "30")),
+        },
     }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     EXPORT_CACHE_DIR = os.getenv(
@@ -60,9 +66,11 @@ class Config:
             "interactive 2D/3D visualization. ENSURE supports keyword search, BLAST, and bulk download.\n"
             "Key publication: ENSURE: the Encyclopedia of Suppressor tRNA with an AI assistant. "
             "PMID 41160884, DOI 10.1093/nar/gkaf1062.\n"
-            "Tools available: database table search/counts, semantic search over Help/Docs markdown, and "
-            "semantic search over PDFs placed in public/docs (e.g., gkaf1062.pdf). "
-            "Always rely on evidence from these tools and avoid guessing.\n"
+            "Tools available: database table schema/rows/counts/stats, sequence alignment search, "
+            "PubMed search (when enabled), semantic + keyword search over public/docs (Markdown/PDF), "
+            "and site/API reference docs in public/docs. Always rely on evidence from these tools when "
+            "a question asks for specific records, counts, or citations; for explanatory questions, "
+            "answer clearly and note when data is not found.\n"
             "Capabilities: Answer questions about ENSURE, its website and platform features, and help "
             "retrieve or interpret database content. If a question requires specific records, authors, "
             "publication metadata, or exact statistics, only answer when evidence is available; otherwise "
@@ -77,7 +85,36 @@ class Config:
     RAG_PER_TABLE = int(os.getenv("RAG_PER_TABLE", "2"))
     RAG_MAX_FIELD_LEN = int(os.getenv("RAG_MAX_FIELD_LEN", "160"))
     RAG_SPECIES_MAX = int(os.getenv("RAG_SPECIES_MAX", "30"))
-    STRICT_EVIDENCE_MODE = os.getenv("STRICT_EVIDENCE_MODE", "1").strip().lower() in ("1", "true", "yes")
+    STRICT_EVIDENCE_MODE = os.getenv("STRICT_EVIDENCE_MODE", "0").strip().lower() in ("1", "true", "yes")
+
+    TOOL_ROUTER_ENABLE = os.getenv("TOOL_ROUTER_ENABLE", "1").strip().lower() in ("1", "true", "yes")
+    TOOL_ROUTER_MAX_STEPS = int(os.getenv("TOOL_ROUTER_MAX_STEPS", "8"))
+    TOOL_ROUTER_MODEL = os.getenv("TOOL_ROUTER_MODEL", "").strip()
+    TOOL_ROUTER_TIMEOUT = float(os.getenv("TOOL_ROUTER_TIMEOUT", "20"))
+    TOOL_RESULT_MAX_CHARS = int(os.getenv("TOOL_RESULT_MAX_CHARS", "5000"))
+
+    RAG_QUERY_EXPAND = os.getenv("RAG_QUERY_EXPAND", "1").strip().lower() in ("1", "true", "yes")
+
+    LANG_DETECT_ENABLE = os.getenv("LANG_DETECT_ENABLE", "1").strip().lower() in ("1", "true", "yes")
+    INTENT_ROUTER_ENABLE = os.getenv("INTENT_ROUTER_ENABLE", "1").strip().lower() in ("1", "true", "yes")
+
+    PUBMED_ENABLE = os.getenv("PUBMED_ENABLE", "1").strip().lower() in ("1", "true", "yes")
+    PUBMED_EUTILS_BASE = os.getenv(
+        "PUBMED_EUTILS_BASE",
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
+    )
+    PUBMED_API_KEY = os.getenv("PUBMED_API_KEY", "").strip()
+    PUBMED_TOOL = os.getenv("PUBMED_TOOL", "ENSURE").strip()
+    PUBMED_EMAIL = os.getenv("PUBMED_EMAIL", "").strip()
+    PUBMED_TIMEOUT = float(os.getenv("PUBMED_TIMEOUT", "12"))
+    PUBMED_RETMAX = int(os.getenv("PUBMED_RETMAX", "10"))
+    PUBMED_ABSTRACT_MAX_CHARS = int(os.getenv("PUBMED_ABSTRACT_MAX_CHARS", "1200"))
+    PUBMED_ROUTER_ENABLE = os.getenv("PUBMED_ROUTER_ENABLE", "1").strip().lower() in ("1", "true", "yes")
+    PUBMED_ROUTER_MODEL = os.getenv("PUBMED_ROUTER_MODEL", "").strip()
+    PUBMED_ROUTER_TIMEOUT = float(os.getenv("PUBMED_ROUTER_TIMEOUT", "10"))
+    PMID_EXTRACTOR_ENABLE = os.getenv("PMID_EXTRACTOR_ENABLE", "1").strip().lower() in ("1", "true", "yes")
+    PMID_EXTRACTOR_MODEL = os.getenv("PMID_EXTRACTOR_MODEL", "").strip()
+    PMID_EXTRACTOR_TIMEOUT = float(os.getenv("PMID_EXTRACTOR_TIMEOUT", "10"))
 
     EMBEDDING_ENABLE = os.getenv("EMBEDDING_ENABLE", "1").strip().lower() not in ("0", "false", "no")
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text:latest")
