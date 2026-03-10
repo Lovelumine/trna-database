@@ -11,6 +11,7 @@ const messages: Record<'zh-CN' | 'en', Record<string, MessageValue>> = {
     'brand.eyebrow': 'ENSURE Admin',
     'prefs.language': '语言',
     'prefs.theme': '主题',
+    'prefs.themeSystem': '自动',
     'prefs.themeLight': '浅色',
     'prefs.themeDark': '暗黑',
     'prefs.languageZh': '中文',
@@ -19,23 +20,23 @@ const messages: Record<'zh-CN' | 'en', Record<string, MessageValue>> = {
     'prefs.lightMode': '浅色模式',
     'tool.language': '切换中英文',
     'tool.returnSite': '返回 ENSURE',
-    'login.heroTitle': '网站控制中心',
-    'login.heroLead': '独立后台用于管理数据表、文档内容、AI 配置和审计记录，不再混在主站页面里。',
-    'login.featureContentTitle': '内容运维',
-    'login.featureContentDesc': '维护数据库表、Markdown 文档和站点说明内容。',
+    'login.heroTitle': '数据、文档与 AI 统一维护',
+    'login.heroLead': '面向 ENSURE 管理员的后台入口，用于维护数据表、帮助文档、模型配置与审计记录。',
+    'login.featureContentTitle': '数据与内容',
+    'login.featureContentDesc': '管理数据库表、列显示配置、默认展示字段和帮助文档内容。',
     'login.featureAiTitle': 'AI 运行态',
-    'login.featureAiDesc': '统一管理 DeepSeek / Ollama、模型列表、系统提示词和上下文策略。',
+    'login.featureAiDesc': '维护模型提供方、默认模型、系统提示词与运行参数。',
     'login.featureAuditTitle': '审计留痕',
-    'login.featureAuditDesc': '跟踪后台登录、配置变更、文档修改和数据操作。',
+    'login.featureAuditDesc': '查看管理员登录、数据写入、文档修改与配置变更记录。',
     'login.signIn': '登录',
     'login.title': '登录后台',
-    'login.lead': '使用管理员账户进入 ENSURE 控制台。',
+    'login.lead': '使用管理员账户继续。',
     'login.username': '用户名',
     'login.password': '密码',
     'login.usernamePlaceholder': '请输入用户名',
     'login.passwordPlaceholder': '请输入密码',
-    'login.submit': '登录 ENSURE Admin',
-    'login.openSite': '在新页面打开主站',
+    'login.submit': '登录后台',
+    'login.openSite': '打开主站',
     'login.missing': '请输入用户名和密码',
     'login.failed': '登录失败',
     'login.success': '登录成功',
@@ -248,6 +249,7 @@ const messages: Record<'zh-CN' | 'en', Record<string, MessageValue>> = {
     'brand.eyebrow': 'ENSURE Admin',
     'prefs.language': 'Language',
     'prefs.theme': 'Theme',
+    'prefs.themeSystem': 'Auto',
     'prefs.themeLight': 'Light',
     'prefs.themeDark': 'Dark',
     'prefs.languageZh': '中文',
@@ -256,23 +258,23 @@ const messages: Record<'zh-CN' | 'en', Record<string, MessageValue>> = {
     'prefs.lightMode': 'Light mode',
     'tool.language': 'Switch language',
     'tool.returnSite': 'Return to ENSURE',
-    'login.heroTitle': 'Website Control Center',
-    'login.heroLead': 'This standalone admin manages database tables, documentation, AI configuration, and audit records without being mixed into the public site.',
-    'login.featureContentTitle': 'Content Ops',
-    'login.featureContentDesc': 'Maintain database tables, Markdown documents, and site copy.',
+    'login.heroTitle': 'One surface for data, docs, and AI runtime',
+    'login.heroLead': 'Administrator access for ENSURE data tables, documentation, model settings, and audit activity.',
+    'login.featureContentTitle': 'Data and Content',
+    'login.featureContentDesc': 'Maintain database tables, display labels, default columns, and help content.',
     'login.featureAiTitle': 'AI Runtime',
-    'login.featureAiDesc': 'Manage DeepSeek / Ollama, model lists, system prompts, and context strategy in one place.',
+    'login.featureAiDesc': 'Control provider selection, default models, system prompts, and runtime parameters.',
     'login.featureAuditTitle': 'Audit Trail',
-    'login.featureAuditDesc': 'Track sign-ins, setting changes, document edits, and data mutations.',
+    'login.featureAuditDesc': 'Review administrator sign-ins, data writes, document updates, and configuration changes.',
     'login.signIn': 'Sign in',
-    'login.title': 'Admin sign-in',
-    'login.lead': 'Use an administrator account to enter the ENSURE console.',
+    'login.title': 'Sign in',
+    'login.lead': 'Use your administrator account to continue.',
     'login.username': 'Username',
     'login.password': 'Password',
     'login.usernamePlaceholder': 'Enter username',
     'login.passwordPlaceholder': 'Enter password',
-    'login.submit': 'Sign in to ENSURE Admin',
-    'login.openSite': 'Open public site in a new tab',
+    'login.submit': 'Sign in',
+    'login.openSite': 'Open site',
     'login.missing': 'Enter both username and password',
     'login.failed': 'Login failed',
     'login.success': 'Login successful',
@@ -486,7 +488,7 @@ function interpolate(template: string, params: Record<string, any>) {
 }
 
 export function useAdminI18n() {
-  const { locale, theme, isDark, setLocale, toggleTheme } = useAdminPreferences();
+  const { locale, themeMode, resolvedTheme, isDark, setLocale, setThemeMode, toggleTheme } = useAdminPreferences();
 
   function t(key: string, params: Record<string, any> = {}) {
     const table = messages[locale.value] || messages['zh-CN'];
@@ -499,11 +501,17 @@ export function useAdminI18n() {
 
   return {
     locale,
-    theme,
+    themeMode,
+    resolvedTheme,
     isDark,
     setLocale,
+    setThemeMode,
     toggleTheme,
     t,
-    themeLabel: computed(() => (isDark.value ? t('prefs.lightMode') : t('prefs.darkMode')))
+    themeLabel: computed(() => {
+      if (themeMode.value === 'dark') return t('prefs.themeDark');
+      if (themeMode.value === 'light') return t('prefs.themeLight');
+      return t('prefs.themeSystem');
+    })
   };
 }

@@ -70,7 +70,21 @@
           </el-tooltip>
           <el-tooltip :content="themeLabel" placement="right">
             <button class="sidebar-tool-button" type="button" @click="toggleTheme">
-              <el-icon><component :is="isDark ? Sunny : MoonNight" /></el-icon>
+              <svg v-if="themeMode === 'dark'" class="sidebar-tool-svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20.74 15.28A8.68 8.68 0 0 1 8.72 3.26A9 9 0 1 0 20.74 15.28Z" fill="currentColor" />
+              </svg>
+              <svg v-else-if="themeMode === 'light'" class="sidebar-tool-svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M6.76 4.84l-1.8-1.79l-1.41 1.41l1.79 1.8l1.42-1.42Zm10.48 0l1.42 1.42l1.79-1.8l-1.41-1.41l-1.8 1.79ZM12 4h1V1h-2v3h1Zm7 8h3v-2h-3v2Zm-7 7h-1v3h2v-3h-1Zm8.95-.64l-1.79-1.79l-1.42 1.41l1.8 1.8l1.41-1.42ZM4.84 17.24l-1.79 1.8l1.41 1.41l1.8-1.79l-1.42-1.42ZM4 12H1v-2h3v2Zm8 5a5 5 0 1 1 0-10a5 5 0 0 1 0 10Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <svg v-else class="sidebar-tool-svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 2a10 10 0 0 0 0 20a1 1 0 0 0 0-2a8 8 0 1 1 0-16a1 1 0 0 0 0-2Zm0 2v16a8 8 0 0 0 0-16Z"
+                  fill="currentColor"
+                />
+              </svg>
             </button>
           </el-tooltip>
           <el-tooltip :content="t('tool.returnSite')" placement="right">
@@ -720,10 +734,8 @@ import {
   Grid,
   House,
   Monitor,
-  MoonNight,
   Notebook,
   RefreshRight,
-  Sunny,
   SwitchButton
 } from '@element-plus/icons-vue';
 
@@ -762,7 +774,7 @@ import { useMarkdown } from '@/utils/useMarkdown';
 
 const route = useRoute();
 const router = useRouter();
-const { locale, setLocale, toggleTheme, themeLabel, t, isDark } = useAdminI18n();
+const { locale, setLocale, toggleTheme, themeLabel, themeMode, t } = useAdminI18n();
 const { renderMarkdown } = useMarkdown();
 
 const adminUser = ref<AdminUser | null>(null);
@@ -1907,6 +1919,11 @@ onMounted(async () => {
 
 .sidebar-tool-button:hover {
   background: var(--admin-sidebar-tools-hover);
+}
+
+.sidebar-tool-svg {
+  width: 17px;
+  height: 17px;
 }
 
 .sidebar-tool-button--label {

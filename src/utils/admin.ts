@@ -66,7 +66,18 @@ export type AdminResourcesResponse = {
     editable_table_count: number;
     doc_count: number;
     total_rows: number;
+    media_count?: number;
   };
+};
+
+export type AdminTableMediaFieldConfig = {
+  renderer?: 'text' | 'image' | 'url' | 'file';
+  source?: 'auto' | 'direct' | 'template';
+  template?: string;
+  width?: number;
+  height?: number;
+  fit?: 'contain' | 'cover' | 'fill';
+  preview?: boolean;
 };
 
 export type AdminTableColumn = {
@@ -78,6 +89,7 @@ export type AdminTableColumn = {
 export type AdminTableMeta = AdminTableResource & {
   columns: AdminTableColumn[];
   default_visible_columns: string[];
+  media_fields?: Record<string, AdminTableMediaFieldConfig>;
 };
 
 export type AdminTableLabelsResponse = {
@@ -88,6 +100,11 @@ export type AdminTableLabelsResponse = {
 export type AdminTableVisibleColumnsResponse = {
   table: string;
   columns: string[];
+};
+
+export type AdminTableMediaFieldsResponse = {
+  table: string;
+  fields: Record<string, AdminTableMediaFieldConfig>;
 };
 
 export type AdminTableRowsResponse = {
@@ -103,6 +120,34 @@ export type AdminDocDetail = {
   type: string;
   editable: boolean;
   content: string;
+};
+
+export type AdminMediaAsset = {
+  id: number;
+  bucket: string;
+  object_key: string;
+  public_url: string;
+  mime_type: string;
+  file_ext: string;
+  size_bytes: number;
+  width?: number | null;
+  height?: number | null;
+  sha256: string;
+  title: string;
+  alt_text: string;
+  original_filename: string;
+  source_type: string;
+  created_by?: number | null;
+  created_by_username?: string;
+  created_at?: string | null;
+  markdown: string;
+};
+
+export type AdminMediaListResponse = {
+  page: number;
+  page_size: number;
+  total: number;
+  items: AdminMediaAsset[];
 };
 
 async function parseJson(resp: Response) {
@@ -239,6 +284,20 @@ export async function saveAdminTableVisibleColumns(
   return (await ensureOk(resp, '保存默认列失败')) as AdminTableVisibleColumnsResponse;
 }
 
+export async function saveAdminTableMediaFields(
+  table: string,
+  payload: { fields: Record<string, AdminTableMediaFieldConfig> },
+  csrfToken: string
+): Promise<AdminTableMediaFieldsResponse> {
+  const resp = await fetch(`/admin/api/tables/${encodeURIComponent(table)}/media_fields`, {
+    method: 'POST',
+    headers: adminJsonHeaders(csrfToken),
+    credentials: 'same-origin',
+    body: JSON.stringify(payload),
+  });
+  return (await ensureOk(resp, '保存图片字段配置失败')) as AdminTableMediaFieldsResponse;
+}
+
 export async function fetchAdminDoc(filename: string): Promise<AdminDocDetail> {
   const resp = await fetch(`/admin/api/docs/${encodeURIComponent(filename)}`, {
     method: 'GET',
@@ -275,6 +334,47 @@ export async function deleteAdminDoc(filename: string, csrfToken: string) {
     credentials: 'same-origin'
   });
   return await ensureOk(resp, '删除文档失败');
+}
+
+export async function fetchAdminMediaList(params: { search?: string; source_type?: string; page?: number; page_size?: number } = {}): Promise<AdminMediaListResponse> {
+  const query = new URLSearchParams();
+  if (params.search) query.set('search', String(params.search));
+  if (params.source_type) query.set('source_type', String(params.source_type));
+  if (params.page) query.set('page', String(params.page));
+  if (params.page_size) query.set('page_size', String(params.page_size));
+  const resp = await fetch(`/admin/api/media${query.toString() ? `?${query.toString()}` : ''}`, {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'same-origin',
+  });
+  return (await ensureOk(resp, '加载媒体库失败')) as AdminMediaListResponse;
+}
+
+export async function uploadAdminMedia(
+  file: File,
+  payload: { csrfToken: string; title?: string; alt_text?: string; source_type?: string }
+): Promise<{ asset: AdminMediaAsset; deduped?: boolean }> {
+  const form = new FormData();
+  form.append('file', file);
+  if (payload.title) form.append('title', payload.title);
+  if (payload.alt_text) form.append('alt_text', payload.alt_text);
+  if (payload.source_type) form.append('source_type', payload.source_type);
+  const resp = await fetch('/admin/api/media/upload', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: payload.csrfToken ? { 'X-CSRF-Token': payload.csrfToken } : undefined,
+    body: form,
+  });
+  return (await ensureOk(resp, '上传图片失败')) as { asset: AdminMediaAsset; deduped?: boolean };
+}
+
+export async function deleteAdminMedia(assetId: number, csrfToken: string) {
+  const resp = await fetch(`/admin/api/media/${assetId}`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+    headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : undefined,
+  });
+  return await ensureOk(resp, '删除图片失败');
 }
 
 export async function saveAdminLLMSettings(payload: Record<string, any>): Promise<AdminLLMSettings> {

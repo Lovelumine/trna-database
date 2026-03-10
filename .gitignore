@@ -48,6 +48,8 @@ python scripts
 __pycache__
 .venv/
 Flask/.venv/
+Flask/.deps_installed.system
+Flask/.requirements.system.sha256
 
 # Large media/fonts kept locally but not tracked
 *.mp4

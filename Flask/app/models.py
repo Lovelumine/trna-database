@@ -50,3 +50,25 @@ class AppSetting(db.Model):
     setting_key = db.Column(db.String(128), primary_key=True)
     setting_value = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class MediaAsset(db.Model):
+    __tablename__ = "media_assets"
+
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    bucket = db.Column(db.String(128), nullable=False, index=True)
+    object_key = db.Column(db.String(512), nullable=False, unique=True, index=True)
+    public_url = db.Column(db.String(1024), nullable=False)
+    mime_type = db.Column(db.String(128), nullable=False)
+    file_ext = db.Column(db.String(32), nullable=False)
+    size_bytes = db.Column(db.BigInteger, nullable=False, server_default=text("0"))
+    width = db.Column(db.Integer)
+    height = db.Column(db.Integer)
+    sha256 = db.Column(db.String(64), index=True)
+    title = db.Column(db.String(255))
+    alt_text = db.Column(db.String(255))
+    original_filename = db.Column(db.String(255))
+    source_type = db.Column(db.String(64), nullable=False, server_default=text("'library'"), index=True)
+    created_by = db.Column(db.Integer, index=True)
+    created_by_username = db.Column(db.String(64), index=True)
+    created_at = db.Column(db.DateTime, server_default=func.now(), index=True)

@@ -13,6 +13,8 @@ from flask import (
 import csv
 import json
 import hashlib
+import io
+import mimetypes
 import os
 import threading
 import time
@@ -23,9 +25,11 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from sqlalchemy import text, bindparam, Integer
+from sqlalchemy import text, bindparam, Integer, or_
 import re
 import requests
+from PIL import Image
+from werkzeug.utils import secure_filename
 from . import db
 from .admin import (
     admin_required,
@@ -38,14 +42,16 @@ from .admin import (
     serialize_admin_user,
     verify_admin_credentials,
 )
-from .models import AdminAuditLog
+from .models import AdminAuditLog, MediaAsset
 from .settings_store import (
     get_llm_settings,
     get_table_column_labels,
     get_table_default_visible_columns,
+    get_table_media_field_config,
     save_llm_settings,
     save_table_column_labels,
     save_table_default_visible_columns,
+    save_table_media_field_config,
 )
 
 from .logic.align import (
@@ -2988,6 +2994,147 @@ def _minio_public_url(key: str) -> str:
         return ""
     return f"{base}/{key}"
 
+
+_MEDIA_FORMAT_INFO = {
+    "PNG": (".png", "image/png"),
+    "JPEG": (".jpg", "image/jpeg"),
+    "WEBP": (".webp", "image/webp"),
+    "GIF": (".gif", "image/gif"),
+}
+
+
+def _safe_media_source_type(value: str) -> str:
+    source_type = re.sub(r"[^a-z0-9_-]+", "-", str(value or "").strip().lower()).strip("-")
+    return source_type or "library"
+
+
+def _minio_media_object_key(source_type: str, sha256_hex: str, file_ext: str) -> str:
+    prefix = str(current_app.config.get("MINIO_MEDIA_PREFIX") or "media").strip("/")
+    now = datetime.utcnow()
+    return f"{prefix}/{_safe_media_source_type(source_type)}/{now:%Y/%m}/{sha256_hex}{file_ext}"
+
+
+def _serialize_media_asset(asset: MediaAsset) -> dict:
+    return {
+        "id": int(asset.id),
+        "bucket": str(asset.bucket or ""),
+        "object_key": str(asset.object_key or ""),
+        "public_url": str(asset.public_url or ""),
+        "mime_type": str(asset.mime_type or ""),
+        "file_ext": str(asset.file_ext or ""),
+        "size_bytes": int(asset.size_bytes or 0),
+        "width": int(asset.width or 0) if asset.width else None,
+        "height": int(asset.height or 0) if asset.height else None,
+        "sha256": str(asset.sha256 or ""),
+        "title": str(asset.title or ""),
+        "alt_text": str(asset.alt_text or ""),
+        "original_filename": str(asset.original_filename or ""),
+        "source_type": str(asset.source_type or "library"),
+        "created_by": int(asset.created_by or 0) if asset.created_by else None,
+        "created_by_username": str(asset.created_by_username or ""),
+        "created_at": asset.created_at.isoformat() if asset.created_at else None,
+        "markdown": f"![{str(asset.alt_text or asset.title or '').strip()}]({str(asset.public_url or '').strip()})",
+    }
+
+
+def _read_uploaded_media_image(file_storage):
+    if file_storage is None:
+        raise ValueError("file is required")
+    max_bytes = int(current_app.config.get("MEDIA_UPLOAD_MAX_BYTES") or 0) or (10 * 1024 * 1024)
+    original_name = secure_filename(str(getattr(file_storage, "filename", "") or "").strip())
+    if not original_name:
+        raise ValueError("filename is required")
+    payload = file_storage.read()
+    if not payload:
+        raise ValueError("uploaded file is empty")
+    if len(payload) > max_bytes:
+        raise ValueError(f"file exceeds {max_bytes // (1024 * 1024)} MB limit")
+    try:
+        with Image.open(io.BytesIO(payload)) as image:
+            image.load()
+            fmt = str(image.format or "").upper()
+            width, height = image.size
+    except Exception as exc:
+        raise ValueError("only PNG/JPG/WEBP/GIF images are supported") from exc
+    if fmt not in _MEDIA_FORMAT_INFO:
+        raise ValueError("only PNG/JPG/WEBP/GIF images are supported")
+    file_ext, mime_type = _MEDIA_FORMAT_INFO[fmt]
+    guessed_mime = str(getattr(file_storage, "mimetype", "") or "").strip().lower()
+    if guessed_mime and guessed_mime not in {mime_type, "image/jpg"}:
+        raise ValueError("uploaded image type does not match file content")
+    guessed_ext = (Path(original_name).suffix or "").lower()
+    if guessed_ext and guessed_ext not in {file_ext, ".jpeg" if file_ext == ".jpg" else file_ext}:
+        raise ValueError("uploaded image extension does not match file content")
+    return {
+        "payload": payload,
+        "size_bytes": len(payload),
+        "width": int(width or 0),
+        "height": int(height or 0),
+        "mime_type": mime_type,
+        "file_ext": file_ext,
+        "original_filename": original_name,
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def _media_asset_query():
+    return MediaAsset.query.order_by(MediaAsset.created_at.desc(), MediaAsset.id.desc())
+
+
+def _find_media_asset_references(asset: MediaAsset) -> list[dict]:
+    references: list[dict] = []
+    public_url = str(asset.public_url or "").strip()
+    object_key = str(asset.object_key or "").strip()
+    if not public_url and not object_key:
+        return references
+
+    for doc in _admin_list_docs():
+        try:
+            path = _admin_doc_allowed(doc.get("filename") or "")
+            with open(path, "r", encoding="utf-8") as handle:
+                content = handle.read()
+            if (public_url and public_url in content) or (object_key and object_key in content):
+                references.append({"type": "doc", "resource": doc.get("filename") or ""})
+        except Exception:
+            continue
+
+    scan_tables = _admin_all_tables(include_internal=False)
+    for table_name in scan_tables:
+        cols, _ = _get_table_columns(table_name)
+        if not cols:
+            continue
+        text_columns = [
+            str(column.get("name"))
+            for column in cols
+            if any(token in str(column.get("type") or "").lower() for token in ("char", "text", "json"))
+        ]
+        if not text_columns:
+            continue
+        clauses = []
+        params = {}
+        idx = 0
+        for column_name in text_columns:
+            if public_url:
+                params[f"u{idx}"] = f"%{public_url}%"
+                clauses.append(f"CAST(`{column_name}` AS CHAR) LIKE :u{idx}")
+                idx += 1
+            if object_key:
+                params[f"k{idx}"] = f"%{object_key}%"
+                clauses.append(f"CAST(`{column_name}` AS CHAR) LIKE :k{idx}")
+                idx += 1
+        if not clauses:
+            continue
+        sql = text(f"SELECT 1 FROM `{table_name}` WHERE {' OR '.join(clauses)} LIMIT 1")
+        try:
+            with db.engine.connect() as conn:
+                hit = conn.execute(sql, params).first()
+            if hit:
+                references.append({"type": "table", "resource": table_name})
+        except Exception:
+            continue
+
+    return references
+
 def _minio_stream_response(client, bucket: str, key: str, table: str, fmt: str):
     obj = client.get_object(bucket, key)
 
@@ -4022,6 +4169,7 @@ def admin_resources():
     tables = [item for item in tables if item]
     docs = _admin_list_docs()
     total_rows = sum(int(item.get("row_count") or 0) for item in tables)
+    media_count = int(MediaAsset.query.count())
     return jsonify(
         {
             "tables": tables,
@@ -4031,6 +4179,7 @@ def admin_resources():
                 "editable_table_count": len([item for item in tables if not item.get("read_only")]),
                 "doc_count": len(docs),
                 "total_rows": int(total_rows),
+                "media_count": media_count,
             },
         }
     )
@@ -4046,10 +4195,12 @@ def admin_table_meta(table):
     summary = _admin_table_summary(table)
     label_overrides = get_table_column_labels(table)
     default_visible_columns = get_table_default_visible_columns(table)
+    media_fields = get_table_media_field_config(table)
     return jsonify(
         {
             **summary,
             "default_visible_columns": default_visible_columns,
+            "media_fields": media_fields,
             "columns": [
                 {
                     "name": c["name"],
@@ -4110,6 +4261,32 @@ def admin_table_visible_columns_update(table):
     return jsonify({"ok": True, "table": table, "columns": after})
 
 
+@bp.route("/admin/api/tables/<table>/media_fields", methods=["POST"])
+@admin_write_required
+def admin_table_media_fields_update(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    cols, col_names = _get_table_columns(table)
+    if not cols:
+        return jsonify({"error": f"Table '{table}' does not exist"}), 404
+    payload = request.get_json(silent=True) or {}
+    raw_fields = payload.get("fields") or {}
+    safe_fields = {
+        str(column): config
+        for column, config in (raw_fields.items() if isinstance(raw_fields, dict) else [])
+        if str(column) in col_names
+    }
+    before, after = save_table_media_field_config(table, safe_fields)
+    audit_admin_action(
+        action="update_media_fields",
+        table_name="app_settings",
+        record_pk=f"media_fields:{table}",
+        before=before,
+        after=after,
+    )
+    return jsonify({"ok": True, "table": table, "fields": after})
+
+
 @bp.route("/api/tables/<table>/column_labels", methods=["GET"])
 def public_table_column_labels(table):
     if not _admin_table_allowed(table):
@@ -4122,6 +4299,13 @@ def public_table_default_columns(table):
     if not _admin_table_allowed(table):
         return jsonify({"error": f"Table '{table}' is not public"}), 404
     return jsonify({"table": table, "columns": get_table_default_visible_columns(table)})
+
+
+@bp.route("/api/tables/<table>/media_fields", methods=["GET"])
+def public_table_media_fields(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not public"}), 404
+    return jsonify({"table": table, "fields": get_table_media_field_config(table)})
 
 @bp.route("/admin/api/tables/<table>/rows", methods=["POST"])
 @admin_required
@@ -4303,6 +4487,151 @@ def admin_docs_delete(filename):
         return jsonify({"error": "document not found"}), 404
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
+
+
+@bp.route("/admin/api/media", methods=["GET"])
+@admin_required
+def admin_media_list():
+    search = str(request.args.get("search") or "").strip()
+    source_type = _safe_media_source_type(request.args.get("source_type") or "")
+    try:
+        page = max(int(request.args.get("page") or 1), 1)
+    except Exception:
+        page = 1
+    try:
+        page_size = min(max(int(request.args.get("page_size") or 24), 1), 100)
+    except Exception:
+        page_size = 24
+    query = _media_asset_query()
+    if search:
+        needle = f"%{search}%"
+        query = query.filter(
+            or_(
+                MediaAsset.title.ilike(needle),
+                MediaAsset.alt_text.ilike(needle),
+                MediaAsset.original_filename.ilike(needle),
+                MediaAsset.object_key.ilike(needle),
+                MediaAsset.public_url.ilike(needle),
+            )
+        )
+    if source_type and source_type != "all":
+        query = query.filter(MediaAsset.source_type == source_type)
+    total = int(query.count())
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+    return jsonify(
+        {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "items": [_serialize_media_asset(item) for item in items],
+        }
+    )
+
+
+@bp.route("/admin/api/media/upload", methods=["POST"])
+@admin_write_required
+def admin_media_upload():
+    bucket = str(current_app.config.get("MINIO_BUCKET") or "").strip()
+    minio_client = _get_minio_client()
+    if not bucket or not minio_client:
+        return jsonify({"error": "MinIO is not configured"}), 400
+    try:
+        uploaded = request.files.get("file")
+        source_type = _safe_media_source_type(request.form.get("source_type") or "library")
+        title = str(request.form.get("title") or "").strip()
+        alt_text = str(request.form.get("alt_text") or "").strip()
+        image_info = _read_uploaded_media_image(uploaded)
+        existing = MediaAsset.query.filter_by(
+            sha256=image_info["sha256"],
+            size_bytes=image_info["size_bytes"],
+        ).order_by(MediaAsset.id.desc()).first()
+        if existing:
+            return jsonify({"ok": True, "asset": _serialize_media_asset(existing), "deduped": True}), 200
+
+        object_key = _minio_media_object_key(source_type, image_info["sha256"], image_info["file_ext"])
+        public_url = _minio_public_url(object_key)
+        if not public_url:
+            return jsonify({"error": "MinIO public base is not configured"}), 400
+
+        minio_client.put_object(
+            bucket,
+            object_key,
+            io.BytesIO(image_info["payload"]),
+            length=image_info["size_bytes"],
+            content_type=image_info["mime_type"],
+        )
+        actor = current_admin()
+        asset = MediaAsset(
+            bucket=bucket,
+            object_key=object_key,
+            public_url=public_url,
+            mime_type=image_info["mime_type"],
+            file_ext=image_info["file_ext"],
+            size_bytes=image_info["size_bytes"],
+            width=image_info["width"],
+            height=image_info["height"],
+            sha256=image_info["sha256"],
+            title=title or Path(image_info["original_filename"]).stem,
+            alt_text=alt_text,
+            original_filename=image_info["original_filename"],
+            source_type=source_type,
+            created_by=int(actor.id) if actor else None,
+            created_by_username=str(actor.username) if actor else "",
+        )
+        db.session.add(asset)
+        db.session.commit()
+        payload = _serialize_media_asset(asset)
+        audit_admin_action(
+            action="upload_media",
+            table_name="media_assets",
+            record_pk=str(asset.id),
+            after=payload,
+            user=actor,
+        )
+        return jsonify({"ok": True, "asset": payload, "deduped": False}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+
+
+@bp.route("/admin/api/media/<int:asset_id>", methods=["DELETE"])
+@admin_write_required
+def admin_media_delete(asset_id: int):
+    asset = db.session.get(MediaAsset, int(asset_id))
+    if not asset:
+        return jsonify({"error": "media asset not found"}), 404
+    references = _find_media_asset_references(asset)
+    if references:
+        return jsonify({"error": "media asset is still referenced", "references": references}), 409
+    minio_client = _get_minio_client()
+    bucket = str(current_app.config.get("MINIO_BUCKET") or "").strip()
+    payload = _serialize_media_asset(asset)
+    try:
+        if minio_client and bucket and asset.object_key:
+            try:
+                minio_client.remove_object(bucket, asset.object_key)
+            except Exception:
+                pass
+        db.session.delete(asset)
+        db.session.commit()
+        audit_admin_action(
+            action="delete_media",
+            table_name="media_assets",
+            record_pk=str(asset_id),
+            before=payload,
+        )
+        return jsonify({"ok": True}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+
+
+@bp.route("/api/media/<int:asset_id>", methods=["GET"])
+def public_media_detail(asset_id: int):
+    asset = db.session.get(MediaAsset, int(asset_id))
+    if not asset:
+        return jsonify({"error": "media asset not found"}), 404
+    return jsonify(_serialize_media_asset(asset))
 
 
 @bp.route("/chat/api/models", methods=["GET"])

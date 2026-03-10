@@ -48,12 +48,14 @@ class Config:
     MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
     MINIO_BUCKET = os.getenv("MINIO_BUCKET")
     MINIO_EXPORT_PREFIX = os.getenv("MINIO_EXPORT_PREFIX", "exports")
+    MINIO_MEDIA_PREFIX = os.getenv("MINIO_MEDIA_PREFIX", "media")
     MINIO_PUBLIC_BASE = os.getenv("MINIO_PUBLIC_BASE")
     _minio_secure = os.getenv("MINIO_SECURE")
     if _minio_secure is None:
         MINIO_SECURE = None
     else:
         MINIO_SECURE = _minio_secure.strip().lower() in ("1", "true", "yes")
+    MEDIA_UPLOAD_MAX_BYTES = int(os.getenv("MEDIA_UPLOAD_MAX_BYTES", str(10 * 1024 * 1024)))
 
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://192.168.236.2:11434")
     OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:32b")

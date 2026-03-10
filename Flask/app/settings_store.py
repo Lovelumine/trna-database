@@ -27,6 +27,7 @@ DEFAULT_SETTING_FACTORIES = {
     "llm_deepseek_models_json": lambda: json.dumps(DEFAULT_DEEPSEEK_MODELS, ensure_ascii=False),
     "table_column_label_overrides_json": lambda: "{}",
     "table_default_visible_columns_json": lambda: "{}",
+    "table_media_field_config_json": lambda: "{}",
 }
 
 
@@ -315,4 +316,77 @@ def save_table_default_visible_columns(table: str, columns: list[Any]):
     set_setting("table_default_visible_columns_json", json.dumps(overrides, ensure_ascii=False))
     db.session.commit()
     after = list(overrides.get(table_key, []))
+    return before, after
+
+
+def _normalize_media_field_config(raw: Any) -> dict[str, dict[str, Any]]:
+    normalized: dict[str, dict[str, Any]] = {}
+    if not isinstance(raw, dict):
+        return normalized
+    for field_name, config in raw.items():
+        field_key = str(field_name or "").strip()
+        if not field_key or not isinstance(config, dict):
+            continue
+        renderer = str(config.get("renderer") or "").strip().lower()
+        source = str(config.get("source") or "").strip().lower()
+        template = str(config.get("template") or "").strip()
+        item: dict[str, Any] = {}
+        if renderer in ("text", "image", "url", "file"):
+            item["renderer"] = renderer
+        if source in ("auto", "direct", "template"):
+            item["source"] = source
+        if template:
+            item["template"] = template
+        for key in ("width", "height"):
+            try:
+                value = int(config.get(key))
+            except Exception:
+                value = 0
+            if value > 0:
+                item[key] = value
+        fit = str(config.get("fit") or "").strip().lower()
+        if fit in ("contain", "cover", "fill"):
+            item["fit"] = fit
+        if "preview" in config:
+            item["preview"] = bool(config.get("preview"))
+        if item:
+            normalized[field_key] = item
+    return normalized
+
+
+def get_table_media_field_config_map() -> dict[str, dict[str, dict[str, Any]]]:
+    ensure_default_app_settings()
+    raw = _json_dict(get_setting("table_media_field_config_json", "{}"), {})
+    normalized: dict[str, dict[str, dict[str, Any]]] = {}
+    for table_name, config in raw.items():
+        table_key = str(table_name or "").strip()
+        if not table_key:
+            continue
+        table_config = _normalize_media_field_config(config)
+        if table_config:
+            normalized[table_key] = table_config
+    return normalized
+
+
+def get_table_media_field_config(table: str) -> dict[str, dict[str, Any]]:
+    table_key = str(table or "").strip()
+    if not table_key:
+        return {}
+    return dict(get_table_media_field_config_map().get(table_key, {}))
+
+
+def save_table_media_field_config(table: str, config: dict[str, Any]):
+    table_key = str(table or "").strip()
+    if not table_key:
+        raise ValueError("table is required")
+    before = get_table_media_field_config(table_key)
+    overrides = get_table_media_field_config_map()
+    normalized = _normalize_media_field_config(config)
+    if normalized:
+        overrides[table_key] = normalized
+    else:
+        overrides.pop(table_key, None)
+    set_setting("table_media_field_config_json", json.dumps(overrides, ensure_ascii=False))
+    db.session.commit()
+    after = dict(overrides.get(table_key, {}))
     return before, after

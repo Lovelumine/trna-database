@@ -1,41 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import argparse
+import hashlib
 import os
 import subprocess
 import sys
-import venv
 from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 FLASK_DIR = SCRIPT_DIR.parent
 ROOT_DIR = FLASK_DIR.parent
-VENV_DIR = FLASK_DIR / ".venv"
 REQUIREMENTS = FLASK_DIR / "requirements.txt"
+DEPS_MARKER = FLASK_DIR / ".deps_installed.system"
+REQUIREMENTS_HASH_FILE = FLASK_DIR / ".requirements.system.sha256"
 
 
 def is_windows() -> bool:
     return os.name == "nt"
 
 
-def venv_python_path() -> Path:
-    if is_windows():
-        return VENV_DIR / "Scripts" / "python.exe"
-    return VENV_DIR / "bin" / "python"
-
-
-def ensure_venv() -> Path:
-    python_path = venv_python_path()
-    if python_path.exists():
-        return python_path
-
-    print(f"[ENSURE] creating virtual environment at {VENV_DIR}")
-    builder = venv.EnvBuilder(with_pip=True, clear=False, upgrade=False)
-    builder.create(str(VENV_DIR))
-    if not python_path.exists():
-        raise RuntimeError(f"virtualenv created but python not found: {python_path}")
-    return python_path
+def current_python_path() -> Path:
+    return Path(sys.executable).resolve()
 
 
 def run(cmd: list[str], cwd: Path | None = None):
@@ -43,11 +29,30 @@ def run(cmd: list[str], cwd: Path | None = None):
     subprocess.check_call(cmd, cwd=str(cwd or ROOT_DIR))
 
 
+def requirements_sha256() -> str:
+    if not REQUIREMENTS.exists():
+        raise FileNotFoundError(f"requirements file not found: {REQUIREMENTS}")
+    return hashlib.sha256(REQUIREMENTS.read_bytes()).hexdigest()
+
+
+def needs_dependency_install() -> bool:
+    if not DEPS_MARKER.exists():
+        return True
+    if not REQUIREMENTS_HASH_FILE.exists():
+        return True
+    try:
+        return REQUIREMENTS_HASH_FILE.read_text(encoding="utf-8").strip() != requirements_sha256()
+    except OSError:
+        return True
+
+
 def install_requirements(python_path: Path):
     if not REQUIREMENTS.exists():
         raise FileNotFoundError(f"requirements file not found: {REQUIREMENTS}")
     run([str(python_path), "-m", "pip", "install", "--upgrade", "pip"], cwd=FLASK_DIR)
     run([str(python_path), "-m", "pip", "install", "-r", str(REQUIREMENTS)], cwd=FLASK_DIR)
+    DEPS_MARKER.write_text("ok\n", encoding="utf-8")
+    REQUIREMENTS_HASH_FILE.write_text(requirements_sha256() + "\n", encoding="utf-8")
 
 
 def parse_args():
@@ -74,12 +79,11 @@ def main():
     install_flag = bool(args.install)
     no_install_flag = bool(args.no_install)
 
-    python_path = ensure_venv()
-    first_boot = not (VENV_DIR / ".deps_installed").exists()
+    python_path = current_python_path()
+    deps_missing_or_changed = needs_dependency_install()
 
-    if install_flag or (first_boot and not no_install_flag):
+    if install_flag or (deps_missing_or_changed and not no_install_flag):
         install_requirements(python_path)
-        (VENV_DIR / ".deps_installed").write_text("ok\n", encoding="utf-8")
 
     try:
         raise SystemExit(start_server(python_path, host=args.host, port=args.port))
