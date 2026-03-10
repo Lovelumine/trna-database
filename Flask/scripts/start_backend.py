@@ -59,19 +59,49 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Start the ENSURE Flask backend.")
     parser.add_argument("--install", "--bootstrap", action="store_true", dest="install", help="Force reinstall backend dependencies")
     parser.add_argument("--no-install", action="store_true", help="Skip dependency installation")
-    parser.add_argument("--host", default="127.0.0.1", help="Backend bind host, default: 127.0.0.1")
+    parser.add_argument(
+        "--server",
+        choices=["flask", "gunicorn"],
+        default="gunicorn",
+        help="Server mode: flask for development, gunicorn for production (default: gunicorn)",
+    )
+    parser.add_argument("--host", default="0.0.0.0", help="Backend bind host, default: 0.0.0.0")
     parser.add_argument("--port", type=int, default=8010, help="Backend bind port, default: 8010")
     return parser.parse_args()
 
 
-def start_server(python_path: Path, host: str, port: int):
+def start_flask_server(python_path: Path, host: str, port: int):
     env = os.environ.copy()
     env.setdefault("PYTHONUNBUFFERED", "1")
     env["ENSURE_BACKEND_HOST"] = str(host)
     env["ENSURE_BACKEND_PORT"] = str(port)
     os.chdir(FLASK_DIR)
-    print(f"[ENSURE] starting Flask backend on http://{host}:{port}")
+    print(f"[ENSURE] starting Flask development server on http://{host}:{port}")
     return subprocess.call([str(python_path), "wsgi.py"], cwd=str(FLASK_DIR), env=env)
+
+
+def start_gunicorn_server(python_path: Path, host: str, port: int):
+    env = os.environ.copy()
+    env.setdefault("PYTHONUNBUFFERED", "1")
+    env["ENSURE_BACKEND_HOST"] = str(host)
+    env["ENSURE_BACKEND_PORT"] = str(port)
+    bind = f"{host}:{port}"
+    os.chdir(FLASK_DIR)
+    print(f"[ENSURE] starting Gunicorn backend on http://{host}:{port}")
+    return subprocess.call(
+        [
+            str(python_path),
+            "-m",
+            "gunicorn",
+            "-c",
+            "gunicorn.conf.py",
+            "--bind",
+            bind,
+            "wsgi:app",
+        ],
+        cwd=str(FLASK_DIR),
+        env=env,
+    )
 
 
 def main():
@@ -86,7 +116,9 @@ def main():
         install_requirements(python_path)
 
     try:
-        raise SystemExit(start_server(python_path, host=args.host, port=args.port))
+        if args.server == "flask":
+            raise SystemExit(start_flask_server(python_path, host=args.host, port=args.port))
+        raise SystemExit(start_gunicorn_server(python_path, host=args.host, port=args.port))
     except KeyboardInterrupt:
         print("\n[ENSURE] backend stopped")
         raise SystemExit(130)
