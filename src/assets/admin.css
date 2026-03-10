@@ -1,0 +1,137 @@
+:root {
+  color-scheme: light;
+  --admin-bg: #edf2f7;
+  --admin-page: #f7f9fc;
+  --admin-topbar-bg: #f7f9fc;
+  --admin-surface: #ffffff;
+  --admin-surface-muted: #f6f8fb;
+  --admin-surface-soft: #eef3f9;
+  --admin-surface-strong: #0f172a;
+  --admin-surface-strong-2: #162033;
+  --admin-sidebar-bg: #f8fbff;
+  --admin-sidebar-border: rgba(15, 23, 42, 0.08);
+  --admin-sidebar-brand-text: #0f172a;
+  --admin-sidebar-brand-subtext: #5f6c80;
+  --admin-sidebar-icon: #2563eb;
+  --admin-sidebar-text: #0f172a;
+  --admin-sidebar-text-muted: #6b7280;
+  --admin-sidebar-item-bg: #ffffff;
+  --admin-sidebar-item-border: rgba(15, 23, 42, 0.08);
+  --admin-sidebar-item-border-hover: rgba(37, 99, 235, 0.18);
+  --admin-sidebar-item-hover: #f4f8ff;
+  --admin-sidebar-item-active: #ecf4ff;
+  --admin-sidebar-item-active-border: rgba(37, 99, 235, 0.22);
+  --admin-sidebar-badge-bg: #eef4ff;
+  --admin-sidebar-badge-text: #315b9a;
+  --admin-sidebar-tools-bg: rgba(255, 255, 255, 0.9);
+  --admin-sidebar-tools-hover: #eef4ff;
+  --admin-sidebar-danger: #dc2626;
+  --admin-text: #0f172a;
+  --admin-text-muted: #5b6472;
+  --admin-text-faint: #8b95a7;
+  --admin-border: rgba(15, 23, 42, 0.08);
+  --admin-border-strong: rgba(15, 23, 42, 0.14);
+  --admin-accent: #2563eb;
+  --admin-accent-soft: rgba(37, 99, 235, 0.1);
+  --admin-danger: #dc2626;
+  --admin-table-header-bg: #f3f6fb;
+  --admin-table-header-text: #73839a;
+  --admin-table-row-bg: #ffffff;
+  --admin-table-row-alt: #f8fbff;
+  --admin-table-row-hover: #edf4ff;
+  --admin-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+  --admin-radius-xl: 24px;
+  --admin-radius-lg: 18px;
+  --admin-radius-md: 14px;
+  --el-color-primary: var(--admin-accent);
+}
+
+:root[data-admin-theme='dark'] {
+  color-scheme: dark;
+  --admin-bg: #0f172a;
+  --admin-page: #111827;
+  --admin-topbar-bg: #142033;
+  --admin-surface: #162235;
+  --admin-surface-muted: #1d2b43;
+  --admin-surface-soft: #22314b;
+  --admin-surface-strong: #e5edf7;
+  --admin-surface-strong-2: #f8fafc;
+  --admin-sidebar-bg: #0d1628;
+  --admin-sidebar-border: rgba(148, 163, 184, 0.18);
+  --admin-sidebar-brand-text: #f8fafc;
+  --admin-sidebar-brand-subtext: rgba(191, 219, 254, 0.78);
+  --admin-sidebar-icon: #93c5fd;
+  --admin-sidebar-text: #f8fafc;
+  --admin-sidebar-text-muted: rgba(226, 232, 240, 0.72);
+  --admin-sidebar-item-bg: rgba(255, 255, 255, 0.04);
+  --admin-sidebar-item-border: rgba(148, 163, 184, 0.14);
+  --admin-sidebar-item-border-hover: rgba(96, 165, 250, 0.28);
+  --admin-sidebar-item-hover: rgba(37, 99, 235, 0.12);
+  --admin-sidebar-item-active: rgba(37, 99, 235, 0.18);
+  --admin-sidebar-item-active-border: rgba(96, 165, 250, 0.34);
+  --admin-sidebar-badge-bg: rgba(96, 165, 250, 0.14);
+  --admin-sidebar-badge-text: rgba(226, 232, 240, 0.86);
+  --admin-sidebar-tools-bg: rgba(255, 255, 255, 0.06);
+  --admin-sidebar-tools-hover: rgba(148, 163, 184, 0.16);
+  --admin-sidebar-danger: #fda4af;
+  --admin-text: #e5edf7;
+  --admin-text-muted: #b7c4d6;
+  --admin-text-faint: #93a4bb;
+  --admin-border: rgba(148, 163, 184, 0.22);
+  --admin-border-strong: rgba(148, 163, 184, 0.34);
+  --admin-accent-soft: rgba(96, 165, 250, 0.16);
+  --admin-table-header-bg: #22324d;
+  --admin-table-header-text: #b9c6d9;
+  --admin-table-row-bg: #162235;
+  --admin-table-row-alt: #1b2b44;
+  --admin-table-row-hover: #243754;
+  --admin-shadow: 0 18px 44px rgba(2, 6, 23, 0.34);
+  --el-bg-color: var(--admin-surface);
+  --el-bg-color-page: var(--admin-page);
+  --el-bg-color-overlay: var(--admin-surface);
+  --el-text-color-primary: var(--admin-text);
+  --el-text-color-regular: var(--admin-text-muted);
+  --el-text-color-secondary: var(--admin-text-faint);
+  --el-border-color: var(--admin-border);
+  --el-border-color-light: var(--admin-border);
+  --el-fill-color: var(--admin-surface-muted);
+  --el-fill-color-light: var(--admin-surface-muted);
+  --el-fill-color-blank: var(--admin-surface);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#admin-app {
+  min-height: 100%;
+}
+
+body.admin-app-body {
+  margin: 0;
+  min-width: 320px;
+  color: var(--admin-text);
+  font-family: "Manrope", "IBM Plex Sans", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 26%),
+    linear-gradient(180deg, var(--admin-page) 0%, var(--admin-bg) 100%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#admin-app {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

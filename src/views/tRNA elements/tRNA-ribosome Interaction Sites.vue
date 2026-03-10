@@ -89,7 +89,8 @@ import TableToolbar from '@/components/TableToolbar.vue';
 
 // 列配置（TSX 拆分）
 import en from '@shene/table/dist/locale/en';
-import { allColumns, selectedColumns } from './RibosomeInteractionColumns';
+import { allColumns as baseColumns, selectedColumns } from './RibosomeInteractionColumns';
+import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 
 export default defineComponent({
   name: 'TrnaRibosomeInteractionSites',
@@ -105,6 +106,7 @@ export default defineComponent({
   setup() {
     const locale = ref(en);
     const TABLE_NAME = 'trna_ribosome_interactions';
+    const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
     const {
       rows,
       loading,
@@ -130,11 +132,13 @@ export default defineComponent({
 
     onMounted(async () => {
       await loadPage();
+      allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
+      selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
       triggerColumnChange();
     });
 
     const columns = computed<STableColumnsType<any>>(() =>
-      allColumns.filter(col => selectedColumns.value.includes(col.key as string))
+      allColumns.value.filter(col => selectedColumns.value.includes(col.key as string))
     );
 
     // 图片 & lightbox

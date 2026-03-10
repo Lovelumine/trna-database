@@ -20,6 +20,12 @@ def create_app() -> Flask:
     db.init_app(app)
     migrate.init_app(app, db)
 
+    with app.app_context():
+        from .admin import ensure_admin_tables
+        from .settings_store import ensure_default_app_settings
+        ensure_admin_tables()
+        ensure_default_app_settings()
+
     # 注册路由
     from .routes import bp as routes_bp
     app.register_blueprint(routes_bp)

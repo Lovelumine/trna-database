@@ -20,10 +20,33 @@ import uuid
 import zipfile
 import math
 import subprocess
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
 from sqlalchemy import text, bindparam, Integer
 import re
 import requests
 from . import db
+from .admin import (
+    admin_required,
+    admin_write_required,
+    audit_admin_action,
+    current_admin,
+    get_csrf_token,
+    login_admin_session,
+    logout_admin_session,
+    serialize_admin_user,
+    verify_admin_credentials,
+)
+from .models import AdminAuditLog
+from .settings_store import (
+    get_llm_settings,
+    get_table_column_labels,
+    get_table_default_visible_columns,
+    save_llm_settings,
+    save_table_column_labels,
+    save_table_default_visible_columns,
+)
 
 from .logic.align import (
     search_in_csvs,
@@ -62,9 +85,9 @@ _CHAT_SESSIONS = {}
 _EMBED_LOCK = threading.Lock()
 _EMBED_INDEX = []
 _EMBED_INDEX_MTIME = 0.0
-_ALLOWED_CHAT_MODELS = {"qwen3:32b", "gemma3:27b"}
 
 _TOOL_NAMES = {
+    "current_time",
     "tables_list",
     "table_info",
     "table_rows",
@@ -78,6 +101,49 @@ _TOOL_NAMES = {
     "doc_get",
     "site_map",
     "api_reference",
+    "repo_search",
+    "repo_file",
+}
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ALLOWED_TEXT_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".vue", ".css", ".scss", ".md", ".json", ".yml", ".yaml"}
+_REPO_DENY_PARTS = {".git", "node_modules", "dist", ".venv", "__pycache__", "cache", "exports"}
+_REPO_DENY_NAMES = {".env", ".env.local", ".env.production", ".env.development"}
+_REPO_ALLOWED_PATHS = [
+    _REPO_ROOT / "src",
+    _REPO_ROOT / "Flask" / "app",
+    _REPO_ROOT / "Flask" / "config.py",
+    _REPO_ROOT / "Flask" / "wsgi.py",
+    _REPO_ROOT / "README.md",
+    _REPO_ROOT / "package.json",
+    _REPO_ROOT / "vite.config.js",
+    _REPO_ROOT / "vite.config.ts",
+]
+
+_TIMEZONE_ALIASES = {
+    "asia/shanghai": "Asia/Shanghai",
+    "shanghai": "Asia/Shanghai",
+    "beijing": "Asia/Shanghai",
+    "北京时间": "Asia/Shanghai",
+    "上海时间": "Asia/Shanghai",
+    "china": "Asia/Shanghai",
+    "china standard time": "Asia/Shanghai",
+    "cst china": "Asia/Shanghai",
+    "utc": "UTC",
+    "gmt": "UTC",
+    "new york": "America/New_York",
+    "纽约": "America/New_York",
+    "nyc": "America/New_York",
+    "los angeles": "America/Los_Angeles",
+    "洛杉矶": "America/Los_Angeles",
+    "la time": "America/Los_Angeles",
+    "san francisco": "America/Los_Angeles",
+    "london": "Europe/London",
+    "伦敦": "Europe/London",
+    "tokyo": "Asia/Tokyo",
+    "东京": "Asia/Tokyo",
+    "singapore": "Asia/Singapore",
+    "新加坡": "Asia/Singapore",
 }
 
 def _get_ollama_config():
@@ -95,6 +161,51 @@ def _get_ollama_config():
     except Exception:
         max_messages = 20
     return base, model, timeout, system_prompt, max_messages
+
+
+def _get_llm_runtime(requested_model: str = "", requested_provider: str = "") -> dict:
+    cfg = get_llm_settings(include_secrets=True)
+    model = str(requested_model or "").strip()
+    provider = str(requested_provider or "").strip().lower()
+
+    ollama_models = cfg.get("ollama_models") or []
+    deepseek_models = cfg.get("deepseek_models") or []
+    active_provider = str(cfg.get("active_provider") or "ollama").strip().lower()
+
+    if not provider:
+        if model and model in deepseek_models:
+            provider = "deepseek"
+        elif model and model in ollama_models:
+            provider = "ollama"
+        else:
+            provider = active_provider
+
+    if provider not in ("ollama", "deepseek"):
+        provider = active_provider if active_provider in ("ollama", "deepseek") else "ollama"
+
+    if not model:
+        model = str(cfg.get("active_model") or "").strip()
+    if not model:
+        model = (
+            str(cfg.get("deepseek_default_model") or "deepseek-chat")
+            if provider == "deepseek"
+            else str(cfg.get("ollama_default_model") or "qwen3:32b")
+        )
+
+    runtime = {
+        "provider": provider,
+        "model": model,
+        "timeout": float(cfg.get("timeout") or 120),
+        "system_prompt": str(cfg.get("system_prompt") or ""),
+        "max_messages": int(cfg.get("max_messages") or 20),
+        "ollama_base_url": str(cfg.get("ollama_base_url") or "http://127.0.0.1:11434"),
+        "deepseek_base_url": str(cfg.get("deepseek_base_url") or "https://api.deepseek.com"),
+        "deepseek_api_key": str(cfg.get("deepseek_api_key") or ""),
+        "model_options": list(cfg.get("model_options") or []),
+        "ollama_models": list(ollama_models),
+        "deepseek_models": list(deepseek_models),
+    }
+    return runtime
 
 def _get_tool_router_config():
     enable = bool(current_app.config.get("TOOL_ROUTER_ENABLE", True))
@@ -129,13 +240,19 @@ def _get_pmid_extractor_config():
     timeout = float(current_app.config.get("PMID_EXTRACTOR_TIMEOUT", 10) or 10)
     return enable, model, timeout
 
-def _select_ollama_model(requested: str, fallback: str) -> str:
+def _select_chat_model(requested: str, fallback: str) -> str:
     if not isinstance(requested, str):
         return fallback
     candidate = requested.strip()
     if not candidate:
         return fallback
-    return candidate if candidate in _ALLOWED_CHAT_MODELS else fallback
+    runtime = _get_llm_runtime(candidate)
+    allowed = set(runtime.get("model_options") or [])
+    if allowed and candidate in allowed:
+        return candidate
+    if not allowed:
+        return candidate
+    return fallback
 
 def _get_chat_session(chat_id: str):
     with _CHAT_LOCK:
@@ -152,6 +269,37 @@ def _append_chat_message(chat_id: str, role: str, content: str, max_messages: in
         if max_messages and len(session["messages"]) > max_messages:
             session["messages"] = session["messages"][-max_messages:]
         session["updated_at"] = time.time()
+
+def _replace_chat_history(chat_id: str, history: list, max_messages: int):
+    if not isinstance(history, list):
+        return
+    trimmed = history[-max_messages:] if max_messages else list(history)
+    with _CHAT_LOCK:
+        session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": time.time()})
+        session["messages"] = trimmed
+        session["updated_at"] = time.time()
+
+def _normalize_client_history(items, max_messages: int) -> list:
+    if not isinstance(items, list):
+        return []
+    normalized = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role") or "").strip().lower()
+        if role in {"assistant", "bot", "model"}:
+            role = "assistant"
+        elif role in {"user", "human"}:
+            role = "user"
+        else:
+            continue
+        content = str(item.get("content") or "").strip()
+        if not content:
+            continue
+        normalized.append({"role": role, "content": content})
+    if max_messages and len(normalized) > max_messages:
+        normalized = normalized[-max_messages:]
+    return normalized
 
 def _build_ollama_messages(session_messages, system_prompt: str, extra_system: str = ""):
     messages = []
@@ -198,6 +346,95 @@ def _ollama_once(base: str, model: str, messages: list, timeout: float) -> str:
     data = resp.json() or {}
     msg = data.get("message") or {}
     return msg.get("content") or ""
+
+
+def _deepseek_stream(base: str, api_key: str, model: str, messages: list, timeout: float):
+    if not api_key:
+        raise RuntimeError("DeepSeek API key is not configured")
+    url = base.rstrip("/") + "/chat/completions"
+    payload = {"model": model, "messages": messages, "stream": True}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    resp = requests.post(url, json=payload, headers=headers, stream=True, timeout=timeout)
+    resp.raise_for_status()
+    for line in resp.iter_lines(decode_unicode=True):
+        if not line:
+            continue
+        if not line.startswith("data:"):
+            continue
+        raw = line[5:].strip()
+        if raw == "[DONE]":
+            yield "", True
+            return
+        data = json.loads(raw)
+        choices = data.get("choices") or []
+        if not choices:
+            continue
+        delta = choices[0].get("delta") or {}
+        content = delta.get("content") or ""
+        done = choices[0].get("finish_reason") is not None
+        yield content, done
+
+
+def _deepseek_once(base: str, api_key: str, model: str, messages: list, timeout: float) -> str:
+    if not api_key:
+        raise RuntimeError("DeepSeek API key is not configured")
+    url = base.rstrip("/") + "/chat/completions"
+    payload = {"model": model, "messages": messages, "stream": False}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+    resp.raise_for_status()
+    data = resp.json() or {}
+    choices = data.get("choices") or []
+    if not choices:
+        return ""
+    message = choices[0].get("message") or {}
+    return message.get("content") or ""
+
+
+def _llm_stream(runtime: dict, messages: list, model: str = ""):
+    provider = str(runtime.get("provider") or "ollama")
+    chosen_model = str(model or runtime.get("model") or "").strip()
+    timeout = float(runtime.get("timeout") or 120)
+    if provider == "deepseek":
+        return _deepseek_stream(
+            str(runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
+            str(runtime.get("deepseek_api_key") or ""),
+            chosen_model,
+            messages,
+            timeout,
+        )
+    return _ollama_stream(
+        str(runtime.get("ollama_base_url") or "http://127.0.0.1:11434"),
+        chosen_model,
+        messages,
+        timeout,
+    )
+
+
+def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | None = None) -> str:
+    provider = str(runtime.get("provider") or "ollama")
+    chosen_model = str(model or runtime.get("model") or "").strip()
+    timeout_value = float(timeout if timeout is not None else (runtime.get("timeout") or 120))
+    if provider == "deepseek":
+        return _deepseek_once(
+            str(runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
+            str(runtime.get("deepseek_api_key") or ""),
+            chosen_model,
+            messages,
+            timeout_value,
+        )
+    return _ollama_once(
+        str(runtime.get("ollama_base_url") or "http://127.0.0.1:11434"),
+        chosen_model,
+        messages,
+        timeout_value,
+    )
 
 def _get_embedding_config():
     enable = current_app.config.get("EMBEDDING_ENABLE", True)
@@ -784,6 +1021,209 @@ def _doc_get(filename: str, max_len: int = 1200) -> str:
         text = text[: max_len - 3] + "..."
     return text
 
+def _repo_path_allowed(path: Path) -> bool:
+    try:
+        resolved = path.resolve()
+        resolved.relative_to(_REPO_ROOT)
+    except Exception:
+        return False
+    if not resolved.exists() or not resolved.is_file():
+        return False
+    rel = resolved.relative_to(_REPO_ROOT)
+    if any(part in _REPO_DENY_PARTS for part in rel.parts):
+        return False
+    if rel.name in _REPO_DENY_NAMES:
+        return False
+    allowed = False
+    for item in _REPO_ALLOWED_PATHS:
+        if item.is_dir():
+            try:
+                resolved.relative_to(item.resolve())
+                allowed = True
+                break
+            except Exception:
+                continue
+        elif resolved == item.resolve():
+            allowed = True
+            break
+    if not allowed:
+        return False
+    if rel.name in {"README.md", "package.json", "vite.config.js", "vite.config.ts", "config.py", "wsgi.py"}:
+        return True
+    return resolved.suffix.lower() in _REPO_ALLOWED_TEXT_SUFFIXES
+
+def _iter_repo_files():
+    for item in _REPO_ALLOWED_PATHS:
+        if not item.exists():
+            continue
+        if item.is_file():
+            if _repo_path_allowed(item):
+                yield item.resolve()
+            continue
+        for path in item.rglob("*"):
+            if not path.is_file():
+                continue
+            if _repo_path_allowed(path):
+                yield path.resolve()
+
+def _resolve_repo_path_hint(raw_hint: str) -> str:
+    hint = str(raw_hint or "").strip().strip("`'\"")
+    if not hint:
+        return ""
+    normalized = hint.replace("\\", "/").lstrip("./")
+    candidate = (_REPO_ROOT / normalized).resolve()
+    if _repo_path_allowed(candidate):
+        return str(candidate.relative_to(_REPO_ROOT))
+    basename = Path(normalized).name
+    if not basename:
+        return ""
+    matches = []
+    for path in _iter_repo_files():
+        rel = str(path.relative_to(_REPO_ROOT))
+        if rel == normalized or rel.endswith("/" + normalized) or path.name == basename:
+            matches.append(rel)
+    if not matches:
+        return ""
+    matches.sort(key=lambda item: (0 if item == normalized else 1, len(item), item))
+    return matches[0]
+
+def _looks_like_repo_question(question: str) -> bool:
+    q = str(question or "")
+    return bool(re.search(
+        r"源码|代码|实现|架构|组件|前端|后端|仓库|repo|repository|codebase|source code|"
+        r"vue|flask|typescript|javascript|python|hook|composable|函数|模块|页面怎么实现|"
+        r"\.vue\b|\.py\b|\.ts\b|\.tsx\b|\.js\b|README|wsgi|config\.py",
+        q,
+        flags=re.IGNORECASE,
+    ))
+
+def _extract_repo_path_hints(question: str) -> list[str]:
+    q = str(question or "")
+    hints = []
+    patterns = [
+        r"(?:src|Flask)/[A-Za-z0-9_./-]+",
+        r"[A-Za-z0-9_-]+\.(?:vue|ts|tsx|js|jsx|py|md|json|css|scss|ya?ml)",
+    ]
+    for pattern in patterns:
+        for match in re.findall(pattern, q):
+            value = str(match).strip().strip("`'\"")
+            if value and value not in hints:
+                hints.append(value)
+    return hints[:4]
+
+def _extract_repo_search_terms(query: str) -> list[str]:
+    raw = str(query or "").strip()
+    if not raw:
+        return []
+    terms = []
+    for token in re.findall(r"[A-Za-z0-9_./-]+\.(?:vue|ts|tsx|js|jsx|py|md|json|css|scss|ya?ml)", raw):
+        if token not in terms:
+            terms.append(token)
+    for token in re.findall(r"[A-Za-z_][A-Za-z0-9_:/.-]{2,}", raw):
+        low = token.lower()
+        if low in {"the", "and", "for", "with", "this", "that", "what", "which", "where", "how", "why", "are", "can"}:
+            continue
+        if token not in terms:
+            terms.append(token)
+    for token in re.findall(r"[\u4e00-\u9fff]{2,12}", raw):
+        if token not in terms:
+            terms.append(token)
+    if raw not in terms:
+        terms.insert(0, raw)
+    return terms[:8]
+
+def _repo_search_tool(params: dict) -> dict:
+    query = str(params.get("query") or params.get("keyword") or "").strip()
+    try:
+        limit = int(params.get("limit") or 8)
+    except Exception:
+        limit = 8
+    limit = max(1, min(limit, 20))
+    terms = _extract_repo_search_terms(query)
+    if not terms:
+        return {"query": query, "hits": []}
+
+    hits = []
+    for path in _iter_repo_files():
+        rel = str(path.relative_to(_REPO_ROOT))
+        rel_lower = rel.lower()
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        lines = text.splitlines()
+        path_terms = [term for term in terms if term.lower() in rel_lower]
+        path_bonus = 4 * len(path_terms)
+        file_hits = []
+        for lineno, line in enumerate(lines, start=1):
+            low = line.lower()
+            score = 0
+            matched = []
+            for term in terms:
+                t = term.lower()
+                if t and t in low:
+                    score += 6 if t == terms[0].lower() else 3
+                    matched.append(term)
+            if score <= 0:
+                continue
+            snippet = line.strip()
+            if len(snippet) > 220:
+                snippet = snippet[:217] + "..."
+            file_hits.append({
+                "path": rel,
+                "line": lineno,
+                "snippet": snippet,
+                "score": score + path_bonus,
+                "matched_terms": list(dict.fromkeys(path_terms + matched)),
+            })
+        if not file_hits and path_bonus:
+            fallback_line = next((idx + 1 for idx, line in enumerate(lines) if line.strip()), 1)
+            snippet = lines[fallback_line - 1].strip() if lines else rel
+            if len(snippet) > 220:
+                snippet = snippet[:217] + "..."
+            file_hits.append({
+                "path": rel,
+                "line": fallback_line,
+                "snippet": snippet,
+                "score": path_bonus,
+                "matched_terms": path_terms,
+            })
+        file_hits.sort(key=lambda item: (-int(item.get("score") or 0), int(item.get("line") or 0)))
+        hits.extend(file_hits[:3])
+    hits.sort(key=lambda item: (-int(item.get("score") or 0), str(item.get("path") or ""), int(item.get("line") or 0)))
+    return {"query": query, "hits": hits[:limit]}
+
+def _repo_file_tool(params: dict) -> dict:
+    raw_path = _resolve_repo_path_hint(str(params.get("path") or ""))
+    if not raw_path:
+        return {"error": "path is required"}
+    candidate = (_REPO_ROOT / raw_path).resolve()
+    if not _repo_path_allowed(candidate):
+        return {"error": "path is not allowed"}
+    try:
+        start_line = int(params.get("start_line") or 1)
+    except Exception:
+        start_line = 1
+    try:
+        max_lines = int(params.get("max_lines") or 120)
+    except Exception:
+        max_lines = 120
+    start_line = max(1, start_line)
+    max_lines = max(1, min(max_lines, 220))
+    try:
+        lines = candidate.read_text(encoding="utf-8").splitlines()
+    except Exception as exc:
+        return {"error": f"unable to read file: {exc}"}
+    start_idx = start_line - 1
+    end_idx = min(len(lines), start_idx + max_lines)
+    content = "\n".join(lines[start_idx:end_idx])
+    return {
+        "path": str(candidate.relative_to(_REPO_ROOT)),
+        "start_line": start_line,
+        "end_line": end_idx,
+        "content": content,
+    }
+
 def _pubmed_request(endpoint: str, params: dict) -> dict:
     enable, base, api_key, tool, email, timeout, _, _ = _get_pubmed_config()
     if not enable:
@@ -960,6 +1400,74 @@ def _pubmed_search_tool(params: dict) -> dict:
     except Exception as exc:
         return {"error": str(exc)}
 
+def _normalize_timezone_name(name: str) -> str:
+    raw = str(name or "").strip()
+    if not raw:
+        return ""
+    return _TIMEZONE_ALIASES.get(raw.lower(), raw)
+
+def _extract_time_timezone(question: str) -> str:
+    q = str(question or "").lower()
+    if not q:
+        return ""
+    for alias, canonical in _TIMEZONE_ALIASES.items():
+        if alias in q:
+            return canonical
+    return ""
+
+def _needs_current_time(question: str) -> bool:
+    q = str(question or "")
+    if not q:
+        return False
+    return bool(re.search(
+        r"(现在几点|当前时间|现在时间|现在几时|今天几号|今天日期|今天多少号|当前日期|今天星期几|当前星期几|北京时间|上海时间|"
+        r"纽约时间|东京时间|伦敦时间|新加坡时间|"
+        r"what(?:'s| is)?(?: the)? current time|what time is it|time now|current date|today'?s date|what day is it|date now|"
+        r"time in [a-z/_ -]+|date in [a-z/_ -]+)",
+        q,
+        flags=re.IGNORECASE,
+    ))
+
+def _current_time_tool(params: dict) -> dict:
+    requested = _normalize_timezone_name(params.get("timezone") or "")
+    default_timezone = _normalize_timezone_name(current_app.config.get("DEFAULT_TIMEZONE") or "Asia/Shanghai")
+    timezone_name = requested or default_timezone or "UTC"
+    try:
+        tz = ZoneInfo(timezone_name)
+    except Exception:
+        timezone_name = default_timezone or "UTC"
+        try:
+            tz = ZoneInfo(timezone_name)
+        except Exception:
+            timezone_name = "UTC"
+            tz = ZoneInfo("UTC")
+
+    now = datetime.now(tz)
+    offset = now.strftime("%z")
+    if offset and len(offset) == 5:
+        offset = f"{offset[:3]}:{offset[3:]}"
+    weekday_en = now.strftime("%A")
+    weekday_zh = {
+        "Monday": "星期一",
+        "Tuesday": "星期二",
+        "Wednesday": "星期三",
+        "Thursday": "星期四",
+        "Friday": "星期五",
+        "Saturday": "星期六",
+        "Sunday": "星期日",
+    }.get(weekday_en, "")
+    return {
+        "timezone": timezone_name,
+        "iso": now.isoformat(timespec="seconds"),
+        "date": now.strftime("%Y-%m-%d"),
+        "time": now.strftime("%H:%M:%S"),
+        "datetime": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "weekday_en": weekday_en,
+        "weekday_zh": weekday_zh,
+        "utc_offset": offset or "",
+        "unix": int(now.timestamp()),
+    }
+
 def _tool_router_prompt() -> str:
     return (
         "You are a tool router. Decide if a tool call is needed to answer the user.\n"
@@ -967,6 +1475,7 @@ def _tool_router_prompt() -> str:
         "If a tool is needed, return: {\"tool\": \"<name>\", \"params\": {...}}\n"
         "If no tool is needed, return: {\"tool\": \"none\"}\n\n"
         "Available tools:\n"
+        "- current_time: get the current date/time. params: {timezone?}\n"
         "- tables_list: list database tables.\n"
         "- table_info: get table schema. params: {table}\n"
         "- table_rows: query rows. params: {table, page, page_size, search_text, search_column, "
@@ -983,6 +1492,9 @@ def _tool_router_prompt() -> str:
         "- doc_get: get a doc snippet. params: {filename, max_len}\n"
         "- site_map: get website routes/structure.\n"
         "- api_reference: get API reference summary.\n"
+        "- repo_search: search read-only source files in the allowlisted repo paths. params: {query, limit?}\n"
+        "- repo_file: read a snippet from an allowlisted source file. params: {path, start_line?, max_lines?}\n"
+        "Use repo_search/repo_file for architecture, implementation, component, route, or code-flow questions.\n"
     )
 
 def _tool_plan_prompt(max_steps: int) -> str:
@@ -994,6 +1506,7 @@ def _tool_plan_prompt(max_steps: int) -> str:
         "{\"tool\": \"<name>\", \"params\": {...}}. Do NOT add extra text.\n"
         "If no tool is needed, return [].\n\n"
         "Available tools:\n"
+        "- current_time (params: {timezone?})\n"
         "- tables_list\n"
         "- table_info (params: {table})\n"
         "- table_rows (params: {table, page, page_size, search_text, search_column, sort_by, sort_order, case_insensitive, use_fulltext, fulltext_index, filters})\n"
@@ -1006,13 +1519,17 @@ def _tool_plan_prompt(max_steps: int) -> str:
         "- doc_get (params: {filename, max_len})\n"
         "- site_map\n"
         "- api_reference\n\n"
+        "- repo_search (params: {query, limit?})\n"
+        "- repo_file (params: {path, start_line?, max_lines?})\n\n"
         f"Known table names: {tables}\n"
         f"Display names: {display_names}\n\n"
         "Guidelines:\n"
+        "- For questions about current time/date/day, include current_time.\n"
         "- If question mentions ENSURE IDs -> include ensure_lookup.\n"
         "- If question asks for counts + methods + examples -> include table_info, table_stats, table_rows.\n"
         "- For papers: if a PMID column likely exists, use table_stats distinct_count; for latest papers or literature queries, include pubmed_search.\n"
         "- For examples: use table_rows with small page_size (3-5).\n"
+        "- For source code, frontend/backend architecture, file ownership, route flow, or implementation details -> include repo_search; if a file path/name is given, include repo_file.\n"
     )
 
 def _parse_tool_plan(text: str) -> list:
@@ -1072,14 +1589,14 @@ def _plan_tools(question: str, rag_context: str, max_steps: int):
     enable, _, router_model, router_timeout, _ = _get_tool_router_config()
     if not enable:
         return []
-    base, model, _, _, _ = _get_ollama_config()
-    router_model = router_model or model
+    runtime = _get_llm_runtime(router_model)
+    router_model = router_model or str(runtime.get("model") or "")
     messages = [{"role": "system", "content": _tool_plan_prompt(max_steps)}]
     if rag_context:
         messages.append({"role": "system", "content": "Context:\n" + rag_context})
     messages.append({"role": "user", "content": str(question or "")})
     try:
-        reply = _ollama_once(base, router_model, messages, router_timeout)
+        reply = _llm_once(runtime, messages, model=router_model, timeout=router_timeout)
     except Exception:
         return []
     plan = _parse_tool_plan(reply)
@@ -1111,7 +1628,16 @@ def _update_signals(name: str, result: dict, signals: dict):
         items = result.get("items") or []
         signals["pubmed_abstracts"] = max(signals.get("pubmed_abstracts", 0), len(items))
 
-def _execute_tool_cached(name: str, params: dict, cache: dict, context_lines: list, evidence_lines: list, signals: dict, max_chars: int):
+def _execute_tool_cached(
+    name: str,
+    params: dict,
+    cache: dict,
+    context_lines: list,
+    evidence_lines: list,
+    signals: dict,
+    max_chars: int,
+    trace_sink: list | None = None,
+):
     key = _tool_cache_key(name, params)
     if key in cache:
         return cache[key]
@@ -1121,9 +1647,11 @@ def _execute_tool_cached(name: str, params: dict, cache: dict, context_lines: li
     evidence_lines.append(f"Tool `{name}` — {summary}")
     context_lines.append(_format_tool_context(name, result, max_chars))
     _update_signals(name, result, signals)
+    if isinstance(trace_sink, list):
+        trace_sink.append({"tool": name, "summary": summary})
     return result
 
-def _execute_tool_plan(plan: list, max_chars: int):
+def _execute_tool_plan(plan: list, max_chars: int, trace_sink: list | None = None):
     context_lines = []
     evidence_lines = []
     cache = {}
@@ -1132,7 +1660,7 @@ def _execute_tool_plan(plan: list, max_chars: int):
     for item in plan:
         name = item.get("tool")
         params = item.get("params") or {}
-        _execute_tool_cached(name, params, cache, context_lines, evidence_lines, signals, max_chars)
+        _execute_tool_cached(name, params, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
         steps += 1
     return "\n\n".join(context_lines), "\n".join(evidence_lines), signals, cache, steps
 
@@ -1256,8 +1784,8 @@ def _extract_candidate_pmids_by_model(question: str, cache: dict) -> list:
     enable, extractor_model, extractor_timeout = _get_pmid_extractor_config()
     if not enable:
         return _collect_candidate_pmids(question, cache)
-    base, model, _, _, _ = _get_ollama_config()
-    extractor_model = extractor_model or model
+    runtime = _get_llm_runtime(extractor_model)
+    extractor_model = extractor_model or str(runtime.get("model") or "")
     context_chunks = []
     if question:
         context_chunks.append("Question:\n" + str(question))
@@ -1277,13 +1805,14 @@ def _extract_candidate_pmids_by_model(question: str, cache: dict) -> list:
         {"role": "system", "content": "\n\n".join(context_chunks)},
     ]
     try:
-        reply = _ollama_once(base, extractor_model, messages, extractor_timeout)
+        reply = _llm_once(runtime, messages, model=extractor_model, timeout=extractor_timeout)
         data = json.loads(reply.strip())
     except Exception:
         return _collect_candidate_pmids(question, cache)
     pmids = data.get("pmids") or []
     if isinstance(pmids, str):
         pmids = [p for p in pmids.replace(";", ",").split(",") if p.strip()]
+    pmids = [str(p).strip() for p in pmids if p is not None and str(p).strip()]
     # Filter: keep only those that actually appear in context (safety)
     context_text = "\n".join(context_chunks)
     pmids = [p for p in pmids if re.search(rf"\\b{re.escape(p)}\\b", context_text)]
@@ -1313,8 +1842,8 @@ def _pubmed_router_decision(question: str, candidates: list, evidence_summaries:
         return {"need_pubmed": False, "pmids": []}
     if not candidates:
         return {"need_pubmed": False, "pmids": []}
-    base, model, _, _, _ = _get_ollama_config()
-    router_model = router_model or model
+    runtime = _get_llm_runtime(router_model)
+    router_model = router_model or str(runtime.get("model") or "")
     context = "\n".join(evidence_summaries or [])
     messages = [
         {"role": "system", "content": _pubmed_router_prompt()},
@@ -1324,7 +1853,7 @@ def _pubmed_router_decision(question: str, candidates: list, evidence_summaries:
     if context:
         messages.append({"role": "system", "content": "Evidence summaries:\n" + context})
     try:
-        reply = _ollama_once(base, router_model, messages, router_timeout)
+        reply = _llm_once(runtime, messages, model=router_model, timeout=router_timeout)
     except Exception:
         return {"need_pubmed": False, "pmids": []}
     try:
@@ -1335,6 +1864,7 @@ def _pubmed_router_decision(question: str, candidates: list, evidence_summaries:
     pmids = data.get("pmids") or []
     if isinstance(pmids, str):
         pmids = [p for p in pmids.replace(";", ",").split(",") if p.strip()]
+    pmids = [str(p).strip() for p in pmids if p is not None and str(p).strip()]
     pmids = [p for p in pmids if p in set(candidates)]
     if not pmids:
         need = False
@@ -1350,6 +1880,7 @@ def _smart_table_rows(
     signals: dict,
     max_chars: int,
     steps_left: int,
+    trace_sink: list | None = None,
 ):
     if not table or steps_left <= 0:
         return None, steps_left
@@ -1405,7 +1936,7 @@ def _smart_table_rows(
             params["search_values"] = attempt.get("search_values")
         if attempt.get("search_text"):
             params["search_text"] = attempt.get("search_text")
-        result = _execute_tool_cached("table_rows", params, cache, context_lines, evidence_lines, signals, max_chars)
+        result = _execute_tool_cached("table_rows", params, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
         steps_left -= 1
         last_result = result
         if isinstance(result, dict) and (result.get("rows") or []):
@@ -1432,9 +1963,19 @@ def _classify_intent(question: str) -> str:
 
 def _style_prompt_for_intent(intent: str, lang: str) -> str:
     if lang == "zh":
-        base = "请使用中文回答，语气礼貌、专业，称呼用户为“您”。避免生硬模板化，用自然叙述表达。"
+        base = (
+            "身份：您是 ENSURE 的 AI 助手荧荧（Yingying）。如果用户问您是谁，请明确回答“我是荧荧（Yingying），"
+            "ENSURE 数据库的 AI 助手。”不要说自己是 DeepSeek、Ollama、ChatGPT、GPT 或任何模型/提供商。"
+            "请优先使用与用户提问相同的主要语言回答；当前应使用中文。语气礼貌、专业，称呼用户为“您”。"
+            "避免生硬模板化，用自然叙述表达。"
+        )
     else:
-        base = "Respond in English with a polite, professional tone. Avoid rigid templates; use natural narration."
+        base = (
+            "Identity: You are Yingying (荧荧), the AI assistant for ENSURE. If the user asks who you are, "
+            "answer that you are Yingying, the AI assistant for ENSURE. Do not say you are DeepSeek, Ollama, "
+            "ChatGPT, GPT, or any model/provider. Respond in the same primary language as the user; for this "
+            "reply, use English. Use a polite, professional tone and avoid rigid templates; use natural narration."
+        )
     if intent == "retrieval":
         return (
             base
@@ -1482,6 +2023,21 @@ def _build_pubmed_query(question: str) -> str:
 def _augment_plan_with_heuristics(plan: list, question: str, max_steps: int) -> list:
     plan = plan or []
     tools_in_plan = {p.get("tool") for p in plan if isinstance(p, dict)}
+    if _needs_current_time(question) and "current_time" not in tools_in_plan:
+        timezone_name = _extract_time_timezone(question or "")
+        params = {"timezone": timezone_name} if timezone_name else {}
+        plan.insert(0, {"tool": "current_time", "params": params})
+        tools_in_plan.add("current_time")
+    path_hints = _extract_repo_path_hints(question or "")
+    if path_hints and "repo_file" not in tools_in_plan:
+        resolved = _resolve_repo_path_hint(path_hints[0])
+        if resolved:
+            plan.insert(0, {"tool": "repo_file", "params": {"path": resolved, "start_line": 1, "max_lines": 160}})
+            tools_in_plan.add("repo_file")
+    if _looks_like_repo_question(question) and "repo_search" not in tools_in_plan:
+        insert_at = 1 if plan and plan[0].get("tool") == "repo_file" else 0
+        plan.insert(insert_at, {"tool": "repo_search", "params": {"query": str(question or ""), "limit": 8}})
+        tools_in_plan.add("repo_search")
     ensure_ids = _extract_ensure_ids(question or "")
     if ensure_ids and "ensure_lookup" not in tools_in_plan:
         plan.insert(0, {"tool": "ensure_lookup", "params": {"ensure_id": ensure_ids[0]}})
@@ -1493,7 +2049,15 @@ def _augment_plan_with_heuristics(plan: list, question: str, max_steps: int) -> 
         plan.append({"tool": "pubmed_search", "params": {"query": _build_pubmed_query(question), "retmax": 8, "sort": "date"}})
     return _sanitize_tool_plan(plan, max_steps)
 
-def _evidence_gate(question: str, signals: dict, cache: dict, steps_used: int, max_steps: int, max_chars: int):
+def _evidence_gate(
+    question: str,
+    signals: dict,
+    cache: dict,
+    steps_used: int,
+    max_steps: int,
+    max_chars: int,
+    trace_sink: list | None = None,
+):
     if steps_used >= max_steps:
         return "", ""
     context_lines = []
@@ -1510,7 +2074,7 @@ def _evidence_gate(question: str, signals: dict, cache: dict, steps_used: int, m
     columns = []
     method_col = ""
     if table and steps_left > 0 and (needs_methods or needs_papers or needs_examples):
-        info = _execute_tool_cached("table_info", {"table": table}, cache, context_lines, evidence_lines, signals, max_chars)
+        info = _execute_tool_cached("table_info", {"table": table}, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
         columns = [c.get("name") for c in (info.get("columns") or [])] if isinstance(info, dict) else []
         method_col = _pick_method_column(columns)
         steps_left -= 1
@@ -1527,7 +2091,7 @@ def _evidence_gate(question: str, signals: dict, cache: dict, steps_used: int, m
                     "top_n": 50,
                 }],
             }
-            _execute_tool_cached("table_stats", params, cache, context_lines, evidence_lines, signals, max_chars)
+            _execute_tool_cached("table_stats", params, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
             steps_left -= 1
 
     if table and needs_papers and steps_left > 0 and signals.get("pmid_count") is None:
@@ -1541,7 +2105,7 @@ def _evidence_gate(question: str, signals: dict, cache: dict, steps_used: int, m
                     "column": pmid_col,
                 }],
             }
-            _execute_tool_cached("table_stats", params, cache, context_lines, evidence_lines, signals, max_chars)
+            _execute_tool_cached("table_stats", params, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
             steps_left -= 1
 
     rows_result = None
@@ -1556,11 +2120,12 @@ def _evidence_gate(question: str, signals: dict, cache: dict, steps_used: int, m
             signals,
             max_chars,
             steps_left,
+            trace_sink=trace_sink,
         )
 
     if needs_pubmed and not is_table_q and steps_left > 0 and signals.get("pubmed_items", 0) <= 0:
         params = {"query": _build_pubmed_query(question), "retmax": 8, "sort": "date"}
-        _execute_tool_cached("pubmed_search", params, cache, context_lines, evidence_lines, signals, max_chars)
+        _execute_tool_cached("pubmed_search", params, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
         steps_left -= 1
 
     if (needs_papers or needs_methods) and steps_left > 0 and signals.get("pubmed_items", 0) <= 0:
@@ -1575,7 +2140,7 @@ def _evidence_gate(question: str, signals: dict, cache: dict, steps_used: int, m
             pmids = _extract_pmids_from_rows(rows, _find_column([k for k in (rows[0].keys() if rows else [])], ["pmid", "pubmed"]))
             if pmids:
                 params = {"pmids": pmids[:8]}
-                _execute_tool_cached("pubmed_search", params, cache, context_lines, evidence_lines, signals, max_chars)
+                _execute_tool_cached("pubmed_search", params, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
                 steps_left -= 1
 
     if (needs_papers or needs_methods) and steps_left > 0 and signals.get("pubmed_items", 0) > 0 and signals.get("pubmed_abstracts", 0) <= 0:
@@ -1588,7 +2153,7 @@ def _evidence_gate(question: str, signals: dict, cache: dict, steps_used: int, m
                     pmids = [it.get("pmid") for it in items if it.get("pmid")]
                 break
         if pmids:
-            _execute_tool_cached("pubmed_fetch", {"pmids": pmids[:5]}, cache, context_lines, evidence_lines, signals, max_chars)
+            _execute_tool_cached("pubmed_fetch", {"pmids": pmids[:5]}, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
             steps_left -= 1
 
     # AI-driven PubMed fetch decision (no hard-coded trigger)
@@ -1601,7 +2166,7 @@ def _evidence_gate(question: str, signals: dict, cache: dict, steps_used: int, m
         candidates = _extract_candidate_pmids_by_model(question, cache)
         decision = _pubmed_router_decision(question, candidates, summaries)
         if decision.get("need_pubmed") and decision.get("pmids"):
-            _execute_tool_cached("pubmed_fetch", {"pmids": decision.get("pmids")[:5]}, cache, context_lines, evidence_lines, signals, max_chars)
+            _execute_tool_cached("pubmed_fetch", {"pmids": decision.get("pmids")[:5]}, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
             steps_left -= 1
 
     # If methods are requested for a table, try to fetch method-specific rows and PubMed abstracts
@@ -1623,13 +2188,13 @@ def _evidence_gate(question: str, signals: dict, cache: dict, steps_used: int, m
                 "case_insensitive": True,
                 "use_fulltext": False,
             }
-            rows_result = _execute_tool_cached("table_rows", params, cache, context_lines, evidence_lines, signals, max_chars)
+            rows_result = _execute_tool_cached("table_rows", params, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
             steps_left -= 1
             if isinstance(rows_result, dict):
                 rows = rows_result.get("rows") or []
                 pmids = _extract_pmids_from_rows(rows, _find_column([k for k in (rows[0].keys() if rows else [])], ["pmid", "pubmed"]))
                 if pmids and steps_left > 0:
-                    _execute_tool_cached("pubmed_fetch", {"pmids": pmids[:5]}, cache, context_lines, evidence_lines, signals, max_chars)
+                    _execute_tool_cached("pubmed_fetch", {"pmids": pmids[:5]}, cache, context_lines, evidence_lines, signals, max_chars, trace_sink=trace_sink)
                     steps_left -= 1
 
     return "\n\n".join(context_lines), "\n".join(evidence_lines)
@@ -1653,6 +2218,18 @@ def _answer_prompt() -> str:
         "Do not mention tool names or JSON. Use clear, concise language."
     )
 
+def _build_answer_messages(system_prompt: str, session_messages: list, evidence_context: str, question: str, style_prompt: str = "") -> list:
+    extra_system = "Evidence:\n" + (evidence_context or "None")
+    if style_prompt:
+        extra_system = extra_system + "\n\nStyle:\n" + style_prompt
+    messages = _build_ollama_messages(session_messages, system_prompt, extra_system)
+    messages.append({"role": "system", "content": _answer_prompt()})
+    question_text = str(question or "").strip()
+    if question_text:
+        if not messages or messages[-1].get("role") != "user" or str(messages[-1].get("content") or "").strip() != question_text:
+            messages.append({"role": "user", "content": question_text})
+    return messages
+
 def _critic_prompt() -> str:
     return (
         "You are a critic. Verify whether the answer is fully supported by the evidence.\n"
@@ -1668,14 +2245,9 @@ def _critic_prompt() -> str:
         "- If you can rewrite the answer using only evidence, set verdict=revise and provide revised_answer.\n"
     )
 
-def _generate_answer(base: str, model: str, timeout: float, system_prompt: str, session_messages: list, evidence_context: str, question: str, style_prompt: str = "") -> str:
-    extra_system = "Evidence:\n" + (evidence_context or "None")
-    if style_prompt:
-        extra_system = extra_system + "\n\nStyle:\n" + style_prompt
-    messages = _build_ollama_messages(session_messages, system_prompt, extra_system)
-    messages.append({"role": "system", "content": _answer_prompt()})
-    messages.append({"role": "user", "content": question})
-    return _ollama_once(base, model, messages, timeout)
+def _generate_answer(runtime: dict, system_prompt: str, session_messages: list, evidence_context: str, question: str, style_prompt: str = "") -> str:
+    messages = _build_answer_messages(system_prompt, session_messages, evidence_context, question, style_prompt)
+    return _llm_once(runtime, messages)
 
 def _parse_critic_output(text: str) -> dict:
     if not text:
@@ -1697,14 +2269,14 @@ def _parse_critic_output(text: str) -> dict:
             return {}
     return {}
 
-def _critique_answer(base: str, model: str, timeout: float, question: str, answer: str, evidence: str) -> dict:
+def _critique_answer(runtime: dict, question: str, answer: str, evidence: str) -> dict:
     messages = [
         {"role": "system", "content": _critic_prompt()},
         {"role": "system", "content": "Evidence:\n" + (evidence or "None")},
         {"role": "user", "content": f"Question:\n{question}\n\nAnswer:\n{answer}"},
     ]
     try:
-        reply = _ollama_once(base, model, messages, timeout)
+        reply = _llm_once(runtime, messages)
     except Exception:
         return {}
     return _parse_critic_output(reply)
@@ -1736,6 +2308,8 @@ def _tool_summary(name: str, result: dict) -> str:
         return "no result"
     if result.get("error"):
         return f"error: {result.get('error')}"
+    if name == "current_time":
+        return f"timezone={result.get('timezone')}, datetime={result.get('datetime')}"
     if name == "table_rows":
         return f"table={result.get('table')}, total={result.get('total')}, rows_shown={len(result.get('rows') or [])}"
     if name == "table_info":
@@ -1752,6 +2326,10 @@ def _tool_summary(name: str, result: dict) -> str:
         return f"hits={len(result.get('hits') or [])}"
     if name == "doc_get":
         return f"doc={result.get('filename')}"
+    if name == "repo_search":
+        return f"hits={len(result.get('hits') or [])}"
+    if name == "repo_file":
+        return f"path={result.get('path')}, lines={result.get('start_line')}-{result.get('end_line')}"
     if name == "ensure_lookup":
         hits = result.get("hits") or []
         return f"ensure_id={result.get('ensure_id')}, tables_hit={len(hits)}"
@@ -1768,6 +2346,40 @@ def _tool_summary(name: str, result: dict) -> str:
     return "ok"
 
 def _format_tool_context(name: str, result: dict, max_chars: int) -> str:
+    if isinstance(result, dict) and result.get("error"):
+        return f"Tool `{name}` error: {result.get('error')}"
+    if name == "current_time":
+        payload = (
+            f"Current date/time in `{result.get('timezone')}`: "
+            f"{result.get('datetime')} ({result.get('weekday_en')}, UTC{result.get('utc_offset')})"
+        )
+        return payload
+    if name == "repo_search":
+        query = str(result.get("query") or "")
+        hits = result.get("hits") or []
+        lines = [f"Read-only source search for `{query}`:"]
+        for item in hits[:8]:
+            path = item.get("path") or ""
+            line = item.get("line") or ""
+            snippet = item.get("snippet") or ""
+            lines.append(f"- {path}:{line} — {snippet}")
+        payload = "\n".join(lines)
+        if max_chars and len(payload) > max_chars:
+            payload = payload[: max_chars - 3] + "..."
+        return payload
+    if name == "repo_file":
+        path = str(result.get("path") or "")
+        start_line = int(result.get("start_line") or 1)
+        end_line = int(result.get("end_line") or start_line)
+        content = str(result.get("content") or "")
+        numbered = []
+        for idx, line in enumerate(content.splitlines(), start=start_line):
+            numbered.append(f"{idx}: {line}")
+        body = "\n".join(numbered)
+        payload = f"Read-only source file `{path}` lines {start_line}-{end_line}:\n{body}"
+        if max_chars and len(payload) > max_chars:
+            payload = payload[: max_chars - 3] + "..."
+        return payload
     try:
         payload = json.dumps(result, ensure_ascii=False)
     except Exception:
@@ -1831,6 +2443,17 @@ def _extract_pmids_from_rows(rows: list, pmid_col: str) -> list:
 
 def _heuristic_tool_call(question: str):
     q = str(question or "")
+    if _needs_current_time(q):
+        timezone_name = _extract_time_timezone(q)
+        params = {"timezone": timezone_name} if timezone_name else {}
+        return {"tool": "current_time", "params": params}
+    path_hints = _extract_repo_path_hints(q)
+    if path_hints:
+        resolved = _resolve_repo_path_hint(path_hints[0])
+        if resolved:
+            return {"tool": "repo_file", "params": {"path": resolved, "start_line": 1, "max_lines": 160}}
+    if _looks_like_repo_question(q):
+        return {"tool": "repo_search", "params": {"query": q, "limit": 8}}
     ensure_ids = _extract_ensure_ids(q)
     if ensure_ids:
         return {"tool": "ensure_lookup", "params": {"ensure_id": ensure_ids[0]}}
@@ -1849,6 +2472,8 @@ def _heuristic_tool_call(question: str):
 
 def _execute_tool(name: str, params: dict):
     params = params or {}
+    if name == "current_time":
+        return _current_time_tool(params)
     if name == "tables_list":
         insp = db.inspect(db.engine)
         tables = [t for t in insp.get_table_names() if t not in {"alembic_version", "table_meta"}]
@@ -1925,6 +2550,10 @@ def _execute_tool(name: str, params: dict):
         filename = (params.get("filename") or "").strip()
         max_len = int(params.get("max_len") or 1200)
         return {"filename": filename, "content": _doc_get(filename, max_len)}
+    if name == "repo_search":
+        return _repo_search_tool(params)
+    if name == "repo_file":
+        return _repo_file_tool(params)
     if name == "site_map":
         content = _doc_get("99-Site-Map.md", 2000)
         return {"content": content}
@@ -1933,26 +2562,26 @@ def _execute_tool(name: str, params: dict):
         return {"content": content}
     return {"error": f"unknown tool '{name}'"}
 
-def _run_tool_pipeline(question: str, rag_context: str):
+def _run_tool_pipeline(question: str, rag_context: str, trace_sink: list | None = None):
     enable, max_steps, _, _, max_chars = _get_tool_router_config()
     if not enable:
-        return "", "", {}, {}, 0, max_steps, max_chars
+        return "", "", {}, {}, 0, max_steps, max_chars, trace_sink or []
 
     # 1) Plan tools (LLM planner)
     plan = _plan_tools(question, rag_context, max_steps)
     plan = _augment_plan_with_heuristics(plan, question, max_steps)
 
     # 2) Execute planned tools
-    tool_context, tool_evidence, signals, cache, steps_used = _execute_tool_plan(plan, max_chars)
+    tool_context, tool_evidence, signals, cache, steps_used = _execute_tool_plan(plan, max_chars, trace_sink=trace_sink)
 
     # 3) Evidence gate: add missing steps for examples/methods/papers/pubmed
     extra_context, extra_evidence = _evidence_gate(
-        question, signals, cache, steps_used, max_steps, max_chars
+        question, signals, cache, steps_used, max_steps, max_chars, trace_sink=trace_sink
     )
 
     merged_context = "\n\n".join([c for c in [tool_context, extra_context] if c]).strip()
     merged_evidence = "\n".join([e for e in [tool_evidence, extra_evidence] if e]).strip()
-    return merged_context, merged_evidence, cache, signals, steps_used, max_steps, max_chars
+    return merged_context, merged_evidence, cache, signals, steps_used, max_steps, max_chars, trace_sink or []
 
 def _count_table_rows(conn, table: str) -> int:
     sql = text(f"SELECT COUNT(*) FROM `{table}`")
@@ -2937,6 +3566,210 @@ def _codon_change_heatmap(
             data.append({"orig": orig, "mut": mut, "count": int(cnt)})
     return data
 
+
+def _fetch_engineered_row(conn, ensure_id: str):
+    sql = text(f"SELECT * FROM `{ENGINEERED_TABLE}` WHERE `ENSURE_ID` = :pk LIMIT 1")
+    row = conn.execute(sql, {"pk": ensure_id}).fetchone()
+    if not row:
+        return None
+    try:
+        return dict(row._mapping)
+    except AttributeError:
+        return dict(row)
+
+_ADMIN_INTERNAL_TABLES = {
+    "admin_users",
+    "admin_audit_logs",
+    "alembic_version",
+    "app_settings",
+    "runtime_prompt_settings",
+    "table_meta",
+}
+_ADMIN_READ_ONLY_TABLES = {
+    "alignment_sessions",
+    "engineered_sup_trna_perpos_counts",
+    "pmid_article_info_extended",
+    "runtime_prompt_settings",
+    "table_meta",
+}
+_ADMIN_TABLE_LABELS = {
+    "coding_variation_cancer": "Coding Variation in Cancer",
+    "coding_variation_genetic_disease": "Coding Variation in Genetic Disease",
+    "nonsense_sup_rna": "Natural Nonsense sup-tRNA",
+    "frameshift_sup_trna": "Natural Frameshift sup-tRNA",
+    "Engineered_sup_tRNA": "Engineered sup-tRNA",
+    "function_and_modification": "Modification with Function",
+    "aars_recognition": "aaRS Recognition",
+    "ef_tu": "EF-Tu Recognition",
+    "trna_records": "tRNA Records",
+    "trna_ribosome_interactions": "tRNA-Ribosome Interactions",
+    "genomes": "Genomes",
+    "alignment_sessions": "Alignment Sessions",
+    "engineered_sup_trna_perpos_counts": "Engineered Per-position Counts",
+    "pmid_article_info_extended": "PMID Article Cache",
+}
+_ADMIN_TABLE_CATEGORIES = {
+    "coding_variation_cancer": "disease",
+    "coding_variation_genetic_disease": "disease",
+    "nonsense_sup_rna": "natural",
+    "frameshift_sup_trna": "natural",
+    "Engineered_sup_tRNA": "engineered",
+    "function_and_modification": "elements",
+    "aars_recognition": "elements",
+    "ef_tu": "elements",
+    "trna_records": "records",
+    "trna_ribosome_interactions": "records",
+    "genomes": "records",
+    "alignment_sessions": "system",
+    "engineered_sup_trna_perpos_counts": "system",
+    "pmid_article_info_extended": "system",
+}
+
+def _admin_display_name(table: str) -> str:
+    if table in _ADMIN_TABLE_LABELS:
+        return _ADMIN_TABLE_LABELS[table]
+    pretty = str(table or "").replace("_", " ").strip()
+    return pretty[:1].upper() + pretty[1:] if pretty else str(table or "")
+
+def _admin_all_tables(include_internal: bool = False) -> list:
+    insp = db.inspect(db.engine)
+    tables = [t for t in insp.get_table_names() if t not in {"sqlite_sequence"}]
+    if not include_internal:
+        tables = [t for t in tables if t not in _ADMIN_INTERNAL_TABLES]
+    preferred = [t for t in EXPORT_TABLES if t in tables]
+    extras = sorted(
+        [t for t in tables if t not in preferred],
+        key=lambda item: (_ADMIN_TABLE_CATEGORIES.get(item, "zzz"), item.lower()),
+    )
+    return preferred + extras
+
+def _admin_table_allowed(table: str, include_internal: bool = False) -> bool:
+    if not table:
+        return False
+    return table in _admin_all_tables(include_internal=include_internal)
+
+def _admin_table_read_only(table: str) -> bool:
+    return table in _ADMIN_READ_ONLY_TABLES
+
+def _admin_table_primary_columns(table: str) -> list:
+    insp = db.inspect(db.engine)
+    try:
+        pk = insp.get_pk_constraint(table) or {}
+    except Exception:
+        pk = {}
+    cols = pk.get("constrained_columns") or []
+    return [str(col) for col in cols if col]
+
+def _admin_table_match_columns(table: str, original_row: dict, col_names: list) -> list:
+    if not isinstance(original_row, dict):
+        return []
+    pk_cols = [col for col in _admin_table_primary_columns(table) if col in original_row]
+    if pk_cols:
+        return pk_cols
+    preferred = ["ENSURE_ID", "ensure_id", "id", "ID", "Index", "PMID", "pmid"]
+    chosen = [col for col in preferred if col in col_names and col in original_row and original_row.get(col) not in ("", None)]
+    if chosen:
+        return chosen
+    fallback = [col for col in col_names if col in original_row]
+    return fallback[: min(len(fallback), 12)]
+
+def _admin_build_row_where(table: str, original_row: dict, col_names: list):
+    match_columns = _admin_table_match_columns(table, original_row, col_names)
+    if not match_columns:
+        return "", {}, []
+    where_parts = []
+    params = {}
+    for idx, column in enumerate(match_columns):
+        value = original_row.get(column)
+        if value is None:
+            where_parts.append(f"`{column}` IS NULL")
+            continue
+        key = f"w{idx}"
+        where_parts.append(f"`{column}` = :{key}")
+        params[key] = value
+    return " AND ".join(where_parts), params, match_columns
+
+def _admin_fetch_row(conn, table: str, original_row: dict, col_names: list):
+    where_sql, params, _ = _admin_build_row_where(table, original_row, col_names)
+    if not where_sql:
+        return None
+    sql = text(f"SELECT * FROM `{table}` WHERE {where_sql} LIMIT 1")
+    row = conn.execute(sql, params).fetchone()
+    if not row:
+        return None
+    try:
+        return dict(row._mapping)
+    except AttributeError:
+        return dict(row)
+
+def _admin_table_summary(table: str) -> dict:
+    cols, col_names = _get_table_columns(table)
+    if not cols:
+        return {}
+    try:
+        with db.engine.connect() as conn:
+            count = _count_table_rows(conn, table)
+    except Exception:
+        count = 0
+    return {
+        "name": table,
+        "label": _admin_display_name(table),
+        "category": _ADMIN_TABLE_CATEGORIES.get(table, "records"),
+        "row_count": int(count),
+        "column_count": len(col_names or []),
+        "primary_columns": _admin_table_primary_columns(table),
+        "read_only": _admin_table_read_only(table),
+    }
+
+def _admin_doc_allowed(filename: str, allow_create: bool = False) -> str:
+    docs_dir = _docs_dir()
+    if not docs_dir or not os.path.isdir(docs_dir):
+        raise FileNotFoundError("docs directory not found")
+    safe = os.path.basename(str(filename or "").strip())
+    if not safe:
+        raise ValueError("filename is required")
+    if allow_create and not safe.lower().endswith(".md"):
+        raise ValueError("only .md files can be created")
+    path = os.path.abspath(os.path.join(docs_dir, safe))
+    root = os.path.abspath(docs_dir)
+    if not path.startswith(root + os.sep) and path != root:
+        raise ValueError("invalid filename")
+    if not allow_create and not os.path.isfile(path):
+        raise FileNotFoundError("document does not exist")
+    return path
+
+def _admin_list_docs() -> list:
+    docs = []
+    for fname in _list_docs():
+        path = _admin_doc_allowed(fname)
+        ext = os.path.splitext(fname)[1].lower()
+        try:
+            size = os.path.getsize(path)
+        except Exception:
+            size = 0
+        docs.append({
+            "filename": fname,
+            "type": ext.lstrip(".") or "file",
+            "editable": ext == ".md",
+            "size": int(size),
+        })
+    return docs
+
+def _admin_read_doc(filename: str) -> dict:
+    path = _admin_doc_allowed(filename)
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".pdf":
+        content = _read_pdf_text(path)
+    else:
+        with open(path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+    return {
+        "filename": os.path.basename(path),
+        "editable": ext == ".md",
+        "type": ext.lstrip(".") or "file",
+        "content": content,
+    }
+
 # 针对 Engineered_sup_tRNA 提供简化 CRUD（行级编辑）
 ENGINEERED_TABLE = "Engineered_sup_tRNA"
 
@@ -2951,6 +3784,7 @@ def engineered_columns():
     })
 
 @bp.route("/engineered_sup_trna/create", methods=["POST"])
+@admin_write_required
 def engineered_create():
     """
     JSON: {<column>: <value>, ...}
@@ -2982,12 +3816,19 @@ def engineered_create():
     try:
         with db.engine.begin() as conn:
             conn.execute(sql, params)
+        audit_admin_action(
+            action="create",
+            table_name=ENGINEERED_TABLE,
+            record_pk=str(payload.get("ENSURE_ID") or ""),
+            after=data,
+        )
         return jsonify({"ok": True, "inserted": 1}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 
 @bp.route("/engineered_sup_trna/update", methods=["POST"])
+@admin_write_required
 def engineered_update():
     """
     JSON:
@@ -3020,13 +3861,23 @@ def engineered_update():
 
     try:
         with db.engine.begin() as conn:
+            before_row = _fetch_engineered_row(conn, ensure_id)
             res = conn.execute(sql, params)
+            after_row = _fetch_engineered_row(conn, ensure_id)
+        audit_admin_action(
+            action="update",
+            table_name=ENGINEERED_TABLE,
+            record_pk=str(ensure_id),
+            before=before_row,
+            after=after_row or updates,
+        )
         return jsonify({"ok": True, "updated": res.rowcount}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 
 @bp.route("/engineered_sup_trna/delete", methods=["POST"])
+@admin_write_required
 def engineered_delete():
     """
     JSON: { "ENSURE_ID": "..." }
@@ -3039,7 +3890,14 @@ def engineered_delete():
     sql = text(f"DELETE FROM `{ENGINEERED_TABLE}` WHERE `ENSURE_ID` = :ENSURE_ID")
     try:
         with db.engine.begin() as conn:
+            before_row = _fetch_engineered_row(conn, ensure_id)
             res = conn.execute(sql, {"ENSURE_ID": ensure_id})
+        audit_admin_action(
+            action="delete",
+            table_name=ENGINEERED_TABLE,
+            record_pk=str(ensure_id),
+            before=before_row,
+        )
         return jsonify({"ok": True, "deleted": res.rowcount}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -3053,9 +3911,427 @@ def health():
     return "OK", 200
 
 
+@bp.route("/admin/api/login", methods=["POST"])
+def admin_login():
+    payload = request.get_json(silent=True) or {}
+    username = str(payload.get("username") or "").strip()
+    password = str(payload.get("password") or "")
+    user = verify_admin_credentials(username, password)
+    if not user:
+        return jsonify({"error": "Invalid username or password"}), 401
+
+    csrf_token = login_admin_session(user)
+    audit_admin_action(
+        action="login",
+        table_name="admin_users",
+        record_pk=str(user.id),
+        user=user,
+    )
+    return jsonify(
+        {
+            "ok": True,
+            "authenticated": True,
+            "user": serialize_admin_user(user),
+            "csrf_token": csrf_token,
+        }
+    )
+
+
+@bp.route("/admin/api/me", methods=["GET"])
+@admin_required
+def admin_me():
+    user = current_admin()
+    return jsonify(
+        {
+            "authenticated": True,
+            "user": serialize_admin_user(user),
+            "csrf_token": get_csrf_token(),
+        }
+    )
+
+
+@bp.route("/admin/api/logout", methods=["POST"])
+@admin_required
+def admin_logout():
+    user = current_admin()
+    audit_admin_action(
+        action="logout",
+        table_name="admin_users",
+        record_pk=str(user.id),
+        user=user,
+    )
+    logout_admin_session()
+    return jsonify({"ok": True})
+
+
+@bp.route("/admin/api/audit_logs", methods=["GET"])
+@admin_required
+def admin_audit_logs():
+    try:
+        limit = int(request.args.get("limit", 20))
+    except Exception:
+        limit = 20
+    limit = max(1, min(limit, 200))
+
+    rows = AdminAuditLog.query.order_by(AdminAuditLog.id.desc()).limit(limit).all()
+    return jsonify(
+        {
+            "rows": [
+                {
+                    "id": int(row.id),
+                    "username": row.username,
+                    "role": row.role,
+                    "action": row.action,
+                    "table_name": row.table_name,
+                    "record_pk": row.record_pk,
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                    "ip_address": row.ip_address,
+                    "before_json": row.before_json,
+                    "after_json": row.after_json,
+                }
+                for row in rows
+            ]
+        }
+    )
+
+
+@bp.route("/admin/api/llm_settings", methods=["GET"])
+@admin_required
+def admin_llm_settings_get():
+    return jsonify(get_llm_settings(include_secrets=True))
+
+
+@bp.route("/admin/api/llm_settings", methods=["POST"])
+@admin_write_required
+def admin_llm_settings_update():
+    payload = request.get_json(silent=True) or {}
+    before, after = save_llm_settings(payload)
+    audit_admin_action(
+        action="update_llm_settings",
+        table_name="app_settings",
+        record_pk="llm",
+        before=before,
+        after=after,
+    )
+    return jsonify({"ok": True, "settings": get_llm_settings(include_secrets=True)})
+
+@bp.route("/admin/api/resources", methods=["GET"])
+@admin_required
+def admin_resources():
+    tables = [_admin_table_summary(table) for table in _admin_all_tables(include_internal=False)]
+    tables = [item for item in tables if item]
+    docs = _admin_list_docs()
+    total_rows = sum(int(item.get("row_count") or 0) for item in tables)
+    return jsonify(
+        {
+            "tables": tables,
+            "docs": docs,
+            "overview": {
+                "table_count": len(tables),
+                "editable_table_count": len([item for item in tables if not item.get("read_only")]),
+                "doc_count": len(docs),
+                "total_rows": int(total_rows),
+            },
+        }
+    )
+
+@bp.route("/admin/api/tables/<table>/meta", methods=["GET"])
+@admin_required
+def admin_table_meta(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    cols, _ = _get_table_columns(table)
+    if not cols:
+        return jsonify({"error": f"Table '{table}' does not exist"}), 404
+    summary = _admin_table_summary(table)
+    label_overrides = get_table_column_labels(table)
+    default_visible_columns = get_table_default_visible_columns(table)
+    return jsonify(
+        {
+            **summary,
+            "default_visible_columns": default_visible_columns,
+            "columns": [
+                {
+                    "name": c["name"],
+                    "type": str(c["type"]),
+                    "label_override": label_overrides.get(str(c["name"]), ""),
+                }
+                for c in cols
+            ],
+        }
+    )
+
+
+@bp.route("/admin/api/tables/<table>/labels", methods=["POST"])
+@admin_write_required
+def admin_table_labels_update(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    cols, col_names = _get_table_columns(table)
+    if not cols:
+        return jsonify({"error": f"Table '{table}' does not exist"}), 404
+    payload = request.get_json(silent=True) or {}
+    raw_labels = payload.get("labels") or {}
+    safe_labels = {
+        str(column): str(label or "").strip()
+        for column, label in (raw_labels.items() if isinstance(raw_labels, dict) else [])
+        if str(column) in col_names
+    }
+    before, after = save_table_column_labels(table, safe_labels)
+    audit_admin_action(
+        action="update_column_labels",
+        table_name="app_settings",
+        record_pk=f"column_labels:{table}",
+        before=before,
+        after=after,
+    )
+    return jsonify({"ok": True, "table": table, "labels": after})
+
+
+@bp.route("/admin/api/tables/<table>/visible_columns", methods=["POST"])
+@admin_write_required
+def admin_table_visible_columns_update(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    cols, col_names = _get_table_columns(table)
+    if not cols:
+        return jsonify({"error": f"Table '{table}' does not exist"}), 404
+    payload = request.get_json(silent=True) or {}
+    raw_columns = payload.get("columns") or []
+    safe_columns = [str(column) for column in raw_columns if str(column) in col_names]
+    before, after = save_table_default_visible_columns(table, safe_columns)
+    audit_admin_action(
+        action="update_default_visible_columns",
+        table_name="app_settings",
+        record_pk=f"default_visible_columns:{table}",
+        before=before,
+        after=after,
+    )
+    return jsonify({"ok": True, "table": table, "columns": after})
+
+
+@bp.route("/api/tables/<table>/column_labels", methods=["GET"])
+def public_table_column_labels(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not public"}), 404
+    return jsonify({"table": table, "labels": get_table_column_labels(table)})
+
+
+@bp.route("/api/tables/<table>/default_columns", methods=["GET"])
+def public_table_default_columns(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not public"}), 404
+    return jsonify({"table": table, "columns": get_table_default_visible_columns(table)})
+
+@bp.route("/admin/api/tables/<table>/rows", methods=["POST"])
+@admin_required
+def admin_table_rows(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    payload = request.get_json(silent=True) or {}
+    payload["table"] = table
+    result = _query_table_rows(payload)
+    if result.get("error"):
+        status = result.pop("status", 400)
+        return jsonify(result), status
+    return jsonify(result)
+
+@bp.route("/admin/api/tables/<table>/create", methods=["POST"])
+@admin_write_required
+def admin_table_create(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    if _admin_table_read_only(table):
+        return jsonify({"error": f"Table '{table}' is read-only"}), 400
+    payload = request.get_json(silent=True) or {}
+    cols, col_names = _get_table_columns(table)
+    if not cols:
+        return jsonify({"error": f"Table '{table}' does not exist"}), 404
+    data = {k: v for k, v in payload.items() if k in col_names}
+    if not data:
+        return jsonify({"error": "No valid columns to insert"}), 400
+    columns_sql = ", ".join(f"`{name}`" for name in data.keys())
+    values_sql = []
+    params = {}
+    for idx, (name, value) in enumerate(data.items()):
+        key = f"v{idx}"
+        values_sql.append(f":{key}")
+        params[key] = value
+    sql = text(f"INSERT INTO `{table}` ({columns_sql}) VALUES ({', '.join(values_sql)})")
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(sql, params)
+        record_pk = next((str(data.get(col)) for col in _admin_table_match_columns(table, data, col_names) if data.get(col) not in (None, "")), "")
+        audit_admin_action(action="create", table_name=table, record_pk=record_pk, after=data)
+        return jsonify({"ok": True, "inserted": 1}), 200
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
+
+@bp.route("/admin/api/tables/<table>/update", methods=["POST"])
+@admin_write_required
+def admin_table_update(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    if _admin_table_read_only(table):
+        return jsonify({"error": f"Table '{table}' is read-only"}), 400
+    payload = request.get_json(silent=True) or {}
+    original_row = payload.get("original_row") or {}
+    updates = payload.get("updates") or {}
+    cols, col_names = _get_table_columns(table)
+    if not cols:
+        return jsonify({"error": f"Table '{table}' does not exist"}), 404
+    if not isinstance(original_row, dict) or not original_row:
+        return jsonify({"error": "original_row is required"}), 400
+    updates = {k: v for k, v in updates.items() if k in col_names}
+    if not updates:
+        return jsonify({"error": "No valid columns to update"}), 400
+    where_sql, where_params, match_columns = _admin_build_row_where(table, original_row, col_names)
+    if not where_sql:
+        return jsonify({"error": "Unable to identify the original row"}), 400
+    set_parts = []
+    params = dict(where_params)
+    for idx, (name, value) in enumerate(updates.items()):
+        key = f"s{idx}"
+        set_parts.append(f"`{name}` = :{key}")
+        params[key] = value
+    sql = text(f"UPDATE `{table}` SET {', '.join(set_parts)} WHERE {where_sql} LIMIT 1")
+    merged_row = dict(original_row)
+    merged_row.update(updates)
+    try:
+        with db.engine.begin() as conn:
+            before_row = _admin_fetch_row(conn, table, original_row, col_names)
+            result = conn.execute(sql, params)
+            after_row = _admin_fetch_row(conn, table, merged_row, col_names) or _admin_fetch_row(conn, table, original_row, col_names)
+        record_pk = next((str(original_row.get(col)) for col in match_columns if original_row.get(col) not in (None, "")), "")
+        audit_admin_action(action="update", table_name=table, record_pk=record_pk, before=before_row or original_row, after=after_row or merged_row)
+        return jsonify({"ok": True, "updated": int(result.rowcount or 0)}), 200
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
+
+@bp.route("/admin/api/tables/<table>/delete", methods=["POST"])
+@admin_write_required
+def admin_table_delete(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    if _admin_table_read_only(table):
+        return jsonify({"error": f"Table '{table}' is read-only"}), 400
+    payload = request.get_json(silent=True) or {}
+    original_row = payload.get("original_row") or {}
+    cols, col_names = _get_table_columns(table)
+    if not cols:
+        return jsonify({"error": f"Table '{table}' does not exist"}), 404
+    if not isinstance(original_row, dict) or not original_row:
+        return jsonify({"error": "original_row is required"}), 400
+    where_sql, params, match_columns = _admin_build_row_where(table, original_row, col_names)
+    if not where_sql:
+        return jsonify({"error": "Unable to identify the row to delete"}), 400
+    sql = text(f"DELETE FROM `{table}` WHERE {where_sql} LIMIT 1")
+    try:
+        with db.engine.begin() as conn:
+            before_row = _admin_fetch_row(conn, table, original_row, col_names)
+            result = conn.execute(sql, params)
+        record_pk = next((str(original_row.get(col)) for col in match_columns if original_row.get(col) not in (None, "")), "")
+        audit_admin_action(action="delete", table_name=table, record_pk=record_pk, before=before_row or original_row)
+        return jsonify({"ok": True, "deleted": int(result.rowcount or 0)}), 200
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
+
+@bp.route("/admin/api/docs", methods=["GET"])
+@admin_required
+def admin_docs_list():
+    return jsonify({"docs": _admin_list_docs()})
+
+@bp.route("/admin/api/docs", methods=["POST"])
+@admin_write_required
+def admin_docs_create():
+    payload = request.get_json(silent=True) or {}
+    filename = str(payload.get("filename") or "").strip()
+    content = str(payload.get("content") or "")
+    try:
+        path = _admin_doc_allowed(filename, allow_create=True)
+        if os.path.exists(path):
+            return jsonify({"error": "document already exists"}), 400
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        audit_admin_action(action="create_doc", table_name="public_docs", record_pk=filename, after={"filename": filename})
+        return jsonify({"ok": True, "doc": _admin_read_doc(filename)}), 200
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
+
+@bp.route("/admin/api/docs/<path:filename>", methods=["GET"])
+@admin_required
+def admin_docs_get(filename):
+    try:
+        return jsonify(_admin_read_doc(filename))
+    except FileNotFoundError:
+        return jsonify({"error": "document not found"}), 404
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
+
+@bp.route("/admin/api/docs/<path:filename>", methods=["POST"])
+@admin_write_required
+def admin_docs_save(filename):
+    payload = request.get_json(silent=True) or {}
+    content = str(payload.get("content") or "")
+    try:
+        path = _admin_doc_allowed(filename)
+        if not path.lower().endswith(".md"):
+            return jsonify({"error": "only markdown documents are editable"}), 400
+        before = _admin_read_doc(filename)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        after = _admin_read_doc(filename)
+        audit_admin_action(action="update_doc", table_name="public_docs", record_pk=filename, before={"content": before.get("content", "")[:1000]}, after={"content": after.get("content", "")[:1000]})
+        return jsonify({"ok": True, "doc": after}), 200
+    except FileNotFoundError:
+        return jsonify({"error": "document not found"}), 404
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
+
+@bp.route("/admin/api/docs/<path:filename>", methods=["DELETE"])
+@admin_write_required
+def admin_docs_delete(filename):
+    try:
+        path = _admin_doc_allowed(filename)
+        if not path.lower().endswith(".md"):
+            return jsonify({"error": "only markdown documents can be deleted"}), 400
+        before = _admin_read_doc(filename)
+        os.remove(path)
+        audit_admin_action(action="delete_doc", table_name="public_docs", record_pk=filename, before={"content": before.get("content", "")[:1000]})
+        return jsonify({"ok": True}), 200
+    except FileNotFoundError:
+        return jsonify({"error": "document not found"}), 404
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@bp.route("/chat/api/models", methods=["GET"])
+def chat_model_options():
+    settings = get_llm_settings(include_secrets=False)
+    return jsonify(
+        {
+            "active_provider": settings.get("active_provider"),
+            "active_model": settings.get("active_model"),
+            "model_options": settings.get("model_options") or [],
+            "ollama_models": settings.get("ollama_models") or [],
+            "deepseek_models": settings.get("deepseek_models") or [],
+        }
+    )
+
+
 @bp.route("/chat/api/application/profile", methods=["GET"])
 def chat_application_profile():
-    return jsonify({"data": {"id": "ollama-local"}}), 200
+    settings = get_llm_settings(include_secrets=False)
+    return jsonify(
+        {
+            "data": {
+                "id": "ensure-chat",
+                "active_provider": settings.get("active_provider"),
+                "active_model": settings.get("active_model"),
+                "model_options": settings.get("model_options") or [],
+            }
+        }
+    ), 200
 
 
 @bp.route("/chat/api/open", methods=["GET"])
@@ -3092,8 +4368,8 @@ def chat_title():
     if not summary_input:
         return jsonify({"title": "New chat"}), 200
 
-    base, model, timeout, _, _ = _get_ollama_config()
-    model = _select_ollama_model(payload.get("model"), model)
+    runtime = _get_llm_runtime(payload.get("model"))
+    model = _select_chat_model(payload.get("model"), str(runtime.get("model") or ""))
     user_text = " ".join(user_parts).strip()
     sample = user_text if user_text else summary_input
     cjk_count = len(re.findall(r"[\u4e00-\u9fff]", sample))
@@ -3115,7 +4391,7 @@ def chat_title():
     ]
     title = ""
     try:
-        for chunk, done in _ollama_stream(base, model, messages, timeout):
+        for chunk, done in _llm_stream(runtime, messages, model=model):
             if chunk:
                 title += chunk
             if done:
@@ -3137,46 +4413,140 @@ def chat_message(chat_id):
     message = (payload.get("message") or "").strip()
     if not message:
         return jsonify({"error": "missing message"}), 400
+    stream_requested = bool(payload.get("stream", True))
 
-    base, model, timeout, system_prompt, max_messages = _get_ollama_config()
-    model = _select_ollama_model(payload.get("model"), model)
+    runtime = _get_llm_runtime(payload.get("model"))
+    model = _select_chat_model(payload.get("model"), str(runtime.get("model") or ""))
+    system_prompt = str(runtime.get("system_prompt") or "")
+    max_messages = int(runtime.get("max_messages") or 20)
     lang_detect = bool(current_app.config.get("LANG_DETECT_ENABLE", True))
     intent_router = bool(current_app.config.get("INTENT_ROUTER_ENABLE", True))
     lang = _detect_language(message) if lang_detect else "zh"
     intent = _classify_intent(message) if intent_router else "general"
     style_prompt = _style_prompt_for_intent(intent, lang)
-    _append_chat_message(chat_id, "user", message, max_messages)
+    history = _normalize_client_history(payload.get("history"), max_messages)
+    if history:
+        _replace_chat_history(chat_id, history, max_messages)
+    should_append_user = True
+    if history:
+        last = history[-1]
+        if str(last.get("role") or "") == "user" and str(last.get("content") or "").strip() == message:
+            should_append_user = False
+    if should_append_user:
+        _append_chat_message(chat_id, "user", message, max_messages)
 
-    rag_context, rag_evidence = _rag_retrieve(message)
-    tool_context, tool_evidence, tool_cache, tool_signals, steps_used, max_steps, max_chars = _run_tool_pipeline(message, rag_context)
-    merged_context = "\n\n".join([c for c in [rag_context, tool_context] if c]).strip()
-    merged_evidence = "\n".join([e for e in [rag_evidence, tool_evidence] if e]).strip()
     strict_evidence = bool(current_app.config.get("STRICT_EVIDENCE_MODE", False))
     force_evidence = _requires_strict_evidence(message)
     session = _get_chat_session(chat_id)
-    messages = _build_ollama_messages(session.get("messages"), system_prompt, merged_context)
+
+    def _sse(payload: dict):
+        return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
     def generate():
         complete = ""
+        answer_pmids = []
+        invalid_pmids = []
         try:
-            context_local = merged_context
-            evidence_local = merged_evidence
-            if ((strict_evidence and _evidence_required(message)) or force_evidence) and not merged_evidence:
+            yield _sse({
+                "type": "status",
+                "status": "Analyzing question",
+                "detail": "Checking the language, intent, and evidence requirements for your request."
+            })
+
+            rag_context, rag_evidence = _rag_retrieve(message)
+
+            yield _sse({
+                "type": "status",
+                "status": "Searching ENSURE data",
+                "detail": "Running document retrieval and database lookups for relevant evidence."
+            })
+
+            tool_trace = []
+            tool_context, tool_evidence, tool_cache, tool_signals, steps_used, max_steps, max_chars, tool_trace = _run_tool_pipeline(
+                message,
+                rag_context,
+                trace_sink=tool_trace,
+            )
+            for trace in tool_trace:
+                yield _sse({
+                    "type": "tool",
+                    "tool": str(trace.get("tool") or "tool"),
+                    "summary": str(trace.get("summary") or ""),
+                })
+
+            context_local = "\n\n".join([c for c in [rag_context, tool_context] if c]).strip()
+            evidence_local = "\n".join([e for e in [rag_evidence, tool_evidence] if e]).strip()
+            if ((strict_evidence and _evidence_required(message)) or force_evidence) and not evidence_local:
                 allowed = _strict_allowed_response(message)
                 fallback = allowed or "当前数据中找不到"
                 _append_chat_message(chat_id, "assistant", fallback, max_messages)
-                data = json.dumps({"content": fallback}, ensure_ascii=False)
-                yield f"data: {data}\n\n"
+                yield _sse({"type": "content", "content": fallback})
                 evidence_text = _format_evidence_block(evidence_local)
-                data = json.dumps({"content": evidence_text}, ensure_ascii=False)
-                yield f"data: {data}\n\n"
+                yield _sse({"type": "evidence", "content": evidence_text})
                 yield "data: [DONE]\n\n"
                 return
+
+            yield _sse({
+                "type": "status",
+                "status": "Drafting answer",
+                "detail": "Synthesizing the retrieved evidence into a grounded response."
+            })
+
+            if stream_requested:
+                yield _sse({
+                    "type": "status",
+                    "status": "Streaming answer",
+                    "detail": "Sending the grounded answer as soon as new text is generated."
+                })
+                answer_messages = _build_answer_messages(
+                    system_prompt,
+                    session.get("messages") or [],
+                    context_local,
+                    message,
+                    style_prompt,
+                )
+                try:
+                    for chunk, done in _llm_stream(runtime, answer_messages, model=model):
+                        if chunk:
+                            complete += chunk
+                            yield _sse({"type": "content", "content": chunk})
+                        if done:
+                            break
+                except Exception:
+                    if not complete.strip():
+                        raise
+                    yield _sse({
+                        "type": "status",
+                        "status": "Stream interrupted",
+                        "detail": "Showing the partial answer generated before the stream ended."
+                    })
+                complete = complete.strip()
+                if not complete:
+                    complete = _generate_answer(
+                        runtime,
+                        system_prompt,
+                        session.get("messages") or [],
+                        context_local,
+                        message,
+                        style_prompt,
+                    )
+                    if complete:
+                        yield _sse({"type": "content", "content": complete})
+                if complete:
+                    _append_chat_message(chat_id, "assistant", complete, max_messages)
+                yield _sse({
+                    "type": "status",
+                    "status": "Preparing evidence",
+                    "detail": "Packaging the evidence trace used for this answer."
+                })
+                evidence_text = _format_evidence_block(evidence_local)
+                yield _sse({"type": "evidence", "content": evidence_text})
+                yield "data: [DONE]\n\n"
+                return
+
             # Generate answer with evidence
             complete = _generate_answer(
-                base,
-                model,
-                timeout,
+                runtime,
                 system_prompt,
                 session.get("messages") or [],
                 context_local,
@@ -3184,8 +4554,14 @@ def chat_message(chat_id):
                 style_prompt,
             )
 
+            yield _sse({
+                "type": "status",
+                "status": "Reviewing answer",
+                "detail": "Checking citations, evidence coverage, and whether the answer needs revision."
+            })
+
             # Critic check
-            critic = _critique_answer(base, model, timeout, message, complete, context_local)
+            critic = _critique_answer(runtime, message, complete, context_local)
             verdict = (critic.get("verdict") or "").strip().lower()
             tool_calls = critic.get("tool_calls") or []
             revised = critic.get("revised_answer") or ""
@@ -3194,7 +4570,7 @@ def chat_message(chat_id):
             if verdict == "need_more_evidence" and tool_calls:
                 tool_calls = _sanitize_tool_plan(tool_calls, max_steps)
                 for call in tool_calls:
-                    _execute_tool_cached(
+                    extra_result = _execute_tool_cached(
                         call.get("tool"),
                         call.get("params") or {},
                         tool_cache,
@@ -3202,7 +4578,13 @@ def chat_message(chat_id):
                         [],
                         tool_signals,
                         max_chars,
+                        trace_sink=tool_trace,
                     )
+                    yield _sse({
+                        "type": "tool",
+                        "tool": str(call.get("tool") or "tool"),
+                        "summary": _tool_summary(str(call.get("tool") or "tool"), extra_result),
+                    })
                 # rebuild merged context/evidence from cache
                 extra_context_lines = []
                 extra_evidence_lines = []
@@ -3213,16 +4595,14 @@ def chat_message(chat_id):
                 context_local = "\n\n".join([c for c in [rag_context, "\n\n".join(extra_context_lines)] if c]).strip()
                 evidence_local = "\n".join([e for e in [rag_evidence, "\n".join(extra_evidence_lines)] if e]).strip()
                 complete = _generate_answer(
-                    base,
-                    model,
-                    timeout,
+                    runtime,
                     system_prompt,
                     session.get("messages") or [],
                     context_local,
                     message,
                     style_prompt,
                 )
-                critic = _critique_answer(base, model, timeout, message, complete, context_local)
+                critic = _critique_answer(runtime, message, complete, context_local)
                 verdict = (critic.get("verdict") or "").strip().lower()
                 revised = critic.get("revised_answer") or ""
 
@@ -3238,9 +4618,7 @@ def chat_message(chat_id):
                     + ". Remove or correct them while keeping the rest."
                 )
                 complete = _generate_answer(
-                    base,
-                    model,
-                    timeout,
+                    runtime,
                     system_prompt,
                     session.get("messages") or [],
                     context_local,
@@ -3258,16 +4636,14 @@ def chat_message(chat_id):
                     "Prefer integrating them naturally instead of listing."
                 )
                 complete = _generate_answer(
-                    base,
-                    model,
-                    timeout,
+                    runtime,
                     system_prompt,
                     session.get("messages") or [],
                     context_local,
                     message,
                     style_prompt + "\n" + second_hint,
                 )
-                critic2 = _critique_answer(base, model, timeout, message, complete, context_local)
+                critic2 = _critique_answer(runtime, message, complete, context_local)
                 verdict2 = (critic2.get("verdict") or "").strip().lower()
                 revised2 = critic2.get("revised_answer") or ""
                 if verdict2 == "revise" and revised2:
@@ -3281,9 +4657,7 @@ def chat_message(chat_id):
                         + ". Remove or correct them while keeping the rest."
                     )
                     complete = _generate_answer(
-                        base,
-                        model,
-                        timeout,
+                        runtime,
                         system_prompt,
                         session.get("messages") or [],
                         context_local,
@@ -3291,23 +4665,25 @@ def chat_message(chat_id):
                         style_prompt + "\n" + correction_hint,
                     )
                     _, invalid_pmids = _check_answer_pmids(complete, context_local)
-                    if invalid_pmids:
-                        complete = _remove_invalid_pmids(complete, invalid_pmids)
+                if invalid_pmids:
+                    complete = _remove_invalid_pmids(complete, invalid_pmids)
 
             if complete:
                 _append_chat_message(chat_id, "assistant", complete, max_messages)
+            yield _sse({
+                "type": "status",
+                "status": "Preparing final response",
+                "detail": "Packaging the answer and evidence trace for display."
+            })
             evidence_text = _format_evidence_block(evidence_local)
             if answer_pmids:
                 evidence_text += "\n\nAnswer PMIDs: " + ", ".join(answer_pmids)
             if invalid_pmids:
                 evidence_text += "\nInvalid PMIDs removed: " + ", ".join(invalid_pmids)
-            data = json.dumps({"content": complete}, ensure_ascii=False)
-            yield f"data: {data}\n\n"
-            data = json.dumps({"content": evidence_text}, ensure_ascii=False)
-            yield f"data: {data}\n\n"
+            yield _sse({"type": "content", "content": complete})
+            yield _sse({"type": "evidence", "content": evidence_text})
         except Exception as exc:
-            data = json.dumps({"content": f"Error: {exc}"}, ensure_ascii=False)
-            yield f"data: {data}\n\n"
+            yield _sse({"type": "error", "content": f"Error: {exc}"})
         yield "data: [DONE]\n\n"
 
     headers = {

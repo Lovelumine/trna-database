@@ -51,9 +51,10 @@
 import { defineComponent, ref, onMounted, computed } from 'vue';
 import { ElSelect, ElOption } from 'element-plus';
 import { useTableData } from '../../utils/useTableData';
-import { allColumns, selectedColumns, isPMID } from './aaRScolumns';
+import { allColumns as baseColumns, selectedColumns, isPMID } from './aaRScolumns';
 import en from '@shene/table/dist/locale/en';
 import TableToolbar from '@/components/TableToolbar.vue';
+import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 
 const locale = ref(en);
 
@@ -62,6 +63,7 @@ export default defineComponent({
   components: { ElSelect, ElOption, TableToolbar },
   setup() {
     const TABLE_NAME = 'aars_recognition';
+    const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
     const {
       rows,
       loading,
@@ -106,14 +108,15 @@ export default defineComponent({
 
     onMounted(async () => {
       await loadPage();
-      selectedColumns.value = [...selectedColumns.value];
+      allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
+      selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
       tryAutoExpand();
     });
 
     // 搜索列：只展示带 dataIndex 的叶子列，避免 undefined
     const searchableColumns = computed(() => {
       const cols: any[] = [];
-      allColumns.forEach((column: any) => {
+      allColumns.value.forEach((column: any) => {
         if (column.dataIndex) cols.push(column);
         if (Array.isArray(column.children)) {
           column.children.forEach((child: any) => {
@@ -126,7 +129,7 @@ export default defineComponent({
 
     // 列显示：父列/子列一起按 selectedColumns 过滤
     const displayedColumns = computed(() =>
-      allColumns.flatMap((column) => {
+      allColumns.value.flatMap((column) => {
         if (selectedColumns.value.includes(column.key as string)) {
           return column;
         }

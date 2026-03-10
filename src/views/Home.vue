@@ -24,7 +24,7 @@
           </p>
           <div class="cta-row">
             <a class="btn btn-primary" href="/expanded/ensure-0">Explore Structures</a>
-            <a class="btn btn-ghost" href="/AIyingying">Ask the AI Assistant</a>
+            <a class="btn btn-ghost" href="/AIYingying">Ask the AI Assistant</a>
           </div>
         </div>
       </header>
@@ -95,7 +95,7 @@
         <ul class="tool-list">
           <li><strong><a href="/download">Data Download:</a></strong> Access downloadable datasets for further research.</li>
           <li><strong><a href="/expanded/ensure-0">Interactive Visualization:</a></strong> Explore tRNA structures and functions interactively.</li>
-          <li><strong><a href="/AIyingying">AI Assistant:</a></strong> Get expert answers to your tRNA therapeutic questions from Yingying, our AI assistant built on the GPT-4o model.</li>
+          <li><strong><a href="/AIYingying">AI Assistant:</a></strong> Get expert answers to your tRNA therapeutic questions from Yingying, our AI assistant built on the GPT-4o model.</li>
           <li><strong><a href="/blast">BLAST Functionality:</a></strong> Quickly find specific tRNA data using our advanced BLAST tools.</li>
         </ul>
       </section>
@@ -111,7 +111,7 @@
         </p>
         <p class="closing-links">
           Get started: <a class="text-link" href="/download">download data</a> or
-          <a class="text-link" href="/AIyingying">consult the AI assistant</a>.
+          <a class="text-link" href="/AIYingying">consult the AI assistant</a>.
         </p>
       </section>
 

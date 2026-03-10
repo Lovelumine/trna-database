@@ -431,6 +431,7 @@ import TrnaRadial from '@/components/TrnaRadial.vue';
 import supTrnaRadial from '@/components/supTrnaRadial.vue';
 import AlignmentTable from '@/components/AlignmentTable.vue';
 import { ElButton, ElInput, ElMessage } from 'element-plus';
+import { adminJsonHeaders, fetchAdminSession } from '@/utils/admin';
 
 const API_BASE = ''; // 同源部署时留空
 
@@ -444,9 +445,11 @@ export default defineComponent({
     const loading = ref(true);
     const showSup = ref(true);
     const records = ref<any[]>([]);
+    const adminEnabled = ref(false);
+    const csrfToken = ref('');
     const EDIT_MODE = computed(() => {
       try {
-        return new URLSearchParams(window.location.search).get('edit') === '1';
+        return adminEnabled.value && new URLSearchParams(window.location.search).get('edit') === '1';
       } catch {
         return false;
       }
@@ -556,7 +559,8 @@ export default defineComponent({
       try {
         const resp = await fetch(`${API_BASE}/engineered_sup_trna/update`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: adminJsonHeaders(csrfToken.value),
+          credentials: 'same-origin',
           body: JSON.stringify({ ENSURE_ID: ensureId, updates })
         });
         const json = await resp.json();
@@ -570,6 +574,9 @@ export default defineComponent({
     };
 
     onMounted(async () => {
+      const session = await fetchAdminSession();
+      adminEnabled.value = !!session;
+      csrfToken.value = session?.csrf_token || '';
       try {
         await fetchByEnsureId(id);
         await nextTick();

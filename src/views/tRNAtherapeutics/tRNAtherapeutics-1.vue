@@ -88,13 +88,15 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, computed, reactive } from 'vue';
+import { defineComponent, ref, computed, reactive, onMounted } from 'vue';
 import { ElTag, ElSpace, ElSelect, ElOption, ElProgress, ElButton, ElDialog, ElForm, ElFormItem, ElInput, ElMessage } from 'element-plus';
 import { STableProvider } from '@shene/table';
-import { allColumns } from './columns';
+import { allColumns as baseColumns } from './columns';
 import TranStructure from '@/components/TranStructure.vue';
 import en from '@shene/table/dist/locale/en';
 import TableToolbar from '@/components/TableToolbar.vue';
+import { adminJsonHeaders, fetchAdminSession } from '@/utils/admin';
+import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 
 const locale = ref(en);
 const API_BASE = ''; // 同源部署时留空，否则填后端域名
@@ -122,10 +124,15 @@ export default defineComponent({
     loadingSup:     { type: Boolean, required: true },
   },
   setup(props) {
+    const TABLE_NAME = 'Engineered_sup_tRNA';
+    const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
+    const adminEnabled = ref(false);
+    const csrfToken = ref('');
+
     // 编辑模式标识：URL ?edit=1 时开启
     const EDIT_MODE = computed(() => {
       try {
-        return new URLSearchParams(window.location.search).get('edit') === '1';
+        return adminEnabled.value && new URLSearchParams(window.location.search).get('edit') === '1';
       } catch {
         return false;
       }
@@ -146,7 +153,7 @@ export default defineComponent({
 
     // 计算要显示的列
     const columns = computed(() => {
-      const baseCols = allColumns.filter(col => selectedColumns.value.includes(col.key as string));
+      const baseCols = allColumns.value.filter(col => selectedColumns.value.includes(col.key as string));
       if (EDIT_MODE.value) {
         baseCols.push({
           title: 'Actions',
@@ -203,7 +210,7 @@ export default defineComponent({
       isCreate.value = false;
       editingRow.value = row;
       resetForm();
-      allColumns.forEach(col => {
+      allColumns.value.forEach(col => {
         editForm[col.dataIndex] = row[col.dataIndex] ?? '';
       });
       editForm.ENSURE_ID = row.ENSURE_ID;
@@ -215,7 +222,7 @@ export default defineComponent({
       isCreate.value = true;
       editingRow.value = null;
       resetForm();
-      allColumns.forEach(col => {
+      allColumns.value.forEach(col => {
         editForm[col.dataIndex] = '';
       });
       // 默认填入当前展开的 PMID（如果只有一个选中 PMID）
@@ -240,7 +247,8 @@ export default defineComponent({
       try {
         const resp = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: adminJsonHeaders(csrfToken.value),
+          credentials: 'same-origin',
           body: JSON.stringify(payload)
         });
         const json = await resp.json();
@@ -269,7 +277,8 @@ export default defineComponent({
       try {
         const resp = await fetch(`${API_BASE}/engineered_sup_trna/delete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: adminJsonHeaders(csrfToken.value),
+          credentials: 'same-origin',
           body: JSON.stringify({ ENSURE_ID: ensureId })
         });
         const json = await resp.json();
@@ -281,6 +290,14 @@ export default defineComponent({
         ElMessage.error(e?.message || 'Delete failed');
       }
     };
+
+    onMounted(async () => {
+      const session = await fetchAdminSession();
+      adminEnabled.value = !!session;
+      csrfToken.value = session?.csrf_token || '';
+      allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
+      selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
+    });
 
     return {
       locale,

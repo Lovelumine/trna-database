@@ -15,17 +15,17 @@
       </div>
       <div v-else key="content">
         <!-- 条件渲染 NavBar，当路径不为 '/audio' 时显示 -->
-        <nav-bar v-if="!isAudioRoute" />
+        <nav-bar v-if="!isAudioRoute && !isAdminRoute && !isAIYingyingRoute" />
         <router-view />
-        <footer-comp />
-        <bot-component v-if="!isAIYingyingRoute" />
+        <footer-comp v-if="!isAdminRoute && !isAIYingyingRoute" />
+        <bot-component v-if="!isAIYingyingRoute && !isAdminRoute" />
       </div>
     </transition>
   </div>
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, watch } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import NavBar from './components/NavBar.vue';
 import FooterComp from './components/Footer.vue';
@@ -40,10 +40,12 @@ export default defineComponent({
   setup() {
     const route = useRoute();
     const loading = ref(true);
-    const isAIYingyingRoute = ref(route.path === '/AIYingying');
-    
-    // 新增：检查路径是否为 '/audio'
-    const isAudioRoute = ref(route.path.includes('/audio'));
+    const normalizedPath = computed(() => String(route.path || '').toLowerCase());
+    const isAIYingyingRoute = computed(() =>
+      route.name === 'AIYingying' || normalizedPath.value === '/aiyingying'
+    );
+    const isAdminRoute = computed(() => normalizedPath.value.startsWith('/admin'));
+    const isAudioRoute = computed(() => normalizedPath.value.includes('/audio'));
 
     onMounted(() => {
       // 强制加载动画至少显示两秒
@@ -52,15 +54,7 @@ export default defineComponent({
       }, 500);
     });
 
-    watch(
-      () => route.path,
-      (newPath) => {
-        isAIYingyingRoute.value = newPath === '/AIYingying';
-        isAudioRoute.value = newPath.includes('/audio');  // 更新路径判断
-      }
-    );
-
-    return { loading, isAIYingyingRoute, isAudioRoute };
+    return { loading, isAIYingyingRoute, isAudioRoute, isAdminRoute };
   }
 });
 </script>

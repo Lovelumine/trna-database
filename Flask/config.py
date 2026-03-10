@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from datetime import timedelta
 from urllib.parse import quote_plus
 
 class Config:
@@ -10,7 +11,7 @@ class Config:
         pwd  = os.getenv("MYSQL_PASSWORD", "")
         host = os.getenv("MYSQL_HOST", "127.0.0.1")
         port = int(os.getenv("MYSQL_PORT", "3306"))
-        db   = os.getenv("MYSQL_DB", "test")
+        db   = os.getenv("MYSQL_DB") or os.getenv("MYSQL_DATABASE", "test")
         # 使用 utf8mb4；pool_pre_ping 保活；pool_recycle 避免长连接被踢
         _db_url = (
             f"mysql+pymysql://{quote_plus(user)}:{quote_plus(pwd)}@{host}:{port}/{db}"
@@ -31,6 +32,13 @@ class Config:
         },
     }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SECRET_KEY = os.getenv("SECRET_KEY") or os.getenv("FLASK_SECRET_KEY") or "ensure-dev-secret-change-me"
+    SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "ensure_admin_session")
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "0").strip().lower() in ("1", "true", "yes")
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=int(os.getenv("ADMIN_SESSION_HOURS", "12")))
+    DEFAULT_TIMEZONE = os.getenv("DEFAULT_TIMEZONE", "Asia/Shanghai").strip() or "Asia/Shanghai"
     EXPORT_CACHE_DIR = os.getenv(
         "EXPORT_CACHE_DIR",
         os.path.join(os.path.dirname(__file__), "app", "cache", "exports"),
@@ -50,13 +58,18 @@ class Config:
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://192.168.236.2:11434")
     OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:32b")
     OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
+    DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "").strip()
     OLLAMA_SYSTEM_PROMPT = os.getenv(
         "OLLAMA_SYSTEM_PROMPT",
         (
             "You are Yingying (荧荧), the AI assistant for ENSURE.\n"
-            "Identity: Always present yourself as Yingying. Do not mention or reveal any model, "
-            "provider, or backend details. Never say you are an AI model.\n"
-            "Language: If the user asks in Chinese, answer in Chinese; otherwise answer in English. "
+            "Identity: Always present yourself as Yingying. If the user asks who you are, answer that "
+            "you are Yingying (荧荧), the AI assistant for ENSURE. Do not mention or reveal any model, "
+            "provider, or backend details. Never say you are DeepSeek, Ollama, ChatGPT, GPT, or any AI model.\n"
+            "Language: Answer in the same primary language as the user's question whenever possible. "
+            "If the user asks in Chinese, answer in Chinese; otherwise answer in English. "
             "When answering in Chinese, keep scientific terms and key names in English when natural.\n"
             "About ENSURE: ENSURE (https://trna.lumoxuan.cn/) is the Encyclopedia of Suppressor tRNA "
             "with an AI assistant. It is a comprehensive database for suppressor tRNA research, "

@@ -7,6 +7,17 @@ type ChatMessage = {
   image?: string | null;
 };
 
+type ChatToolTrace = {
+  id: number;
+  tool: string;
+  summary: string;
+};
+
+type ChatHistoryMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 type ChatSession = {
   apiKey: string;
   isChatOpen: Ref<boolean>;
@@ -14,20 +25,42 @@ type ChatSession = {
   newMessage: Ref<string>;
   newImage: Ref<File | null>;
   imagePreview: Ref<string>;
+  isStreaming: Ref<boolean>;
   applicationId: string;
   chatId: string;
   initialized: boolean;
   initializing: Promise<void> | null;
+  streamAbortController: AbortController | null;
+  progressStatus: Ref<string>;
+  progressDetail: Ref<string>;
+  progressToolTrace: Ref<ChatToolTrace[]>;
 };
 
 type SendOptions = {
   skipUserPush?: boolean;
   overrideText?: string;
   model?: string;
+  history?: ChatHistoryMessage[];
 };
 
 const defaultGreeting = 'Hello, I am your virtual assistant YingYing. How can I assist you today?';
 const sessions = new Map<string, ChatSession>();
+const apiBaseURL = import.meta.env.VITE_CHAT_API_BASE || '/chat/api';
+const mask = (s?: string) => (s ? s.replace(/.(?=.{4})/g, '*') : '');
+
+const logAuth = (session: ChatSession, where: string, url: string, method: string) => {
+  console.log(`[useChat] ${method} ${url}`);
+  console.log(`[useChat] ${where} Authorization(m): ${mask(session.apiKey)}`);
+  // @ts-ignore
+  if (import.meta.env?.VITE_DEBUG_LOG_FULL_AUTH === '1') {
+    console.warn('[useChat] Authorization(FULL,DEBUG): Bearer ' + session.apiKey);
+  }
+};
+
+const authHeaders = (session: ChatSession) => ({
+  Authorization: `Bearer ${session.apiKey}`,
+  accept: 'application/json'
+});
 
 const getSession = (key: string, apiKey: string): ChatSession => {
   const existing = sessions.get(key);
@@ -39,17 +72,99 @@ const getSession = (key: string, apiKey: string): ChatSession => {
     newMessage: ref(''),
     newImage: ref<File | null>(null),
     imagePreview: ref(''),
+    isStreaming: ref(false),
     applicationId: '',
     chatId: '',
     initialized: false,
-    initializing: null
+    initializing: null,
+    streamAbortController: null,
+    progressStatus: ref(''),
+    progressDetail: ref(''),
+    progressToolTrace: ref<ChatToolTrace[]>([])
   };
   sessions.set(key, session);
   return session;
 };
 
+const fetchApplicationProfile = async (session: ChatSession, signal?: AbortSignal) => {
+  try {
+    const url = `${apiBaseURL}/application/profile`;
+    logAuth(session, 'profile', url, 'GET');
+
+    const response = await fetch(url, { method: 'GET', headers: authHeaders(session), signal });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    session.applicationId = data?.data?.id || '';
+    console.log('[useChat] applicationId:', session.applicationId);
+  } catch (e) {
+    console.error('Error fetching application profile:', e);
+  }
+};
+
+const openChatSession = async (session: ChatSession, signal?: AbortSignal) => {
+  try {
+    const url = `${apiBaseURL}/open?application_id=${encodeURIComponent(session.applicationId)}&ts=${Date.now()}`;
+    logAuth(session, 'open', url, 'GET');
+
+    let response = await fetch(url, {
+      method: 'GET',
+      headers: authHeaders(session),
+      cache: 'no-store',
+      signal
+    });
+    if (!response.ok && (response.status === 400 || response.status === 404)) {
+      const fallbackUrl = `${apiBaseURL}/open?ts=${Date.now()}`;
+      logAuth(session, 'open(fallback)', fallbackUrl, 'GET');
+      response = await fetch(fallbackUrl, {
+        method: 'GET',
+        headers: authHeaders(session),
+        cache: 'no-store',
+        signal
+      });
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const data = await response.json();
+    session.chatId = data?.data || '';
+    console.log('[useChat] chatId:', session.chatId);
+  } catch (e) {
+    console.error('Error opening chat session:', e);
+  }
+};
+
+const initializeChatSession = async (session: ChatSession, signal?: AbortSignal) => {
+  if (session.chatId) {
+    session.initialized = true;
+    return;
+  }
+  if (session.initializing) {
+    return session.initializing;
+  }
+  console.log('[useChat] apiBaseURL:', apiBaseURL);
+  session.initializing = (async () => {
+    try {
+      if (!session.applicationId) {
+        await fetchApplicationProfile(session, signal);
+      }
+      if (!session.chatId) {
+        await openChatSession(session, signal);
+      }
+      session.initialized = Boolean(session.chatId);
+    } finally {
+      session.initializing = null;
+    }
+  })();
+  return session.initializing;
+};
+
 type UseChatOptions = {
   key?: string;
+};
+
+export const warmChatSession = async (apiKey: string, key: string) => {
+  const session = getSession(key, apiKey);
+  session.apiKey = apiKey;
+  await initializeChatSession(session);
 };
 
 export function useChat(apiKey: string, options: UseChatOptions = {}) {
@@ -57,102 +172,30 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
   const session = getSession(key, apiKey);
   session.apiKey = apiKey;
 
-  // ✅ 必须带前导斜杠
-  const apiBaseURL = import.meta.env.VITE_CHAT_API_BASE || '/chat/api';
-
-  // 日志与打码
-  const mask = (s?: string) => (s ? s.replace(/.(?=.{4})/g, '*') : '');
-  const logAuth = (where: string, url: string, method: string) => {
-    console.log(`[useChat] ${method} ${url}`);
-    console.log(`[useChat] ${where} Authorization(m): ${mask(session.apiKey)}`);
-    // @ts-ignore
-    if (import.meta.env?.VITE_DEBUG_LOG_FULL_AUTH === '1') {
-      console.warn('[useChat] Authorization(FULL,DEBUG): Bearer ' + session.apiKey);
-    }
-  };
-  const authHeaders = () => ({
-    // ✅ 用标准头 + Bearer 前缀
-    Authorization: `Bearer ${session.apiKey}`,
-    accept: 'application/json'
-  });
-
   const toggleChat = () => { session.isChatOpen.value = !session.isChatOpen.value; };
-
-  // 1) 获取应用信息
-  const fetchApplicationProfile = async () => {
-    try {
-      const url = `${apiBaseURL}/application/profile`;
-      logAuth('profile', url, 'GET');
-
-      const response = await fetch(url, { method: 'GET', headers: authHeaders() });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      session.applicationId = data?.data?.id || '';
-      console.log('[useChat] applicationId:', session.applicationId);
-    } catch (e) {
-      console.error('Error fetching application profile:', e);
-    }
+  const stopMessage = () => {
+    session.streamAbortController?.abort();
   };
 
-  // 2) 打开会话（按你的 Swagger：GET /chat/api/open）
-  const openChatSession = async () => {
-    try {
-      // 可带 application_id，也可不带；先带上
-      const url = `${apiBaseURL}/open?application_id=${encodeURIComponent(session.applicationId)}&ts=${Date.now()}`;
-      logAuth('open', url, 'GET');
-
-      let response = await fetch(url, { method: 'GET', headers: authHeaders(), cache: 'no-store' });
-      // 兜底：如果带 application_id 不被接受，再试不带
-      if (!response.ok && (response.status === 400 || response.status === 404)) {
-        const url2 = `${apiBaseURL}/open?ts=${Date.now()}`;
-        logAuth('open(fallback)', url2, 'GET');
-        response = await fetch(url2, { method: 'GET', headers: authHeaders(), cache: 'no-store' });
-      }
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const data = await response.json();
-      session.chatId = data?.data || '';
-      console.log('[useChat] chatId:', session.chatId);
-    } catch (e) {
-      console.error('Error opening chat session:', e);
-    }
-  };
-
-  const ensureReady = async () => {
-    if (session.chatId) return;
-    if (session.initializing) {
-      await session.initializing;
-    }
-    if (!session.applicationId) {
-      await fetchApplicationProfile();
-    }
-    if (!session.chatId) {
-      await openChatSession();
-    }
+  const ensureReady = async (signal?: AbortSignal) => {
+    await initializeChatSession(session, signal);
   };
 
   // 3) 发送消息（POST /chat/api/chat_message/{chat_id}）
   const sendMessage = async (options: SendOptions = {}) => {
+    if (session.isStreaming.value) return { aborted: false };
     const overrideText = options.overrideText ?? '';
     const pendingText = overrideText ? overrideText : session.newMessage.value;
     if (!pendingText.trim() && !session.newImage.value) return;
-    await ensureReady();
-    if (!session.chatId) {
-      console.error('Chat ID is not available. Unable to send message.');
-      session.messages.value.push({
-        id: Date.now(),
-        text: 'Sorry, I could not process your request.',
-        sender: 'bot'
-      });
-      return;
-    }
 
     const textContent = pendingText.trim();
     const imageBase64 = session.newImage.value ? await toBase64(session.newImage.value) : null;
+    let userMessageId: number | null = null;
 
     if (!options.skipUserPush) {
+      userMessageId = Date.now();
       session.messages.value.push({
-        id: Date.now(),
+        id: userMessageId,
         sender: 'user',
         text: textContent,
         image: imageBase64
@@ -161,10 +204,31 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
     session.newMessage.value = '';
     session.newImage.value = null;
     session.imagePreview.value = '';
+    session.progressStatus.value = 'Preparing request';
+    session.progressDetail.value = 'Opening the chat session and getting the response pipeline ready.';
+    session.progressToolTrace.value = [];
+
+    const controller = new AbortController();
+    session.streamAbortController = controller;
+    session.isStreaming.value = true;
+
+    let botMessageId: number | null = null;
+    let complete = '';
 
     try {
+      await ensureReady(controller.signal);
+      if (!session.chatId) {
+        console.error('Chat ID is not available. Unable to send message.');
+        session.messages.value.push({
+          id: Date.now(),
+          text: 'Sorry, I could not process your request.',
+          sender: 'bot'
+        });
+        return { aborted: false };
+      }
+
       const url = `${apiBaseURL}/chat_message/${encodeURIComponent(session.chatId)}`;
-      logAuth('sendMessage', url, 'POST');
+      logAuth(session, 'sendMessage', url, 'POST');
 
       const payload: Record<string, any> = {
         message: textContent,
@@ -172,22 +236,24 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
         stream: true
       };
       if (options.model) payload.model = options.model;
+      if (Array.isArray(options.history) && options.history.length) {
+        payload.history = options.history;
+      }
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: { ...authHeaders(session), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
 
       if (!response.body) throw new Error('ReadableStream not supported.');
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
-      const botMessageId = Date.now();
-      session.messages.value.push({ id: botMessageId, text: '', sender: 'bot' });
+      botMessageId = Date.now();
 
       let buffer = '';
-      let complete = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -202,9 +268,28 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
           if (jsonStr === '[DONE]') continue;
           try {
             const parsed = JSON.parse(jsonStr);
+            const eventType = String(parsed?.type || 'content');
+            if (eventType === 'status') {
+              session.progressStatus.value = String(parsed?.status || 'Working on your answer');
+              session.progressDetail.value = String(parsed?.detail || '');
+              continue;
+            }
+            if (eventType === 'tool') {
+              const tool = String(parsed?.tool || 'tool');
+              const summary = String(parsed?.summary || '');
+              session.progressToolTrace.value = [
+                ...session.progressToolTrace.value,
+                { id: Date.now() + session.progressToolTrace.value.length, tool, summary }
+              ];
+              continue;
+            }
             const content = parsed?.content ?? '';
             if (content) {
               complete += content;
+              const hasBotMessage = session.messages.value.some(v => v.id === botMessageId);
+              if (!hasBotMessage) {
+                session.messages.value.push({ id: botMessageId, text: '', sender: 'bot' });
+              }
               const m = session.messages.value.find(v => v.id === botMessageId);
               if (m) m.text = complete.trim();
             }
@@ -214,9 +299,23 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
         }
       }
       console.log('[useChat] stream ended');
+      return { aborted: false };
     } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        if (botMessageId === null && userMessageId !== null) {
+          session.messages.value = session.messages.value.filter(v => v.id !== userMessageId);
+        }
+        if (botMessageId !== null && !complete.trim()) {
+          session.messages.value = session.messages.value.filter(v => v.id !== botMessageId);
+        }
+        return { aborted: true };
+      }
       console.error('Error communicating with API:', e?.message || e);
       session.messages.value.push({ id: Date.now(), text: 'Sorry, I could not process your request.', sender: 'bot' });
+      return { aborted: false };
+    } finally {
+      session.isStreaming.value = false;
+      session.streamAbortController = null;
     }
   };
 
@@ -239,35 +338,25 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
     reader.onload = () => { if (typeof reader.result === 'string') session.imagePreview.value = reader.result; };
   };
 
-  const initializeChat = async () => {
-    if (session.initialized) return;
-    if (session.initializing) return session.initializing;
-    console.log('[useChat] apiBaseURL:', apiBaseURL);
-    session.initializing = (async () => {
-      await fetchApplicationProfile();
-      await openChatSession();
-      session.initialized = true;
-      session.initializing = null;
-    })();
-    return session.initializing;
-  };
-
   const resetChat = async (newApiKey: string) => {
+    stopMessage();
     session.apiKey = newApiKey;
     session.applicationId = '';
     session.chatId = '';
     session.initialized = false;
     session.initializing = null;
+    session.isStreaming.value = false;
+    session.streamAbortController = null;
+    session.progressStatus.value = '';
+    session.progressDetail.value = '';
+    session.progressToolTrace.value = [];
     session.messages.value = [];
     console.log('[useChat] resetChat with new apiKey(m):', mask(session.apiKey));
-    await fetchApplicationProfile();
-    await openChatSession();
-    session.initialized = true;
-    session.initializing = null;
+    await initializeChatSession(session);
     session.messages.value.push({ id: 1, text: defaultGreeting, sender: 'bot' });
   };
 
-  initializeChat();
+  void initializeChatSession(session);
 
   return {
     isChatOpen: session.isChatOpen,
@@ -275,8 +364,13 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
     newMessage: session.newMessage,
     newImage: session.newImage,
     imagePreview: session.imagePreview,
+    isStreaming: session.isStreaming,
+    progressStatus: session.progressStatus,
+    progressDetail: session.progressDetail,
+    progressToolTrace: session.progressToolTrace,
     toggleChat,
     sendMessage,
+    stopMessage,
     triggerImageUpload,
     previewImage,
     resetChat

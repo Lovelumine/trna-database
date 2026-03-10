@@ -72,7 +72,7 @@ import TableToolbar from '@/components/TableToolbar.vue';
 const locale = ref(en);
 
 // 后端 API（同源部署可留空，或写你的后端域名/端口）
-const API_BASE = ''; // 如需直连本机后端：'http://127.0.0.1:8000'
+const API_BASE = ''; // 如需直连本机后端：'http://127.0.0.1:8010'
 const PMID_TABLE = 'pmid_article_info_extended';
 const PERPOS_TABLE = 'engineered_sup_trna_perpos_counts';
 

@@ -114,6 +114,29 @@ export function useTableData(table: string, options: ServerTableOptions = {}) {
     rows.value = rows.value.map((row) => normalizeRow(row));
   };
 
+  const recoverFromInvalidColumnError = () => {
+    const message = String(error.value || '');
+    const match = message.match(/Column '([^']+)' not in table '([^']+)'/i);
+    if (!match) return false;
+
+    const badColumn = match[1];
+    let shouldRetry = false;
+
+    if (searchColumn.value && searchColumn.value === badColumn) {
+      searchColumn.value = '';
+      searchValues.value = [];
+      shouldRetry = true;
+    }
+
+    if (sortBy.value && sortBy.value === badColumn) {
+      sortBy.value = '';
+      sortOrder.value = 'asc';
+      shouldRetry = true;
+    }
+
+    return shouldRetry;
+  };
+
   const schedulePrefetch = (maxPage: number) => {
     if (prefetchPages <= 0) return;
     const remaining = maxPage - pagination.current;
@@ -134,6 +157,9 @@ export function useTableData(table: string, options: ServerTableOptions = {}) {
   const loadPage = async () => {
     cancelPrefetch();
     await fetchRows(buildParams());
+    if (recoverFromInvalidColumnError()) {
+      await fetchRows(buildParams(), { useCache: false, refresh: true });
+    }
     applyRowTransform();
     pagination.total = total.value;
     const maxPage = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));

@@ -196,8 +196,9 @@ import { getTagType } from '../../utils/tag.js';
 import type { EChartsOption } from 'echarts';
 import 'echarts/lib/chart/bar';
 import 'echarts/lib/chart/heatmap';
-import { allColumns, selectedColumns } from './naturalSupTRNAColumns';
+import { allColumns as baseColumns, selectedColumns } from './naturalSupTRNAColumns';
 import TableToolbar from '@/components/TableToolbar.vue';
+import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
@@ -207,6 +208,7 @@ export default defineComponent({
   components: { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption, VueEasyLightbox, TableToolbar },
   setup() {
     const TABLE_NAME = 'nonsense_sup_rna';
+    const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
     const {
       rows,
       loading,
@@ -301,7 +303,8 @@ export default defineComponent({
     onMounted(async () => {
       await loadPage();
       await loadStats();
-      selectedColumns.value = [...selectedColumns.value];
+      allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
+      selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
       tryAutoExpand();
     });
 
@@ -382,7 +385,7 @@ export default defineComponent({
     });
 
     const displayedColumns = computed(() =>
-      allColumns
+      allColumns.value
         .filter((column) => selectedColumns.value.includes(column.key as string))
         .map((column) => {
           if (column.key === 'Stop codon for readthrough') {

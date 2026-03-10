@@ -46,6 +46,8 @@ python scripts
 
 
 __pycache__
+.venv/
+Flask/.venv/
 
 # Large media/fonts kept locally but not tracked
 *.mp4

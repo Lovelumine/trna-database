@@ -5,6 +5,8 @@ import path from 'path';
 import terser from '@rollup/plugin-terser'; // 引入 terser 插件
 import { viteStaticCopy } from 'vite-plugin-static-copy'; // 引入 vite-plugin-static-copy 插件
 
+const backendTarget = 'http://localhost:8010';
+
 // 允许的来源站点
 const allowedOrigins = new Set([
   'https://trna.lumoxuan.cn/',
@@ -52,6 +54,11 @@ export default defineConfig({
     assetsInlineLimit: 4096, // 将小于 4KB 的文件内联到 JavaScript 中
     outDir: 'dist', // 设置构建输出目录
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        admin: path.resolve(__dirname, 'admin.html'),
+        help: path.resolve(__dirname, 'help.html'),
+      },
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) {
@@ -87,44 +94,48 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/search': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
         changeOrigin: true,
       },
       '/search_table': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
         changeOrigin: true,
       },      
       '/table_rows': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
         changeOrigin: true,
       },
       '/table_stats': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
         changeOrigin: true,
       },
       '/table_fulltext_rebuild': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
         changeOrigin: true,
       },
       '/download_table': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
         changeOrigin: true,
       },
       '/download_table_status': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
         changeOrigin: true,
       },
       '/download_bundle_status': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
         changeOrigin: true,
       },
       '/chat/api': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
+        changeOrigin: true,
+      },
+      '/admin/api': {
+        target: backendTarget,
         changeOrigin: true,
       },
       // 后端 Engineered_sup_tRNA CRUD 代理
       '/engineered_sup_trna': {
-        target: 'http://localhost:8000',
+        target: backendTarget,
         changeOrigin: true,
       },
     },

@@ -215,10 +215,11 @@ import { useTableData } from '../../utils/useTableData';
 import VueEasyLightbox from 'vue-easy-lightbox';
 import { highlightMutation } from '../../utils/highlightMutation.js';
 import { getTagType } from '../../utils/tag.js';
-import { allColumns, selectedColumns } from './Frameshiftcolumns';
+import { allColumns as baseColumns, selectedColumns } from './Frameshiftcolumns';
 import type { EChartsOption } from 'echarts';
 import en from '@shene/table/dist/locale/en';
 import TableToolbar from '@/components/TableToolbar.vue';
+import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 const locale = ref(en);
 
 export default defineComponent({
@@ -226,6 +227,7 @@ export default defineComponent({
   components: { ElTooltip, ElImage, ElSelect, ElOption, VueEasyLightbox, TableToolbar },
   setup() {
     const TABLE_NAME = 'frameshift_sup_trna';
+    const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
     const {
       rows,
       loading,
@@ -314,7 +316,8 @@ export default defineComponent({
     onMounted(async () => {
       await loadPage();
       await loadStats();
-      selectedColumns.value = [...selectedColumns.value];
+      allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
+      selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
       tryAutoExpand();
     });
 
@@ -381,7 +384,7 @@ export default defineComponent({
     });
 
     const displayedColumns = computed(() =>
-      allColumns
+      allColumns.value
         .filter((column) => selectedColumns.value.includes(column.key as string))
         .map((column) => {
           if (column.key === 'Noncanonical charged amino acids') {

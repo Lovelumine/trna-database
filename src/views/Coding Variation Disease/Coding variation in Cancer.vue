@@ -104,8 +104,9 @@ import { STableProvider } from '@shene/table';
 import { useTableData } from '../../utils/useTableData';
 import { getTagType } from '../../utils/tag.js';
 import type { EChartsOption } from 'echarts';
-import { allColumns, selectedColumns } from './CodingVariationCancerColumns';
+import { allColumns as baseColumns, selectedColumns } from './CodingVariationCancerColumns';
 import TableToolbar from '@/components/TableToolbar.vue';
+import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
@@ -115,6 +116,7 @@ export default defineComponent({
   components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, TableToolbar },
   setup() {
     const TABLE_NAME = 'coding_variation_cancer';
+    const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
     const {
       rows,
       total,
@@ -264,7 +266,8 @@ export default defineComponent({
     onMounted(async () => {
       await loadPage();
       await loadStats();
-      selectedColumns.value = [...selectedColumns.value]; // 可留可删
+      allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
+      selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
 
       const root = document.documentElement;
       themeObserver = new MutationObserver(() => {
@@ -424,7 +427,7 @@ export default defineComponent({
     });
 
     const displayedColumns = computed(() =>
-      allColumns
+      allColumns.value
         .filter((c) => selectedColumns.value.includes(c.key as string))
         .map((col) => {
           if (col.key !== 'MUTATION_TYPE') return col;

@@ -1,25 +1,25 @@
 <template>
-  <div class="site--main">
-    <div class="help-container">
-      <div class="help-title">
-        <h1>Help & Documentation</h1>
-        <p>Your guide to navigating and understanding our resources</p>
-      </div>
-      <el-row>
-        <el-col :span="6">
-          <div class="sidebar-container">
-            <Sidebar
-              :headings="headings"
-              :files="files"
-              :activeFile="activeFile"
-              :activeHeading="activeHeading"
-              @navigateToHeading="navigateToHeading"
-              @fileSelected="handleFileSelected"
-            />
-          </div>
-        </el-col>
-        <el-col :span="18">
-          <!-- 只保留这一处 v-html，同时让 v-loading 在同一个元素上控制“加载中”遮罩 -->
+  <div class="help-page-shell">
+    <div class="help-page">
+      <header class="help-header">
+        <div class="help-header__copy">
+          <h1>Help</h1>
+        </div>
+      </header>
+
+      <div class="help-layout">
+        <aside class="sidebar-container">
+          <Sidebar
+            :headings="headings"
+            :files="files"
+            :activeFile="activeFile"
+            :activeHeading="activeHeading"
+            @navigateToHeading="navigateToHeading"
+            @fileSelected="handleFileSelected"
+          />
+        </aside>
+
+        <section class="help-content">
           <div
             class="markdown-body"
             v-loading="loading"
@@ -28,8 +28,8 @@
             v-html="content"
           >
           </div>
-        </el-col>
-      </el-row>
+        </section>
+      </div>
     </div>
 
     <vue-easy-lightbox
@@ -115,17 +115,14 @@ const loadMarkdown = async (file) => {
     const markdownContent = response.data;
     const processedContent = extractHeadings(markdownContent);
 
-    // 把锚点注入到渲染后的 HTML 里
     content.value = md.render(processedContent) + '<div id="bottom"></div>';
     await nextTick();
     initLazyLoad();
 
-    // 如果 URL 带了 #bottom，就滚到这个锚点
-    const hash = window.location.hash; // 直接用原生的 hash
+    const hash = window.location.hash;
     if (hash === '#bottom') {
       const bottomEl = document.getElementById('bottom');
       if (bottomEl) {
-        // 滚到锚点，并把它对齐到视口底部
         bottomEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
     }
@@ -166,7 +163,6 @@ const initLazyLoad = () => {
   });
 };
 
-// 简单节流函数
 const throttle = (func, delay) => {
   let lastCall = 0;
   return (...args) => {
@@ -187,26 +183,19 @@ const onScroll = throttle(() => {
     const next = headingElements[i + 1];
     if (current && (!next || next.offsetTop > scrollPosition)) {
       activeHeading.value = headings.value[i].id;
-      console.log('Active heading on scroll:', activeHeading.value);
       break;
     }
   }
-}, 100); // 限制滚动事件的调用频率
-
-watch(activeHeading, (newHeading) => {
-  console.log('Active heading changed:', newHeading);
-});
+}, 100);
 
 watch(() => route.query.file, async (newFile) => {
   const file = newFile || '1-introduction.md';
-  console.log('Route query changed, new file:', file);
   activeFile.value = file;
-  headings.value = []; // 清空headings
-  await loadMarkdown(file); // 加载新的文件并更新headings
+  headings.value = [];
+  await loadMarkdown(file);
 }, { immediate: true });
 
 watch(content, async () => {
-  // 等 v-html 真正插入完
   await nextTick();
   if (route.hash === '#bottom') {
     const bottomEl = document.getElementById('bottom');
@@ -225,96 +214,138 @@ onUnmounted(() => {
 });
 
 const handleFileSelected = (file) => {
-  console.log('File selected:', file);
   activeFile.value = file;
 };
 
 const handleImageClick = (event) => {
   if (event.target.tagName === 'IMG' && event.target.classList.contains('clickable-image')) {
-    console.log('Image clicked:', event.target.src);
     currentIndex.value = images.value.indexOf(event.target.src);
     showViewer.value = true;
   }
 };
 
 const navigateToHeading = (id) => {
-  console.log('Navigating to heading:', id);
   const element = document.getElementById(id);
   if (element) {
-    console.log('Element found, scrolling into view:', element);
-    const yOffset = -10; // 可根据需要调整偏移量
+    const yOffset = -10;
     const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
     window.scrollTo({ top: y, behavior: 'smooth' });
-  } else {
-    console.warn('Element not found:', id);
   }
 };
 </script>
 
 <style scoped>
-.site--main {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
+.help-page-shell {
+  display: block;
+  padding: 10px 18px 40px;
   box-sizing: border-box;
   background-color: var(--farallon-background-gray);
 }
 
-.help-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 1200px;
-  width: 100%;
-  padding: 20px;
-  box-sizing: border-box;
-  background-color: var(--farallon-background-white);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  border: 1px solid var(--farallon-border-color-light);
+.help-page {
+  width: min(1980px, 100%);
+  margin: 0 auto;
 }
 
-.help-title {
-  text-align: center;
-  margin-bottom: 20px;
+.help-header {
+  padding: 10px 0 18px;
 }
 
-.help-title h1 {
-  font-size: 2em;
+.help-header__copy {
+  display: block;
+}
+
+.help-header__copy h1 {
+  margin: 0;
+}
+
+.help-header__copy h1 {
   color: var(--farallon-text-color);
-  margin: 0;
+  font-size: clamp(2rem, 2.6vw, 2.85rem);
+  line-height: 1.08;
 }
 
-.help-title p {
-  font-size: 1em;
-  color: var(--farallon-text-light);
-  margin: 0;
-}
-
-.el-row {
-  width: 100%;
+.help-layout {
+  display: grid;
+  grid-template-columns: clamp(240px, 18vw, 300px) minmax(0, 1fr);
+  gap: 44px;
+  align-items: start;
+  padding-top: 8px;
 }
 
 .sidebar-container {
   position: sticky;
-  top: 20px; /* 调整此值以设置边栏的顶部偏移 */
+  top: 18px;
+  align-self: start;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.help-content {
+  min-width: 0;
 }
 
 .markdown-body {
-  padding: 20px;
-  background-color: var(--farallon-background-white);
+  padding: 0 0 56px;
+  background: transparent;
   color: var(--farallon-text-color);
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--farallon-border-color-light);
   overflow-wrap: break-word;
   box-sizing: border-box;
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
+  min-height: 60vh;
+}
+
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4),
+.markdown-body :deep(h5),
+.markdown-body :deep(h6) {
+  color: var(--farallon-text-color);
+  scroll-margin-top: 18px;
+}
+
+.markdown-body :deep(h1) {
+  font-size: clamp(2.15rem, 2.6vw, 3rem);
+  margin: 0 0 1.1rem;
+}
+
+.markdown-body :deep(h2) {
+  font-size: clamp(1.6rem, 2vw, 2.15rem);
+  margin-top: 2.4rem;
+}
+
+.markdown-body :deep(p),
+.markdown-body :deep(li) {
+  color: var(--farallon-text-color);
+  font-size: 1.13rem;
+  line-height: 1.95;
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  padding-left: 1.5rem;
+}
+
+.markdown-body :deep(a) {
+  color: var(--link-primary);
+}
+
+.markdown-body :deep(blockquote) {
+  margin: 1.5rem 0;
+  padding: 0.2rem 0 0.2rem 1rem;
+  border-left: 3px solid rgba(37, 99, 235, 0.32);
+  color: var(--farallon-text-light);
 }
 
 .markdown-body img {
-  max-width: 100%;
+  max-width: min(100%, 1200px);
   height: auto;
   cursor: pointer;
+  display: block;
+  margin: 1.8rem auto;
 }
 
 .loading-container {
@@ -330,5 +361,49 @@ const navigateToHeading = (id) => {
 
 .fade-enter, .fade-leave-to /* .fade-leave-active in <2.1.8 */ {
   opacity: 0;
+}
+
+@media (max-width: 1200px) {
+  .help-page-shell {
+    padding-inline: 20px;
+  }
+
+  .help-layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 28px;
+  }
+}
+
+@media (max-width: 768px) {
+  .help-page-shell {
+    padding: 12px 14px 28px;
+  }
+
+  .help-header {
+    padding: 2px 0 14px;
+  }
+
+  .help-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding-top: 20px;
+  }
+
+  .sidebar-container {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .markdown-body {
+    padding: 4px 0 28px;
+    min-height: auto;
+  }
+
+  .markdown-body :deep(p),
+  .markdown-body :deep(li) {
+    font-size: 1rem;
+    line-height: 1.78;
+  }
 }
 </style>

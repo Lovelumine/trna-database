@@ -2,7 +2,7 @@
 import multiprocessing
 
 # 监听地址（改端口就改这里）
-bind = "0.0.0.0:8000"
+bind = "0.0.0.0:8010"
 
 # worker 数量：CPU 密集 + Biopython 对齐较重，建议先用 1~2 做稳定性验证
 # 生产里可按 CPU 调整，比如：workers = multiprocessing.cpu_count() // 2 or 2

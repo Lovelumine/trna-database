@@ -89,8 +89,9 @@ import { ElTag, ElSpace, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import { useTableData } from '../../utils/useTableData';
 import type { EChartsOption } from 'echarts';
-import { allColumns, selectedColumns } from './CodingVariation1Columns';
+import { allColumns as baseColumns, selectedColumns } from './CodingVariation1Columns';
 import TableToolbar from '@/components/TableToolbar.vue';
+import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 
 type DataType = { [key: string]: string };
 
@@ -102,6 +103,7 @@ export default defineComponent({
   components: { ElTag, ElSpace, ElSelect, ElOption, TableToolbar },
   setup() {
     const TABLE_NAME = 'coding_variation_genetic_disease';
+    const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
     const {
       rows,
       loading,
@@ -234,7 +236,8 @@ export default defineComponent({
     onMounted(async () => {
       await loadPage();
       await loadStats();
-      selectedColumns.value = [...selectedColumns.value];
+      allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
+      selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
       tryAutoExpand();
     });
 
@@ -308,7 +311,7 @@ export default defineComponent({
     });
 
     const displayedColumns = computed(() =>
-      allColumns
+      allColumns.value
         .filter((column) => selectedColumns.value.includes(column.key as string))
         .map((column) => {
           if (column.key !== 'mutationType') return column;

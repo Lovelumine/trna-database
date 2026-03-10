@@ -49,8 +49,9 @@ import { defineComponent, ref, onMounted, computed } from 'vue';
 import { STableProvider } from '@shene/table';
 import { ElSelect, ElOption } from 'element-plus';
 import { useTableData } from '../../utils/useTableData';
-import { allColumns ,selectedColumns} from './EFTUcolumns';
+import { allColumns as baseColumns, selectedColumns } from './EFTUcolumns';
 import TableToolbar from '@/components/TableToolbar.vue';
+import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 
 import en from '@shene/table/dist/locale/en'
 const locale = ref(en)
@@ -64,6 +65,7 @@ export default defineComponent({
   },
   setup() {
     const TABLE_NAME = 'ef_tu';
+    const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
     const {
       rows,
       loading,
@@ -90,11 +92,13 @@ export default defineComponent({
 
     onMounted(async() => {
       await loadPage();
+      allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
+      selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
       triggerColumnChange();
     });
 
     const displayedColumns = computed(() =>
-      allColumns.filter(column => selectedColumns.value.includes(column.key as string))
+      allColumns.value.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
     return {

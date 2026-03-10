@@ -58,9 +58,10 @@ import { defineComponent, ref, onMounted, computed } from 'vue';
 import { ElImage, ElSelect, ElOption } from 'element-plus';
 import { STableProvider } from '@shene/table';
 import { useTableData } from '../../utils/useTableData';
-import { allColumns } from './Constructioncolumns';
+import { allColumns as baseColumns } from './Constructioncolumns';
 import { highlightMutation } from '../../utils/highlightMutation.js';
 import TableToolbar from '@/components/TableToolbar.vue';
+import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 
 import en from '@shene/table/dist/locale/en'
 const locale = ref(en)
@@ -75,6 +76,7 @@ export default defineComponent({
   },
   setup() {
     const TABLE_NAME = 'construction_sup_trna';
+    const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
     const {
       rows,
       loading,
@@ -100,10 +102,12 @@ export default defineComponent({
 
     onMounted(async () => {
       await loadPage();
+      allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
+      selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
     });
 
     const displayedColumns = computed(() =>
-      allColumns.filter(column => selectedColumns.value.includes(column.key as string))
+      allColumns.value.filter(column => selectedColumns.value.includes(column.key as string))
     );
 
     const rowKey = (r: any, idx: number) =>

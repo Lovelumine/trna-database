@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import { initTheme } from './utils/theme';
-import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory, RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
 import PageNotFound from './views/404.vue'; // 引入404组件
 import EnsureSTable from './components/EnsureSTable.vue'
 
@@ -65,12 +65,10 @@ const tRNAElements = () => import('./views/tRNA elements/tRNA elements.vue');
 const ExpandedRow = () => import('./views/tRNAtherapeutics/ExpandedRow.vue');
 const Display = () => import('./views/display/Display.vue');
 const About = () => import('./views/about/about.vue');
-const Help = () => import('./views/help/help.vue');
 const Download = () => import('./views/download/download.vue');
 const AIYingying = () => import('./views/AIYingying/AIYingying.vue');
 const BlastSearch = () => import('./views/blast/BlastSearch.vue'); // 新添加的 BLAST 搜索组件
 const audio = () => import('./views/audio/audio.vue');
-
 // 引入表格组件
 import STable from '@shene/table';
 import '@shene/table/dist/index.css';
@@ -80,6 +78,49 @@ import VueMatomo from 'vue-matomo';
 
 import VueSidebarMenu from 'vue-sidebar-menu';
 import 'vue-sidebar-menu/dist/vue-sidebar-menu.css';
+
+function redirectLegacyAdminRoute(to: RouteLocationNormalized) {
+  const search = new URLSearchParams();
+  let hashPath = '/workspace';
+
+  if (to.path === '/admin/login') {
+    hashPath = '/login';
+  } else if (to.path === '/admin/engineered-sup-trna') {
+    search.set('view', 'table');
+    search.set('resource', 'Engineered_sup_tRNA');
+  } else {
+    Object.entries(to.query || {}).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((item) => search.append(key, String(item)));
+        return;
+      }
+      if (value != null) {
+        search.set(key, String(value));
+      }
+    });
+  }
+
+  const target = `/admin.html#${hashPath}${search.toString() ? `?${search.toString()}` : ''}`;
+  window.location.replace(target);
+  return false;
+}
+
+function redirectStandaloneHelpRoute(to: RouteLocationNormalized) {
+  const search = new URLSearchParams();
+  Object.entries(to.query || {}).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      value.forEach((item) => search.append(key, String(item)));
+      return;
+    }
+    if (value != null) {
+      search.set(key, String(value));
+    }
+  });
+
+  const target = `/help.html${search.toString() ? `?${search.toString()}` : ''}${to.hash || ''}`;
+  window.location.replace(target);
+  return false;
+}
 
 // 路由配置，使用懒加载
 const routes: RouteRecordRaw[] = [
@@ -91,11 +132,15 @@ const routes: RouteRecordRaw[] = [
   { path: '/expanded/:key', name: 'ExpandedRow', component: ExpandedRow },
   { path: '/about', name: 'about', component: About },
   { path: '/display/:tRNAName', name: 'Display', component: Display },
-  { path: '/help', name: 'help', component: Help },
+  { path: '/help', beforeEnter: redirectStandaloneHelpRoute },
   { path: '/download', name: 'download', component: Download },
   { path: '/AIYingying', name: 'AIYingying', component: AIYingying },
   { path: '/audio', name: 'audio', component: audio },
   { path: '/blast', name: 'blast', component: BlastSearch }, // 新添加的 BLAST 搜索路由
+  { path: '/admin', beforeEnter: redirectLegacyAdminRoute },
+  { path: '/admin/login', beforeEnter: redirectLegacyAdminRoute },
+  { path: '/admin/workspace', beforeEnter: redirectLegacyAdminRoute },
+  { path: '/admin/engineered-sup-trna', beforeEnter: redirectLegacyAdminRoute },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
 ];
 
@@ -112,7 +157,7 @@ const router = createRouter({
 });
 
 // 添加路由钩子来控制 NProgress
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   NProgress.start();
   next();
 });

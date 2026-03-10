@@ -2,26 +2,35 @@
 <template>
   <div class="sidebar">
     <div class="sidebar-header">
-      <div class="logo">
-        <img src="https://framerusercontent.com/images/1w0lzT7QXS4SRJgD02kucFjmSL4.png" alt="logo" />
-        <div class="title">AI Yingying</div>
+      <div class="profile-card">
+        <div class="logo">
+          <div class="logo-mark">
+            <img src="https://framerusercontent.com/images/1w0lzT7QXS4SRJgD02kucFjmSL4.png" alt="logo" />
+          </div>
+          <div class="logo-copy">
+            <div class="eyebrow">ENSURE Assistant</div>
+            <div class="title">AI Yingying</div>
+            <div class="subtitle">sup-tRNA research assistant</div>
+          </div>
+        </div>
+
+        <div class="note-banner" :class="{ acknowledged: noteAcknowledged }">
+          <div class="note-topline">
+            <span class="note-badge">{{ noteAcknowledged ? 'Acknowledged' : 'Review required' }}</span>
+            <button class="note-link" type="button" @click="openNoteModal">
+              {{ noteAcknowledged ? 'Usage note' : 'Unlock chat' }}
+            </button>
+          </div>
+          <div class="note-text">
+            {{ noteAcknowledged ? 'AI answers can be inaccurate. Verify key claims and citations.' : 'Review the usage note before chatting.' }}
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="note-banner">
-      <div class="note-text">{{ noteText }}</div>
-      <button
-        v-if="!noteAcknowledged"
-        class="note-ack"
-        type="button"
-        @click="acknowledgeNote"
-      >
-        I understand
-      </button>
-    </div>
-
     <button class="new-chat" type="button" @click="createSession">
-      New chat
+      <span class="new-chat-plus">+</span>
+      <span>New chat</span>
     </button>
 
     <div class="session-list">
@@ -91,10 +100,48 @@
         </div>
       </div>
     </div>
+
+    <div class="sidebar-footer">
+      <button
+        class="theme-toggle"
+        type="button"
+        :aria-pressed="isDarkMode"
+        @click="toggleTheme"
+      >
+        <span class="theme-toggle-icon" aria-hidden="true">
+          <svg v-if="isDarkMode" viewBox="0 0 24 24">
+            <path d="M21 12.8A8.8 8.8 0 1 1 11.2 3a7.1 7.1 0 0 0 9.8 9.8Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <svg v-else viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.9"></circle>
+            <path d="M12 2.4v2.4M12 19.2v2.4M4.8 4.8l1.7 1.7M17.5 17.5l1.7 1.7M2.4 12h2.4M19.2 12h2.4M4.8 19.2l1.7-1.7M17.5 6.5l1.7-1.7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+          </svg>
+        </span>
+        <span>{{ isDarkMode ? 'Dark mode' : 'Light mode' }}</span>
+      </button>
+
+      <a
+        class="return-link"
+        href="/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Return to ENSURE website in a new tab"
+        title="Open ENSURE in a new tab"
+      >
+        <span class="return-link-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </span>
+        <span>Return to ENSURE</span>
+      </a>
+    </div>
   </div>
 </template>
 
 <script>
+import { getThemeMode, setThemeMode } from '@/utils/theme';
+
 export default {
   name: 'Sidebar',
   props: {
@@ -107,10 +154,23 @@ export default {
     return {
       editingId: '',
       editingTitle: '',
-      confirmDeleteId: ''
+      confirmDeleteId: '',
+      isDarkMode: false
     };
   },
+  mounted() {
+    this.syncThemeState();
+  },
   methods: {
+    syncThemeState() {
+      const root = document.documentElement;
+      const storedMode = getThemeMode();
+      this.isDarkMode = storedMode === 'dark' || (storedMode === 'system' && (root.classList.contains('dark') || root.getAttribute('data-theme') === 'dark'));
+    },
+    toggleTheme() {
+      setThemeMode(this.isDarkMode ? 'light' : 'dark');
+      this.syncThemeState();
+    },
     selectSession(id) {
       this.editingId = '';
       this.editingTitle = '';
@@ -120,8 +180,8 @@ export default {
     createSession() {
       this.$emit('new-session');
     },
-    acknowledgeNote() {
-      this.$emit('acknowledge-note');
+    openNoteModal() {
+      this.$emit('open-note-modal');
     },
     startRename(session) {
       this.confirmDeleteId = '';
@@ -158,107 +218,214 @@ export default {
 
 <style scoped>
 .sidebar {
-  width: 232px;
+  width: 280px;
   height: 100%;
-  background-color: var(--app-surface);
+  background: var(--ai-sidebar);
   display: flex;
   flex-direction: column;
-  padding: 12px 10px;
-  border-right: 1px solid var(--app-border);
-  gap: 8px;
-  overflow-x: hidden;
+  padding: 12px;
+  border-right: 1px solid var(--ai-border);
+  gap: 10px;
+  overflow: hidden;
 }
 
 .sidebar-header {
   display: flex;
-  align-items: center;
+  align-items: stretch;
+}
+
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid var(--ai-border);
+  background: linear-gradient(180deg, var(--ai-card), var(--ai-card-muted));
+  box-shadow: var(--ai-card-shadow);
 }
 
 .logo {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.logo-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--ai-accent-soft), transparent);
+  border: 1px solid var(--ai-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .logo img {
-  width: 32px;
-  height: 32px;
-  margin-right: 8px;
+  width: 24px;
+  height: 24px;
+}
+
+.logo-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ai-accent);
 }
 
 .title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--app-text);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ai-text);
+  line-height: 1.2;
 }
 
-.new-chat {
-  width: 100%;
-  border: 1px solid var(--app-accent);
-  background: var(--app-accent);
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
+.subtitle {
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--ai-muted);
 }
 
 .note-banner {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--ai-card-muted), var(--ai-card));
+  border: 1px solid var(--ai-warning-border);
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+.note-banner.acknowledged {
+  background: linear-gradient(180deg, var(--ai-card-muted), var(--ai-card));
+  border-color: var(--ai-border-strong);
+}
+
+.note-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 10px 12px;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 12px;
+}
+
+.note-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--ai-warning-text);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.note-banner.acknowledged .note-badge {
+  background: var(--ai-accent-soft);
+  color: var(--ai-accent);
+}
+
+.note-link {
+  border: none;
+  background: transparent;
+  color: var(--ai-accent);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
 }
 
 .note-text {
-  font-size: 12px;
-  color: #92400e;
-  line-height: 1.4;
+  font-size: 11px;
+  color: var(--ai-muted);
+  line-height: 1.35;
   font-weight: 600;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
-.note-ack {
-  align-self: flex-start;
-  padding: 6px 10px;
-  font-size: 12px;
-  border: 1px solid #f59e0b;
-  border-radius: 12px;
-  background: #f59e0b;
-  color: #fff;
+.new-chat {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--ai-border-strong);
+  background: linear-gradient(180deg, var(--ai-card-muted), var(--ai-card));
+  color: var(--ai-accent-strong);
+  padding: 0 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.new-chat:hover {
+  transform: translateY(-1px);
+  border-color: rgba(47, 111, 237, 0.32);
+  background: linear-gradient(180deg, var(--ai-card), var(--ai-accent-soft));
+}
+
+.new-chat-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--ai-accent-soft);
+  color: var(--ai-accent);
 }
 
 .session-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  flex: 1;
+  gap: 8px;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 2px;
+  padding-right: 4px;
   min-width: 0;
 }
 
 .session-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 8px 8px 10px;
-  border-radius: 8px;
+  gap: 6px;
+  padding: 11px 12px;
+  border-radius: 14px;
   border: 1px solid transparent;
-  border-left: 3px solid transparent;
-  background: transparent;
-  color: var(--app-text);
+  background: var(--ai-card);
+  color: var(--ai-text);
   cursor: pointer;
   text-align: left;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   min-width: 0;
   position: relative;
   overflow: hidden;
   width: 100%;
   box-sizing: border-box;
+  box-shadow: none;
 }
 
 .session-row {
@@ -298,11 +465,11 @@ export default {
 
 .session-input {
   width: 100%;
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--app-border);
-  background: var(--app-surface-2);
-  color: var(--app-text);
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--ai-border);
+  background: var(--ai-card);
+  color: var(--ai-text);
   font-size: 12px;
 }
 
@@ -317,100 +484,114 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 11px;
-  color: var(--app-text-muted);
+  font-size: 12px;
+  color: var(--ai-muted);
   margin-top: 6px;
 }
 
 .session-action {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 8px;
-  border: 1px solid var(--app-border);
-  background: var(--app-surface);
-  color: var(--app-text-muted);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--ai-border);
+  background: var(--ai-card);
+  color: var(--ai-muted);
   cursor: pointer;
 }
 
 .session-action.danger {
-  border-color: rgba(231, 76, 60, 0.5);
-  color: #e74c3c;
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #ef4444;
 }
 
 .session-item:hover {
-  background: var(--app-surface-2);
-  border-color: var(--app-border);
-  border-left-color: var(--app-accent);
+  transform: translateY(-1px);
+  background: var(--ai-card);
+  border-color: var(--ai-border);
 }
 
 .session-item.active {
-  background: var(--app-surface-2);
-  border-color: var(--app-border);
-  border-left-color: var(--app-accent);
+  background: var(--ai-card-strong);
+  border-color: var(--ai-border-strong);
 }
 
 .session-title {
   font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
+  font-weight: 700;
+  line-height: 1.35;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  padding-right: 52px;
+  padding-right: 64px;
   max-width: 100%;
 }
 
-@media screen and (max-width: 768px) {
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.theme-toggle,
+.return-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid var(--ai-border);
+  background: var(--ai-card);
+  color: var(--ai-text);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: var(--ai-card-shadow);
+}
+
+.theme-toggle {
+  cursor: pointer;
+  justify-content: flex-start;
+}
+
+.theme-toggle-icon,
+.return-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--ai-card-muted);
+  color: var(--ai-accent);
+  flex-shrink: 0;
+}
+
+.theme-toggle-icon svg,
+.return-link-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media screen and (max-width: 860px) {
   .sidebar {
-    width: 62px;
+    width: 100%;
+    padding: calc(14px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom));
+    gap: 12px;
   }
 
-  .title {
-    display: none;
-  }
-
-  .new-chat {
-    font-size: 0;
-    padding: 10px;
-  }
-
-  .session-title {
-    display: none;
+  .profile-card {
+    padding: 14px;
   }
 
   .session-actions {
     display: none;
   }
-}
 
-:root[data-theme="dark"] .sidebar,
-html.dark .sidebar {
-  background-color: #151a23;
-  border-right-color: rgba(255, 255, 255, 0.08);
-}
-
-:root[data-theme="dark"] .note-banner,
-html.dark .note-banner {
-  background: #3a2a12;
-  border-color: #c58a1a;
-}
-
-:root[data-theme="dark"] .note-text,
-html.dark .note-text {
-  color: #f6d28b;
-}
-
-:root[data-theme="dark"] .session-item,
-html.dark .session-item {
-  color: #e0e6f0;
-}
-
-:root[data-theme="dark"] .session-item:hover,
-html.dark .session-item:hover,
-:root[data-theme="dark"] .session-item.active,
-html.dark .session-item.active {
-  background: #1e2430;
-  border-color: rgba(255, 255, 255, 0.08);
-  border-left-color: #4c71d8;
+  .new-chat {
+    min-height: 46px;
+  }
 }
 </style>
