@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import multiprocessing
+import os
 
 # 监听地址（改端口就改这里）
 bind = "0.0.0.0:8010"
@@ -15,8 +16,12 @@ worker_class = "sync"
 backlog = 2048
 
 # 超时设置
-timeout = 120
-graceful_timeout = 30
+# AI 聊天请求可能串行经过 conversation router、retrieval judge、final critic、
+# 最终回答生成等多个模型调用，总耗时会明显高于单次 llm_timeout。
+# 如果这里和 llm_timeout 持平，gunicorn 会在 SSE 仍在进行时杀掉 worker，
+# 前端/Vite 侧就会看到截断的 chunked 响应错误。
+timeout = int(os.getenv("GUNICORN_TIMEOUT", "600"))
+graceful_timeout = int(os.getenv("GUNICORN_GRACEFUL_TIMEOUT", "90"))
 
 # 日志（按需调整）
 accesslog = "-"

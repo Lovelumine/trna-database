@@ -44,10 +44,12 @@ from .admin import (
 )
 from .models import AdminAuditLog, MediaAsset
 from .settings_store import (
+    get_ai_workflow_settings,
     get_llm_settings,
     get_table_column_labels,
     get_table_default_visible_columns,
     get_table_media_field_config,
+    save_ai_workflow_settings,
     save_llm_settings,
     save_table_column_labels,
     save_table_default_visible_columns,
@@ -83,6 +85,34 @@ EXPORT_NAME_BY_TABLE = {
     "ef_tu": "EF-Tu recognition site",
 }
 
+
+def _normalize_table_name(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    if raw in EXPORT_TABLES:
+        return raw
+
+    lowered = raw.lower()
+    for table in EXPORT_TABLES:
+        if table.lower() == lowered:
+            return table
+    for table, display in EXPORT_NAME_BY_TABLE.items():
+        if display.lower() == lowered:
+            return table
+
+    compact = re.sub(r"[^a-z0-9]+", "", lowered)
+    if not compact:
+        return ""
+    for table in EXPORT_TABLES:
+        if re.sub(r"[^a-z0-9]+", "", table.lower()) == compact:
+            return table
+    for table, display in EXPORT_NAME_BY_TABLE.items():
+        if re.sub(r"[^a-z0-9]+", "", display.lower()) == compact:
+            return table
+
+    return _detect_table_from_question(raw)
+
 _EXPORT_TASK_LOCK = threading.Lock()
 _EXPORT_TASKS = {}
 
@@ -110,6 +140,10 @@ _TOOL_NAMES = {
     "repo_search",
     "repo_file",
 }
+
+_TABLE_DEEPEN_TOOLS = {"tables_list", "table_info", "table_rows", "table_stats", "ensure_lookup", "search_alignment"}
+_PUBMED_DEEPEN_TOOLS = {"pubmed_search", "pubmed_fetch"}
+_DOC_DEEPEN_TOOLS = {"docs_list", "docs_search", "doc_get", "site_map", "api_reference", "repo_search", "repo_file"}
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _REPO_ALLOWED_TEXT_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".vue", ".css", ".scss", ".md", ".json", ".yml", ".yaml"}
@@ -246,6 +280,59 @@ def _get_pmid_extractor_config():
     timeout = float(current_app.config.get("PMID_EXTRACTOR_TIMEOUT", 10) or 10)
     return enable, model, timeout
 
+
+def _get_ai_workflow_config() -> dict:
+    try:
+        return get_ai_workflow_settings()
+    except Exception:
+        return {
+            "workflow_enable": True,
+            "conversation_router_enable": True,
+            "conversation_router_model": "",
+            "conversation_router_timeout": 15,
+            "router_confidence_threshold": 0.7,
+            "max_retrieval_rounds": 2,
+            "max_tool_steps_per_round": 4,
+            "max_total_tool_steps": 12,
+            "retrieval_judge_enable": True,
+            "retrieval_judge_model": "",
+            "retrieval_judge_threshold": 0.8,
+            "stop_on_no_new_evidence": True,
+            "stop_on_repeated_plan": True,
+            "allow_pubmed_deepen": True,
+            "allow_table_deepen": True,
+            "allow_doc_deepen": True,
+            "final_critic_enable": True,
+        }
+
+
+def _optional_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if not text:
+        return None
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    return None
+
+
+def _apply_request_workflow_overrides(workflow: dict, payload: dict) -> dict:
+    effective = dict(workflow or {})
+    deep_review = _optional_bool((payload or {}).get("deep_review"))
+    if deep_review is None:
+        deep_review = True
+    effective["request_deep_review"] = deep_review
+    if not deep_review:
+        effective["max_retrieval_rounds"] = 1
+        effective["retrieval_judge_enable"] = False
+        effective["final_critic_enable"] = False
+    return effective
+
 def _select_chat_model(requested: str, fallback: str) -> str:
     if not isinstance(requested, str):
         return fallback
@@ -327,6 +414,413 @@ def _detect_language(text: str) -> str:
     if cjk > 0:
         return "zh"
     return "en"
+
+
+def _history_messages_before_current(session_messages: list, current_message: str) -> list:
+    items = list(session_messages or [])
+    current = str(current_message or "").strip()
+    if items:
+        last = items[-1]
+        if (
+            isinstance(last, dict)
+            and str(last.get("role") or "").strip().lower() == "user"
+            and str(last.get("content") or "").strip() == current
+        ):
+            return items[:-1]
+    return items
+
+
+def _find_last_message_by_role(session_messages: list, role: str) -> str:
+    target_role = str(role or "").strip().lower()
+    for item in reversed(session_messages or []):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("role") or "").strip().lower() != target_role:
+            continue
+        content = str(item.get("content") or "").strip()
+        if content:
+            return content
+    return ""
+
+
+def _find_message_by_role_offset(session_messages: list, role: str, offset: int) -> str:
+    target_role = str(role or "").strip().lower()
+    target_offset = max(1, int(offset or 1))
+    seen = 0
+    for item in reversed(session_messages or []):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("role") or "").strip().lower() != target_role:
+            continue
+        content = str(item.get("content") or "").strip()
+        if not content:
+            continue
+        seen += 1
+        if seen == target_offset:
+            return content
+    return ""
+
+
+def _detect_history_transform_request(question: str, session_messages: list) -> dict | None:
+    q = str(question or "").strip()
+    if not q:
+        return None
+    qlow = q.lower()
+    has_reference = bool(
+        re.search(
+            r"上一次|上一条|上条|刚才|刚刚|前面|上面|之前|那段|那个回答|上个回答|previous answer|last answer|previous response|last response|that answer|above answer|above response",
+            q,
+            flags=re.IGNORECASE,
+        )
+    )
+    if not has_reference:
+        return None
+
+    transform_type = ""
+    target_language = ""
+    if re.search(r"翻译|translate", q, flags=re.IGNORECASE):
+        transform_type = "translate"
+        if re.search(r"中文|汉语|chinese", q, flags=re.IGNORECASE):
+            target_language = "zh"
+        elif re.search(r"英文|英语|english", q, flags=re.IGNORECASE):
+            target_language = "en"
+        else:
+            target_language = _detect_language(q)
+    elif re.search(r"总结|概括|summari[sz]e|tl;dr", q, flags=re.IGNORECASE):
+        transform_type = "summarize"
+    elif re.search(r"改写|重写|润色|rephrase|rewrite|polish", q, flags=re.IGNORECASE):
+        transform_type = "rewrite"
+    else:
+        return None
+
+    history_before_current = _history_messages_before_current(session_messages, q)
+    source_text = _find_last_message_by_role(history_before_current, "assistant")
+    if not source_text:
+        return None
+    return {
+        "type": transform_type,
+        "source_text": source_text,
+        "target_language": target_language,
+        "reference_text": q,
+    }
+
+
+def _history_transform_prompt(transform: dict) -> str:
+    mode = str((transform or {}).get("type") or "").strip().lower()
+    target_language = str((transform or {}).get("target_language") or "").strip().lower()
+    if mode == "translate":
+        if target_language == "zh":
+            return (
+                "请仅根据给定文本做忠实翻译，翻译成中文。"
+                "不要补充新事实，不要检索外部信息，不要解释过程。"
+                "如果原文已经是中文，就做自然润色后返回。"
+            )
+        if target_language == "en":
+            return (
+                "Translate the given text into English only."
+                " Do not add facts, retrieve outside information, or explain your process."
+                " If the source is already English, lightly polish it and return only the rewritten text."
+            )
+        return (
+            "Translate the given text into the language implied by the user's request."
+            " Do not add facts, retrieve outside information, or explain your process."
+        )
+    if mode == "summarize":
+        return (
+            "Summarize the given assistant answer only."
+            " Do not retrieve outside information or add new facts."
+            " Keep the summary faithful to the source."
+        )
+    return (
+        "Rewrite the given assistant answer only according to the user's request."
+        " Do not retrieve outside information or add new facts."
+        " Return only the rewritten answer."
+    )
+
+
+def _run_history_transform(runtime: dict, model: str, system_prompt: str, transform: dict, question: str) -> str:
+    instruction = _history_transform_prompt(transform)
+    source_text = str((transform or {}).get("source_text") or "")
+    request_text = str(question or "").strip()
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": instruction},
+        {"role": "user", "content": f"User request:\n{request_text}\n\nSource answer:\n{source_text}"},
+    ]
+    return _llm_once(runtime, messages, model=model).strip()
+
+
+def _build_router_history_snippet(session_messages: list, current_message: str, max_items: int = 8, max_chars: int = 2400) -> str:
+    history_before_current = _history_messages_before_current(session_messages, current_message)
+    lines = []
+    for item in history_before_current[-max_items:]:
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role") or "").strip().lower()
+        if role not in {"user", "assistant"}:
+            continue
+        content = str(item.get("content") or "").strip().replace("\r\n", "\n")
+        if not content:
+            continue
+        if len(content) > 320:
+            content = content[:320].rstrip() + "..."
+        lines.append(f"{role}: {content}")
+    snippet = "\n".join(lines).strip() or "None"
+    if len(snippet) > max_chars:
+        snippet = snippet[-max_chars:]
+    return snippet
+
+
+def _conversation_router_prompt() -> str:
+    return (
+        "You are a conversation router for ENSURE. Decide how the assistant should handle the user's latest message.\n"
+        "Return JSON only with this schema:\n"
+        "{\"route\":\"history_transform\"|\"knowledge_retrieval\"|\"direct_answer\"|\"clarify\","
+        "\"confidence\":0.0,"
+        "\"reason\":\"...\","
+        "\"transform_type\":\"translate\"|\"rewrite\"|\"summarize\"|\"none\","
+        "\"target_message_role\":\"assistant\"|\"user\"|\"\","
+        "\"target_message_offset\":0,"
+        "\"target_language\":\"zh\"|\"en\"|\"\","
+        "\"clarification_question\":\"...\"}\n"
+        "Rules:\n"
+        "- Choose history_transform when the user wants to translate, rewrite, polish, summarize, or lightly expand a previous chat message.\n"
+        "- Treat requests like 'make the previous answer clearer', 'turn it into three sentences', or 'expand that answer a bit' as history_transform if no new external facts are required.\n"
+        "- If the user asks to expand the previous answer with new examples, counts, citations, PMIDs, papers, methods, database rows, or other fresh evidence, choose knowledge_retrieval instead.\n"
+        "- Prefer history_transform even if ENSURE is mentioned, as long as no new external facts are needed.\n"
+        "- Choose knowledge_retrieval only when the assistant needs ENSURE/database/docs/PubMed/repository evidence.\n"
+        "- Choose direct_answer for identity, greeting, or simple conversational replies that can be answered from the chat alone.\n"
+        "- Choose clarify when the user references prior content ambiguously or the requested target message cannot be identified confidently.\n"
+        "- target_message_offset counts backward among messages of target_message_role before the current user message. 1 means the latest matching message.\n"
+        "- If route is not history_transform, set transform_type to \"none\", target_message_role to \"\", target_message_offset to 0, and target_language to \"\".\n"
+        "- If route is not clarify, set clarification_question to an empty string.\n"
+        "- Keep reason short.\n"
+    )
+
+
+def _extract_json_object(text_value: str) -> dict:
+    raw = str(text_value or "").strip()
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+    match = re.search(r"\{[\s\S]*\}", raw)
+    if not match:
+        return {}
+    try:
+        data = json.loads(match.group(0))
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        return {}
+    return {}
+
+
+def _parse_conversation_router_output(text_value: str) -> dict:
+    data = _extract_json_object(text_value)
+    route = str(data.get("route") or "").strip().lower()
+    if route not in {"history_transform", "knowledge_retrieval", "direct_answer", "clarify"}:
+        route = ""
+    confidence = max(0.0, min(float(data.get("confidence") or 0.0), 1.0))
+    transform_type = str(data.get("transform_type") or "").strip().lower()
+    if transform_type not in {"translate", "rewrite", "summarize"}:
+        transform_type = "none"
+    target_role = str(data.get("target_message_role") or "").strip().lower()
+    if target_role not in {"assistant", "user"}:
+        target_role = ""
+    try:
+        target_offset = int(data.get("target_message_offset") or 0)
+    except Exception:
+        target_offset = 0
+    target_offset = max(0, min(target_offset, 10))
+    target_language = str(data.get("target_language") or "").strip().lower()
+    if target_language not in {"zh", "en"}:
+        target_language = ""
+    clarification_question = str(data.get("clarification_question") or "").strip()
+    reason = str(data.get("reason") or "").strip()
+    if route != "history_transform":
+        transform_type = "none"
+        target_role = ""
+        target_offset = 0
+        target_language = ""
+    if route != "clarify":
+        clarification_question = ""
+    return {
+        "route": route,
+        "confidence": confidence,
+        "reason": reason,
+        "transform_type": transform_type,
+        "target_message_role": target_role,
+        "target_message_offset": target_offset,
+        "target_language": target_language,
+        "clarification_question": clarification_question,
+    }
+
+
+def _fallback_conversation_route(question: str, session_messages: list, intent: str, force_evidence: bool) -> dict:
+    transform = _detect_history_transform_request(question, session_messages)
+    if transform:
+        return {
+            "route": "history_transform",
+            "confidence": 1.0,
+            "reason": "deterministic_history_transform_fallback",
+            "transform_type": str(transform.get("type") or "rewrite"),
+            "target_message_role": "assistant",
+            "target_message_offset": 1,
+            "target_language": str(transform.get("target_language") or ""),
+            "clarification_question": "",
+            "source_text": str(transform.get("source_text") or "").strip(),
+        }
+    if re.search(
+        r"上一次|上一条|上条|刚才|刚刚|前面|上面|之前|那段|那个回答|上个回答|previous|last|above|that answer|that response",
+        str(question or ""),
+        flags=re.IGNORECASE,
+    ):
+        return {
+            "route": "clarify",
+            "confidence": 0.0,
+            "reason": "ambiguous_reference_fallback",
+            "transform_type": "none",
+            "target_message_role": "",
+            "target_message_offset": 0,
+            "target_language": "",
+            "clarification_question": "",
+        }
+    if force_evidence or intent == "retrieval":
+        route = "knowledge_retrieval"
+        reason = "retrieval_fallback"
+    else:
+        route = "direct_answer"
+        reason = "direct_answer_fallback"
+    return {
+        "route": route,
+        "confidence": 0.0,
+        "reason": reason,
+        "transform_type": "none",
+        "target_message_role": "",
+        "target_message_offset": 0,
+        "target_language": "",
+        "clarification_question": "",
+    }
+
+
+def _route_conversation_request(
+    runtime: dict,
+    model: str,
+    session_messages: list,
+    question: str,
+    workflow: dict,
+    intent: str,
+    force_evidence: bool,
+) -> dict:
+    fallback = _fallback_conversation_route(question, session_messages, intent, force_evidence)
+    if not workflow.get("conversation_router_enable", True):
+        return fallback
+
+    router_model = _select_chat_model(
+        str(workflow.get("conversation_router_model") or "").strip(),
+        model,
+    )
+    router_timeout = float(workflow.get("conversation_router_timeout") or runtime.get("timeout") or 15)
+    router_threshold = float(workflow.get("router_confidence_threshold") or 0.7)
+    history_snippet = _build_router_history_snippet(session_messages, question)
+    messages = [
+        {"role": "system", "content": _conversation_router_prompt()},
+        {"role": "user", "content": f"Conversation history before the latest user message:\n{history_snippet}\n\nLatest user message:\n{question}"},
+    ]
+    try:
+        reply = _llm_once(runtime, messages, model=router_model, timeout=router_timeout)
+        routed = _parse_conversation_router_output(reply)
+    except Exception:
+        return fallback
+
+    if not routed.get("route"):
+        return fallback
+    if float(routed.get("confidence") or 0.0) < router_threshold:
+        return fallback
+
+    if routed.get("route") == "history_transform":
+        target_role = str(routed.get("target_message_role") or "").strip().lower() or "assistant"
+        target_offset = int(routed.get("target_message_offset") or 1)
+        source_text = _find_message_by_role_offset(
+            _history_messages_before_current(session_messages, question),
+            target_role,
+            target_offset,
+        )
+        if not source_text:
+            return {
+                "route": "clarify",
+                "confidence": float(routed.get("confidence") or 0.0),
+                "reason": "router_target_missing",
+                "transform_type": "none",
+                "target_message_role": "",
+                "target_message_offset": 0,
+                "target_language": "",
+                "clarification_question": str(routed.get("clarification_question") or "").strip(),
+            }
+        routed["target_message_role"] = target_role
+        routed["target_message_offset"] = max(1, target_offset)
+        routed["source_text"] = source_text
+    return routed
+
+
+def _direct_answer_prompt(lang: str) -> str:
+    if lang == "zh":
+        return (
+            "请直接根据当前对话回答用户。"
+            "不要检索数据库、文档、PubMed 或仓库代码，也不要提及检索过程。"
+        )
+    return (
+        "Answer directly from the current conversation only."
+        " Do not retrieve database, document, PubMed, or repository evidence, and do not mention retrieval."
+    )
+
+
+def _run_direct_answer(runtime: dict, system_prompt: str, session_messages: list, style_prompt: str, question: str, model: str = "") -> str:
+    extra_system = _direct_answer_prompt(_detect_language(question))
+    if style_prompt:
+        extra_system += "\n\nStyle:\n" + style_prompt
+    messages = _build_ollama_messages(session_messages, system_prompt, extra_system)
+    return _llm_once(runtime, messages, model=model).strip()
+
+
+def _default_clarification_question(question: str) -> str:
+    if _detect_language(question) == "zh":
+        return "请您再明确一点：您是希望我处理上一条回答、上一条问题，还是想让我继续检索新的 ENSURE 证据？"
+    return (
+        "Please clarify whether you want me to transform the previous answer, transform your previous question, "
+        "or retrieve new ENSURE evidence."
+    )
+
+
+def _non_retrieval_evidence_text(route_name: str, source_role: str = "assistant") -> str:
+    route = str(route_name or "").strip().lower()
+    source = str(source_role or "").strip().lower()
+    if route == "history_transform":
+        source_label = "previous assistant answer" if source == "assistant" else "previous user message"
+        return (
+            "No external retrieval was used.\n"
+            f"- Route: history_transform\n"
+            f"- Source: {source_label}\n"
+            "- Basis: transformed directly from the existing conversation history"
+        )
+    if route == "direct_answer":
+        return (
+            "No external retrieval was used.\n"
+            "- Route: direct_answer\n"
+            "- Basis: answered directly from the active conversation context"
+        )
+    if route == "clarify":
+        return (
+            "No external retrieval was used.\n"
+            "- Route: clarify\n"
+            "- Basis: the request was ambiguous, so the assistant asked a focused follow-up question first"
+        )
+    return "No external retrieval was used."
 
 def _ollama_stream(base: str, model: str, messages: list, timeout: float):
     url = base.rstrip("/") + "/api/chat"
@@ -1567,6 +2061,7 @@ def _sanitize_tool_plan(plan: list, max_steps: int) -> list:
     if not isinstance(plan, list):
         return []
     cleaned = []
+    seen = set()
     for item in plan:
         if not isinstance(item, dict):
             continue
@@ -1574,6 +2069,21 @@ def _sanitize_tool_plan(plan: list, max_steps: int) -> list:
         if tool not in _TOOL_NAMES:
             continue
         params = item.get("params") or {}
+        if not isinstance(params, dict):
+            params = {}
+        else:
+            params = dict(params)
+        if tool in {"table_info", "table_rows", "table_stats"}:
+            table = _normalize_table_name(
+                params.get("table") or params.get("table_name") or params.get("dataset")
+            )
+            if not table:
+                continue
+            params["table"] = table
+            params.pop("table_name", None)
+            params.pop("dataset", None)
+        elif tool == "tables_list":
+            params = {}
         # Drop invalid ensure_lookup entries
         if tool == "ensure_lookup":
             ensure_id = str(params.get("ensure_id") or "").strip()
@@ -1586,6 +2096,13 @@ def _sanitize_tool_plan(plan: list, max_steps: int) -> list:
                 pmids = [p for p in pmids.replace(";", ",").split(",") if p.strip()]
             if not query and not pmids:
                 continue
+        try:
+            signature = json.dumps({"tool": tool, "params": params}, ensure_ascii=False, sort_keys=True)
+        except Exception:
+            signature = f"{tool}:{params}"
+        if signature in seen:
+            continue
+        seen.add(signature)
         cleaned.append({"tool": tool, "params": params})
         if max_steps and len(cleaned) >= max_steps:
             break
@@ -2255,6 +2772,23 @@ def _generate_answer(runtime: dict, system_prompt: str, session_messages: list, 
     messages = _build_answer_messages(system_prompt, session_messages, evidence_context, question, style_prompt)
     return _llm_once(runtime, messages)
 
+
+def _generate_answer_stream(runtime: dict, system_prompt: str, session_messages: list, evidence_context: str, question: str, style_prompt: str = ""):
+    messages = _build_answer_messages(system_prompt, session_messages, evidence_context, question, style_prompt)
+    return _llm_stream(runtime, messages)
+
+
+def _draft_preview_event(answer: str, label: str = "Draft answer preview") -> dict:
+    text = str(answer or "").strip()
+    if len(text) > 1600:
+        text = text[:1597].rstrip() + "..."
+    return {
+        "type": "draft_preview",
+        "label": str(label or "Draft answer preview"),
+        "content": text,
+    }
+
+
 def _parse_critic_output(text: str) -> dict:
     if not text:
         return {}
@@ -2286,6 +2820,201 @@ def _critique_answer(runtime: dict, question: str, answer: str, evidence: str) -
     except Exception:
         return {}
     return _parse_critic_output(reply)
+
+
+def _finalize_answer(
+    runtime: dict,
+    system_prompt: str,
+    session_messages: list,
+    question: str,
+    style_prompt: str,
+    rag_context: str,
+    rag_evidence: str,
+    cache: dict,
+    signals: dict,
+    tool_trace: list,
+    workflow: dict,
+) -> dict:
+    _, _, _, _, max_chars = _get_tool_router_config()
+    context_local, evidence_local, _, _ = _compose_cached_context_and_evidence(
+        rag_context,
+        rag_evidence,
+        cache,
+        max_chars,
+    )
+    if not workflow.get("final_critic_enable", True) and int(signals.get("pubmed_abstracts", 0) or 0) <= 0:
+        yield {
+            "type": "status",
+            "status": "Preparing final answer stream",
+            "detail": "Deep review is disabled for this request, so the assistant will stream the answer directly from the current evidence.",
+        }
+        return {
+            "answer": "",
+            "context": context_local,
+            "evidence": evidence_local,
+            "answer_pmids": [],
+            "invalid_pmids": [],
+        }
+    yield {
+        "type": "status",
+        "status": "Generating reviewed answer",
+        "detail": "Drafting an evidence-grounded final answer from the accumulated retrieval context.",
+    }
+    complete = _generate_answer(
+        runtime,
+        system_prompt,
+        session_messages,
+        context_local,
+        question,
+        style_prompt,
+    ).strip()
+    yield _draft_preview_event(complete, "Draft answer preview")
+    answer_pmids = []
+    invalid_pmids = []
+
+    if workflow.get("final_critic_enable", True):
+        yield {
+            "type": "status",
+            "status": "Reviewing answer",
+            "detail": "Checking evidence coverage, unsupported claims, and whether one more lookup is needed before delivery.",
+        }
+        critic = _critique_answer(runtime, question, complete, context_local)
+        verdict = (critic.get("verdict") or "").strip().lower()
+        revised = critic.get("revised_answer") or ""
+        tool_calls = critic.get("tool_calls") or []
+        remaining_steps = max(0, int(workflow.get("max_total_tool_steps") or 1) - len(tool_trace))
+
+        if verdict == "need_more_evidence" and tool_calls and remaining_steps > 0:
+            round_budget = min(int(workflow.get("max_tool_steps_per_round") or 1), remaining_steps)
+            tool_calls = _filter_tool_calls_for_workflow(tool_calls, workflow, round_budget)
+            if tool_calls:
+                yield {
+                    "type": "status",
+                    "status": "Collecting final evidence",
+                    "detail": "The final critic requested one more targeted retrieval pass before the answer is released.",
+                }
+                trace_before = len(tool_trace)
+                _execute_tool_plan_with_state(tool_calls, cache, signals, max_chars, trace_sink=tool_trace)
+                for trace in tool_trace[trace_before:]:
+                    yield {
+                        "type": "tool",
+                        "tool": str(trace.get("tool") or "tool"),
+                        "summary": str(trace.get("summary") or ""),
+                    }
+                context_local, evidence_local, _, _ = _compose_cached_context_and_evidence(
+                    rag_context,
+                    rag_evidence,
+                    cache,
+                    max_chars,
+                )
+                yield {
+                    "type": "status",
+                    "status": "Regenerating final answer",
+                    "detail": "Rebuilding the answer after the final critic requested extra evidence.",
+                }
+                complete = _generate_answer(
+                    runtime,
+                    system_prompt,
+                    session_messages,
+                    context_local,
+                    question,
+                    style_prompt,
+                ).strip()
+                yield _draft_preview_event(complete, "Updated draft after final evidence")
+                yield {
+                    "type": "status",
+                    "status": "Reviewing answer",
+                    "detail": "Rechecking the revised answer against the expanded evidence before delivery.",
+                }
+                critic = _critique_answer(runtime, question, complete, context_local)
+                verdict = (critic.get("verdict") or "").strip().lower()
+                revised = critic.get("revised_answer") or ""
+
+        if verdict == "revise" and revised:
+            complete = str(revised).strip()
+
+    yield {
+        "type": "status",
+        "status": "Validating citations",
+        "detail": "Checking that any cited PMIDs are supported by the current evidence trace.",
+    }
+    answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
+    if invalid_pmids:
+        correction_hint = (
+            "The answer included PMIDs not present in the evidence: "
+            + ", ".join(invalid_pmids)
+            + ". Remove or correct them while keeping the rest."
+        )
+        complete = _generate_answer(
+            runtime,
+            system_prompt,
+            session_messages,
+            context_local,
+            question,
+            style_prompt + "\n" + correction_hint,
+        ).strip()
+        _, invalid_pmids = _check_answer_pmids(complete, context_local)
+        if invalid_pmids:
+            complete = _remove_invalid_pmids(complete, invalid_pmids)
+
+    if signals.get("pubmed_abstracts", 0) > 0:
+        yield {
+            "type": "status",
+            "status": "Integrating literature evidence",
+            "detail": "Refining the final answer with any PubMed abstracts gathered during retrieval.",
+        }
+        second_hint = (
+            "Use any PubMed abstracts in the evidence to refine the answer. "
+            "Prefer integrating them naturally instead of listing."
+        )
+        complete = _generate_answer(
+            runtime,
+            system_prompt,
+            session_messages,
+            context_local,
+            question,
+            style_prompt + "\n" + second_hint,
+        ).strip()
+        yield _draft_preview_event(complete, "Literature-enriched draft preview")
+        if workflow.get("final_critic_enable", True):
+            yield {
+                "type": "status",
+                "status": "Reviewing answer",
+                "detail": "Checking the literature-enriched answer against the current evidence before delivery.",
+            }
+            critic2 = _critique_answer(runtime, question, complete, context_local)
+            verdict2 = (critic2.get("verdict") or "").strip().lower()
+            revised2 = critic2.get("revised_answer") or ""
+            if verdict2 == "revise" and revised2:
+                complete = str(revised2).strip()
+        answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
+        if invalid_pmids:
+            correction_hint = (
+                "The answer included PMIDs not present in the evidence: "
+                + ", ".join(invalid_pmids)
+                + ". Remove or correct them while keeping the rest."
+            )
+            complete = _generate_answer(
+                runtime,
+                system_prompt,
+                session_messages,
+                context_local,
+                question,
+                style_prompt + "\n" + correction_hint,
+            ).strip()
+            _, invalid_pmids = _check_answer_pmids(complete, context_local)
+            if invalid_pmids:
+                complete = _remove_invalid_pmids(complete, invalid_pmids)
+
+    answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
+    return {
+        "answer": complete.strip(),
+        "context": context_local,
+        "evidence": evidence_local,
+        "answer_pmids": answer_pmids,
+        "invalid_pmids": invalid_pmids,
+    }
+
 
 def _parse_tool_call(text: str) -> dict:
     if not text:
@@ -2588,6 +3317,384 @@ def _run_tool_pipeline(question: str, rag_context: str, trace_sink: list | None 
     merged_context = "\n\n".join([c for c in [tool_context, extra_context] if c]).strip()
     merged_evidence = "\n".join([e for e in [tool_evidence, extra_evidence] if e]).strip()
     return merged_context, merged_evidence, cache, signals, steps_used, max_steps, max_chars, trace_sink or []
+
+
+def _fresh_tool_signals() -> dict:
+    return {
+        "rows": 0,
+        "stats": 0,
+        "pmid_count": None,
+        "method_stats": False,
+        "pubmed_items": 0,
+        "pubmed_abstracts": 0,
+    }
+
+
+def _execute_tool_plan_with_state(
+    plan: list,
+    cache: dict,
+    signals: dict,
+    max_chars: int,
+    trace_sink: list | None = None,
+):
+    context_lines = []
+    evidence_lines = []
+    executed_steps = 0
+    for item in plan or []:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("tool")
+        params = item.get("params") or {}
+        before_size = len(cache)
+        _execute_tool_cached(
+            name,
+            params,
+            cache,
+            context_lines,
+            evidence_lines,
+            signals,
+            max_chars,
+            trace_sink=trace_sink,
+        )
+        if len(cache) > before_size:
+            executed_steps += 1
+    return "\n\n".join(context_lines), "\n".join(evidence_lines), executed_steps
+
+
+def _compose_cached_context_and_evidence(rag_context: str, rag_evidence: str, cache: dict, max_chars: int):
+    context_lines = []
+    evidence_lines = []
+    for key, result in (cache or {}).items():
+        name = key.split(":", 1)[0]
+        context_lines.append(_format_tool_context(name, result, max_chars))
+        evidence_lines.append(f"Tool `{name}` — {_tool_summary(name, result)}")
+    tool_context = "\n\n".join([line for line in context_lines if line]).strip()
+    tool_evidence = "\n".join([line for line in evidence_lines if line]).strip()
+    merged_context = "\n\n".join([part for part in [rag_context, tool_context] if part]).strip()
+    merged_evidence = "\n".join([part for part in [rag_evidence, tool_evidence] if part]).strip()
+    return merged_context, merged_evidence, tool_context, tool_evidence
+
+
+def _filter_tool_calls_for_workflow(plan: list, workflow: dict, max_steps: int) -> list:
+    filtered = []
+    for item in _sanitize_tool_plan(plan, max_steps):
+        tool = item.get("tool")
+        if tool in _PUBMED_DEEPEN_TOOLS and not workflow.get("allow_pubmed_deepen", True):
+            continue
+        if tool in _TABLE_DEEPEN_TOOLS and not workflow.get("allow_table_deepen", True):
+            continue
+        if tool in _DOC_DEEPEN_TOOLS and not workflow.get("allow_doc_deepen", True):
+            continue
+        filtered.append(item)
+        if max_steps and len(filtered) >= max_steps:
+            break
+    return filtered
+
+
+def _plan_signature(plan: list) -> str:
+    try:
+        return json.dumps(plan or [], ensure_ascii=False, sort_keys=True)
+    except Exception:
+        return ""
+
+
+def _retrieval_judge_prompt(max_steps: int) -> str:
+    tools = ", ".join(sorted(_TOOL_NAMES))
+    known_tables = ", ".join(EXPORT_TABLES)
+    display_names = ", ".join(sorted(set(EXPORT_NAME_BY_TABLE.values())))
+    return (
+        "You are a retrieval judge for ENSURE.\n"
+        "Decide whether the current evidence is already sufficient to answer the user's question.\n"
+        "Return JSON only in this format:\n"
+        "{\"enough\":true|false,"
+        "\"coverage_score\":0.0,"
+        "\"missing_aspects\":[...],"
+        "\"tool_calls\":[{\"tool\":\"...\",\"params\":{...}}],"
+        "\"stop\":true|false,"
+        "\"stop_reason\":\"...\"}\n"
+        f"tool_calls must contain at most {max_steps} items.\n"
+        f"Available tools: {tools}\n"
+        f"Known canonical table names: {known_tables}\n"
+        f"Known table display names: {display_names}\n"
+        "Rules:\n"
+        "- Prefer the smallest next lookup that would improve coverage.\n"
+        "- If the evidence already supports the question, set enough=true and tool_calls=[].\n"
+        "- If more retrieval would likely repeat existing evidence, set stop=true.\n"
+        "- For table_info, table_rows, and table_stats, always include params.table using a concrete known canonical table name.\n"
+        "- Never output table_info, table_rows, or table_stats without params.table.\n"
+        "- Do not invent unsupported facts, PMIDs, or filenames.\n"
+        "- Do not output any prose outside the JSON object.\n"
+    )
+
+
+def _parse_retrieval_judge_output(text: str) -> dict:
+    data = _parse_critic_output(text)
+    if not isinstance(data, dict):
+        return {}
+    missing = data.get("missing_aspects") or data.get("missing") or []
+    if isinstance(missing, str):
+        missing = [missing]
+    normalized_missing = [str(item).strip() for item in missing if str(item).strip()]
+    try:
+        coverage_score = float(data.get("coverage_score"))
+    except Exception:
+        coverage_score = None
+    return {
+        "enough": bool(data.get("enough")),
+        "coverage_score": coverage_score,
+        "missing_aspects": normalized_missing,
+        "tool_calls": data.get("tool_calls") or [],
+        "stop": bool(data.get("stop")),
+        "stop_reason": str(data.get("stop_reason") or "").strip(),
+    }
+
+
+def _judge_retrieval(question: str, evidence_context: str, evidence_summary: str, workflow: dict, trace: list | None = None) -> dict:
+    max_steps = int(workflow.get("max_tool_steps_per_round") or 4)
+    requested_model = str(workflow.get("retrieval_judge_model") or "").strip()
+    runtime = _get_llm_runtime(requested_model)
+    model = _select_chat_model(requested_model, str(runtime.get("model") or ""))
+    trace_lines = []
+    for item in (trace or [])[-8:]:
+        tool = str(item.get("tool") or "tool")
+        summary = str(item.get("summary") or "")
+        trace_lines.append(f"- {tool}: {summary}")
+    messages = [
+        {"role": "system", "content": _retrieval_judge_prompt(max_steps)},
+        {"role": "system", "content": "Question:\n" + str(question or "")},
+        {"role": "system", "content": "Evidence context:\n" + (evidence_context or "None")},
+        {"role": "system", "content": "Evidence summary:\n" + (evidence_summary or "None")},
+    ]
+    if trace_lines:
+        messages.append({"role": "system", "content": "Recent tool trace:\n" + "\n".join(trace_lines)})
+    try:
+        reply = _llm_once(runtime, messages, model=model, timeout=float(runtime.get("timeout") or 20))
+    except Exception:
+        return {
+            "enough": bool(evidence_summary),
+            "coverage_score": 1.0 if evidence_summary else 0.0,
+            "missing_aspects": [],
+            "tool_calls": [],
+            "stop": True,
+            "stop_reason": "judge_unavailable",
+        }
+    parsed = _parse_retrieval_judge_output(reply)
+    parsed["tool_calls"] = _sanitize_tool_plan(parsed.get("tool_calls") or [], max_steps)
+    if parsed.get("coverage_score") is None:
+        parsed["coverage_score"] = 1.0 if parsed.get("enough") else 0.0
+    if not parsed.get("enough") and not parsed.get("tool_calls") and not parsed.get("stop"):
+        parsed["stop"] = True
+        parsed["stop_reason"] = parsed.get("stop_reason") or "judge_no_followup_plan"
+    return parsed
+
+
+def _judge_event_payload(judge: dict, judge_threshold: float) -> dict:
+    missing = [str(item).strip() for item in (judge.get("missing_aspects") or []) if str(item).strip()]
+    tool_calls = judge.get("tool_calls") or []
+    next_tools = []
+    for item in tool_calls:
+        if not isinstance(item, dict):
+            continue
+        tool_name = str(item.get("tool") or "").strip()
+        if tool_name:
+            next_tools.append(tool_name)
+    coverage_score = judge.get("coverage_score")
+    try:
+        coverage_value = float(coverage_score)
+    except Exception:
+        coverage_value = None
+    enough = bool(judge.get("enough"))
+    if coverage_value is not None:
+        enough = enough or coverage_value >= float(judge_threshold)
+    stop = bool(judge.get("stop"))
+    stop_reason = str(judge.get("stop_reason") or "").strip()
+
+    if enough:
+        verdict = "enough"
+        summary = (
+            f"Judge accepted the current evidence"
+            + (f" (coverage {coverage_value:.2f})." if coverage_value is not None else ".")
+        )
+    elif stop:
+        verdict = "stop"
+        summary = stop_reason or "Judge stopped further deepening because additional retrieval was unlikely to help."
+    else:
+        verdict = "continue"
+        pieces = []
+        if coverage_value is not None:
+            pieces.append(f"coverage {coverage_value:.2f}")
+        if missing:
+            pieces.append("missing: " + "; ".join(missing[:3]))
+        if next_tools:
+            pieces.append("next: " + ", ".join(next_tools[:4]))
+        summary = "Judge requested another retrieval pass"
+        if pieces:
+            summary += " (" + " | ".join(pieces) + ")"
+        summary += "."
+
+    return {
+        "type": "judge",
+        "verdict": verdict,
+        "coverage_score": coverage_value,
+        "missing_aspects": missing,
+        "next_tools": next_tools,
+        "stop_reason": stop_reason,
+        "summary": summary,
+    }
+
+
+def _stream_text_chunks(text: str, chunk_size: int = 180):
+    payload = str(text or "")
+    if not payload:
+        return
+    for idx in range(0, len(payload), chunk_size):
+        yield payload[idx: idx + chunk_size]
+
+
+def _orchestrate_retrieval(question: str, rag_context: str, rag_evidence: str, workflow: dict, emit=None) -> dict:
+    _, _, _, _, max_chars = _get_tool_router_config()
+    cache = {}
+    signals = _fresh_tool_signals()
+    tool_trace = []
+    rounds = []
+    max_rounds = int(workflow.get("max_retrieval_rounds") or 1)
+    max_rounds = max(1, max_rounds)
+    max_total_steps = int(workflow.get("max_total_tool_steps") or 1)
+    max_total_steps = max(1, max_total_steps)
+    per_round_steps = int(workflow.get("max_tool_steps_per_round") or 1)
+    per_round_steps = max(1, per_round_steps)
+    judge_threshold = float(workflow.get("retrieval_judge_threshold") or 0.8)
+    workflow_enabled = bool(workflow.get("workflow_enable", True))
+    judge_enabled = bool(workflow.get("retrieval_judge_enable", True)) and workflow_enabled and max_rounds > 1
+    current_context = str(rag_context or "").strip()
+    current_evidence = str(rag_evidence or "").strip()
+    next_plan = None
+    last_plan_sig = ""
+    stop_reason = "workflow_disabled"
+
+    for round_number in range(1, max_rounds + 1):
+        total_used = len(tool_trace)
+        budget_left = max_total_steps - total_used
+        if budget_left <= 0:
+            stop_reason = "max_total_tool_steps_reached"
+            break
+        round_budget = min(per_round_steps, budget_left)
+        if callable(emit):
+            emit(
+                {
+                    "type": "status",
+                    "status": "Searching ENSURE data" if round_number == 1 else "Deepening evidence",
+                    "detail": f"Round {round_number} of {max_rounds}: retrieving database, document, and literature evidence.",
+                }
+            )
+
+        round_cache_before = len(cache)
+        round_trace_before = len(tool_trace)
+        if next_plan is None:
+            plan = _augment_plan_with_heuristics(
+                _plan_tools(question, current_context or rag_context, round_budget),
+                question,
+                round_budget,
+            )
+        else:
+            plan = list(next_plan)
+        plan = _filter_tool_calls_for_workflow(plan, workflow, round_budget)
+
+        _execute_tool_plan_with_state(plan, cache, signals, max_chars, trace_sink=tool_trace)
+        _evidence_gate(question, signals, cache, len(tool_trace) - round_trace_before, round_budget, max_chars, trace_sink=tool_trace)
+
+        round_trace = tool_trace[round_trace_before:]
+        for trace in round_trace:
+            if callable(emit):
+                emit(
+                    {
+                        "type": "tool",
+                        "tool": str(trace.get("tool") or "tool"),
+                        "summary": str(trace.get("summary") or ""),
+                    }
+                )
+
+        current_context, current_evidence, _, _ = _compose_cached_context_and_evidence(
+            rag_context,
+            rag_evidence,
+            cache,
+            max_chars,
+        )
+        new_cache_keys = len(cache) - round_cache_before
+        rounds.append(
+            {
+                "round": round_number,
+                "plan": plan,
+                "new_cache_keys": new_cache_keys,
+                "new_tool_steps": len(round_trace),
+            }
+        )
+
+        if not workflow_enabled:
+            stop_reason = "workflow_disabled"
+            break
+        if round_number >= max_rounds:
+            stop_reason = "max_rounds_reached"
+            break
+        if round_number > 1 and workflow.get("stop_on_no_new_evidence", True) and new_cache_keys <= 0:
+            stop_reason = "no_new_evidence"
+            break
+        if not judge_enabled:
+            stop_reason = "judge_disabled"
+            break
+
+        if callable(emit):
+            emit(
+                {
+                    "type": "status",
+                    "status": "Reviewing evidence",
+                    "detail": f"Round {round_number}: judging whether the current evidence is sufficient or needs another retrieval pass.",
+                }
+            )
+        judge = _judge_retrieval(question, current_context, current_evidence, workflow, trace=tool_trace)
+        rounds[-1]["judge"] = judge
+        coverage_score = judge.get("coverage_score")
+        enough = bool(judge.get("enough"))
+        if coverage_score is not None:
+            enough = enough or float(coverage_score) >= judge_threshold
+        if enough:
+            stop_reason = "judge_enough"
+            break
+        if judge.get("stop"):
+            stop_reason = judge.get("stop_reason") or "judge_stop"
+            break
+
+        next_plan = _filter_tool_calls_for_workflow(judge.get("tool_calls") or [], workflow, round_budget)
+        if not next_plan:
+            next_plan = _filter_tool_calls_for_workflow(
+                _augment_plan_with_heuristics(_plan_tools(question, current_context, round_budget), question, round_budget),
+                workflow,
+                round_budget,
+            )
+        next_sig = _plan_signature(next_plan)
+        if not next_plan:
+            stop_reason = "judge_no_followup_plan"
+            break
+        if workflow.get("stop_on_repeated_plan", True) and next_sig and next_sig == last_plan_sig:
+            stop_reason = "repeated_plan"
+            break
+        last_plan_sig = next_sig
+
+    current_context, current_evidence, _, _ = _compose_cached_context_and_evidence(
+        rag_context,
+        rag_evidence,
+        cache,
+        max_chars,
+    )
+    return {
+        "context": current_context,
+        "evidence": current_evidence,
+        "cache": cache,
+        "signals": signals,
+        "tool_trace": tool_trace,
+        "rounds": rounds,
+        "stop_reason": stop_reason,
+    }
 
 def _count_table_rows(conn, table: str) -> int:
     sql = text(f"SELECT COUNT(*) FROM `{table}`")
@@ -4162,6 +5269,27 @@ def admin_llm_settings_update():
     )
     return jsonify({"ok": True, "settings": get_llm_settings(include_secrets=True)})
 
+
+@bp.route("/admin/api/ai_workflow_settings", methods=["GET"])
+@admin_required
+def admin_ai_workflow_settings_get():
+    return jsonify(get_ai_workflow_settings())
+
+
+@bp.route("/admin/api/ai_workflow_settings", methods=["POST"])
+@admin_write_required
+def admin_ai_workflow_settings_update():
+    payload = request.get_json(silent=True) or {}
+    before, after = save_ai_workflow_settings(payload)
+    audit_admin_action(
+        action="update_ai_workflow_settings",
+        table_name="app_settings",
+        record_pk="ai_workflow",
+        before=before,
+        after=after,
+    )
+    return jsonify({"ok": True, "settings": get_ai_workflow_settings()})
+
 @bp.route("/admin/api/resources", methods=["GET"])
 @admin_required
 def admin_resources():
@@ -4767,6 +5895,7 @@ def chat_message(chat_id):
     strict_evidence = bool(current_app.config.get("STRICT_EVIDENCE_MODE", False))
     force_evidence = _requires_strict_evidence(message)
     session = _get_chat_session(chat_id)
+    workflow = _apply_request_workflow_overrides(_get_ai_workflow_config(), payload)
 
     def _sse(payload: dict):
         return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
@@ -4782,29 +5911,252 @@ def chat_message(chat_id):
                 "detail": "Checking the language, intent, and evidence requirements for your request."
             })
 
-            rag_context, rag_evidence = _rag_retrieve(message)
-
             yield _sse({
                 "type": "status",
-                "status": "Searching ENSURE data",
-                "detail": "Running document retrieval and database lookups for relevant evidence."
+                "status": "Routing request",
+                "detail": "Letting the conversation router decide whether this request should transform prior chat content, answer directly, or retrieve new evidence.",
             })
-
-            tool_trace = []
-            tool_context, tool_evidence, tool_cache, tool_signals, steps_used, max_steps, max_chars, tool_trace = _run_tool_pipeline(
-                message,
-                rag_context,
-                trace_sink=tool_trace,
-            )
-            for trace in tool_trace:
+            if not workflow.get("request_deep_review", True):
                 yield _sse({
-                    "type": "tool",
-                    "tool": str(trace.get("tool") or "tool"),
-                    "summary": str(trace.get("summary") or ""),
+                    "type": "status",
+                    "status": "Fast response mode",
+                    "detail": "Deep retrieval review is disabled for this request. The assistant will use a single retrieval pass and skip the final critic.",
+                })
+            route_decision = _route_conversation_request(
+                runtime,
+                model,
+                session.get("messages") or [],
+                message,
+                workflow,
+                intent,
+                force_evidence,
+            )
+            route_name = str(route_decision.get("route") or "knowledge_retrieval").strip().lower()
+
+            if route_name == "history_transform":
+                transform_request = {
+                    "type": str(route_decision.get("transform_type") or "rewrite"),
+                    "source_text": str(route_decision.get("source_text") or "").strip(),
+                    "target_language": str(route_decision.get("target_language") or "").strip(),
+                    "reference_text": message,
+                }
+                source_role = str(route_decision.get("target_message_role") or "assistant").strip().lower()
+                status_label = "Rewriting previous answer" if source_role == "assistant" else "Rewriting previous message"
+                yield _sse({
+                    "type": "status",
+                    "status": status_label,
+                    "detail": "Using the routed conversation history target as the only source, without running database or literature retrieval.",
+                })
+                complete = _run_history_transform(runtime, model, system_prompt, transform_request, message)
+                if not complete:
+                    complete = str(transform_request.get("source_text") or "").strip()
+                if complete:
+                    _append_chat_message(chat_id, "assistant", complete, max_messages)
+                evidence_text = _non_retrieval_evidence_text("history_transform", source_role)
+                yield _sse({
+                    "type": "status",
+                    "status": "Delivering final answer",
+                    "detail": "Returning the transformed answer directly from conversation history.",
+                })
+                if stream_requested:
+                    for chunk in _stream_text_chunks(complete):
+                        yield _sse({"type": "content", "content": chunk})
+                else:
+                    yield _sse({"type": "content", "content": complete})
+                yield _sse({"type": "evidence", "content": evidence_text})
+                yield "data: [DONE]\n\n"
+                return
+
+            if route_name == "clarify":
+                complete = str(route_decision.get("clarification_question") or "").strip() or _default_clarification_question(message)
+                _append_chat_message(chat_id, "assistant", complete, max_messages)
+                evidence_text = _non_retrieval_evidence_text("clarify")
+                yield _sse({
+                    "type": "status",
+                    "status": "Asking for clarification",
+                    "detail": "The conversation router could not safely identify the exact target or evidence need, so the assistant is asking a focused follow-up question.",
+                })
+                yield _sse({
+                    "type": "status",
+                    "status": "Delivering final answer",
+                    "detail": "Returning a clarification request before any retrieval is attempted.",
+                })
+                if stream_requested:
+                    for chunk in _stream_text_chunks(complete):
+                        yield _sse({"type": "content", "content": chunk})
+                else:
+                    yield _sse({"type": "content", "content": complete})
+                yield _sse({"type": "evidence", "content": evidence_text})
+                yield "data: [DONE]\n\n"
+                return
+
+            if route_name == "direct_answer":
+                yield _sse({
+                    "type": "status",
+                    "status": "Drafting final answer",
+                    "detail": "Answering directly from the conversation context without starting retrieval.",
+                })
+                complete = _run_direct_answer(
+                    runtime,
+                    system_prompt,
+                    session.get("messages") or [],
+                    style_prompt,
+                    message,
+                    model=model,
+                )
+                if complete:
+                    _append_chat_message(chat_id, "assistant", complete, max_messages)
+                evidence_text = _non_retrieval_evidence_text("direct_answer")
+                yield _sse({
+                    "type": "status",
+                    "status": "Delivering final answer",
+                    "detail": "Streaming the direct answer produced from conversation context only.",
+                })
+                if stream_requested:
+                    for chunk in _stream_text_chunks(complete):
+                        yield _sse({"type": "content", "content": chunk})
+                else:
+                    yield _sse({"type": "content", "content": complete})
+                yield _sse({"type": "evidence", "content": evidence_text})
+                yield "data: [DONE]\n\n"
+                return
+
+            rag_context, rag_evidence = _rag_retrieve(message)
+            _, _, _, _, max_chars = _get_tool_router_config()
+            tool_cache = {}
+            tool_signals = _fresh_tool_signals()
+            tool_trace = []
+            current_context = str(rag_context or "").strip()
+            current_evidence = str(rag_evidence or "").strip()
+            next_plan = None
+            last_plan_sig = ""
+            max_rounds = max(1, int(workflow.get("max_retrieval_rounds") or 1))
+            max_total_steps = max(1, int(workflow.get("max_total_tool_steps") or 1))
+            per_round_steps = max(1, int(workflow.get("max_tool_steps_per_round") or 1))
+            judge_enabled = bool(workflow.get("workflow_enable", True)) and bool(workflow.get("retrieval_judge_enable", True)) and max_rounds > 1
+            judge_threshold = float(workflow.get("retrieval_judge_threshold") or 0.8)
+
+            for round_number in range(1, max_rounds + 1):
+                budget_left = max_total_steps - len(tool_trace)
+                if budget_left <= 0:
+                    yield _sse({
+                        "type": "status",
+                        "status": "Retrieval limit reached",
+                        "detail": "The workflow reached the configured total tool-step limit and will answer with the current evidence.",
+                    })
+                    break
+
+                round_budget = min(per_round_steps, budget_left)
+                yield _sse({
+                    "type": "status",
+                    "status": "Searching ENSURE data" if round_number == 1 else "Deepening evidence",
+                    "detail": f"Round {round_number} of {max_rounds}: retrieving database, document, and literature evidence.",
                 })
 
-            context_local = "\n\n".join([c for c in [rag_context, tool_context] if c]).strip()
-            evidence_local = "\n".join([e for e in [rag_evidence, tool_evidence] if e]).strip()
+                round_trace_before = len(tool_trace)
+                round_cache_before = len(tool_cache)
+                if next_plan is None:
+                    round_plan = _augment_plan_with_heuristics(
+                        _plan_tools(message, current_context or rag_context, round_budget),
+                        message,
+                        round_budget,
+                    )
+                else:
+                    round_plan = list(next_plan)
+                round_plan = _filter_tool_calls_for_workflow(round_plan, workflow, round_budget)
+
+                _execute_tool_plan_with_state(round_plan, tool_cache, tool_signals, max_chars, trace_sink=tool_trace)
+                _evidence_gate(
+                    message,
+                    tool_signals,
+                    tool_cache,
+                    len(tool_trace) - round_trace_before,
+                    round_budget,
+                    max_chars,
+                    trace_sink=tool_trace,
+                )
+
+                for trace in tool_trace[round_trace_before:]:
+                    yield _sse({
+                        "type": "tool",
+                        "tool": str(trace.get("tool") or "tool"),
+                        "summary": str(trace.get("summary") or ""),
+                    })
+
+                current_context, current_evidence, _, _ = _compose_cached_context_and_evidence(
+                    rag_context,
+                    rag_evidence,
+                    tool_cache,
+                    max_chars,
+                )
+                new_cache_keys = len(tool_cache) - round_cache_before
+
+                if not workflow.get("workflow_enable", True):
+                    break
+                if round_number >= max_rounds:
+                    break
+                if round_number > 1 and workflow.get("stop_on_no_new_evidence", True) and new_cache_keys <= 0:
+                    yield _sse({
+                        "type": "status",
+                        "status": "Stopping retrieval",
+                        "detail": "The last retrieval pass did not add new evidence, so the assistant will finalize the answer now.",
+                    })
+                    break
+                if not judge_enabled:
+                    break
+
+                yield _sse({
+                    "type": "status",
+                    "status": "Reviewing evidence",
+                    "detail": f"Round {round_number}: judging whether the current evidence is sufficient or needs another retrieval pass.",
+                })
+                judge = _judge_retrieval(message, current_context, current_evidence, workflow, trace=tool_trace)
+                yield _sse(_judge_event_payload(judge, judge_threshold))
+                coverage_score = judge.get("coverage_score")
+                enough = bool(judge.get("enough"))
+                if coverage_score is not None:
+                    enough = enough or float(coverage_score) >= judge_threshold
+                if enough:
+                    yield _sse({
+                        "type": "status",
+                        "status": "Evidence ready",
+                        "detail": "The retrieval judge determined that the current evidence is sufficient.",
+                    })
+                    break
+                if judge.get("stop"):
+                    yield _sse({
+                        "type": "status",
+                        "status": "Stopping retrieval",
+                        "detail": str(judge.get("stop_reason") or "The retrieval judge stopped further deepening and will answer with the current evidence."),
+                    })
+                    break
+
+                next_plan = _filter_tool_calls_for_workflow(judge.get("tool_calls") or [], workflow, round_budget)
+                if not next_plan:
+                    next_plan = _filter_tool_calls_for_workflow(
+                        _augment_plan_with_heuristics(_plan_tools(message, current_context, round_budget), message, round_budget),
+                        workflow,
+                        round_budget,
+                    )
+                next_sig = _plan_signature(next_plan)
+                if not next_plan:
+                    yield _sse({
+                        "type": "status",
+                        "status": "Stopping retrieval",
+                        "detail": "No safe follow-up retrieval plan was produced, so the assistant will answer with the current evidence.",
+                    })
+                    break
+                if workflow.get("stop_on_repeated_plan", True) and next_sig and next_sig == last_plan_sig:
+                    yield _sse({
+                        "type": "status",
+                        "status": "Stopping retrieval",
+                        "detail": "The next retrieval plan repeated the previous one, so the assistant will finalize the answer now.",
+                    })
+                    break
+                last_plan_sig = next_sig
+
+            context_local = current_context
+            evidence_local = current_evidence
             if ((strict_evidence and _evidence_required(message)) or force_evidence) and not evidence_local:
                 allowed = _strict_allowed_response(message)
                 fallback = allowed or "当前数据中找不到"
@@ -4817,39 +6169,59 @@ def chat_message(chat_id):
 
             yield _sse({
                 "type": "status",
-                "status": "Drafting answer",
-                "detail": "Synthesizing the retrieved evidence into a grounded response."
+                "status": "Drafting final answer",
+                "detail": "Synthesizing the accumulated evidence into a single grounded final answer."
             })
 
-            if stream_requested:
-                yield _sse({
-                    "type": "status",
-                    "status": "Streaming answer",
-                    "detail": "Sending the grounded answer as soon as new text is generated."
-                })
-                answer_messages = _build_answer_messages(
-                    system_prompt,
-                    session.get("messages") or [],
-                    context_local,
-                    message,
-                    style_prompt,
-                )
+            finalizer = _finalize_answer(
+                runtime,
+                system_prompt,
+                session.get("messages") or [],
+                message,
+                style_prompt,
+                rag_context,
+                rag_evidence,
+                tool_cache,
+                tool_signals,
+                tool_trace,
+                workflow,
+            )
+            while True:
                 try:
-                    for chunk, done in _llm_stream(runtime, answer_messages, model=model):
+                    yield _sse(next(finalizer))
+                except StopIteration as stop:
+                    final_result = stop.value or {}
+                    break
+            complete = str(final_result.get("answer") or "").strip()
+            context_local = str(final_result.get("context") or context_local).strip()
+            evidence_local = str(final_result.get("evidence") or evidence_local).strip()
+            answer_pmids = list(final_result.get("answer_pmids") or [])
+            invalid_pmids = list(final_result.get("invalid_pmids") or [])
+
+            yield _sse({
+                "type": "status",
+                "status": "Delivering final answer",
+                "detail": "Streaming the final reviewed answer and packaging the supporting evidence trace.",
+            })
+            if stream_requested:
+                streamed_complete = ""
+                try:
+                    for chunk, done in _generate_answer_stream(
+                        runtime,
+                        system_prompt,
+                        session.get("messages") or [],
+                        context_local,
+                        message,
+                        style_prompt,
+                    ):
                         if chunk:
-                            complete += chunk
+                            streamed_complete += chunk
                             yield _sse({"type": "content", "content": chunk})
                         if done:
                             break
                 except Exception:
-                    if not complete.strip():
-                        raise
-                    yield _sse({
-                        "type": "status",
-                        "status": "Stream interrupted",
-                        "detail": "Showing the partial answer generated before the stream ended."
-                    })
-                complete = complete.strip()
+                    streamed_complete = ""
+                complete = streamed_complete.strip() or complete
                 if not complete:
                     complete = _generate_answer(
                         runtime,
@@ -4858,158 +6230,29 @@ def chat_message(chat_id):
                         context_local,
                         message,
                         style_prompt,
-                    )
-                    if complete:
-                        yield _sse({"type": "content", "content": complete})
-                if complete:
-                    _append_chat_message(chat_id, "assistant", complete, max_messages)
-                yield _sse({
-                    "type": "status",
-                    "status": "Preparing evidence",
-                    "detail": "Packaging the evidence trace used for this answer."
-                })
-                evidence_text = _format_evidence_block(evidence_local)
-                yield _sse({"type": "evidence", "content": evidence_text})
-                yield "data: [DONE]\n\n"
-                return
-
-            # Generate answer with evidence
-            complete = _generate_answer(
-                runtime,
-                system_prompt,
-                session.get("messages") or [],
-                context_local,
-                message,
-                style_prompt,
-            )
-
-            yield _sse({
-                "type": "status",
-                "status": "Reviewing answer",
-                "detail": "Checking citations, evidence coverage, and whether the answer needs revision."
-            })
-
-            # Critic check
-            critic = _critique_answer(runtime, message, complete, context_local)
-            verdict = (critic.get("verdict") or "").strip().lower()
-            tool_calls = critic.get("tool_calls") or []
-            revised = critic.get("revised_answer") or ""
-
-            # If critic requests more evidence, run tools and regenerate once
-            if verdict == "need_more_evidence" and tool_calls:
-                tool_calls = _sanitize_tool_plan(tool_calls, max_steps)
-                for call in tool_calls:
-                    extra_result = _execute_tool_cached(
-                        call.get("tool"),
-                        call.get("params") or {},
-                        tool_cache,
-                        [],
-                        [],
-                        tool_signals,
-                        max_chars,
-                        trace_sink=tool_trace,
-                    )
-                    yield _sse({
-                        "type": "tool",
-                        "tool": str(call.get("tool") or "tool"),
-                        "summary": _tool_summary(str(call.get("tool") or "tool"), extra_result),
-                    })
-                # rebuild merged context/evidence from cache
-                extra_context_lines = []
-                extra_evidence_lines = []
-                for key, result in tool_cache.items():
-                    name = key.split(":", 1)[0]
-                    extra_context_lines.append(_format_tool_context(name, result, max_chars))
-                    extra_evidence_lines.append(f"Tool `{name}` — {_tool_summary(name, result)}")
-                context_local = "\n\n".join([c for c in [rag_context, "\n\n".join(extra_context_lines)] if c]).strip()
-                evidence_local = "\n".join([e for e in [rag_evidence, "\n".join(extra_evidence_lines)] if e]).strip()
-                complete = _generate_answer(
-                    runtime,
-                    system_prompt,
-                    session.get("messages") or [],
-                    context_local,
-                    message,
-                    style_prompt,
-                )
-                critic = _critique_answer(runtime, message, complete, context_local)
-                verdict = (critic.get("verdict") or "").strip().lower()
-                revised = critic.get("revised_answer") or ""
-
-            if verdict == "revise" and revised:
-                complete = revised
-
-            # Validate PMIDs in the answer against evidence; revise or strip if needed
-            answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
-            if invalid_pmids:
-                correction_hint = (
-                    "The answer included PMIDs not present in the evidence: "
-                    + ", ".join(invalid_pmids)
-                    + ". Remove or correct them while keeping the rest."
-                )
-                complete = _generate_answer(
-                    runtime,
-                    system_prompt,
-                    session.get("messages") or [],
-                    context_local,
-                    message,
-                    style_prompt + "\n" + correction_hint,
-                )
-                _, invalid_pmids = _check_answer_pmids(complete, context_local)
-                if invalid_pmids:
-                    complete = _remove_invalid_pmids(complete, invalid_pmids)
-
-            # Always produce a second-pass answer when PubMed abstracts are present
-            if tool_signals.get("pubmed_abstracts", 0) > 0:
-                second_hint = (
-                    "Use any PubMed abstracts in the evidence to refine the answer. "
-                    "Prefer integrating them naturally instead of listing."
-                )
-                complete = _generate_answer(
-                    runtime,
-                    system_prompt,
-                    session.get("messages") or [],
-                    context_local,
-                    message,
-                    style_prompt + "\n" + second_hint,
-                )
-                critic2 = _critique_answer(runtime, message, complete, context_local)
-                verdict2 = (critic2.get("verdict") or "").strip().lower()
-                revised2 = critic2.get("revised_answer") or ""
-                if verdict2 == "revise" and revised2:
-                    complete = revised2
-                # Re-check PMIDs for the final answer
-                answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
-                if invalid_pmids:
-                    correction_hint = (
-                        "The answer included PMIDs not present in the evidence: "
-                        + ", ".join(invalid_pmids)
-                        + ". Remove or correct them while keeping the rest."
-                    )
+                    ).strip()
+                if not streamed_complete and complete:
+                    for chunk in _stream_text_chunks(complete):
+                        yield _sse({"type": "content", "content": chunk})
+            else:
+                if not complete:
                     complete = _generate_answer(
                         runtime,
                         system_prompt,
                         session.get("messages") or [],
                         context_local,
                         message,
-                        style_prompt + "\n" + correction_hint,
-                    )
-                    _, invalid_pmids = _check_answer_pmids(complete, context_local)
-                if invalid_pmids:
-                    complete = _remove_invalid_pmids(complete, invalid_pmids)
-
-            if complete:
-                _append_chat_message(chat_id, "assistant", complete, max_messages)
-            yield _sse({
-                "type": "status",
-                "status": "Preparing final response",
-                "detail": "Packaging the answer and evidence trace for display."
-            })
+                        style_prompt,
+                    ).strip()
+                yield _sse({"type": "content", "content": complete})
+            answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
             evidence_text = _format_evidence_block(evidence_local)
             if answer_pmids:
                 evidence_text += "\n\nAnswer PMIDs: " + ", ".join(answer_pmids)
             if invalid_pmids:
                 evidence_text += "\nInvalid PMIDs removed: " + ", ".join(invalid_pmids)
-            yield _sse({"type": "content", "content": complete})
+            if complete:
+                _append_chat_message(chat_id, "assistant", complete, max_messages)
             yield _sse({"type": "evidence", "content": evidence_text})
         except Exception as exc:
             yield _sse({"type": "error", "content": f"Error: {exc}"})

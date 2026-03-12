@@ -579,6 +579,82 @@
             <section class="content-card">
               <div class="content-card-header">
                 <div>
+                  <h3>{{ t('workflow.title') }}</h3>
+                  <p>{{ t('workflow.hint') }}</p>
+                </div>
+                <el-button type="primary" :loading="workflowSaving" @click="saveWorkflowConfig">{{ t('llm.save') }}</el-button>
+              </div>
+
+              <div class="llm-grid">
+                <el-form-item :label="t('workflow.enable')">
+                  <el-switch v-model="workflowForm.workflow_enable" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.routerEnable')">
+                  <el-switch v-model="workflowForm.conversation_router_enable" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.routerTimeout')">
+                  <el-input-number v-model="workflowForm.conversation_router_timeout" :min="1" :max="60" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.routerThreshold')">
+                  <el-input-number v-model="workflowForm.router_confidence_threshold" :min="0" :max="1" :step="0.05" :precision="2" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.routerModel')">
+                  <el-input v-model="workflowForm.conversation_router_model" :placeholder="t('workflow.routerModelPlaceholder')" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.judgeEnable')">
+                  <el-switch v-model="workflowForm.retrieval_judge_enable" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.maxRounds')">
+                  <el-input-number v-model="workflowForm.max_retrieval_rounds" :min="1" :max="5" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.stepsPerRound')">
+                  <el-input-number v-model="workflowForm.max_tool_steps_per_round" :min="1" :max="8" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.totalSteps')">
+                  <el-input-number v-model="workflowForm.max_total_tool_steps" :min="1" :max="24" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.judgeThreshold')">
+                  <el-input-number v-model="workflowForm.retrieval_judge_threshold" :min="0" :max="1" :step="0.05" :precision="2" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.judgeModel')">
+                  <el-input v-model="workflowForm.retrieval_judge_model" :placeholder="t('workflow.judgeModelPlaceholder')" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.finalCritic')">
+                  <el-switch v-model="workflowForm.final_critic_enable" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.stopNoEvidence')">
+                  <el-switch v-model="workflowForm.stop_on_no_new_evidence" />
+                </el-form-item>
+
+                <el-form-item :label="t('workflow.stopRepeatedPlan')">
+                  <el-switch v-model="workflowForm.stop_on_repeated_plan" />
+                </el-form-item>
+
+                <el-form-item class="span-2" :label="t('workflow.deepenSources')">
+                  <div class="workflow-checkboxes">
+                    <el-checkbox v-model="workflowForm.allow_table_deepen">{{ t('workflow.allowTable') }}</el-checkbox>
+                    <el-checkbox v-model="workflowForm.allow_pubmed_deepen">{{ t('workflow.allowPubmed') }}</el-checkbox>
+                    <el-checkbox v-model="workflowForm.allow_doc_deepen">{{ t('workflow.allowDocs') }}</el-checkbox>
+                  </div>
+                </el-form-item>
+              </div>
+            </section>
+
+            <section class="content-card">
+              <div class="content-card-header">
+                <div>
                   <h3>{{ t('llm.systemPrompt') }}</h3>
                   <p>{{ t('llm.systemPromptHint') }}</p>
                 </div>
@@ -740,6 +816,7 @@ import {
 } from '@element-plus/icons-vue';
 
 import {
+  fetchAdminAIWorkflowSettings,
   createAdminDoc,
   createAdminTableRecord,
   deleteAdminDoc,
@@ -751,11 +828,13 @@ import {
   fetchAdminSession,
   fetchAdminTableMeta,
   fetchAdminTableRows,
+  saveAdminAIWorkflowSettings,
   saveAdminTableLabels,
   saveAdminTableVisibleColumns,
   saveAdminDoc,
   saveAdminLLMSettings,
   updateAdminTableRecord,
+  type AdminAIWorkflowSettings,
   type AdminAuditRow,
   type AdminDocDetail,
   type AdminLLMSettings,
@@ -782,6 +861,7 @@ const csrfToken = ref('');
 const resources = ref<AdminResourcesResponse | null>(null);
 const auditRows = ref<AdminAuditRow[]>([]);
 const llmSaving = ref(false);
+const workflowSaving = ref(false);
 const resourcesLoading = ref(false);
 
 const selectedTableMeta = ref<AdminTableMeta | null>(null);
@@ -852,6 +932,25 @@ const llmText = reactive({
   ollama_models_text: '',
   deepseek_models_text: ''
 });
+const workflowForm = reactive<AdminAIWorkflowSettings>({
+  workflow_enable: true,
+  conversation_router_enable: true,
+  conversation_router_model: '',
+  conversation_router_timeout: 15,
+  router_confidence_threshold: 0.7,
+  max_retrieval_rounds: 2,
+  max_tool_steps_per_round: 4,
+  max_total_tool_steps: 12,
+  retrieval_judge_enable: true,
+  retrieval_judge_model: '',
+  retrieval_judge_threshold: 0.8,
+  stop_on_no_new_evidence: true,
+  stop_on_repeated_plan: true,
+  allow_pubmed_deepen: true,
+  allow_table_deepen: true,
+  allow_doc_deepen: true,
+  final_critic_enable: true
+});
 
 const currentView = computed(() => String(route.query.view || 'overview'));
 const currentResource = computed(() => String(route.query.resource || ''));
@@ -880,7 +979,7 @@ const activeModelLabel = computed(() => {
   }
   return String(llmForm.ollama_default_model || '').trim() || 'qwen3:32b';
 });
-const pageBusy = computed(() => resourcesLoading.value || tableLoading.value || docLoading.value || llmSaving.value);
+const pageBusy = computed(() => resourcesLoading.value || tableLoading.value || docLoading.value || llmSaving.value || workflowSaving.value);
 const editableColumns = computed(() => (selectedTableMeta.value?.columns || []).filter((column) => column.name !== 'Index'));
 const selectedDocIsMarkdown = computed(() => isMarkdownDoc(selectedDoc.value));
 const canInlineEditTable = computed(() => Boolean(selectedTableMeta.value && !selectedTableMeta.value.read_only));
@@ -1238,7 +1337,7 @@ async function syncRouteState() {
       return;
     }
     if (currentView.value === 'llm') {
-      await loadLLMSettings();
+      await Promise.all([loadLLMSettings(), loadWorkflowSettings()]);
       return;
     }
     if (currentView.value === 'audit') {
@@ -1292,8 +1391,33 @@ function applyLLMSettings(settings: AdminLLMSettings | null) {
   llmText.deepseek_models_text = Array.isArray(settings.deepseek_models) ? settings.deepseek_models.join(', ') : '';
 }
 
+function applyWorkflowSettings(settings: AdminAIWorkflowSettings | null) {
+  if (!settings) return;
+  workflowForm.workflow_enable = Boolean(settings.workflow_enable);
+  workflowForm.conversation_router_enable = Boolean(settings.conversation_router_enable);
+  workflowForm.conversation_router_model = settings.conversation_router_model || '';
+  workflowForm.conversation_router_timeout = Number(settings.conversation_router_timeout || 15);
+  workflowForm.router_confidence_threshold = Number(settings.router_confidence_threshold || 0.7);
+  workflowForm.max_retrieval_rounds = Number(settings.max_retrieval_rounds || 2);
+  workflowForm.max_tool_steps_per_round = Number(settings.max_tool_steps_per_round || 4);
+  workflowForm.max_total_tool_steps = Number(settings.max_total_tool_steps || 12);
+  workflowForm.retrieval_judge_enable = Boolean(settings.retrieval_judge_enable);
+  workflowForm.retrieval_judge_model = settings.retrieval_judge_model || '';
+  workflowForm.retrieval_judge_threshold = Number(settings.retrieval_judge_threshold || 0.8);
+  workflowForm.stop_on_no_new_evidence = Boolean(settings.stop_on_no_new_evidence);
+  workflowForm.stop_on_repeated_plan = Boolean(settings.stop_on_repeated_plan);
+  workflowForm.allow_pubmed_deepen = Boolean(settings.allow_pubmed_deepen);
+  workflowForm.allow_table_deepen = Boolean(settings.allow_table_deepen);
+  workflowForm.allow_doc_deepen = Boolean(settings.allow_doc_deepen);
+  workflowForm.final_critic_enable = Boolean(settings.final_critic_enable);
+}
+
 async function loadLLMSettings() {
   applyLLMSettings(await fetchAdminLLMSettings());
+}
+
+async function loadWorkflowSettings() {
+  applyWorkflowSettings(await fetchAdminAIWorkflowSettings());
 }
 
 async function loadAuditLogs() {
@@ -1626,6 +1750,39 @@ async function saveLLMConfig() {
   }
 }
 
+async function saveWorkflowConfig() {
+  workflowSaving.value = true;
+  try {
+    const settings = await saveAdminAIWorkflowSettings({
+      csrfToken: csrfToken.value,
+      workflow_enable: workflowForm.workflow_enable,
+      conversation_router_enable: workflowForm.conversation_router_enable,
+      conversation_router_model: workflowForm.conversation_router_model,
+      conversation_router_timeout: workflowForm.conversation_router_timeout,
+      router_confidence_threshold: workflowForm.router_confidence_threshold,
+      max_retrieval_rounds: workflowForm.max_retrieval_rounds,
+      max_tool_steps_per_round: workflowForm.max_tool_steps_per_round,
+      max_total_tool_steps: workflowForm.max_total_tool_steps,
+      retrieval_judge_enable: workflowForm.retrieval_judge_enable,
+      retrieval_judge_model: workflowForm.retrieval_judge_model,
+      retrieval_judge_threshold: workflowForm.retrieval_judge_threshold,
+      stop_on_no_new_evidence: workflowForm.stop_on_no_new_evidence,
+      stop_on_repeated_plan: workflowForm.stop_on_repeated_plan,
+      allow_pubmed_deepen: workflowForm.allow_pubmed_deepen,
+      allow_table_deepen: workflowForm.allow_table_deepen,
+      allow_doc_deepen: workflowForm.allow_doc_deepen,
+      final_critic_enable: workflowForm.final_critic_enable
+    });
+    applyWorkflowSettings(settings);
+    ElMessage.success(t('msg.workflowSaved'));
+    await loadAuditLogs();
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.workflowSaveFailed'));
+  } finally {
+    workflowSaving.value = false;
+  }
+}
+
 async function handleLogout() {
   try {
     await fetch('/admin/api/logout', {
@@ -1649,7 +1806,7 @@ async function refreshCurrentView() {
     return;
   }
   if (currentView.value === 'llm') {
-    await loadLLMSettings();
+    await Promise.all([loadLLMSettings(), loadWorkflowSettings()]);
     return;
   }
   if (currentView.value === 'audit') {
@@ -1688,7 +1845,7 @@ watch(
 onMounted(async () => {
   const authed = await ensureAdminSession();
   if (!authed) return;
-  await Promise.all([loadResources(), loadLLMSettings(), loadAuditLogs()]);
+  await Promise.all([loadResources(), loadLLMSettings(), loadWorkflowSettings(), loadAuditLogs()]);
   if (!route.query.view) {
     navigate('overview');
   } else {
@@ -2510,6 +2667,14 @@ onMounted(async () => {
 
 .span-2 {
   grid-column: 1 / -1;
+}
+
+.workflow-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  min-height: 40px;
+  align-items: center;
 }
 
 .doc-editor-shell,

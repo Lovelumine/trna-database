@@ -203,6 +203,23 @@
               <div class="loading-badge">Processing</div>
               <div class="loading-status">{{ progressStatus || 'Working on your answer' }}</div>
               <p v-if="progressDetail" class="loading-detail">{{ progressDetail }}</p>
+              <div v-if="visibleProgressJudges.length" class="loading-tools loading-tools--judge">
+                <div class="loading-tools-title">Judge review</div>
+                <div
+                  v-for="item in visibleProgressJudges"
+                  :key="item.id"
+                  class="loading-tool-item"
+                >
+                  <span class="loading-tool-name">{{ item.verdict || 'judge' }}</span>
+                  <span class="loading-tool-summary">{{ item.summary }}</span>
+                </div>
+              </div>
+              <div v-if="progressDraftPreview" class="loading-tools loading-tools--draft">
+                <div class="loading-tools-title">{{ progressDraftPreview.label }}</div>
+                <div class="loading-tool-item loading-tool-item--draft">
+                  <span class="loading-tool-summary loading-tool-summary--draft">{{ progressDraftPreview.content }}</span>
+                </div>
+              </div>
               <div v-if="visibleProgressTools.length" class="loading-tools">
                 <div class="loading-tools-title">Tool activity</div>
                 <div
@@ -237,6 +254,10 @@
 
         <!-- 输入 -->
         <div id="input-area">
+          <label id="deep-review-toggle" :class="{ disabled: loading }">
+            <input v-model="deepReviewEnabled" type="checkbox" :disabled="loading" />
+            <span>Deep retrieval & review</span>
+          </label>
           <input
             id="chat-input"
             v-model="inputText"
@@ -304,6 +325,7 @@ export default defineComponent({
     const chat = ref(useChat(apiKey, { key: activeSessionId.value }));
     const sessionOptions = ref<Array<{ id: string; title: string }>>([]);
     const modelOptions = ref<string[]>(['deepseek-chat', 'deepseek-reasoner', 'qwen3:32b', 'gemma3:27b']);
+    const deepReviewEnabled = ref(localStorage.getItem('ai_deep_review_enabled') === '1');
     const selectedModel = ref(
       localStorage.getItem('ai_chat_model') || 'deepseek-chat'
     );
@@ -522,6 +544,20 @@ export default defineComponent({
       }
       return Array.isArray(raw) ? raw : [];
     });
+    const progressJudgeTrace = computed(() => {
+      const raw: any = chat.value.progressJudgeTrace;
+      if (raw && typeof raw === 'object' && 'value' in raw && Array.isArray(raw.value)) {
+        return raw.value;
+      }
+      return Array.isArray(raw) ? raw : [];
+    });
+    const progressDraftPreview = computed(() => {
+      const raw: any = chat.value.progressDraftPreview;
+      if (raw && typeof raw === 'object' && 'value' in raw) {
+        return raw.value || null;
+      }
+      return raw || null;
+    });
     const isAiPage = computed(() => {
       const path = router.currentRoute.value?.path || '';
       return path.toLowerCase().startsWith('/aiyingying');
@@ -661,6 +697,9 @@ export default defineComponent({
     watch(selectedModel, (next) => {
       localStorage.setItem('ai_chat_model', next);
     }, { immediate: true });
+    watch(deepReviewEnabled, (next) => {
+      localStorage.setItem('ai_deep_review_enabled', next ? '1' : '0');
+    }, { immediate: true });
     watch(
       () => getChatOpen(),
       () => { rebindSlider(); }
@@ -743,6 +782,7 @@ export default defineComponent({
       return sender !== 'bot' || !hasContent;
     });
     const visibleProgressTools = computed(() => progressToolTrace.value.slice(-3));
+    const visibleProgressJudges = computed(() => progressJudgeTrace.value.slice(-3));
 
     const renderToken = ref(0);
     watch(
@@ -841,7 +881,8 @@ export default defineComponent({
         skipUserPush: !!editingMessageId.value,
         overrideText: text,
         model: selectedModel.value,
-        history: buildHistoryPayload(historySource, { excludeMessageId: editingMessageId.value })
+        history: buildHistoryPayload(historySource, { excludeMessageId: editingMessageId.value }),
+        deepReview: deepReviewEnabled.value
       });
       showExampleQuestions.value = false;
       localStorage.setItem('hasSentMessage', 'true');
@@ -953,7 +994,8 @@ export default defineComponent({
         skipUserPush: true,
         overrideText: userMsg.text,
         model: selectedModel.value,
-        history: buildHistoryPayload(historySource)
+        history: buildHistoryPayload(historySource),
+        deepReview: deepReviewEnabled.value
       });
       if (!result?.aborted) {
         editingMessageId.value = null;
@@ -962,12 +1004,12 @@ export default defineComponent({
 
     return {
       element, startDrag, chat,
-      activeSessionId, sessionOptions, selectedModel, modelOptions,
+      activeSessionId, sessionOptions, selectedModel, modelOptions, deepReviewEnabled,
       toggleChat, sendMessage, previewImage,
       renderedMessages, safeMessages, chatContent,
       loading, fillExample, showExampleQuestions, exampleWrap,
       aiTip, inputPlaceholder, inputText,
-      progressStatus, progressDetail, visibleProgressTools,
+      progressStatus, progressDetail, progressDraftPreview, visibleProgressTools, visibleProgressJudges,
       chatImagePreview,
       copyMessage, copiedId, openFullscreen,
       createNewSession,
@@ -1152,6 +1194,13 @@ export default defineComponent({
   color:var(--app-text-muted);
   line-height:1.35;
 }
+.loading-tool-item--draft{
+  max-height:10rem;
+  overflow:auto;
+}
+.loading-tool-summary--draft{
+  white-space:pre-wrap;
+}
 .loading-pulse{
   display:flex;
   align-items:center;
@@ -1290,7 +1339,29 @@ export default defineComponent({
 }
 
 /* ——输入区—— */
-#input-area{ display:flex; gap:6px; align-items:center; width:100%; }
+#input-area{ display:flex; gap:6px; align-items:center; width:100%; flex-wrap:wrap; }
+#deep-review-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:34px;
+  padding:0 10px;
+  border-radius:10px;
+  border:1px solid rgba(148, 163, 184, 0.22);
+  background:rgba(148, 163, 184, 0.08);
+  color:var(--app-text-muted);
+  font-size:11px;
+  font-weight:600;
+  white-space:nowrap;
+}
+#deep-review-toggle input{
+  width:13px;
+  height:13px;
+  accent-color:var(--app-accent);
+}
+#deep-review-toggle.disabled{
+  opacity:0.6;
+}
 #chat-input{
   flex-grow:1;
   padding:6px 10px;

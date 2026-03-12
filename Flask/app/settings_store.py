@@ -3,7 +3,7 @@ import json
 from typing import Any
 
 from flask import current_app
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 from . import db
 from .models import AppSetting
@@ -11,6 +11,12 @@ from .models import AppSetting
 
 DEFAULT_DEEPSEEK_MODELS = ["deepseek-chat", "deepseek-reasoner"]
 DEFAULT_OLLAMA_MODELS = ["qwen3:32b", "gemma3:27b"]
+DEFAULT_AI_MAX_RETRIEVAL_ROUNDS = 2
+DEFAULT_AI_MAX_TOOL_STEPS_PER_ROUND = 4
+DEFAULT_AI_MAX_TOTAL_TOOL_STEPS = 12
+DEFAULT_AI_RETRIEVAL_JUDGE_THRESHOLD = 0.8
+DEFAULT_AI_CONVERSATION_ROUTER_TIMEOUT = 15
+DEFAULT_AI_ROUTER_CONFIDENCE_THRESHOLD = 0.7
 
 DEFAULT_SETTING_FACTORIES = {
     "llm_active_provider": lambda: "ollama",
@@ -25,6 +31,23 @@ DEFAULT_SETTING_FACTORIES = {
     "llm_deepseek_api_key": lambda: str(current_app.config.get("DEEPSEEK_API_KEY") or ""),
     "llm_deepseek_default_model": lambda: str(current_app.config.get("DEEPSEEK_MODEL") or "deepseek-chat"),
     "llm_deepseek_models_json": lambda: json.dumps(DEFAULT_DEEPSEEK_MODELS, ensure_ascii=False),
+    "ai_workflow_enable": lambda: "1",
+    "ai_conversation_router_enable": lambda: "1",
+    "ai_conversation_router_model": lambda: "",
+    "ai_conversation_router_timeout": lambda: str(DEFAULT_AI_CONVERSATION_ROUTER_TIMEOUT),
+    "ai_router_confidence_threshold": lambda: str(DEFAULT_AI_ROUTER_CONFIDENCE_THRESHOLD),
+    "ai_max_retrieval_rounds": lambda: str(DEFAULT_AI_MAX_RETRIEVAL_ROUNDS),
+    "ai_max_tool_steps_per_round": lambda: str(DEFAULT_AI_MAX_TOOL_STEPS_PER_ROUND),
+    "ai_max_total_tool_steps": lambda: str(DEFAULT_AI_MAX_TOTAL_TOOL_STEPS),
+    "ai_retrieval_judge_enable": lambda: "1",
+    "ai_retrieval_judge_model": lambda: "",
+    "ai_retrieval_judge_threshold": lambda: str(DEFAULT_AI_RETRIEVAL_JUDGE_THRESHOLD),
+    "ai_stop_on_no_new_evidence": lambda: "1",
+    "ai_stop_on_repeated_plan": lambda: "1",
+    "ai_allow_pubmed_deepen": lambda: "1",
+    "ai_allow_table_deepen": lambda: "1",
+    "ai_allow_doc_deepen": lambda: "1",
+    "ai_final_critic_enable": lambda: "1",
     "table_column_label_overrides_json": lambda: "{}",
     "table_default_visible_columns_json": lambda: "{}",
     "table_media_field_config_json": lambda: "{}",
@@ -42,15 +65,16 @@ def ensure_app_settings_table():
 
 def ensure_default_app_settings():
     ensure_app_settings_table()
-    changed = False
     for key, factory in DEFAULT_SETTING_FACTORIES.items():
-        item = db.session.get(AppSetting, key)
+        with db.session.no_autoflush:
+            item = db.session.get(AppSetting, key)
         if item is None:
-            item = AppSetting(setting_key=key, setting_value=str(factory()))
-            db.session.add(item)
-            changed = True
-    if changed:
-        db.session.commit()
+            try:
+                db.session.add(AppSetting(setting_key=key, setting_value=str(factory())))
+                db.session.commit()
+            except IntegrityError:
+                # Another worker created the row after our existence check.
+                db.session.rollback()
 
 
 def get_setting(key: str, default: Any = ""):
@@ -113,6 +137,14 @@ def _int_text(raw: Any, default: int) -> int:
         return int(raw)
     except Exception:
         return int(default)
+
+
+def _clamp_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+    return max(minimum, min(_int_text(value, default), maximum))
+
+
+def _clamp_float(value: Any, default: float, minimum: float, maximum: float) -> float:
+    return max(minimum, min(_float_text(value, default), maximum))
 
 
 def get_llm_settings(include_secrets: bool = False) -> dict:
@@ -218,6 +250,138 @@ def save_llm_settings(payload: dict):
         set_setting(key, value)
     db.session.commit()
     after = get_llm_settings(include_secrets=True)
+    return before, after
+
+
+def get_ai_workflow_settings() -> dict:
+    ensure_default_app_settings()
+
+    max_rounds = _clamp_int(
+        get_setting("ai_max_retrieval_rounds", DEFAULT_AI_MAX_RETRIEVAL_ROUNDS),
+        DEFAULT_AI_MAX_RETRIEVAL_ROUNDS,
+        1,
+        5,
+    )
+    per_round = _clamp_int(
+        get_setting("ai_max_tool_steps_per_round", DEFAULT_AI_MAX_TOOL_STEPS_PER_ROUND),
+        DEFAULT_AI_MAX_TOOL_STEPS_PER_ROUND,
+        1,
+        8,
+    )
+    max_total = _clamp_int(
+        get_setting("ai_max_total_tool_steps", DEFAULT_AI_MAX_TOTAL_TOOL_STEPS),
+        DEFAULT_AI_MAX_TOTAL_TOOL_STEPS,
+        per_round,
+        24,
+    )
+    threshold = _clamp_float(
+        get_setting("ai_retrieval_judge_threshold", DEFAULT_AI_RETRIEVAL_JUDGE_THRESHOLD),
+        DEFAULT_AI_RETRIEVAL_JUDGE_THRESHOLD,
+        0.0,
+        1.0,
+    )
+    router_threshold = _clamp_float(
+        get_setting("ai_router_confidence_threshold", DEFAULT_AI_ROUTER_CONFIDENCE_THRESHOLD),
+        DEFAULT_AI_ROUTER_CONFIDENCE_THRESHOLD,
+        0.0,
+        1.0,
+    )
+    router_timeout = _clamp_float(
+        get_setting("ai_conversation_router_timeout", DEFAULT_AI_CONVERSATION_ROUTER_TIMEOUT),
+        DEFAULT_AI_CONVERSATION_ROUTER_TIMEOUT,
+        1.0,
+        60.0,
+    )
+
+    return {
+        "workflow_enable": _bool_text(get_setting("ai_workflow_enable", "1"), True),
+        "conversation_router_enable": _bool_text(get_setting("ai_conversation_router_enable", "1"), True),
+        "conversation_router_model": str(get_setting("ai_conversation_router_model", "") or "").strip(),
+        "conversation_router_timeout": router_timeout,
+        "router_confidence_threshold": router_threshold,
+        "max_retrieval_rounds": max_rounds,
+        "max_tool_steps_per_round": per_round,
+        "max_total_tool_steps": max_total,
+        "retrieval_judge_enable": _bool_text(get_setting("ai_retrieval_judge_enable", "1"), True),
+        "retrieval_judge_model": str(get_setting("ai_retrieval_judge_model", "") or "").strip(),
+        "retrieval_judge_threshold": threshold,
+        "stop_on_no_new_evidence": _bool_text(get_setting("ai_stop_on_no_new_evidence", "1"), True),
+        "stop_on_repeated_plan": _bool_text(get_setting("ai_stop_on_repeated_plan", "1"), True),
+        "allow_pubmed_deepen": _bool_text(get_setting("ai_allow_pubmed_deepen", "1"), True),
+        "allow_table_deepen": _bool_text(get_setting("ai_allow_table_deepen", "1"), True),
+        "allow_doc_deepen": _bool_text(get_setting("ai_allow_doc_deepen", "1"), True),
+        "final_critic_enable": _bool_text(get_setting("ai_final_critic_enable", "1"), True),
+    }
+
+
+def save_ai_workflow_settings(payload: dict):
+    if not isinstance(payload, dict):
+        payload = {}
+
+    before = get_ai_workflow_settings()
+
+    max_rounds = _clamp_int(
+        payload.get("max_retrieval_rounds", before.get("max_retrieval_rounds", DEFAULT_AI_MAX_RETRIEVAL_ROUNDS)),
+        DEFAULT_AI_MAX_RETRIEVAL_ROUNDS,
+        1,
+        5,
+    )
+    per_round = _clamp_int(
+        payload.get("max_tool_steps_per_round", before.get("max_tool_steps_per_round", DEFAULT_AI_MAX_TOOL_STEPS_PER_ROUND)),
+        DEFAULT_AI_MAX_TOOL_STEPS_PER_ROUND,
+        1,
+        8,
+    )
+    max_total = _clamp_int(
+        payload.get("max_total_tool_steps", before.get("max_total_tool_steps", DEFAULT_AI_MAX_TOTAL_TOOL_STEPS)),
+        DEFAULT_AI_MAX_TOTAL_TOOL_STEPS,
+        per_round,
+        24,
+    )
+    threshold = _clamp_float(
+        payload.get("retrieval_judge_threshold", before.get("retrieval_judge_threshold", DEFAULT_AI_RETRIEVAL_JUDGE_THRESHOLD)),
+        DEFAULT_AI_RETRIEVAL_JUDGE_THRESHOLD,
+        0.0,
+        1.0,
+    )
+    router_threshold = _clamp_float(
+        payload.get("router_confidence_threshold", before.get("router_confidence_threshold", DEFAULT_AI_ROUTER_CONFIDENCE_THRESHOLD)),
+        DEFAULT_AI_ROUTER_CONFIDENCE_THRESHOLD,
+        0.0,
+        1.0,
+    )
+    router_timeout = _clamp_float(
+        payload.get("conversation_router_timeout", before.get("conversation_router_timeout", DEFAULT_AI_CONVERSATION_ROUTER_TIMEOUT)),
+        DEFAULT_AI_CONVERSATION_ROUTER_TIMEOUT,
+        1.0,
+        60.0,
+    )
+
+    updates = {
+        "ai_workflow_enable": "1" if bool(payload.get("workflow_enable", before.get("workflow_enable", True))) else "0",
+        "ai_conversation_router_enable": "1" if bool(payload.get("conversation_router_enable", before.get("conversation_router_enable", True))) else "0",
+        "ai_conversation_router_model": str(payload.get("conversation_router_model", before.get("conversation_router_model", "")) or "").strip(),
+        "ai_conversation_router_timeout": str(router_timeout),
+        "ai_router_confidence_threshold": str(router_threshold),
+        "ai_max_retrieval_rounds": str(max_rounds),
+        "ai_max_tool_steps_per_round": str(per_round),
+        "ai_max_total_tool_steps": str(max_total),
+        "ai_retrieval_judge_enable": "1" if bool(payload.get("retrieval_judge_enable", before.get("retrieval_judge_enable", True))) else "0",
+        "ai_retrieval_judge_model": str(payload.get("retrieval_judge_model", before.get("retrieval_judge_model", "")) or "").strip(),
+        "ai_retrieval_judge_threshold": str(threshold),
+        "ai_stop_on_no_new_evidence": "1" if bool(payload.get("stop_on_no_new_evidence", before.get("stop_on_no_new_evidence", True))) else "0",
+        "ai_stop_on_repeated_plan": "1" if bool(payload.get("stop_on_repeated_plan", before.get("stop_on_repeated_plan", True))) else "0",
+        "ai_allow_pubmed_deepen": "1" if bool(payload.get("allow_pubmed_deepen", before.get("allow_pubmed_deepen", True))) else "0",
+        "ai_allow_table_deepen": "1" if bool(payload.get("allow_table_deepen", before.get("allow_table_deepen", True))) else "0",
+        "ai_allow_doc_deepen": "1" if bool(payload.get("allow_doc_deepen", before.get("allow_doc_deepen", True))) else "0",
+        "ai_final_critic_enable": "1" if bool(payload.get("final_critic_enable", before.get("final_critic_enable", True))) else "0",
+    }
+
+    for key, value in updates.items():
+        set_setting(key, value)
+    db.session.commit()
+
+    after = get_ai_workflow_settings()
     return before, after
 
 

@@ -13,6 +13,20 @@ type ChatToolTrace = {
   summary: string;
 };
 
+type ChatJudgeTrace = {
+  id: number;
+  verdict: string;
+  summary: string;
+  coverageScore?: number | null;
+  missingAspects?: string[];
+  nextTools?: string[];
+};
+
+type ChatDraftPreview = {
+  label: string;
+  content: string;
+};
+
 type ChatHistoryMessage = {
   role: 'user' | 'assistant';
   content: string;
@@ -34,6 +48,8 @@ type ChatSession = {
   progressStatus: Ref<string>;
   progressDetail: Ref<string>;
   progressToolTrace: Ref<ChatToolTrace[]>;
+  progressJudgeTrace: Ref<ChatJudgeTrace[]>;
+  progressDraftPreview: Ref<ChatDraftPreview | null>;
 };
 
 type SendOptions = {
@@ -41,6 +57,7 @@ type SendOptions = {
   overrideText?: string;
   model?: string;
   history?: ChatHistoryMessage[];
+  deepReview?: boolean;
 };
 
 const defaultGreeting = 'Hello, I am your virtual assistant YingYing. How can I assist you today?';
@@ -62,6 +79,12 @@ const authHeaders = (session: ChatSession) => ({
   accept: 'application/json'
 });
 
+const composeBotMessageText = (main: string, evidence: string) => {
+  const mainText = String(main || '').trim();
+  const evidenceText = String(evidence || '').trim();
+  return evidenceText ? `${mainText}\n\nSearch results:\n${evidenceText}`.trim() : mainText;
+};
+
 const getSession = (key: string, apiKey: string): ChatSession => {
   const existing = sessions.get(key);
   if (existing) return existing;
@@ -80,7 +103,9 @@ const getSession = (key: string, apiKey: string): ChatSession => {
     streamAbortController: null,
     progressStatus: ref(''),
     progressDetail: ref(''),
-    progressToolTrace: ref<ChatToolTrace[]>([])
+    progressToolTrace: ref<ChatToolTrace[]>([]),
+    progressJudgeTrace: ref<ChatJudgeTrace[]>([]),
+    progressDraftPreview: ref<ChatDraftPreview | null>(null)
   };
   sessions.set(key, session);
   return session;
@@ -207,6 +232,8 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
     session.progressStatus.value = 'Preparing request';
     session.progressDetail.value = 'Opening the chat session and getting the response pipeline ready.';
     session.progressToolTrace.value = [];
+    session.progressJudgeTrace.value = [];
+    session.progressDraftPreview.value = null;
 
     const controller = new AbortController();
     session.streamAbortController = controller;
@@ -214,6 +241,7 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
 
     let botMessageId: number | null = null;
     let complete = '';
+    let evidence = '';
 
     try {
       await ensureReady(controller.signal);
@@ -238,6 +266,9 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
       if (options.model) payload.model = options.model;
       if (Array.isArray(options.history) && options.history.length) {
         payload.history = options.history;
+      }
+      if (typeof options.deepReview === 'boolean') {
+        payload.deep_review = options.deepReview;
       }
 
       const response = await fetch(url, {
@@ -283,15 +314,62 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
               ];
               continue;
             }
+            if (eventType === 'judge') {
+              const summary = String(parsed?.summary || '').trim();
+              const verdict = String(parsed?.verdict || '').trim();
+              const coverageRaw = parsed?.coverage_score;
+              const coverageScore = typeof coverageRaw === 'number' ? coverageRaw : Number.isFinite(Number(coverageRaw)) ? Number(coverageRaw) : null;
+              const missingAspects = Array.isArray(parsed?.missing_aspects)
+                ? parsed.missing_aspects.map((item: unknown) => String(item || '').trim()).filter(Boolean)
+                : [];
+              const nextTools = Array.isArray(parsed?.next_tools)
+                ? parsed.next_tools.map((item: unknown) => String(item || '').trim()).filter(Boolean)
+                : [];
+              session.progressJudgeTrace.value = [
+                ...session.progressJudgeTrace.value,
+                {
+                  id: Date.now() + session.progressJudgeTrace.value.length,
+                  verdict,
+                  summary,
+                  coverageScore,
+                  missingAspects,
+                  nextTools
+                }
+              ];
+              if (summary) {
+                session.progressDetail.value = summary;
+              }
+              continue;
+            }
+            if (eventType === 'draft_preview') {
+              const label = String(parsed?.label || 'Draft answer preview').trim();
+              const content = String(parsed?.content || '').trim();
+              session.progressDraftPreview.value = content ? { label, content } : null;
+              continue;
+            }
+            if (eventType === 'evidence') {
+              evidence = String(parsed?.content || '').trim();
+              const effectiveId = botMessageId ?? Date.now();
+              if (botMessageId === null) botMessageId = effectiveId;
+              const hasBotMessage = session.messages.value.some(v => v.id === botMessageId);
+              if (!hasBotMessage) {
+                session.messages.value.push({ id: effectiveId, text: '', sender: 'bot' });
+              }
+              const m = session.messages.value.find(v => v.id === botMessageId);
+              if (m) m.text = composeBotMessageText(complete, evidence);
+              continue;
+            }
             const content = parsed?.content ?? '';
             if (content) {
               complete += content;
+              const effectiveId = botMessageId ?? Date.now();
+              if (botMessageId === null) botMessageId = effectiveId;
               const hasBotMessage = session.messages.value.some(v => v.id === botMessageId);
               if (!hasBotMessage) {
-                session.messages.value.push({ id: botMessageId, text: '', sender: 'bot' });
+                session.messages.value.push({ id: effectiveId, text: '', sender: 'bot' });
               }
               const m = session.messages.value.find(v => v.id === botMessageId);
-              if (m) m.text = complete.trim();
+              if (m) m.text = composeBotMessageText(complete, evidence);
             }
           } catch (err) {
             console.error('chunk parse error:', err, line);
@@ -350,6 +428,8 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
     session.progressStatus.value = '';
     session.progressDetail.value = '';
     session.progressToolTrace.value = [];
+    session.progressJudgeTrace.value = [];
+    session.progressDraftPreview.value = null;
     session.messages.value = [];
     console.log('[useChat] resetChat with new apiKey(m):', mask(session.apiKey));
     await initializeChatSession(session);
@@ -368,6 +448,8 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
     progressStatus: session.progressStatus,
     progressDetail: session.progressDetail,
     progressToolTrace: session.progressToolTrace,
+    progressJudgeTrace: session.progressJudgeTrace,
+    progressDraftPreview: session.progressDraftPreview,
     toggleChat,
     sendMessage,
     stopMessage,

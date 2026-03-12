@@ -106,6 +106,23 @@
             <div class="loading-badge">Processing</div>
             <div class="loading-status">{{ progressStatus || 'Working on your answer' }}</div>
             <p v-if="progressDetail" class="loading-detail">{{ progressDetail }}</p>
+            <div v-if="visibleProgressJudges.length" class="loading-tools loading-tools--judge">
+              <div class="loading-tools-title">Judge review</div>
+              <div
+                v-for="item in visibleProgressJudges"
+                :key="item.id"
+                class="loading-tool-item"
+              >
+                <span class="loading-tool-name">{{ item.verdict || 'judge' }}</span>
+                <span class="loading-tool-summary">{{ item.summary }}</span>
+              </div>
+            </div>
+            <div v-if="progressDraftPreview" class="loading-tools loading-tools--draft">
+              <div class="loading-tools-title">{{ progressDraftPreview.label }}</div>
+              <div class="loading-tool-item loading-tool-item--draft">
+                <span class="loading-tool-summary loading-tool-summary--draft">{{ progressDraftPreview.content }}</span>
+              </div>
+            </div>
             <div v-if="visibleProgressTools.length" class="loading-tools">
               <div class="loading-tools-title">Tool activity</div>
               <div
@@ -220,6 +237,14 @@
           ref="inputRef"
         ></textarea>
         <div class="input-icons">
+          <label class="composer-toggle" :class="{ disabled: !noteAcknowledged || loading }">
+            <input
+              v-model="deepReviewEnabled"
+              type="checkbox"
+              :disabled="!noteAcknowledged || loading"
+            />
+            <span>Deep retrieval & review</span>
+          </label>
           <div v-if="!isMobileViewport" class="composer-model-shell">
             <select
               v-model="selectedModel"
@@ -289,6 +314,7 @@ import 'element-plus/dist/index.css';
 const COMPOSER_MIN_HEIGHT = 44;
 const COMPOSER_MAX_HEIGHT = 180;
 const MOBILE_BREAKPOINT = 860;
+const DEEP_REVIEW_STORAGE_KEY = 'ai_deep_review_enabled';
 
 export default defineComponent({
   name: 'ChatBox',
@@ -317,7 +343,9 @@ export default defineComponent({
       isStreaming,
       progressStatus,
       progressDetail,
-      progressToolTrace
+      progressToolTrace,
+      progressJudgeTrace,
+      progressDraftPreview
     } = useChat(props.apiKey, {
       key: props.conversationId
     });
@@ -331,6 +359,7 @@ export default defineComponent({
     const titleRequested = ref(false);
     const isMobileViewport = ref(false);
     const mobileModelPickerOpen = ref(false);
+    const deepReviewEnabled = ref(localStorage.getItem(DEEP_REVIEW_STORAGE_KEY) === '1');
 
     const botAvatar = 'https://framerusercontent.com/images/p0mVMX1aJictMR1RM9fE1PrTrRQ.png';
     const userAvatar = 'https://framerusercontent.com/images/JnbQ2qAMPu3VRXkbzDhwoMnHpk.png';
@@ -397,6 +426,10 @@ export default defineComponent({
         nextTick(resizeComposer);
       }
     );
+
+    watch(deepReviewEnabled, (next) => {
+      localStorage.setItem(DEEP_REVIEW_STORAGE_KEY, next ? '1' : '0');
+    });
 
     // 抽取 Search result(s) 证据的工具函数（宽松匹配）
     const splitSearchResult = (raw: string) => {
@@ -499,7 +532,8 @@ export default defineComponent({
         skipUserPush: !!editingMessageId.value,
         overrideText: text,
         model: getSelectedModel(),
-        history: buildHistoryPayload(historySource)
+        history: buildHistoryPayload(historySource),
+        deepReview: deepReviewEnabled.value
       });
       if (!result?.aborted) {
         editingMessageId.value = null;
@@ -546,6 +580,10 @@ export default defineComponent({
       closeMobileModelPicker();
     };
     const visibleProgressTools = computed(() => progressToolTrace.value.slice(-6));
+    const visibleProgressJudges = computed(() => {
+      const raw = Array.isArray(progressJudgeTrace.value) ? progressJudgeTrace.value : [];
+      return raw.slice(-3);
+    });
 
     const summarizeTitle = (text: string) => {
       const cleaned = String(text || '')
@@ -771,7 +809,8 @@ export default defineComponent({
         skipUserPush: true,
         overrideText: userMsg.text,
         model: getSelectedModel(),
-        history: buildHistoryPayload(historySource)
+        history: buildHistoryPayload(historySource),
+        deepReview: deepReviewEnabled.value
       });
     };
 
@@ -787,6 +826,9 @@ export default defineComponent({
       mobileModelLabel,
       progressStatus,
       progressDetail,
+      progressDraftPreview,
+      deepReviewEnabled,
+      visibleProgressJudges,
       visibleProgressTools,
       openMobileModelPicker,
       closeMobileModelPicker,
@@ -1112,6 +1154,31 @@ img { max-width: 100% !important; }
   height: 54px;
   min-width: 168px;
   flex-shrink: 0;
+}
+
+.composer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 54px;
+  padding: 0 12px;
+  border-radius: 16px;
+  border: 1px solid var(--ai-border);
+  background: linear-gradient(180deg, var(--ai-card), var(--ai-card-muted));
+  color: var(--ai-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.composer-toggle input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--ai-accent);
+}
+
+.composer-toggle.disabled {
+  opacity: 0.6;
 }
 
 .composer-model-select {
@@ -1476,6 +1543,15 @@ img { max-width: 100% !important; }
   word-break: break-word;
 }
 
+.loading-tool-item--draft {
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.loading-tool-summary--draft {
+  white-space: pre-wrap;
+}
+
 .loading-pulse {
   display: inline-flex;
   align-items: center;
@@ -1552,6 +1628,13 @@ img { max-width: 100% !important; }
     align-items: center;
     justify-content: flex-end;
     gap: 10px;
+  }
+  .composer-toggle {
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: 14px;
+    font-size: 11px;
+    flex: 1 1 auto;
   }
   .mobile-model-button {
     display: inline-flex;

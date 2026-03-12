@@ -41,6 +41,26 @@ export type AdminLLMSettings = {
   model_options: string[];
 };
 
+export type AdminAIWorkflowSettings = {
+  workflow_enable: boolean;
+  conversation_router_enable: boolean;
+  conversation_router_model: string;
+  conversation_router_timeout: number;
+  router_confidence_threshold: number;
+  max_retrieval_rounds: number;
+  max_tool_steps_per_round: number;
+  max_total_tool_steps: number;
+  retrieval_judge_enable: boolean;
+  retrieval_judge_model: string;
+  retrieval_judge_threshold: number;
+  stop_on_no_new_evidence: boolean;
+  stop_on_repeated_plan: boolean;
+  allow_pubmed_deepen: boolean;
+  allow_table_deepen: boolean;
+  allow_doc_deepen: boolean;
+  final_critic_enable: boolean;
+};
+
 export type AdminTableResource = {
   name: string;
   label: string;
@@ -195,6 +215,16 @@ export async function fetchAdminLLMSettings(): Promise<AdminLLMSettings | null> 
   });
   if (!resp.ok) return null;
   return (await resp.json()) as AdminLLMSettings;
+}
+
+export async function fetchAdminAIWorkflowSettings(): Promise<AdminAIWorkflowSettings | null> {
+  const resp = await fetch('/admin/api/ai_workflow_settings', {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'same-origin'
+  });
+  if (!resp.ok) return null;
+  return (await resp.json()) as AdminAIWorkflowSettings;
 }
 
 export async function fetchAdminResources(): Promise<AdminResourcesResponse | null> {
@@ -392,6 +422,23 @@ export async function saveAdminLLMSettings(payload: Record<string, any>): Promis
     throw new Error(json?.error || '保存 LLM 配置失败');
   }
   return json?.settings as AdminLLMSettings;
+}
+
+export async function saveAdminAIWorkflowSettings(payload: Record<string, any>): Promise<AdminAIWorkflowSettings> {
+  const csrfToken = String(payload?.csrfToken || '');
+  const body = { ...payload };
+  delete body.csrfToken;
+  const resp = await fetch('/admin/api/ai_workflow_settings', {
+    method: 'POST',
+    headers: adminJsonHeaders(csrfToken),
+    credentials: 'same-origin',
+    body: JSON.stringify(body)
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok || json?.error) {
+    throw new Error(json?.error || '保存 AI workflow 配置失败');
+  }
+  return json?.settings as AdminAIWorkflowSettings;
 }
 
 export function adminJsonHeaders(csrfToken = ''): HeadersInit {
