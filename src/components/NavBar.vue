@@ -12,16 +12,16 @@
     <nav class="site--header__center" :class="{ 'has-overflow': navProgressVisible }">
       <div ref="centerScrollRef" class="site--header__center-scroll" @scroll="syncNavProgress">
         <ul ref="centerListRef" class="topNav-items">
-        <li><component :is="navLinkComponent" v-bind="navLinkProps('/')" :class="{ 'active-link': isActivePath('/') }">Home</component></li>
-        <li><component :is="navLinkComponent" v-bind="navLinkProps('/CodingVariationDisease')" :class="{ 'active-link': isActivePath('/CodingVariationDisease') }">Mutation-induced Disease</component></li>
-        <li><component :is="navLinkComponent" v-bind="navLinkProps('/naturalsuptRNA')" :class="{ 'active-link': isActivePath('/naturalsuptRNA') }">Natural sup-tRNA</component></li>
-        <li><component :is="navLinkComponent" v-bind="navLinkProps('/tRNAtherapeutics')" :class="{ 'active-link': isActivePath('/tRNAtherapeutics') }">Engineered sup-tRNA</component></li>
-        <li><component :is="navLinkComponent" v-bind="navLinkProps('/tRNAElements')" :class="{ 'active-link': isActivePath('/tRNAElements') }">tRNA Elements</component></li>
-        <li><component :is="navLinkComponent" v-bind="navLinkProps('/blast')" :class="{ 'active-link': isActivePath('/blast') }">Blast Search</component></li>
-        <li><component :is="navLinkComponent" v-bind="navLinkProps('/AIYingying')" :class="{ 'active-link': isActivePath('/AIYingying') }">AI Assistant</component></li>
-        <li class="mobile-only"><component :is="navLinkComponent" v-bind="navLinkProps('/download')" :class="{ 'active-link': isActivePath('/download') }">Download</component></li>
-        <li class="mobile-only"><a href="/help.html">Help</a></li>
-        <li class="mobile-only"><component :is="navLinkComponent" v-bind="navLinkProps('/about')" :class="{ 'active-link': isActivePath('/about') }">About</component></li>
+          <li v-for="item in navItems" :key="item.path">
+            <component :is="navLinkComponent(item)" v-bind="navLinkProps(item)" :class="{ 'active-link': isActivePath(item.path) }">
+              {{ item.label }}
+            </component>
+          </li>
+          <li v-for="item in mobileExtraItems" :key="`mobile-${item.path}`" class="mobile-only">
+            <component :is="navLinkComponent(item)" v-bind="navLinkProps(item)" :class="{ 'active-link': isActivePath(item.path) }">
+              {{ item.label }}
+            </component>
+          </li>
         </ul>
       </div>
       <div v-if="navProgressVisible" class="site--header__progress" aria-hidden="true">
@@ -44,9 +44,16 @@
             <font-awesome-icon :icon="themeIcon" />
           </button>
         </li>
-        <li class="desktop-tool-only"><router-link to="/download" active-class="active-link"><font-awesome-icon :icon="['fas', 'download']" title="Download" /></router-link></li>
-        <li class="desktop-tool-only"><a href="/help.html" title="Help"><font-awesome-icon :icon="['fas', 'book']" /></a></li>
-        <li class="desktop-tool-only"><router-link to="/about" active-class="active-link"><font-awesome-icon :icon="['fas', 'info-circle']" title="About" /></router-link></li>
+        <li v-for="item in desktopToolItems" :key="`tool-${item.path}`" class="desktop-tool-only">
+          <component
+            :is="navLinkComponent(item)"
+            v-bind="navLinkProps(item)"
+            :class="{ 'active-link': isActivePath(item.path) }"
+            :title="item.label"
+          >
+            <font-awesome-icon :icon="toolIcons[item.path]" :title="item.label" />
+          </component>
+        </li>
         <li class="mobile-menu-only">
           <button
             class="mobile-menu-toggle"
@@ -70,30 +77,32 @@
         </button>
       </div>
       <div class="mobile-nav-links">
-        <component :is="navLinkComponent" v-bind="navLinkProps('/')" :class="{ 'active-link': isActivePath('/') }" @click="closeMobileMenu">Home</component>
-        <component :is="navLinkComponent" v-bind="navLinkProps('/CodingVariationDisease')" :class="{ 'active-link': isActivePath('/CodingVariationDisease') }" @click="closeMobileMenu">Mutation-induced Disease</component>
-        <component :is="navLinkComponent" v-bind="navLinkProps('/naturalsuptRNA')" :class="{ 'active-link': isActivePath('/naturalsuptRNA') }" @click="closeMobileMenu">Natural sup-tRNA</component>
-        <component :is="navLinkComponent" v-bind="navLinkProps('/tRNAtherapeutics')" :class="{ 'active-link': isActivePath('/tRNAtherapeutics') }" @click="closeMobileMenu">Engineered sup-tRNA</component>
-        <component :is="navLinkComponent" v-bind="navLinkProps('/tRNAElements')" :class="{ 'active-link': isActivePath('/tRNAElements') }" @click="closeMobileMenu">tRNA Elements</component>
-        <component :is="navLinkComponent" v-bind="navLinkProps('/blast')" :class="{ 'active-link': isActivePath('/blast') }" @click="closeMobileMenu">Blast Search</component>
-        <component :is="navLinkComponent" v-bind="navLinkProps('/AIYingying')" :class="{ 'active-link': isActivePath('/AIYingying') }" @click="closeMobileMenu">AI Assistant</component>
+        <component
+          :is="navLinkComponent(item)"
+          v-for="item in navItems"
+          :key="`drawer-${item.path}`"
+          v-bind="navLinkProps(item)"
+          :class="{ 'active-link': isActivePath(item.path) }"
+          @click="closeMobileMenu"
+        >
+          {{ item.label }}
+        </component>
       </div>
       <div class="mobile-nav-tools">
         <button class="mobile-nav-theme" type="button" @click="toggleTheme">
           <font-awesome-icon :icon="themeIcon" />
           <span>Theme: {{ themeLabel }}</span>
         </button>
-        <component :is="navLinkComponent" v-bind="navLinkProps('/download')" :class="{ 'active-link': isActivePath('/download') }" @click="closeMobileMenu">
-          <font-awesome-icon :icon="['fas', 'download']" />
-          <span>Download</span>
-        </component>
-        <a href="/help.html" @click="closeMobileMenu">
-          <font-awesome-icon :icon="['fas', 'book']" />
-          <span>Help</span>
-        </a>
-        <component :is="navLinkComponent" v-bind="navLinkProps('/about')" :class="{ 'active-link': isActivePath('/about') }" @click="closeMobileMenu">
-          <font-awesome-icon :icon="['fas', 'info-circle']" />
-          <span>About</span>
+        <component
+          :is="navLinkComponent(item)"
+          v-for="item in mobileExtraItems"
+          :key="`drawer-tool-${item.path}`"
+          v-bind="navLinkProps(item)"
+          :class="{ 'active-link': isActivePath(item.path) }"
+          @click="closeMobileMenu"
+        >
+          <font-awesome-icon :icon="toolIcons[item.path]" />
+          <span>{{ item.label }}</span>
         </component>
       </div>
     </div>
@@ -104,6 +113,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { getThemeMode, nextThemeMode, setThemeMode } from '../utils/theme';
+import { APP_PATHS, PRIMARY_NAV_ITEMS, SECONDARY_NAV_ITEMS, type SiteNavItem, type SiteToolItem } from '../config/navigation';
 
 export default {
   name: 'NavBar',
@@ -137,11 +147,26 @@ export default {
 
     const normalizedPath = computed(() => String(route.path || '').toLowerCase());
     const isStandaloneHelp = computed(() =>
-      normalizedPath.value === '/help.html' || normalizedPath.value === '/help'
+      normalizedPath.value === APP_PATHS.helpEntry || normalizedPath.value === APP_PATHS.help
     );
-    const navLinkComponent = computed(() => isStandaloneHelp.value ? 'a' : 'router-link');
-    const navLinkProps = (path: string) => isStandaloneHelp.value ? { href: path } : { to: path };
-    const isActivePath = (path: string) => normalizedPath.value === path.toLowerCase();
+    const navItems = PRIMARY_NAV_ITEMS;
+    const mobileExtraItems = SECONDARY_NAV_ITEMS;
+    const desktopToolItems = SECONDARY_NAV_ITEMS;
+    const toolIcons: Record<string, [string, string]> = {
+      [APP_PATHS.download]: ['fas', 'download'],
+      [APP_PATHS.help]: ['fas', 'book'],
+      [APP_PATHS.about]: ['fas', 'info-circle'],
+    };
+    const navLinkComponent = (item: SiteNavItem | SiteToolItem) =>
+      (isStandaloneHelp.value || item.href) ? 'a' : 'router-link';
+    const navLinkProps = (item: SiteNavItem | SiteToolItem) =>
+      (isStandaloneHelp.value || item.href) ? { href: item.href ?? item.path } : { to: item.path };
+    const isActivePath = (path: string) => {
+      if (path === APP_PATHS.help && isStandaloneHelp.value) {
+        return true;
+      }
+      return normalizedPath.value === path.toLowerCase();
+    };
 
     const ensureActiveNavVisible = (behavior: ScrollBehavior = 'auto') => {
       const scrollEl = centerScrollRef.value;
@@ -265,11 +290,15 @@ export default {
     });
 
     return {
+      desktopToolItems,
       themeLabel,
       themeIcon,
+      toolIcons,
       navLinkComponent,
       navLinkProps,
       isActivePath,
+      mobileExtraItems,
+      navItems,
       toggleTheme,
       closeMobileMenu,
       toggleMobileMenu,

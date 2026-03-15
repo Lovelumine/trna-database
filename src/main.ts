@@ -78,14 +78,15 @@ import VueMatomo from 'vue-matomo';
 
 import VueSidebarMenu from 'vue-sidebar-menu';
 import 'vue-sidebar-menu/dist/vue-sidebar-menu.css';
+import { APP_PATHS, MAIN_PREFETCH_ROUTE_PATHS } from './config/navigation';
 
 function redirectLegacyAdminRoute(to: RouteLocationNormalized) {
   const search = new URLSearchParams();
   let hashPath = '/workspace';
 
-  if (to.path === '/admin/login') {
+  if (to.path === APP_PATHS.adminLogin) {
     hashPath = '/login';
-  } else if (to.path === '/admin/engineered-sup-trna') {
+  } else if (to.path === APP_PATHS.adminEngineered) {
     search.set('view', 'table');
     search.set('resource', 'Engineered_sup_tRNA');
   } else {
@@ -117,30 +118,30 @@ function redirectStandaloneHelpRoute(to: RouteLocationNormalized) {
     }
   });
 
-  const target = `/help.html${search.toString() ? `?${search.toString()}` : ''}${to.hash || ''}`;
+  const target = `${APP_PATHS.helpEntry}${search.toString() ? `?${search.toString()}` : ''}${to.hash || ''}`;
   window.location.replace(target);
   return false;
 }
 
 // 路由配置，使用懒加载
 const routes: RouteRecordRaw[] = [
-  { path: '/', component: Home },
-  { path: '/CodingVariationDisease', component: CodingVariationDisease },
-  { path: '/tRNAtherapeutics', component: tRNAtherapeutics },
-  { path: '/naturalsuptRNA', component: naturalsuptRNA },
-  { path: '/tRNAElements', component: tRNAElements },
-  { path: '/expanded/:key', name: 'ExpandedRow', component: ExpandedRow },
-  { path: '/about', name: 'about', component: About },
+  { path: APP_PATHS.home, component: Home },
+  { path: APP_PATHS.disease, component: CodingVariationDisease },
+  { path: APP_PATHS.therapeutics, component: tRNAtherapeutics },
+  { path: APP_PATHS.natural, component: naturalsuptRNA },
+  { path: APP_PATHS.elements, component: tRNAElements },
+  { path: APP_PATHS.expanded, name: 'ExpandedRow', component: ExpandedRow },
+  { path: APP_PATHS.about, name: 'about', component: About },
   { path: '/display/:tRNAName', name: 'Display', component: Display },
-  { path: '/help', beforeEnter: redirectStandaloneHelpRoute },
-  { path: '/download', name: 'download', component: Download },
-  { path: '/AIYingying', name: 'AIYingying', component: AIYingying },
-  { path: '/audio', name: 'audio', component: audio },
-  { path: '/blast', name: 'blast', component: BlastSearch }, // 新添加的 BLAST 搜索路由
-  { path: '/admin', beforeEnter: redirectLegacyAdminRoute },
-  { path: '/admin/login', beforeEnter: redirectLegacyAdminRoute },
-  { path: '/admin/workspace', beforeEnter: redirectLegacyAdminRoute },
-  { path: '/admin/engineered-sup-trna', beforeEnter: redirectLegacyAdminRoute },
+  { path: APP_PATHS.help, beforeEnter: redirectStandaloneHelpRoute },
+  { path: APP_PATHS.download, name: 'download', component: Download },
+  { path: APP_PATHS.ai, name: 'AIYingying', component: AIYingying },
+  { path: APP_PATHS.audio, name: 'audio', component: audio },
+  { path: APP_PATHS.blast, name: 'blast', component: BlastSearch },
+  { path: APP_PATHS.admin, beforeEnter: redirectLegacyAdminRoute },
+  { path: APP_PATHS.adminLogin, beforeEnter: redirectLegacyAdminRoute },
+  { path: APP_PATHS.adminWorkspace, beforeEnter: redirectLegacyAdminRoute },
+  { path: APP_PATHS.adminEngineered, beforeEnter: redirectLegacyAdminRoute },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
 ];
 
@@ -217,14 +218,7 @@ app.use(VueMatomo, {
 app.mount('#app');
 
 // 预加载其他路由组件
-const prefetchRoutes = [
-  '/CodingVariationDisease',
-  '/tRNAtherapeutics',
-  '/naturalsuptRNA',
-  '/tRNAElements',
-  '/about',
-  '/download'
-];
+const prefetchRoutes = MAIN_PREFETCH_ROUTE_PATHS;
 
 prefetchRoutes.forEach(route => {
   router.resolve({ path: route }).matched.forEach(record => {

@@ -45,7 +45,6 @@ ENSURE（The Encyclopedia of Suppressor tRNA with an AI Assistant）是一个面
 ├── src/                # Vue 3 前端源码
 ├── public/docs/        # 站内帮助文档、站点地图、API 说明、论文 PDF
 ├── Flask/              # 主 Flask API（表格、导出、AI、检索）
-├── searchservice.py    # 独立的轻量序列搜索/比对服务
 ├── tools/data-prep/    # 离线数据处理、序列整理、BLAST 辅助脚本
 ├── vite.config.js      # 前端构建与本地代理配置
 └── package.json        # 前端依赖与脚本
@@ -177,25 +176,6 @@ source .venv/bin/activate
 pip install gunicorn
 gunicorn -c gunicorn.conf.py wsgi:app
 ```
-
-### 仅启动轻量序列搜索服务
-
-如果你只需要 CSV/URL 序列比对，不需要 MySQL、AI 和导出接口，可以直接运行仓库根目录下的 `searchservice.py`：
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install flask flask-cors biopython pandas requests
-python searchservice.py
-```
-
-这个服务只提供：
-
-- `GET /health`
-- `GET /search`
-- `POST /search`
-
-它不能替代 `Flask/` 下的完整 ENSURE API，并且默认监听 `8000` 端口；完整后端默认监听 `8010`。
 
 ## 前端可选环境变量
 

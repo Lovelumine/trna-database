@@ -38,7 +38,6 @@ Reviewed source areas:
 - `Flask/config.py`
 - `Flask/wsgi.py`
 - `Flask/scripts/**`
-- `searchservice.py`
 - `tools/data-prep/**`
 - `vite.config.js`
 - `README.md`
@@ -110,7 +109,6 @@ Important characteristics:
 - `src/admin-main.ts` uses `createWebHashHistory()`;
 - route guard checks `/admin/api/me`;
 - `src/views/admin/AdminWorkspace.vue` is the real admin control center;
-- there is also an older `AdminEngineeredSupTRNA.vue`, which appears legacy/specialized compared to `AdminWorkspace.vue`.
 
 Implication:
 
@@ -119,12 +117,9 @@ Implication:
 
 ### 3.5 Backend Topology
 
-The repository includes two backend modes:
+The repository backend is centered on the full Flask application under `Flask/`.
 
-1. Full Flask backend under `Flask/`
-2. Lightweight standalone search server in `searchservice.py`
-
-The full backend is the real application backend. It serves:
+The full backend serves:
 
 - table browsing;
 - table statistics;
@@ -135,12 +130,10 @@ The full backend is the real application backend. It serves:
 - search and alignment;
 - export status tracking.
 
-The lightweight search service exists to run only sequence search/alignment when MySQL/AI/full export stack is not required.
-
 Implication:
 
-- `/search` cannot be treated as a single-purpose Flask-only endpoint without considering the lightweight service mode;
-- refactors must keep the separation between "full platform" and "search-only mode".
+- `/search` should be treated as part of the main Flask API surface;
+- refactors should keep search/alignment logic consistent with the rest of the platform backend.
 
 ### 3.6 Vite Proxy Topology
 
@@ -372,7 +365,7 @@ Do not:
 
 Do not:
 
-- remove or implicitly break `searchservice.py`;
+- remove or implicitly break the Flask `/search` contract;
 - hard-assume MySQL/full Flask is always present for alignment workflows.
 
 ## 9. Refactor Goals
@@ -648,7 +641,6 @@ Known sync items:
 - `src/views/tRNAtherapeutics/tRNAtherapeutics-1.vue`
 - `src/views/tRNAtherapeutics/ExpandedRow.vue`
 - `src/views/tRNAtherapeutics/expandedRowLogic.ts`
-- `searchservice.py`
 - `src/views/display/Display.vue`
 
 ## 12. Proposed Stop Conditions for AI Retrieval

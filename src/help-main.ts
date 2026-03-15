@@ -12,6 +12,7 @@ import './assets/bot.css';
 import './assets/search.css';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import './utils/icons';
+import { APP_PATHS, HELP_EXTERNAL_ROUTE_PATHS } from './config/navigation';
 
 const Help = () => import('./views/help/help.vue');
 
@@ -45,32 +46,16 @@ function redirectLegacyHelp(to: RouteLocationNormalized) {
       search.set(key, String(value));
     }
   });
-  const target = `/help.html${search.toString() ? `?${search.toString()}` : ''}${to.hash || ''}`;
+  const target = `${APP_PATHS.helpEntry}${search.toString() ? `?${search.toString()}` : ''}${to.hash || ''}`;
   window.location.replace(target);
   return false;
 }
 
-const externalRoutes = [
-  '/',
-  '/CodingVariationDisease',
-  '/tRNAtherapeutics',
-  '/naturalsuptRNA',
-  '/tRNAElements',
-  '/blast',
-  '/AIYingying',
-  '/download',
-  '/about',
-  '/audio',
-  '/admin',
-  '/admin/login',
-  '/admin/workspace'
-];
-
 const routes: RouteRecordRaw[] = [
-  { path: '/help.html', name: 'help-standalone', component: Help },
-  { path: '/help', beforeEnter: redirectLegacyHelp },
-  ...externalRoutes.map((path) => ({ path, beforeEnter: leaveHelpEntry })),
-  { path: '/:pathMatch(.*)*', redirect: '/help.html' }
+  { path: APP_PATHS.helpEntry, name: 'help-standalone', component: Help },
+  { path: APP_PATHS.help, beforeEnter: redirectLegacyHelp },
+  ...HELP_EXTERNAL_ROUTE_PATHS.map((path) => ({ path, beforeEnter: leaveHelpEntry })),
+  { path: '/:pathMatch(.*)*', redirect: APP_PATHS.helpEntry }
 ];
 
 const router = createRouter({

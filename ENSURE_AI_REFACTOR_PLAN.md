@@ -32,7 +32,7 @@ This plan does **not** attempt to redesign:
 - download system;
 - help site architecture;
 - therapeutics page data model;
-- lightweight standalone `searchservice.py` behavior.
+- BLAST/search behavior outside the main AI workflow.
 
 ## 3. AI Code Surfaces
 
@@ -714,7 +714,6 @@ The AI refactor must preserve these rules:
 - `src/views/tRNAtherapeutics/ExpandedRow.vue`
 - `src/views/tRNAtherapeutics/expandedRowLogic.ts`
 - `src/views/help/help.vue`
-- `searchservice.py`
 
 ## 18. API Contract Plan
 
