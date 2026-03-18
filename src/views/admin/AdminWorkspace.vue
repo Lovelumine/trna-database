@@ -33,6 +33,14 @@
           </div>
           <b class="sidebar-primary-badge">{{ resources?.overview.doc_count || 0 }}</b>
         </button>
+        <button class="sidebar-primary-item" :class="{ active: activePrimarySection === 'media' }" type="button" @click="openPrimarySection('media')">
+          <el-icon class="sidebar-primary-icon"><PictureFilled /></el-icon>
+          <div class="sidebar-primary-copy">
+            <strong>{{ t('nav.media') }}</strong>
+            <small>{{ t('nav.mediaHint', { count: resources?.overview.media_count || 0 }) }}</small>
+          </div>
+          <b class="sidebar-primary-badge">{{ resources?.overview.media_count || 0 }}</b>
+        </button>
         <button class="sidebar-primary-item" :class="{ active: activePrimarySection === 'llm' }" type="button" @click="openPrimarySection('llm')">
           <el-icon class="sidebar-primary-icon"><Monitor /></el-icon>
           <div class="sidebar-primary-copy">
@@ -186,6 +194,11 @@
               <small>{{ t('overview.docsLibraryHint') }}</small>
             </article>
             <article class="metric-card">
+              <span>{{ t('overview.mediaLibrary') }}</span>
+              <strong>{{ resources?.overview.media_count || 0 }}</strong>
+              <small>{{ t('overview.mediaLibraryHint') }}</small>
+            </article>
+            <article class="metric-card">
               <span>{{ t('overview.defaultModel') }}</span>
               <strong>{{ activeModelLabel }}</strong>
               <small>{{ t('overview.defaultModelHint', { provider: providerLabel, count: llmModelOptions.length }) }}</small>
@@ -297,36 +310,72 @@
             <div class="table-controls-bar">
               <div v-if="selectedTableMeta" class="summary-strip">
                 <span>{{ selectedTableMeta.primary_columns.length ? `PK · ${selectedTableMeta.primary_columns.join(', ')}` : t('table.noPk') }}</span>
-                <span v-if="canInlineEditTable">{{ t('table.inlineHint') }}</span>
+                <div v-if="selectedTableMeta && !selectedTableMeta.read_only" class="summary-strip-actions">
+                  <el-button
+                    v-if="!tableDeleteMode"
+                    size="small"
+                    type="danger"
+                    plain
+                    @click="enterTableDeleteMode"
+                  >
+                    {{ t('table.deleteSelected') }}
+                  </el-button>
+                  <template v-else>
+                    <span class="summary-strip-selection">{{ t('table.deleteSelectedCount', { count: tableDeleteSelection.length }) }}</span>
+                    <el-button
+                      size="small"
+                      type="danger"
+                      :disabled="!tableDeleteSelection.length"
+                      @click="confirmDeleteSelectedRows"
+                    >
+                      {{ t('table.confirmDelete') }}
+                    </el-button>
+                    <el-button size="small" @click="cancelTableDeleteMode">
+                      {{ t('table.cancelDelete') }}
+                    </el-button>
+                  </template>
+                </div>
               </div>
-              <div class="card-actions">
-                <el-button @click="openColumnLabelDialog">{{ t('table.configureColumns') }}</el-button>
-                <el-button v-if="selectedTableMeta && !selectedTableMeta.read_only" type="primary" @click="openCreateRow">{{ t('table.create') }}</el-button>
+              <div class="table-toolbar">
+                <el-input
+                  size="small"
+                  v-model="tableQuery.searchText"
+                  class="table-search-combo"
+                  :placeholder="t('table.searchPlaceholder')"
+                  clearable
+                  @keyup.enter="runTableSearch"
+                >
+                  <template #prepend>
+                    <el-select
+                      v-model="tableQuery.searchColumn"
+                      size="small"
+                      clearable
+                      class="table-search-combo__select"
+                      :placeholder="t('table.allColumns')"
+                    >
+                      <el-option
+                        v-for="column in selectedTableMeta?.columns || []"
+                        :key="column.name"
+                        :label="columnDisplayLabel(column)"
+                        :value="column.name"
+                      />
+                    </el-select>
+                  </template>
+                </el-input>
+                <el-button size="small" type="primary" @click="runTableSearch">{{ t('table.search') }}</el-button>
               </div>
-            </div>
-
-            <div class="table-toolbar">
-              <el-input
-                v-model="tableQuery.searchText"
-                :placeholder="t('table.searchPlaceholder')"
-                clearable
-                @keyup.enter="runTableSearch"
-              />
-              <el-select v-model="tableQuery.searchColumn" clearable :placeholder="t('table.allColumns')">
-                <el-option
-                  v-for="column in selectedTableMeta?.columns || []"
-                  :key="column.name"
-                  :label="columnDisplayLabel(column)"
-                  :value="column.name"
-                />
-              </el-select>
-              <el-select v-model="tableQuery.pageSize" :placeholder="t('table.pageSize')">
-                <el-option :value="10" label="10 / page" />
-                <el-option :value="20" label="20 / page" />
-                <el-option :value="50" label="50 / page" />
-                <el-option :value="100" label="100 / page" />
-              </el-select>
-              <el-button type="primary" @click="runTableSearch">{{ t('table.search') }}</el-button>
+              <div class="card-actions card-actions--inline">
+                <el-select v-model="tableQuery.pageSize" size="small" class="table-page-size" :placeholder="t('table.pageSize')">
+                  <el-option :value="10" label="10 / page" />
+                  <el-option :value="20" label="20 / page" />
+                  <el-option :value="50" label="50 / page" />
+                  <el-option :value="100" label="100 / page" />
+                </el-select>
+                <el-button size="small" @click="openColumnLabelDialog">{{ t('table.configureColumns') }}</el-button>
+                <el-button size="small" @click="openMediaFieldDialog">{{ t('table.configureMedia') }}</el-button>
+                <el-button size="small" @click="openVirtualMediaDialog">{{ t('table.configureSlots') }}</el-button>
+                <el-button v-if="selectedTableMeta && !selectedTableMeta.read_only" size="small" type="primary" @click="openCreateRow">{{ t('table.create') }}</el-button>
+              </div>
             </div>
 
             <el-alert
@@ -338,8 +387,13 @@
               class="inline-alert"
             />
 
-            <div class="table-shell">
+            <div
+              ref="tableShellRef"
+              class="table-shell"
+              @mousedown="beginTableDrag"
+            >
               <el-table
+                ref="tableRef"
                 v-loading="tableLoading"
                 :data="tableRows"
                 border
@@ -348,7 +402,9 @@
                 table-layout="fixed"
                 :empty-text="t('table.noRows')"
                 @sort-change="handleTableSortChange"
+                @selection-change="handleTableSelectionChange"
               >
+                <el-table-column v-if="tableDeleteMode" type="selection" width="52" fixed="left" />
                 <el-table-column
                   v-for="column in selectedTableMeta?.columns || []"
                   :key="column.name"
@@ -356,29 +412,40 @@
                   :label="columnDisplayLabel(column)"
                   :min-width="columnWidth(column)"
                   sortable="custom"
-                  show-overflow-tooltip
                 >
                   <template #default="{ row }">
                     <div
-                      v-if="isInlineEditing(row, column.name)"
-                      class="table-cell-editor"
+                      v-if="isImageDisplayColumn(column.name)"
+                      class="table-cell-media"
                     >
-                      <input
-                        ref="inlineEditInputRef"
-                        v-model="inlineEditDraft"
-                        class="table-cell-input"
-                        @keydown.enter.stop.prevent="saveInlineEdit"
-                        @keydown.esc.stop.prevent="cancelInlineEdit"
-                        @blur="saveInlineEdit"
-                      />
+                      <button
+                        v-if="rowCellPreviewUrl(row, column.name)"
+                        class="table-cell-media__thumb"
+                        type="button"
+                        @click.stop="openTableImageDialog(row, column.name)"
+                      >
+                        <img
+                          :src="rowCellPreviewUrl(row, column.name)"
+                          :alt="columnDisplayLabel(column)"
+                          class="table-cell-media__image"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </button>
+                      <div v-else class="table-cell-media__empty">—</div>
+                      <span class="table-cell-media__value" :title="displayCellValue(row[column.name])">
+                        {{ displayCellValue(row[column.name]) }}
+                      </span>
                     </div>
                     <button
                       v-else
                       class="table-cell-display"
-                      :class="{ 'table-cell-display--editable': canInlineEditColumn(column.name) }"
+                      :class="{
+                        'table-cell-display--editable': canInlineEditColumn(column.name),
+                        'table-cell-display--editing': isInlineEditing(row, column.name),
+                      }"
                       type="button"
-                      :title="canInlineEditColumn(column.name) ? t('table.inlineHint') : ''"
-                      @dblclick.stop="beginInlineEdit(row, column.name)"
+                      @dblclick.stop="beginInlineEdit(row, column.name, $event)"
                     >
                       <span
                         class="table-cell-value"
@@ -389,16 +456,41 @@
                     </button>
                   </template>
                 </el-table-column>
-                <el-table-column v-if="selectedTableMeta && !selectedTableMeta.read_only" :label="t('table.actions')" fixed="right" width="190">
+                <el-table-column v-if="selectedTableHasVirtualMediaFields" :label="t('table.images')" fixed="right" width="110">
                   <template #default="{ row }">
                     <div class="row-actions">
-                      <el-button size="small" type="primary" @click="openEditRow(row)">{{ t('table.edit') }}</el-button>
-                      <el-button size="small" type="danger" plain @click="deleteRow(row)">{{ t('table.delete') }}</el-button>
+                      <el-button
+                        size="small"
+                        plain
+                        :disabled="tableDeleteMode"
+                        @click="openRecordMediaSlots(row)"
+                      >
+                        {{ t('table.images') }}
+                      </el-button>
                     </div>
                   </template>
                 </el-table-column>
               </el-table>
             </div>
+
+            <Teleport to="body">
+              <div
+                v-if="inlineEditRow && inlineEditColumn"
+                class="table-inline-editor"
+                :style="inlineEditStyle"
+                @mousedown.stop
+                @click.stop
+              >
+                <el-input
+                  ref="inlineEditInputRef"
+                  v-model="inlineEditDraft"
+                  type="text"
+                  class="table-inline-editor__input"
+                  @keydown.enter.stop.prevent="handleInlineEditEnter($event, inlineEditColumn)"
+                  @keydown.esc.stop.prevent="cancelInlineEdit"
+                />
+              </div>
+            </Teleport>
 
             <div class="table-footer">
               <div class="table-meta-inline">
@@ -512,6 +604,13 @@
             </div>
           </div>
         </section>
+
+        <AdminMediaPanel
+          v-else-if="currentView === 'media'"
+          ref="mediaPanelRef"
+          :csrf-token="csrfToken"
+          @changed="handleMediaChanged"
+        />
 
         <section v-else-if="currentView === 'llm'" class="workspace-panel">
           <div class="llm-layout">
@@ -693,6 +792,111 @@
     </section>
 
     <el-dialog
+      v-model="tableImageDialogVisible"
+      :title="t('tableImage.title')"
+      width="min(1040px, 94vw)"
+      destroy-on-close
+      @closed="closeTableImageDialog"
+    >
+      <div class="table-image-workbench">
+        <div class="table-image-workbench__preview-shell">
+          <img
+            v-if="tableImagePreviewUrl"
+            :src="tableImagePreviewUrl"
+            :alt="columnDisplayLabel(tableImageColumn || 'image')"
+            class="table-image-workbench__preview"
+          />
+          <div v-else class="table-image-workbench__empty">
+            {{ t('tableImage.empty') }}
+          </div>
+        </div>
+        <div class="table-image-workbench__side">
+          <div class="table-image-workbench__meta">
+            <article>
+              <span>{{ t('tableImage.field') }}</span>
+              <strong>{{ columnDisplayLabel(tableImageColumn || '') || '—' }}</strong>
+            </article>
+            <article>
+              <span>{{ t('tableImage.rawValue') }}</span>
+              <strong>{{ tableImageRawValue || '—' }}</strong>
+            </article>
+            <article>
+              <span>{{ t('tableImage.assetTitle') }}</span>
+              <strong>{{ tableImageAsset?.title || tableImageAsset?.object_key || '—' }}</strong>
+            </article>
+          </div>
+          <div class="table-image-workbench__actions">
+            <el-button class="table-image-workbench__action-button" :disabled="!tableImagePreviewUrl" @click="downloadTableImage">
+              {{ t('tableImage.download') }}
+            </el-button>
+            <el-button
+              class="table-image-workbench__action-button"
+              type="primary"
+              plain
+              :disabled="!canPickMediaAssetForColumn(tableImageColumn)"
+              :loading="tableImageActionLoading"
+              @click="openTableImageReplacementPicker"
+            >
+              {{ t('tableImage.replace') }}
+            </el-button>
+            <el-button
+              class="table-image-workbench__action-button"
+              plain
+              :disabled="!tableImageRow || !tableImageColumn || tableImageActionLoading"
+              @click="removeTableImage"
+            >
+              {{ t('tableImage.remove') }}
+            </el-button>
+            <el-button
+              class="table-image-workbench__action-button"
+              type="danger"
+              plain
+              :disabled="!tableImageAsset?.id || tableImageActionLoading"
+              :loading="tableImageActionLoading"
+              @click="deleteTableImageAsset"
+            >
+              {{ t('tableImage.delete') }}
+            </el-button>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="tableImageDialogVisible = false">{{ t('dialog.close') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="textCellDialogVisible"
+      :title="t('tableTextEditor.title')"
+      width="min(760px, 94vw)"
+      destroy-on-close
+      @closed="closeTextCellDialog"
+    >
+      <div class="text-cell-editor-dialog">
+        <div class="text-cell-editor-dialog__meta">
+          <article>
+            <span>{{ t('tableTextEditor.field') }}</span>
+            <strong>{{ columnDisplayLabel(textCellDialogColumn || '') || '—' }}</strong>
+          </article>
+        </div>
+        <el-input
+          ref="textCellDialogInputRef"
+          v-model="textCellDialogDraft"
+          type="textarea"
+          :autosize="{ minRows: 10, maxRows: 20 }"
+          class="text-cell-editor-dialog__input"
+          @keydown.esc.stop.prevent="closeTextCellDialog"
+          @keydown.meta.enter.stop.prevent="saveTextCellDialog"
+          @keydown.ctrl.enter.stop.prevent="saveTextCellDialog"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="closeTextCellDialog">{{ t('dialog.cancel') }}</el-button>
+        <el-button type="primary" :loading="textCellDialogSaving" @click="saveTextCellDialog">{{ t('dialog.save') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
       v-model="rowDialogVisible"
       :title="rowDialogMode === 'create' ? t('dialog.createRow', { name: selectedTableMeta?.label || '' }) : t('dialog.editRow', { name: selectedTableMeta?.label || '' })"
       width="min(1100px, 94vw)"
@@ -704,8 +908,51 @@
           v-for="column in editableColumns"
           :key="column.name"
           :label="columnDisplayLabel(column)"
+          :class="{ 'row-form-item--wide': isImageEditorColumn(column) }"
         >
+          <template v-if="isImageEditorColumn(column)">
+            <div class="row-media-field">
+              <div class="row-media-preview-shell">
+                <img
+                  v-if="rowFieldPreviewUrl(column.name)"
+                  :src="rowFieldPreviewUrl(column.name)"
+                  :alt="columnDisplayLabel(column)"
+                  class="row-media-preview-image"
+                />
+                <div v-else class="row-media-preview-empty">
+                  {{ t('rowMedia.empty') }}
+                </div>
+              </div>
+              <div class="row-media-actions">
+                <el-button
+                  type="primary"
+                  plain
+                  :disabled="!canPickMediaAssetForColumn(column.name)"
+                  @click="openFieldMediaPicker(column.name)"
+                >
+                  {{ t('rowMedia.pick') }}
+                </el-button>
+                <el-button plain @click="clearFieldMedia(column.name)">
+                  {{ t('rowMedia.clear') }}
+                </el-button>
+                <el-button text @click="toggleRawField(column.name)">
+                  {{ isRawFieldVisible(column.name) ? t('rowMedia.hideRaw') : t('rowMedia.showRaw') }}
+                </el-button>
+              </div>
+              <div class="row-media-meta">
+                <span>{{ t('rowMedia.currentValue') }}</span>
+                <strong>{{ rowFieldRawValue(column.name) || '—' }}</strong>
+              </div>
+              <el-input
+                v-if="isRawFieldVisible(column.name)"
+                v-model="rowForm[column.name]"
+                :type="isTextareaColumn(column.type) ? 'textarea' : 'text'"
+                :autosize="isTextareaColumn(column.type) ? { minRows: 2, maxRows: 6 } : undefined"
+              />
+            </div>
+          </template>
           <el-input
+            v-else
             v-model="rowForm[column.name]"
             :type="isTextareaColumn(column.type) ? 'textarea' : 'text'"
             :autosize="isTextareaColumn(column.type) ? { minRows: 2, maxRows: 6 } : undefined"
@@ -752,6 +999,74 @@
       </template>
     </el-dialog>
 
+    <el-dialog
+      v-model="fieldMediaPickerVisible"
+      :title="t('rowMedia.pickerTitle')"
+      width="min(980px, 94vw)"
+      destroy-on-close
+    >
+      <div class="row-media-picker">
+        <p class="row-media-picker__hint">{{ t('rowMedia.pickerHint') }}</p>
+        <div class="row-media-picker__toolbar">
+          <el-input
+            v-model="fieldMediaQuery.search"
+            :placeholder="t('rowMedia.pickerSearch')"
+            @keyup.enter="loadFieldMediaLibrary"
+          />
+          <el-button type="primary" :loading="fieldMediaLibraryLoading" @click="loadFieldMediaLibrary">
+            {{ t('media.search') }}
+          </el-button>
+        </div>
+        <div v-if="fieldMediaAssets.length" class="row-media-picker-grid">
+          <button
+            v-for="asset in fieldMediaAssets"
+            :key="asset.id"
+            type="button"
+            class="row-media-picker-card"
+            @click="chooseFieldMediaAsset(asset)"
+          >
+            <div class="row-media-picker-card__thumb">
+              <img :src="asset.public_url" :alt="asset.alt_text || asset.title || asset.original_filename" />
+            </div>
+            <div class="row-media-picker-card__copy">
+              <strong>{{ asset.title || asset.original_filename }}</strong>
+              <span>{{ extractLegacyPictureidFromAsset(asset) || asset.original_filename }}</span>
+            </div>
+            <span class="row-media-picker-card__action">{{ t('rowMedia.pickAction') }}</span>
+          </button>
+        </div>
+        <div v-else class="row-media-picker-empty">
+          {{ t('rowMedia.libraryEmpty') }}
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="fieldMediaPickerVisible = false">{{ t('dialog.cancel') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <AdminTableMediaFieldsDialog
+      v-model="mediaFieldDialogVisible"
+      :csrf-token="csrfToken"
+      :table-meta="selectedTableMeta"
+      :sample-row="tableRows[0] || null"
+      @saved="handleMediaFieldsSaved"
+    />
+
+    <AdminVirtualMediaFieldsDialog
+      v-model="virtualMediaDialogVisible"
+      :csrf-token="csrfToken"
+      :table-meta="selectedTableMeta"
+      @saved="handleVirtualMediaFieldsSaved"
+    />
+
+    <AdminRecordMediaSlotsDialog
+      v-model="recordMediaDialogVisible"
+      :csrf-token="csrfToken"
+      :table-meta="selectedTableMeta"
+      :row="selectedRecordMediaRow"
+      @changed="handleRecordMediaChanged"
+    />
+
     <el-dialog v-model="auditDialogVisible" :title="t('audit.detailTitle')" width="min(960px, 92vw)">
       <div class="audit-detail" v-if="selectedAuditRow">
         <div class="audit-meta-grid">
@@ -783,7 +1098,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import VueEasyLightbox from 'vue-easy-lightbox';
 import {
@@ -811,14 +1126,18 @@ import {
   House,
   Monitor,
   Notebook,
+  PictureFilled,
   RefreshRight,
   SwitchButton
 } from '@element-plus/icons-vue';
 
 import {
   fetchAdminAIWorkflowSettings,
+  fetchAdminMediaList,
+  type AdminVirtualMediaField,
   createAdminDoc,
   createAdminTableRecord,
+  deleteAdminMedia,
   deleteAdminDoc,
   deleteAdminTableRecord,
   fetchAdminAuditLogs,
@@ -838,6 +1157,8 @@ import {
   type AdminAuditRow,
   type AdminDocDetail,
   type AdminLLMSettings,
+  type AdminMediaAsset,
+  type AdminTableMediaFieldConfig,
   type AdminResourcesResponse,
   type AdminTableMeta,
   type AdminUser
@@ -849,7 +1170,16 @@ import {
   setCachedTableColumnLabelOverrides,
   setCachedTableVisibleColumnNames,
 } from '@/utils/tableColumnLabels';
+import {
+  getRowBoundFieldMediaEntry,
+  getRowBoundFieldMediaUrl,
+  resolveMediaSource,
+} from '@/utils/tableMedia';
 import { useMarkdown } from '@/utils/useMarkdown';
+import AdminMediaPanel from './AdminMediaPanel.vue';
+import AdminRecordMediaSlotsDialog from './AdminRecordMediaSlotsDialog.vue';
+import AdminTableMediaFieldsDialog from './AdminTableMediaFieldsDialog.vue';
+import AdminVirtualMediaFieldsDialog from './AdminVirtualMediaFieldsDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -891,6 +1221,7 @@ const docPreviewRef = ref<HTMLElement | null>(null);
 const docPreviewLightboxVisible = ref(false);
 const docPreviewImages = ref<string[]>([]);
 const docPreviewImageIndex = ref(0);
+const mediaPanelRef = ref<{ refresh: () => Promise<void> } | null>(null);
 const routeSwitching = ref(false);
 let routeSwitchToken = 0;
 
@@ -899,16 +1230,57 @@ const rowDialogMode = ref<'create' | 'edit'>('create');
 const rowSaving = ref(false);
 const rowForm = reactive<Record<string, string>>({});
 const originalRow = ref<Record<string, any> | null>(null);
+const tableShellRef = ref<HTMLElement | null>(null);
+const tableImageDialogVisible = ref(false);
+const tableImageActionLoading = ref(false);
+const tableImageRow = ref<Record<string, any> | null>(null);
+const tableImageColumn = ref('');
+const fieldMediaPickerVisible = ref(false);
+const fieldMediaPickerMode = ref<'rowForm' | 'tableCell'>('rowForm');
+const fieldMediaPickerColumn = ref('');
+const fieldMediaLibraryLoading = ref(false);
+const fieldMediaAssets = ref<AdminMediaAsset[]>([]);
+const fieldMediaQuery = reactive({
+  search: '',
+  page: 1,
+  pageSize: 24,
+});
+const rowRawFieldVisibility = reactive<Record<string, boolean>>({});
 const columnLabelDialogVisible = ref(false);
 const columnLabelSaving = ref(false);
+const mediaFieldDialogVisible = ref(false);
+const virtualMediaDialogVisible = ref(false);
+const recordMediaDialogVisible = ref(false);
 const columnLabelForm = reactive<Record<string, string>>({});
 const defaultVisibleColumnsForm = ref<string[]>([]);
+const selectedRecordMediaRow = ref<Record<string, any> | null>(null);
 const inlineEditRow = ref<Record<string, any> | null>(null);
 const inlineEditColumn = ref('');
 const inlineEditOriginalRow = ref<Record<string, any> | null>(null);
 const inlineEditDraft = ref('');
 const inlineEditSaving = ref(false);
-const inlineEditInputRef = ref<HTMLInputElement | null>(null);
+const inlineEditInputRef = ref<any>(null);
+const inlineEditOverlayRect = reactive({
+  top: 0,
+  left: 0,
+  width: 0,
+  minHeight: 0,
+});
+const textCellDialogVisible = ref(false);
+const textCellDialogRow = ref<Record<string, any> | null>(null);
+const textCellDialogColumn = ref('');
+const textCellDialogOriginalRow = ref<Record<string, any> | null>(null);
+const textCellDialogDraft = ref('');
+const textCellDialogSaving = ref(false);
+const textCellDialogInputRef = ref<any>(null);
+const tableRef = ref<any>(null);
+const tableDeleteMode = ref(false);
+const tableDeleteSelection = ref<Record<string, any>[]>([]);
+const tableDragState = reactive({
+  active: false,
+  startX: 0,
+  startScrollLeft: 0,
+});
 
 const auditDialogVisible = ref(false);
 const selectedAuditRow = ref<AdminAuditRow | null>(null);
@@ -983,6 +1355,20 @@ const pageBusy = computed(() => resourcesLoading.value || tableLoading.value || 
 const editableColumns = computed(() => (selectedTableMeta.value?.columns || []).filter((column) => column.name !== 'Index'));
 const selectedDocIsMarkdown = computed(() => isMarkdownDoc(selectedDoc.value));
 const canInlineEditTable = computed(() => Boolean(selectedTableMeta.value && !selectedTableMeta.value.read_only));
+const selectedTableHasVirtualMediaFields = computed(() => Boolean(selectedTableMeta.value?.virtual_media_fields?.length));
+const tableImagePreviewUrl = computed(() => {
+  if (!tableImageRow.value || !tableImageColumn.value) return '';
+  return rowCellPreviewUrl(tableImageRow.value, tableImageColumn.value);
+});
+const tableImageRawValue = computed(() => {
+  if (!tableImageRow.value || !tableImageColumn.value) return '';
+  return normalizeFieldName(tableImageRow.value[tableImageColumn.value]);
+});
+const tableImageBoundEntry = computed(() => {
+  if (!tableImageRow.value || !tableImageColumn.value) return null;
+  return getRowBoundFieldMediaEntry(tableImageRow.value, tableImageColumn.value);
+});
+const tableImageAsset = computed(() => tableImageBoundEntry.value?.asset || null);
 const currentDocResource = computed(() =>
   docsResources.value.find((item) => item.filename === currentResource.value) || null
 );
@@ -1005,6 +1391,7 @@ const selectedTableDefaultVisibleColumns = computed(() => {
 const activeSectionEyebrow = computed(() => {
   if (currentView.value === 'table') return t('section.eyebrowTable');
   if (currentView.value === 'doc') return t('section.eyebrowDoc');
+  if (currentView.value === 'media') return t('section.eyebrowMedia');
   if (currentView.value === 'llm') return t('section.eyebrowLlm');
   if (currentView.value === 'audit') return t('section.eyebrowAudit');
   return t('section.eyebrowOverview');
@@ -1012,6 +1399,7 @@ const activeSectionEyebrow = computed(() => {
 const activeSectionTitle = computed(() => {
   if (currentView.value === 'table') return selectedTableMeta.value?.label || currentResource.value || t('section.titleTableFallback');
   if (currentView.value === 'doc') return selectedDoc.value?.filename || currentResource.value || t('section.titleDocFallback');
+  if (currentView.value === 'media') return t('section.titleMedia');
   if (currentView.value === 'llm') return t('section.titleLlm');
   if (currentView.value === 'audit') return t('section.titleAudit');
   return t('section.titleOverview');
@@ -1030,6 +1418,9 @@ const activeSectionDescription = computed(() => {
       name: selectedDoc.value.filename
     });
   }
+  if (currentView.value === 'media') {
+    return t('section.descMedia');
+  }
   if (currentView.value === 'llm') {
     return t('section.descLlm');
   }
@@ -1037,6 +1428,25 @@ const activeSectionDescription = computed(() => {
     return t('section.descAudit');
   }
   return t('section.descOverview');
+});
+const inlineEditStyle = computed(() => {
+  const viewportWidth = typeof window === 'undefined' ? 1440 : window.innerWidth;
+  const desiredWidth = Math.max(
+    inlineEditOverlayRect.width + 56,
+    Math.min(720, Math.max(320, inlineEditDraft.value.length * 11))
+  );
+  const maxWidth = Math.max(280, viewportWidth - 32);
+  const width = Math.min(desiredWidth, maxWidth);
+  const left = Math.min(
+    inlineEditOverlayRect.left,
+    Math.max(16, viewportWidth - width - 16)
+  );
+  return {
+    top: `${inlineEditOverlayRect.top}px`,
+    left: `${Math.max(16, left)}px`,
+    width: `${width}px`,
+    minHeight: `${Math.max(46, inlineEditOverlayRect.minHeight)}px`,
+  };
 });
 const topbarStats = computed(() => {
   if (currentView.value === 'table' && selectedTableMeta.value) {
@@ -1061,6 +1471,13 @@ const topbarStats = computed(() => {
       }
     ];
   }
+  if (currentView.value === 'media') {
+    return [
+      { key: 'assets', label: t('top.assets'), value: String(resources.value?.overview.media_count || 0) },
+      { key: 'docs', label: t('overview.docsLibrary'), value: String(resources.value?.overview.doc_count || 0) },
+      { key: 'rows', label: t('overview.totalRecords'), value: formatNumber(resources.value?.overview.total_rows || 0) }
+    ];
+  }
   if (currentView.value === 'llm') {
     return [
       { key: 'provider', label: t('field.provider'), value: providerLabel.value },
@@ -1083,6 +1500,7 @@ const topbarStats = computed(() => {
 const activePrimarySection = computed(() => {
   if (currentView.value === 'table') return 'tables';
   if (currentView.value === 'doc') return 'docs';
+  if (currentView.value === 'media') return 'media';
   if (currentView.value === 'llm') return 'llm';
   if (currentView.value === 'audit') return 'audit';
   return 'overview';
@@ -1132,7 +1550,7 @@ function navigate(view: string, resource = '') {
   });
 }
 
-function openPrimarySection(section: 'overview' | 'tables' | 'docs' | 'llm' | 'audit') {
+function openPrimarySection(section: 'overview' | 'tables' | 'docs' | 'media' | 'llm' | 'audit') {
   if (section === 'overview') {
     navigate('overview');
     return;
@@ -1151,11 +1569,20 @@ function openPrimarySection(section: 'overview' | 'tables' | 'docs' | 'llm' | 'a
     navigate(target ? 'doc' : 'overview', target);
     return;
   }
+  if (section === 'media') {
+    navigate('media');
+    return;
+  }
   if (section === 'llm') {
     navigate('llm');
     return;
   }
   navigate('audit');
+}
+
+async function handleMediaChanged() {
+  await loadResources();
+  await loadAuditLogs();
 }
 
 function formatNumber(value: number) {
@@ -1196,12 +1623,158 @@ function columnDisplayLabel(columnOrName: string | { name: string }) {
 }
 
 function columnWidth(columnOrName: string | { name: string }) {
+  const name = typeof columnOrName === 'string' ? columnOrName : columnOrName.name;
+  if (isImageDisplayColumn(name)) return 188;
   const label = columnDisplayLabel(columnOrName);
   return Math.min(Math.max(String(label || '').length * 14, 132), 280);
 }
 
-function isTextareaColumn(type: string) {
-  return /text|json|blob/i.test(String(type || ''));
+function normalizeFieldName(value: unknown) {
+  return String(value || '').trim();
+}
+
+function getSelectedTableMediaConfig(columnName: string): AdminTableMediaFieldConfig {
+  const fieldName = normalizeFieldName(columnName);
+  if (!fieldName) return {};
+  return selectedTableMeta.value?.media_fields?.[fieldName] || {};
+}
+
+function isLegacyPictureidColumn(columnName: string) {
+  return normalizeFieldName(columnName).toLowerCase() === 'pictureid';
+}
+
+function isImageEditorColumn(column: { name: string }) {
+  if (isLegacyPictureidColumn(column.name)) return true;
+  return getSelectedTableMediaConfig(column.name).renderer === 'image';
+}
+
+function isImageDisplayColumn(columnName: string) {
+  if (isLegacyPictureidColumn(columnName)) return true;
+  return getSelectedTableMediaConfig(columnName).renderer === 'image';
+}
+
+function canPickMediaAssetForColumn(columnName: string) {
+  if (isLegacyPictureidColumn(columnName)) return true;
+  const config = getSelectedTableMediaConfig(columnName);
+  return (config.renderer === 'image' || config.renderer === 'url' || config.renderer === 'file')
+    && config.source === 'direct';
+}
+
+function rowFieldRawValue(columnName: string) {
+  return normalizeFieldName(rowForm[columnName]);
+}
+
+function rowFieldPreviewUrl(columnName: string) {
+  if (!selectedTableMeta.value) return '';
+  const raw = rowFieldRawValue(columnName);
+  if (raw) {
+    const resolved = resolveMediaSource(
+      selectedTableMeta.value.name,
+      columnName,
+      raw,
+      selectedTableMeta.value.media_fields || {}
+    );
+    if (resolved) return resolved;
+  }
+  if (originalRow.value) {
+    return getRowBoundFieldMediaUrl(originalRow.value, columnName);
+  }
+  return '';
+}
+
+function resetRowMediaState() {
+  fieldMediaPickerVisible.value = false;
+  fieldMediaPickerMode.value = 'rowForm';
+  fieldMediaPickerColumn.value = '';
+  fieldMediaAssets.value = [];
+  fieldMediaQuery.search = '';
+  fieldMediaQuery.page = 1;
+  Object.keys(rowRawFieldVisibility).forEach((key) => delete rowRawFieldVisibility[key]);
+}
+
+function toggleRawField(columnName: string) {
+  const fieldName = normalizeFieldName(columnName);
+  rowRawFieldVisibility[fieldName] = !rowRawFieldVisibility[fieldName];
+}
+
+function isRawFieldVisible(columnName: string) {
+  return Boolean(rowRawFieldVisibility[normalizeFieldName(columnName)]);
+}
+
+function extractLegacyPictureidFromAsset(asset: AdminMediaAsset) {
+  const candidates = [asset.object_key, asset.original_filename, asset.title]
+    .map((value) => normalizeFieldName(value))
+    .filter(Boolean);
+  for (const candidate of candidates) {
+    const tail = candidate.split('/').pop() || candidate;
+    const stripped = tail.replace(/\.[A-Za-z0-9]+$/, '').trim();
+    if (stripped) return decodeURIComponent(stripped);
+  }
+  return '';
+}
+
+function mapAssetValueForColumn(asset: AdminMediaAsset, columnName: string) {
+  if (isLegacyPictureidColumn(columnName)) {
+    return extractLegacyPictureidFromAsset(asset);
+  }
+  const config = getSelectedTableMediaConfig(columnName);
+  if ((config.renderer === 'image' || config.renderer === 'url' || config.renderer === 'file') && config.source === 'direct') {
+    return normalizeFieldName(asset.public_url);
+  }
+  return '';
+}
+
+async function loadFieldMediaLibrary() {
+  if (!fieldMediaPickerColumn.value) return;
+  fieldMediaLibraryLoading.value = true;
+  try {
+    const sourceType = isLegacyPictureidColumn(fieldMediaPickerColumn.value) ? 'legacy_pictureid' : undefined;
+    const result = await fetchAdminMediaList({
+      search: fieldMediaQuery.search || undefined,
+      source_type: sourceType,
+      page: fieldMediaQuery.page,
+      page_size: fieldMediaQuery.pageSize,
+    });
+    fieldMediaAssets.value = Array.isArray(result.items) ? result.items : [];
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.rowMediaLoadFailed'));
+  } finally {
+    fieldMediaLibraryLoading.value = false;
+  }
+}
+
+async function openFieldMediaPicker(columnName: string) {
+  fieldMediaPickerMode.value = 'rowForm';
+  fieldMediaPickerColumn.value = normalizeFieldName(columnName);
+  fieldMediaQuery.search = '';
+  fieldMediaQuery.page = 1;
+  fieldMediaPickerVisible.value = true;
+  await loadFieldMediaLibrary();
+}
+
+async function chooseFieldMediaAsset(asset: AdminMediaAsset) {
+  if (!fieldMediaPickerColumn.value) return;
+  const nextValue = mapAssetValueForColumn(asset, fieldMediaPickerColumn.value);
+  if (!nextValue) {
+    ElMessage.error(t('msg.rowMediaLoadFailed'));
+    return;
+  }
+  if (fieldMediaPickerMode.value === 'tableCell') {
+    await replaceTableImage(asset, nextValue);
+    return;
+  }
+  rowForm[fieldMediaPickerColumn.value] = nextValue;
+  fieldMediaPickerVisible.value = false;
+}
+
+function clearFieldMedia(columnName: string) {
+  rowForm[normalizeFieldName(columnName)] = '';
+}
+
+function inlineEditUsesTextarea(columnName: string, row?: Record<string, any> | null) {
+  const rawValue = row?.[columnName];
+  const normalized = rawValue == null ? '' : String(rawValue);
+  return normalized.includes('\n');
 }
 
 function displayCellValue(value: any) {
@@ -1209,25 +1782,267 @@ function displayCellValue(value: any) {
   return String(value);
 }
 
+function rowCellPreviewUrl(row: Record<string, any>, columnName: string) {
+  if (!selectedTableMeta.value) return '';
+  const bound = getRowBoundFieldMediaUrl(row, columnName);
+  if (bound) return bound;
+  return resolveMediaSource(
+    selectedTableMeta.value.name,
+    columnName,
+    row?.[columnName],
+    selectedTableMeta.value.media_fields || {}
+  );
+}
+
 function canInlineEditColumn(columnName: string) {
   if (!canInlineEditTable.value || !selectedTableMeta.value) return false;
+  if (tableDeleteMode.value) return false;
   if (columnName === 'Index') return false;
+  if (isImageDisplayColumn(columnName)) return false;
   return !selectedTableMeta.value.primary_columns.includes(columnName);
+}
+
+function openTableImageDialog(row: Record<string, any>, columnName: string) {
+  tableImageRow.value = row;
+  tableImageColumn.value = normalizeFieldName(columnName);
+  tableImageDialogVisible.value = true;
+}
+
+function closeTableImageDialog() {
+  tableImageDialogVisible.value = false;
+  tableImageRow.value = null;
+  tableImageColumn.value = '';
+}
+
+function downloadTableImage() {
+  const safeUrl = normalizeFieldName(tableImagePreviewUrl.value);
+  if (!safeUrl) return;
+  const link = document.createElement('a');
+  link.href = safeUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.download = tableImageRawValue.value || safeUrl.split('/').pop() || 'image';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+async function openTableImageReplacementPicker() {
+  if (!tableImageColumn.value || !tableImageRow.value) return;
+  fieldMediaPickerMode.value = 'tableCell';
+  fieldMediaPickerColumn.value = tableImageColumn.value;
+  fieldMediaQuery.search = '';
+  fieldMediaQuery.page = 1;
+  fieldMediaPickerVisible.value = true;
+  await loadFieldMediaLibrary();
+}
+
+async function replaceTableImage(asset: AdminMediaAsset, nextValue: string) {
+  if (!selectedTableMeta.value || !tableImageRow.value || !tableImageColumn.value) return;
+  tableImageActionLoading.value = true;
+  try {
+    await updateAdminTableRecord(
+      selectedTableMeta.value.name,
+      {
+        original_row: tableImageRow.value,
+        updates: { [tableImageColumn.value]: nextValue },
+      },
+      csrfToken.value
+    );
+    fieldMediaPickerVisible.value = false;
+    ElMessage.success(t('msg.recordUpdated'));
+    await loadSelectedTable();
+    closeTableImageDialog();
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.rowSaveFailed'));
+  } finally {
+    tableImageActionLoading.value = false;
+  }
+}
+
+async function removeTableImage() {
+  if (!selectedTableMeta.value || !tableImageRow.value || !tableImageColumn.value) return;
+  tableImageActionLoading.value = true;
+  try {
+    await updateAdminTableRecord(
+      selectedTableMeta.value.name,
+      {
+        original_row: tableImageRow.value,
+        updates: { [tableImageColumn.value]: '' },
+      },
+      csrfToken.value
+    );
+    ElMessage.success(t('tableImage.removed'));
+    await loadSelectedTable();
+    closeTableImageDialog();
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.rowSaveFailed'));
+  } finally {
+    tableImageActionLoading.value = false;
+  }
+}
+
+async function deleteTableImageAsset() {
+  if (!tableImageAsset.value?.id) return;
+  const assetName = tableImageAsset.value.title || tableImageAsset.value.object_key || tableImageRawValue.value || 'image';
+  try {
+    await ElMessageBox.confirm(
+      t('confirm.deleteMedia', { name: assetName }),
+      t('confirm.deleteTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('tableImage.delete'),
+        cancelButtonText: t('dialog.cancel'),
+      }
+    );
+  } catch {
+    return;
+  }
+  tableImageActionLoading.value = true;
+  try {
+    await deleteAdminMedia(tableImageAsset.value.id, csrfToken.value);
+    ElMessage.success(t('msg.mediaDeleted'));
+    await loadResources();
+    await loadSelectedTable();
+    closeTableImageDialog();
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.mediaDeleteFailed'));
+  } finally {
+    tableImageActionLoading.value = false;
+  }
+}
+
+function isInteractiveDragTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(
+    target.closest(
+      'button, a, input, textarea, select, label, .el-button, .el-input, .el-select, .el-checkbox, .row-actions, .table-inline-editor, .table-cell-display, .table-cell-media__thumb'
+    )
+  );
+}
+
+function getActiveInlineEditAnchor() {
+  if (!tableShellRef.value || !inlineEditRow.value || !inlineEditColumn.value) return null;
+  return tableShellRef.value.querySelector('.table-cell-display--editing') as HTMLElement | null;
+}
+
+function updateInlineEditPosition(anchor?: HTMLElement | null) {
+  const target = anchor || getActiveInlineEditAnchor();
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  inlineEditOverlayRect.top = rect.top;
+  inlineEditOverlayRect.left = rect.left;
+  inlineEditOverlayRect.width = rect.width;
+  inlineEditOverlayRect.minHeight = rect.height;
+}
+
+async function focusInlineEditInput() {
+  await nextTick();
+  inlineEditInputRef.value?.focus?.();
+  const nativeInput = inlineEditInputRef.value?.input
+    || inlineEditInputRef.value?.$el?.querySelector?.('input');
+  if (typeof nativeInput?.select === 'function') {
+    nativeInput.select();
+  }
+}
+
+function getTableHorizontalScrollTarget() {
+  if (!tableShellRef.value) return null;
+  return (
+    tableShellRef.value.querySelector('.el-scrollbar__wrap') ||
+    tableShellRef.value.querySelector('.el-table__body-wrapper') ||
+    tableShellRef.value
+  ) as HTMLElement | null;
+}
+
+function handleTableDragMove(event: MouseEvent) {
+  const scrollTarget = getTableHorizontalScrollTarget();
+  if (!tableDragState.active || !scrollTarget) return;
+  const deltaX = event.clientX - tableDragState.startX;
+  scrollTarget.scrollLeft = tableDragState.startScrollLeft - deltaX;
+}
+
+function stopTableDrag() {
+  if (!tableDragState.active) return;
+  tableDragState.active = false;
+  tableShellRef.value?.classList.remove('table-shell--dragging');
+  document.body.classList.remove('admin-table-dragging');
+  window.removeEventListener('mousemove', handleTableDragMove);
+  window.removeEventListener('mouseup', stopTableDrag);
+}
+
+function beginTableDrag(event: MouseEvent) {
+  const scrollTarget = getTableHorizontalScrollTarget();
+  if (event.button !== 0 || !tableShellRef.value || !scrollTarget) return;
+  if (inlineEditRow.value && !(event.target instanceof HTMLElement && event.target.closest('.table-inline-editor'))) {
+    void saveInlineEdit();
+    return;
+  }
+  if (scrollTarget.scrollWidth <= scrollTarget.clientWidth) return;
+  if (isInteractiveDragTarget(event.target)) return;
+  tableDragState.active = true;
+  tableDragState.startX = event.clientX;
+  tableDragState.startScrollLeft = scrollTarget.scrollLeft;
+  tableShellRef.value.classList.add('table-shell--dragging');
+  document.body.classList.add('admin-table-dragging');
+  window.addEventListener('mousemove', handleTableDragMove);
+  window.addEventListener('mouseup', stopTableDrag);
+  event.preventDefault();
 }
 
 function isInlineEditing(row: Record<string, any>, columnName: string) {
   return inlineEditRow.value === row && inlineEditColumn.value === columnName;
 }
 
-async function beginInlineEdit(row: Record<string, any>, columnName: string) {
+async function persistCellUpdate(
+  row: Record<string, any>,
+  columnName: string,
+  originalRow: Record<string, any> | null,
+  nextValue: string
+) {
+  if (!selectedTableMeta.value) return false;
+  const previousValue = row[columnName] == null ? '' : String(row[columnName]);
+  if (nextValue === previousValue) return false;
+  await updateAdminTableRecord(
+    selectedTableMeta.value.name,
+    {
+      original_row: originalRow,
+      updates: {
+        [columnName]: nextValue,
+      },
+    },
+    csrfToken.value
+  );
+  row[columnName] = nextValue;
+  ElMessage.success({
+    message: t('msg.cellSaved'),
+    duration: 1000,
+  });
+  void loadAuditLogs();
+  return true;
+}
+
+async function beginInlineEdit(row: Record<string, any>, columnName: string, event?: MouseEvent) {
   if (!canInlineEditColumn(columnName) || inlineEditSaving.value) return;
+  if (inlineEditUsesTextarea(columnName, row)) {
+    textCellDialogRow.value = row;
+    textCellDialogColumn.value = columnName;
+    textCellDialogOriginalRow.value = { ...row };
+    textCellDialogDraft.value = row[columnName] == null ? '' : String(row[columnName]);
+    textCellDialogVisible.value = true;
+    await nextTick();
+    const textarea = textCellDialogInputRef.value?.textarea
+      || textCellDialogInputRef.value?.$el?.querySelector?.('textarea');
+    textarea?.focus?.();
+    return;
+  }
   inlineEditRow.value = row;
   inlineEditColumn.value = columnName;
   inlineEditOriginalRow.value = { ...row };
   inlineEditDraft.value = row[columnName] == null ? '' : String(row[columnName]);
   await nextTick();
-  inlineEditInputRef.value?.focus();
-  inlineEditInputRef.value?.select();
+  updateInlineEditPosition(event?.currentTarget instanceof HTMLElement ? event.currentTarget : null);
+  await focusInlineEditInput();
 }
 
 function cancelInlineEdit() {
@@ -1235,40 +2050,119 @@ function cancelInlineEdit() {
   inlineEditColumn.value = '';
   inlineEditOriginalRow.value = null;
   inlineEditDraft.value = '';
+  inlineEditOverlayRect.top = 0;
+  inlineEditOverlayRect.left = 0;
+  inlineEditOverlayRect.width = 0;
+  inlineEditOverlayRect.minHeight = 0;
+}
+
+function closeTextCellDialog() {
+  if (textCellDialogSaving.value) return;
+  textCellDialogVisible.value = false;
+  textCellDialogRow.value = null;
+  textCellDialogColumn.value = '';
+  textCellDialogOriginalRow.value = null;
+  textCellDialogDraft.value = '';
+}
+
+function handleInlineEditEnter(event: KeyboardEvent, columnName: string) {
+  event.preventDefault();
+  void saveInlineEdit();
+}
+
+function handleTableSelectionChange(rows: Record<string, any>[]) {
+  if (!tableDeleteMode.value) return;
+  tableDeleteSelection.value = Array.isArray(rows) ? [...rows] : [];
+}
+
+function enterTableDeleteMode() {
+  cancelInlineEdit();
+  closeTextCellDialog();
+  tableDeleteMode.value = true;
+  tableDeleteSelection.value = [];
+  nextTick(() => {
+    tableRef.value?.clearSelection?.();
+  });
+}
+
+function cancelTableDeleteMode() {
+  tableDeleteMode.value = false;
+  tableDeleteSelection.value = [];
+  tableRef.value?.clearSelection?.();
+}
+
+async function confirmDeleteSelectedRows() {
+  if (!selectedTableMeta.value || !tableDeleteSelection.value.length) return;
+  try {
+    await ElMessageBox.confirm(
+      `${t('confirm.deleteRows', { count: tableDeleteSelection.value.length })}\n${t('confirm.deleteRowsWarning')}`,
+      t('confirm.deleteTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('table.confirmDelete'),
+        cancelButtonText: t('table.cancelDelete'),
+      }
+    );
+  } catch {
+    return;
+  }
+
+  const rowsToDelete = [...tableDeleteSelection.value];
+  try {
+    for (const row of rowsToDelete) {
+      await deleteAdminTableRecord(selectedTableMeta.value.name, { original_row: row }, csrfToken.value);
+    }
+    ElMessage.success(t('msg.recordsDeleted', { count: rowsToDelete.length }));
+    cancelTableDeleteMode();
+    await loadResources();
+    await loadSelectedTable();
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.rowDeleteFailed'));
+  }
 }
 
 async function saveInlineEdit() {
   if (!selectedTableMeta.value || !inlineEditRow.value || !inlineEditColumn.value || inlineEditSaving.value) return;
   const row = inlineEditRow.value;
   const columnName = inlineEditColumn.value;
-  const previousValue = row[columnName] == null ? '' : String(row[columnName]);
-  if (inlineEditDraft.value === previousValue) {
-    cancelInlineEdit();
-    return;
-  }
   inlineEditSaving.value = true;
   try {
-    await updateAdminTableRecord(
-      selectedTableMeta.value.name,
-      {
-        original_row: inlineEditOriginalRow.value,
-        updates: {
-          [columnName]: inlineEditDraft.value
-        }
-      },
-      csrfToken.value
-    );
-    row[columnName] = inlineEditDraft.value;
-    ElMessage.success({
-      message: t('msg.cellSaved'),
-      duration: 1000
-    });
+    await persistCellUpdate(row, columnName, inlineEditOriginalRow.value, inlineEditDraft.value);
     cancelInlineEdit();
-    void loadAuditLogs();
   } catch (error: any) {
     ElMessage.error(error?.message || t('msg.rowSaveFailed'));
   } finally {
     inlineEditSaving.value = false;
+  }
+}
+
+function handleGlobalInlineMouseDown(event: MouseEvent) {
+  if (!inlineEditRow.value || inlineEditSaving.value) return;
+  if (!(event.target instanceof HTMLElement)) return;
+  if (event.target.closest('.table-inline-editor')) return;
+  void saveInlineEdit();
+}
+
+function handleInlineEditViewportChange() {
+  if (!inlineEditRow.value || !inlineEditColumn.value) return;
+  updateInlineEditPosition();
+}
+
+async function saveTextCellDialog() {
+  if (!selectedTableMeta.value || !textCellDialogRow.value || !textCellDialogColumn.value || textCellDialogSaving.value) return;
+  textCellDialogSaving.value = true;
+  try {
+    await persistCellUpdate(
+      textCellDialogRow.value,
+      textCellDialogColumn.value,
+      textCellDialogOriginalRow.value,
+      textCellDialogDraft.value
+    );
+    closeTextCellDialog();
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.rowSaveFailed'));
+  } finally {
+    textCellDialogSaving.value = false;
   }
 }
 
@@ -1461,6 +2355,8 @@ async function loadSelectedTable() {
   tableError.value = '';
   tableLoading.value = true;
   cancelInlineEdit();
+  closeTextCellDialog();
+  cancelTableDeleteMode();
   try {
     if (selectedTableMeta.value && tableQuery.searchColumn) {
       const validColumns = new Set((selectedTableMeta.value.columns || []).map((column) => column.name));
@@ -1516,9 +2412,11 @@ function resetRowForm() {
 
 function openCreateRow() {
   cancelInlineEdit();
+  closeTextCellDialog();
   rowDialogMode.value = 'create';
   originalRow.value = null;
   resetRowForm();
+  resetRowMediaState();
   editableColumns.value.forEach((column) => {
     rowForm[column.name] = '';
   });
@@ -1537,6 +2435,16 @@ function openColumnLabelDialog() {
   });
   defaultVisibleColumnsForm.value = [...selectedTableDefaultVisibleColumns.value];
   columnLabelDialogVisible.value = true;
+}
+
+function openMediaFieldDialog() {
+  if (!selectedTableMeta.value) return;
+  mediaFieldDialogVisible.value = true;
+}
+
+function openVirtualMediaDialog() {
+  if (!selectedTableMeta.value) return;
+  virtualMediaDialogVisible.value = true;
 }
 
 function toggleDefaultVisibleColumn(columnName: string, checked: boolean) {
@@ -1586,15 +2494,31 @@ async function saveColumnLabels() {
   }
 }
 
-function openEditRow(row: Record<string, any>) {
-  cancelInlineEdit();
-  rowDialogMode.value = 'edit';
-  originalRow.value = { ...row };
-  resetRowForm();
-  editableColumns.value.forEach((column) => {
-    rowForm[column.name] = row[column.name] == null ? '' : String(row[column.name]);
-  });
-  rowDialogVisible.value = true;
+async function handleMediaFieldsSaved(fields: Record<string, AdminTableMediaFieldConfig>) {
+  if (!selectedTableMeta.value) return;
+  selectedTableMeta.value = {
+    ...selectedTableMeta.value,
+    media_fields: fields,
+  };
+  await loadAuditLogs();
+}
+
+async function handleVirtualMediaFieldsSaved(fields: AdminVirtualMediaField[]) {
+  if (!selectedTableMeta.value) return;
+  selectedTableMeta.value = {
+    ...selectedTableMeta.value,
+    virtual_media_fields: fields,
+  };
+  await loadAuditLogs();
+}
+
+function openRecordMediaSlots(row: Record<string, any>) {
+  selectedRecordMediaRow.value = { ...row };
+  recordMediaDialogVisible.value = true;
+}
+
+async function handleRecordMediaChanged() {
+  await loadAuditLogs();
 }
 
 async function saveRow() {
@@ -1622,28 +2546,6 @@ async function saveRow() {
     ElMessage.error(error?.message || t('msg.rowSaveFailed'));
   } finally {
     rowSaving.value = false;
-  }
-}
-
-async function deleteRow(row: Record<string, any>) {
-  if (!selectedTableMeta.value) return;
-  cancelInlineEdit();
-  try {
-    await ElMessageBox.confirm(t('confirm.deleteRow'), t('confirm.deleteTitle'), {
-      type: 'warning',
-      confirmButtonText: t('table.delete'),
-      cancelButtonText: t('dialog.cancel')
-    });
-  } catch {
-    return;
-  }
-  try {
-    await deleteAdminTableRecord(selectedTableMeta.value.name, { original_row: row }, csrfToken.value);
-    ElMessage.success(t('msg.recordDeleted'));
-    await loadResources();
-    await loadSelectedTable();
-  } catch (error: any) {
-    ElMessage.error(error?.message || t('msg.rowDeleteFailed'));
   }
 }
 
@@ -1796,6 +2698,7 @@ async function handleLogout() {
 
 async function refreshCurrentView() {
   cancelInlineEdit();
+  closeTextCellDialog();
   await loadResources();
   if (currentView.value === 'table' && currentResource.value) {
     await selectTable(currentResource.value);
@@ -1807,6 +2710,10 @@ async function refreshCurrentView() {
   }
   if (currentView.value === 'llm') {
     await Promise.all([loadLLMSettings(), loadWorkflowSettings()]);
+    return;
+  }
+  if (currentView.value === 'media') {
+    await Promise.all([loadResources(), loadAuditLogs(), mediaPanelRef.value?.refresh?.()]);
     return;
   }
   if (currentView.value === 'audit') {
@@ -1842,7 +2749,19 @@ watch(
   { immediate: false }
 );
 
+watch(
+  () => rowDialogVisible.value,
+  (visible) => {
+    if (!visible) {
+      resetRowMediaState();
+    }
+  }
+);
+
 onMounted(async () => {
+  window.addEventListener('mousedown', handleGlobalInlineMouseDown, true);
+  window.addEventListener('resize', handleInlineEditViewportChange);
+  window.addEventListener('scroll', handleInlineEditViewportChange, true);
   const authed = await ensureAdminSession();
   if (!authed) return;
   await Promise.all([loadResources(), loadLLMSettings(), loadWorkflowSettings(), loadAuditLogs()]);
@@ -1851,6 +2770,13 @@ onMounted(async () => {
   } else {
     await syncRouteState();
   }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('mousedown', handleGlobalInlineMouseDown, true);
+  window.removeEventListener('resize', handleInlineEditViewportChange);
+  window.removeEventListener('scroll', handleInlineEditViewportChange, true);
+  stopTableDrag();
 });
 </script>
 
@@ -2311,12 +3237,11 @@ onMounted(async () => {
 }
 
 .table-controls-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: auto minmax(340px, 420px) minmax(0, 1fr);
+  gap: 12px 16px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .content-card-header h3 {
@@ -2335,11 +3260,14 @@ onMounted(async () => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: 0;
 }
 
 .overview-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
 }
 
@@ -2460,30 +3388,76 @@ onMounted(async () => {
 
 .summary-strip {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 8px;
   margin: 0;
-  flex: 1 1 360px;
+  min-width: 0;
+  align-items: center;
+  justify-self: start;
 }
 
 .summary-strip span {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
   background: var(--admin-surface-muted);
   border: 1px solid var(--admin-border);
   color: var(--admin-text-muted);
-  font-size: 0.88rem;
+  font-size: 0.81rem;
   font-weight: 700;
 }
 
 .table-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 220px 150px auto;
-  gap: 12px;
-  margin-bottom: 14px;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+  align-items: center;
+  width: 100%;
+  max-width: 420px;
+  justify-self: center;
+}
+
+.table-search-combo {
+  min-width: 0;
+  width: 100%;
+}
+
+.table-search-combo__select {
+  width: 124px;
+}
+
+.table-search-combo :deep(.el-input-group__prepend) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.table-search-combo__select :deep(.el-select__wrapper) {
+  min-height: 32px;
+  box-shadow: none;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.table-search-combo :deep(.el-input__wrapper) {
+  min-height: 36px;
+}
+
+.card-actions--inline {
+  gap: 10px;
+  justify-content: flex-end;
+  min-width: 0;
+  width: 100%;
+  justify-self: end;
+  flex-wrap: wrap;
+}
+
+.table-page-size {
+  width: 124px;
 }
 
 .inline-alert {
@@ -2498,6 +3472,12 @@ onMounted(async () => {
   border: 1px solid var(--admin-border);
   border-radius: 14px;
   background: var(--admin-surface);
+  cursor: grab;
+  scrollbar-gutter: stable both-edges;
+}
+
+.table-shell--dragging {
+  cursor: grabbing;
 }
 
 .workspace-table {
@@ -2526,6 +3506,13 @@ onMounted(async () => {
 .table-shell :deep(.el-table td.el-table__cell) {
   background: var(--admin-table-row-bg);
   color: var(--admin-text);
+  vertical-align: top;
+}
+
+.table-shell :deep(.el-table .cell) {
+  white-space: normal;
+  overflow: visible;
+  position: relative;
 }
 
 .table-shell :deep(.el-table .el-table__row--striped td.el-table__cell) {
@@ -2549,8 +3536,60 @@ onMounted(async () => {
   background: var(--admin-table-header-bg);
 }
 
+.table-cell-media {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.table-cell-media__thumb {
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: var(--admin-surface-muted);
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.table-cell-media__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: var(--admin-surface);
+}
+
+.table-cell-media__empty {
+  width: 92px;
+  height: 92px;
+  border: 1px dashed var(--admin-border);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--admin-text-faint);
+  background: var(--admin-surface-muted);
+  font-weight: 700;
+}
+
+.table-cell-media__value {
+  width: 100%;
+  text-align: center;
+  color: var(--admin-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
 .table-shell :deep(.el-table__body tr:hover > td.el-table__cell) {
   background: var(--admin-table-row-hover) !important;
+}
+
+:global(body.admin-table-dragging) {
+  user-select: none;
+  cursor: grabbing;
 }
 
 .table-footer {
@@ -2570,6 +3609,18 @@ onMounted(async () => {
   font-size: 0.92rem;
 }
 
+.summary-strip-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summary-strip-selection {
+  color: var(--admin-text-muted);
+  font-weight: 700;
+}
+
 .row-actions {
   display: flex;
   gap: 8px;
@@ -2577,13 +3628,13 @@ onMounted(async () => {
 
 .table-cell-display {
   width: 100%;
-  min-height: 38px;
-  padding: 0 8px;
+  min-height: 52px;
+  padding: 10px 8px;
   border: none;
   background: transparent;
   text-align: left;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   cursor: default;
 }
 
@@ -2596,11 +3647,19 @@ onMounted(async () => {
   border-radius: 10px;
 }
 
+.table-cell-display--editing {
+  background: var(--admin-surface);
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
 .table-cell-value {
   width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.52;
   color: var(--admin-text);
 }
 
@@ -2608,20 +3667,195 @@ onMounted(async () => {
   color: var(--admin-text-faint);
 }
 
-.table-cell-editor {
-  padding: 4px 8px;
+.table-inline-editor {
+  position: fixed;
+  z-index: 2600;
+  pointer-events: auto;
 }
 
-.table-cell-input {
+.table-inline-editor__input {
   width: 100%;
-  min-height: 34px;
-  padding: 7px 10px;
-  border-radius: 10px;
+}
+
+.table-inline-editor__input :deep(.el-input__wrapper) {
+  min-height: 48px;
+  padding-inline: 16px;
+  border-radius: 16px;
   border: 1px solid var(--admin-accent);
   background: var(--admin-surface);
+  box-shadow:
+    0 16px 32px rgba(15, 23, 42, 0.12),
+    0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.table-image-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 20px;
+}
+
+.table-image-workbench__preview-shell {
+  min-height: 440px;
+  border-radius: 20px;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface-muted);
+  padding: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.table-image-workbench__preview {
+  width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+  border-radius: 14px;
+  background: var(--admin-surface);
+}
+
+.table-image-workbench__empty {
+  color: var(--admin-text-muted);
+  font-weight: 700;
+}
+
+.table-image-workbench__side {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.table-image-workbench__meta {
+  display: grid;
+  gap: 12px;
+}
+
+.table-image-workbench__meta article {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface-muted);
+}
+
+.table-image-workbench__meta span,
+.table-image-workbench__meta strong {
+  display: block;
+}
+
+.table-image-workbench__meta span {
+  color: var(--admin-text-faint);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.table-image-workbench__meta strong {
+  margin-top: 6px;
   color: var(--admin-text);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.table-image-workbench__tip {
+  margin: 0;
+  color: var(--admin-text-muted);
+  line-height: 1.6;
+}
+
+.table-image-workbench__actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+  grid-auto-rows: 52px;
+}
+
+.table-image-workbench__action-button {
+  width: 100%;
+  height: 100%;
+  min-height: 52px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+
+.table-image-workbench__actions > * {
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.table-image-workbench__actions :deep(.el-button) {
+  width: 100%;
+  min-height: 52px;
+  height: 100%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  box-sizing: border-box;
+  padding-inline: 16px;
+}
+
+.table-image-workbench__actions :deep(.el-button > span),
+.table-image-workbench__action-button :deep(span) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.text-cell-editor-dialog {
+  display: grid;
+  gap: 16px;
+}
+
+.text-cell-editor-dialog__meta {
+  display: grid;
+  gap: 12px;
+}
+
+.text-cell-editor-dialog__meta article {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface-muted);
+}
+
+.text-cell-editor-dialog__meta span,
+.text-cell-editor-dialog__meta strong {
+  display: block;
+}
+
+.text-cell-editor-dialog__meta span {
+  color: var(--admin-text-faint);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.text-cell-editor-dialog__meta strong {
+  margin-top: 6px;
+  color: var(--admin-text);
+  line-height: 1.5;
+}
+
+.text-cell-editor-dialog__input :deep(.el-textarea__inner) {
+  min-height: 320px !important;
+  padding: 16px 18px;
+  line-height: 1.72;
+  border-radius: 16px;
+  resize: vertical;
+  font-size: 0.98rem;
 }
 
 .llm-layout {
@@ -2663,6 +3897,151 @@ onMounted(async () => {
 
 .label-form-row :deep(.el-checkbox) {
   justify-self: flex-start;
+}
+
+.row-form-item--wide {
+  grid-column: 1 / -1;
+}
+
+.row-media-field {
+  display: grid;
+  gap: 12px;
+}
+
+.row-media-preview-shell {
+  min-height: 200px;
+  border: 1px solid var(--admin-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.12), rgba(226, 232, 240, 0.34));
+  display: grid;
+  place-items: center;
+}
+
+.row-media-preview-image {
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  display: block;
+}
+
+.row-media-preview-empty {
+  color: var(--admin-text-muted);
+  font-size: 0.92rem;
+}
+
+.row-media-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.row-media-meta {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  background: var(--admin-surface-muted);
+}
+
+.row-media-meta span {
+  color: var(--admin-text-faint);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.row-media-meta strong {
+  color: var(--admin-text);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.row-media-picker {
+  display: grid;
+  gap: 16px;
+}
+
+.row-media-picker__hint {
+  margin: 0;
+  color: var(--admin-text-muted);
+  line-height: 1.6;
+}
+
+.row-media-picker__toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.row-media-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  max-height: 58vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.row-media-picker-card {
+  border: 1px solid var(--admin-border);
+  border-radius: 16px;
+  background: var(--admin-surface-muted);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.row-media-picker-card:hover {
+  border-color: rgba(37, 99, 235, 0.32);
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+}
+
+.row-media-picker-card__thumb {
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.12), rgba(226, 232, 240, 0.3));
+}
+
+.row-media-picker-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.row-media-picker-card__copy {
+  display: grid;
+  gap: 4px;
+}
+
+.row-media-picker-card__copy strong {
+  color: var(--admin-text);
+  line-height: 1.35;
+}
+
+.row-media-picker-card__copy span,
+.row-media-picker-card__action,
+.row-media-picker-empty {
+  color: var(--admin-text-muted);
+  font-size: 0.82rem;
+}
+
+.row-media-picker-card__action {
+  font-weight: 700;
+}
+
+.row-media-picker-empty {
+  padding: 20px;
+  border: 1px dashed var(--admin-border);
+  border-radius: 16px;
+  background: var(--admin-surface-muted);
+  text-align: center;
 }
 
 .span-2 {
@@ -3043,6 +4422,24 @@ onMounted(async () => {
   .workspace-subtitle-select {
     width: min(100%, 320px);
   }
+
+  .table-controls-bar {
+    grid-template-columns: auto minmax(280px, 1fr);
+  }
+
+  .card-actions {
+    justify-content: flex-start;
+  }
+
+  .summary-strip,
+  .table-toolbar {
+    grid-column: auto;
+  }
+
+  .card-actions--inline {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
 }
 
 @media (max-width: 1180px) {
@@ -3058,6 +4455,25 @@ onMounted(async () => {
 
   .workspace-main {
     min-height: 0;
+  }
+
+  .table-controls-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .table-toolbar {
+    grid-template-columns: minmax(260px, 1fr) 88px;
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .summary-strip,
+  .card-actions--inline {
+    grid-column: 1 / -1;
+  }
+
+  .card-actions--inline {
+    justify-content: flex-start;
   }
 }
 
@@ -3081,6 +4497,11 @@ onMounted(async () => {
     width: 100%;
   }
 
+  .card-actions {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
   .workspace-subtitle-select,
   .workspace-subtitle-control,
   .topbar-tools {
@@ -3099,7 +4520,21 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
+  .summary-strip {
+    flex-wrap: wrap;
+  }
+
   .label-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .row-media-picker__toolbar,
+  .row-media-picker-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-image-workbench,
+  .table-image-workbench__actions {
     grid-template-columns: 1fr;
   }
 }

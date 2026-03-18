@@ -100,6 +100,16 @@ export type AdminTableMediaFieldConfig = {
   preview?: boolean;
 };
 
+export type AdminVirtualMediaField = {
+  key: string;
+  label: string;
+  multiple?: boolean;
+  placement?: 'record' | 'detail' | 'gallery';
+  required?: boolean;
+  sort_order?: number;
+  orphan?: boolean;
+};
+
 export type AdminTableColumn = {
   name: string;
   type: string;
@@ -110,6 +120,7 @@ export type AdminTableMeta = AdminTableResource & {
   columns: AdminTableColumn[];
   default_visible_columns: string[];
   media_fields?: Record<string, AdminTableMediaFieldConfig>;
+  virtual_media_fields?: AdminVirtualMediaField[];
 };
 
 export type AdminTableLabelsResponse = {
@@ -127,12 +138,46 @@ export type AdminTableMediaFieldsResponse = {
   fields: Record<string, AdminTableMediaFieldConfig>;
 };
 
+export type AdminTableVirtualMediaFieldsResponse = {
+  table: string;
+  virtual_media_fields: AdminVirtualMediaField[];
+};
+
 export type AdminTableRowsResponse = {
   table: string;
   total: number;
   page: number;
   page_size: number;
   rows: Record<string, any>[];
+};
+
+export type AdminRecordMediaSlotBinding = {
+  binding: {
+    id: number;
+    asset_id: number;
+    binding_type: string;
+    resource_name: string;
+    field_name: string;
+    record_key: string;
+    slot_key: string;
+    extra?: Record<string, any>;
+    created_by?: number | null;
+    created_by_username?: string;
+    created_at?: string | null;
+  };
+  asset?: AdminMediaAsset | null;
+};
+
+export type AdminRecordMediaSlot = AdminVirtualMediaField & {
+  bindings: AdminRecordMediaSlotBinding[];
+};
+
+export type AdminRecordMediaSlotsResponse = {
+  table: string;
+  record_key: string;
+  match_columns: string[];
+  row: Record<string, any>;
+  slots: AdminRecordMediaSlot[];
 };
 
 export type AdminDocDetail = {
@@ -161,6 +206,19 @@ export type AdminMediaAsset = {
   created_by_username?: string;
   created_at?: string | null;
   markdown: string;
+  binding_count?: number;
+  reference_count?: number;
+};
+
+export type AdminMediaReference = {
+  type: string;
+  resource: string;
+  field_name?: string;
+  record_key?: string;
+  slot_key?: string;
+  source?: string;
+  binding_id?: number | null;
+  created_at?: string | null;
 };
 
 export type AdminMediaListResponse = {
@@ -168,6 +226,68 @@ export type AdminMediaListResponse = {
   page_size: number;
   total: number;
   items: AdminMediaAsset[];
+};
+
+export type AdminMediaDetailResponse = {
+  asset: AdminMediaAsset;
+  references: AdminMediaReference[];
+};
+
+export type AdminLegacyPictureidPreviewRow = {
+  pictureid: string;
+  pictureid_normalized: string;
+  record_key: string;
+  match_columns: string[];
+  caption: string;
+  object_key: string;
+  public_url: string;
+  source_field: string;
+};
+
+export type AdminLegacyPictureidPreviewTable = {
+  table: string;
+  display_name: string;
+  candidate_count: number;
+  with_record_key_count: number;
+  sample_rows: AdminLegacyPictureidPreviewRow[];
+};
+
+export type AdminLegacyPictureidPreviewResponse = {
+  tables: AdminLegacyPictureidPreviewTable[];
+  invalid_tables: string[];
+  summary: {
+    table_count: number;
+    candidate_count: number;
+    with_record_key_count: number;
+    migration_ready: boolean;
+    bucket_configured: boolean;
+    public_base_configured: boolean;
+  };
+};
+
+export type AdminLegacyPictureidMigrateResponse = {
+  ok: boolean;
+  dry_run: boolean;
+  invalid_tables: string[];
+  tables: Array<{
+    table: string;
+    display_name: string;
+    candidate_count: number;
+    created_assets: number;
+    reused_assets: number;
+    created_bindings: number;
+    existing_bindings: number;
+    skipped_rows: number;
+  }>;
+  summary: {
+    table_count: number;
+    candidate_count: number;
+    created_assets: number;
+    reused_assets: number;
+    created_bindings: number;
+    existing_bindings: number;
+    skipped_rows: number;
+  };
 };
 
 async function parseJson(resp: Response) {
@@ -328,6 +448,52 @@ export async function saveAdminTableMediaFields(
   return (await ensureOk(resp, '保存图片字段配置失败')) as AdminTableMediaFieldsResponse;
 }
 
+export async function saveAdminTableVirtualMediaFields(
+  table: string,
+  payload: { fields: AdminVirtualMediaField[] },
+  csrfToken: string
+): Promise<AdminTableVirtualMediaFieldsResponse> {
+  const resp = await fetch(`/admin/api/tables/${encodeURIComponent(table)}/virtual_media_fields`, {
+    method: 'POST',
+    headers: adminJsonHeaders(csrfToken),
+    credentials: 'same-origin',
+    body: JSON.stringify(payload),
+  });
+  return (await ensureOk(resp, '保存记录图片槽位失败')) as AdminTableVirtualMediaFieldsResponse;
+}
+
+export async function fetchAdminRecordMediaSlots(
+  table: string,
+  payload: { original_row: Record<string, any> }
+): Promise<AdminRecordMediaSlotsResponse> {
+  const resp = await fetch(`/admin/api/tables/${encodeURIComponent(table)}/record_media_slots`, {
+    method: 'POST',
+    headers: adminJsonHeaders(),
+    credentials: 'same-origin',
+    body: JSON.stringify(payload),
+  });
+  return (await ensureOk(resp, '加载记录图片槽位失败')) as AdminRecordMediaSlotsResponse;
+}
+
+export async function bindAdminRecordMediaSlot(
+  table: string,
+  payload: {
+    original_row: Record<string, any>;
+    slot_key: string;
+    asset_id: number;
+    replace_existing?: boolean;
+  },
+  csrfToken: string
+) {
+  const resp = await fetch(`/admin/api/tables/${encodeURIComponent(table)}/record_media_slots/bind`, {
+    method: 'POST',
+    headers: adminJsonHeaders(csrfToken),
+    credentials: 'same-origin',
+    body: JSON.stringify(payload),
+  });
+  return await ensureOk(resp, '绑定记录图片失败');
+}
+
 export async function fetchAdminDoc(filename: string): Promise<AdminDocDetail> {
   const resp = await fetch(`/admin/api/docs/${encodeURIComponent(filename)}`, {
     method: 'GET',
@@ -366,10 +532,11 @@ export async function deleteAdminDoc(filename: string, csrfToken: string) {
   return await ensureOk(resp, '删除文档失败');
 }
 
-export async function fetchAdminMediaList(params: { search?: string; source_type?: string; page?: number; page_size?: number } = {}): Promise<AdminMediaListResponse> {
+export async function fetchAdminMediaList(params: { search?: string; source_type?: string; binding_status?: string; page?: number; page_size?: number } = {}): Promise<AdminMediaListResponse> {
   const query = new URLSearchParams();
   if (params.search) query.set('search', String(params.search));
   if (params.source_type) query.set('source_type', String(params.source_type));
+  if (params.binding_status) query.set('binding_status', String(params.binding_status));
   if (params.page) query.set('page', String(params.page));
   if (params.page_size) query.set('page_size', String(params.page_size));
   const resp = await fetch(`/admin/api/media${query.toString() ? `?${query.toString()}` : ''}`, {
@@ -398,13 +565,89 @@ export async function uploadAdminMedia(
   return (await ensureOk(resp, '上传图片失败')) as { asset: AdminMediaAsset; deduped?: boolean };
 }
 
+export async function fetchAdminMediaDetail(assetId: number): Promise<AdminMediaDetailResponse> {
+  const resp = await fetch(`/admin/api/media/${assetId}`, {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'same-origin',
+  });
+  return (await ensureOk(resp, '加载媒体详情失败')) as AdminMediaDetailResponse;
+}
+
+export async function saveAdminMedia(
+  assetId: number,
+  payload: { csrfToken: string; title?: string; alt_text?: string; source_type?: string }
+): Promise<AdminMediaDetailResponse> {
+  const csrfToken = String(payload?.csrfToken || '');
+  const body = { ...payload };
+  delete body.csrfToken;
+  const resp = await fetch(`/admin/api/media/${assetId}`, {
+    method: 'POST',
+    headers: adminJsonHeaders(csrfToken),
+    credentials: 'same-origin',
+    body: JSON.stringify(body),
+  });
+  return (await ensureOk(resp, '保存媒体元数据失败')) as AdminMediaDetailResponse;
+}
+
+export async function deleteAdminMediaBinding(bindingId: number, csrfToken: string) {
+  const resp = await fetch(`/admin/api/media/bindings/${bindingId}`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+    headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : undefined,
+  });
+  return await ensureOk(resp, '删除图片绑定失败');
+}
+
 export async function deleteAdminMedia(assetId: number, csrfToken: string) {
   const resp = await fetch(`/admin/api/media/${assetId}`, {
     method: 'DELETE',
     credentials: 'same-origin',
     headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : undefined,
   });
-  return await ensureOk(resp, '删除图片失败');
+  const json = await parseJson(resp);
+  if (!resp.ok || json?.error) {
+    const error: Error & { references?: AdminMediaReference[] } = new Error(
+      json?.error || '删除图片失败'
+    );
+    if (Array.isArray(json?.references)) {
+      error.references = json.references;
+    }
+    throw error;
+  }
+  return json;
+}
+
+export async function fetchAdminLegacyPictureidPreview(params: {
+  tables?: string[];
+  sample_limit?: number;
+} = {}): Promise<AdminLegacyPictureidPreviewResponse> {
+  const query = new URLSearchParams();
+  if (params.tables?.length) query.set('tables', params.tables.join(','));
+  if (params.sample_limit != null) query.set('sample_limit', String(params.sample_limit));
+  const resp = await fetch(`/admin/api/media/legacy_pictureid/preview${query.toString() ? `?${query.toString()}` : ''}`, {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'same-origin',
+  });
+  return (await ensureOk(resp, '加载历史 pictureid 预览失败')) as AdminLegacyPictureidPreviewResponse;
+}
+
+export async function runAdminLegacyPictureidMigration(
+  payload: {
+    tables?: string[];
+    dry_run?: boolean;
+    confirm?: boolean;
+  },
+  csrfToken: string
+): Promise<AdminLegacyPictureidMigrateResponse> {
+  const resp = await fetch('/admin/api/media/legacy_pictureid/migrate', {
+    method: 'POST',
+    headers: adminJsonHeaders(csrfToken),
+    credentials: 'same-origin',
+    body: JSON.stringify(payload),
+  });
+  return (await ensureOk(resp, '执行历史 pictureid 迁移失败')) as AdminLegacyPictureidMigrateResponse;
 }
 
 export async function saveAdminLLMSettings(payload: Record<string, any>): Promise<AdminLLMSettings> {

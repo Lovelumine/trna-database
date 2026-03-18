@@ -35,7 +35,13 @@
             </template>
 
             <template v-else-if="column.key === 'Structure of sup-tRNA'">
-              <el-image style="width: 100px; height: 100px" :src="text" :preview-src-list="[text]" fit="cover" />
+              <el-image
+                v-if="getStructureImageUrl(record)"
+                style="width: 100px; height: 100px"
+                :src="getStructureImageUrl(record)"
+                :preview-src-list="getStructurePreviewList(record)"
+                fit="cover"
+              />
             </template>
 
             <template v-else-if="column.key === 'Codon for readthrough'">
@@ -126,8 +132,9 @@
               <div>
                 <b>Structure of sup-tRNA:</b>
                 <img
-                  :src="`https://minio.lumoxuan.cn/ensure/picture/${record.pictureid}.png`"
-                  @click="showLightbox(record.pictureid)"
+                  v-if="getStructureImageUrl(record)"
+                  :src="getStructureImageUrl(record)"
+                  @click="showLightboxByUrl(getStructureImageUrl(record))"
                   style="width: 100px; cursor: pointer;"
                 />
               </div>
@@ -156,8 +163,8 @@
               <p v-if="record.Notes">
                 <b>Notes:</b>
                 <img
-                  :src="`https://minio.lumoxuan.cn/ensure/picture/${record.Notes}.png`"
-                  @click="showLightbox(record.Notes)"
+                  :src="resolveMediaSource(TABLE_NAME, 'Notes', record.Notes)"
+                  @click="showLightboxByUrl(resolveMediaSource(TABLE_NAME, 'Notes', record.Notes))"
                   style="width: 100px; cursor: pointer;"
                 />
               </p>
@@ -220,6 +227,7 @@ import type { EChartsOption } from 'echarts';
 import en from '@shene/table/dist/locale/en';
 import TableToolbar from '@/components/TableToolbar.vue';
 import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
+import { getRowBoundFieldMediaUrl, resolveMediaSource } from '@/utils/tableMedia';
 const locale = ref(en);
 
 export default defineComponent({
@@ -251,13 +259,28 @@ export default defineComponent({
     const visible = ref(false);
     const lightboxImgs = ref<string[]>([]);
     const lightboxKey = ref(0);
-    const showLightbox = (pictureid: string) => {
-      const imgUrl = `https://minio.lumoxuan.cn/ensure/picture/${pictureid}.png`;
+    const showLightboxByUrl = (imgUrl: string) => {
+      if (!imgUrl) return;
       lightboxImgs.value = [imgUrl];
       lightboxKey.value += 1;
       visible.value = true;
     };
     const hideLightbox = () => { visible.value = false; };
+
+    const getStructureImageUrl = (record: any) => {
+      const boundPicture = getRowBoundFieldMediaUrl(record, 'pictureid');
+      if (boundPicture) return boundPicture;
+      const boundStructure = getRowBoundFieldMediaUrl(record, 'Structure of sup-tRNA');
+      if (boundStructure) return boundStructure;
+      const legacyPicture = resolveMediaSource(TABLE_NAME, 'pictureid', record?.pictureid);
+      if (legacyPicture) return legacyPicture;
+      return resolveMediaSource(TABLE_NAME, 'Structure of sup-tRNA', record?.['Structure of sup-tRNA']);
+    };
+
+    const getStructurePreviewList = (record: any) => {
+      const url = getStructureImageUrl(record);
+      return url ? [url] : [];
+    };
 
     const loadStats = async () => {
       try {
@@ -569,8 +592,11 @@ export default defineComponent({
       visible,
       lightboxImgs,
       lightboxKey,
-      showLightbox,
+      showLightboxByUrl,
       hideLightbox,
+      getStructureImageUrl,
+      getStructurePreviewList,
+      resolveMediaSource,
       highlightMutation,
 
       // 分页

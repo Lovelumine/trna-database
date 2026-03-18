@@ -51,6 +51,7 @@ DEFAULT_SETTING_FACTORIES = {
     "table_column_label_overrides_json": lambda: "{}",
     "table_default_visible_columns_json": lambda: "{}",
     "table_media_field_config_json": lambda: "{}",
+    "table_virtual_media_fields_json": lambda: "{}",
 }
 
 
@@ -518,6 +519,54 @@ def _normalize_media_field_config(raw: Any) -> dict[str, dict[str, Any]]:
     return normalized
 
 
+def _normalize_virtual_media_fields(raw: Any) -> list[dict[str, Any]]:
+    raw_items: list[Any]
+    if isinstance(raw, list):
+        raw_items = list(raw)
+    elif isinstance(raw, dict):
+        raw_items = [
+            {"key": str(key or "").strip(), **(value if isinstance(value, dict) else {})}
+            for key, value in raw.items()
+        ]
+    else:
+        raw_items = []
+
+    normalized: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("key") or "").strip().lower().replace(" ", "_")
+        key = "".join(ch for ch in key if ch.isalnum() or ch in {"_", "-"})
+        if not key or key in seen:
+            continue
+        seen.add(key)
+
+        placement = str(item.get("placement") or "record").strip().lower()
+        if placement not in ("record", "detail", "gallery"):
+            placement = "record"
+
+        normalized.append(
+            {
+                "key": key,
+                "label": str(item.get("label") or key).strip() or key,
+                "multiple": bool(item.get("multiple")),
+                "placement": placement,
+                "required": bool(item.get("required")),
+                "sort_order": _int_text(item.get("sort_order"), 0),
+            }
+        )
+
+    normalized.sort(
+        key=lambda item: (
+            int(item.get("sort_order") or 0),
+            str(item.get("label") or ""),
+            str(item.get("key") or ""),
+        )
+    )
+    return normalized
+
+
 def get_table_media_field_config_map() -> dict[str, dict[str, dict[str, Any]]]:
     ensure_default_app_settings()
     raw = _json_dict(get_setting("table_media_field_config_json", "{}"), {})
@@ -539,6 +588,27 @@ def get_table_media_field_config(table: str) -> dict[str, dict[str, Any]]:
     return dict(get_table_media_field_config_map().get(table_key, {}))
 
 
+def get_table_virtual_media_fields_map() -> dict[str, list[dict[str, Any]]]:
+    ensure_default_app_settings()
+    raw = _json_dict(get_setting("table_virtual_media_fields_json", "{}"), {})
+    normalized: dict[str, list[dict[str, Any]]] = {}
+    for table_name, config in raw.items():
+        table_key = str(table_name or "").strip()
+        if not table_key:
+            continue
+        table_config = _normalize_virtual_media_fields(config)
+        if table_config:
+            normalized[table_key] = table_config
+    return normalized
+
+
+def get_table_virtual_media_fields(table: str) -> list[dict[str, Any]]:
+    table_key = str(table or "").strip()
+    if not table_key:
+        return []
+    return list(get_table_virtual_media_fields_map().get(table_key, []))
+
+
 def save_table_media_field_config(table: str, config: dict[str, Any]):
     table_key = str(table or "").strip()
     if not table_key:
@@ -553,4 +623,21 @@ def save_table_media_field_config(table: str, config: dict[str, Any]):
     set_setting("table_media_field_config_json", json.dumps(overrides, ensure_ascii=False))
     db.session.commit()
     after = dict(overrides.get(table_key, {}))
+    return before, after
+
+
+def save_table_virtual_media_fields(table: str, config: list[dict[str, Any]] | dict[str, Any]):
+    table_key = str(table or "").strip()
+    if not table_key:
+        raise ValueError("table is required")
+    before = get_table_virtual_media_fields(table_key)
+    overrides = get_table_virtual_media_fields_map()
+    normalized = _normalize_virtual_media_fields(config)
+    if normalized:
+        overrides[table_key] = normalized
+    else:
+        overrides.pop(table_key, None)
+    set_setting("table_virtual_media_fields_json", json.dumps(overrides, ensure_ascii=False))
+    db.session.commit()
+    after = list(overrides.get(table_key, []))
     return before, after

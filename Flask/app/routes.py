@@ -42,18 +42,21 @@ from .admin import (
     serialize_admin_user,
     verify_admin_credentials,
 )
-from .models import AdminAuditLog, MediaAsset
+from .models import AdminAuditLog, MediaAsset, MediaBinding
 from .settings_store import (
+    get_setting,
     get_ai_workflow_settings,
     get_llm_settings,
     get_table_column_labels,
     get_table_default_visible_columns,
     get_table_media_field_config,
+    get_table_virtual_media_fields,
     save_ai_workflow_settings,
     save_llm_settings,
     save_table_column_labels,
     save_table_default_visible_columns,
     save_table_media_field_config,
+    save_table_virtual_media_fields,
 )
 
 from .logic.align import (
@@ -4144,6 +4147,94 @@ def _serialize_media_asset(asset: MediaAsset) -> dict:
     }
 
 
+_MEDIA_BINDING_TYPES = {
+    "table_field",
+    "table_record_slot",
+    "doc_image",
+    "site_asset",
+    "manual_attachment",
+}
+
+
+def _safe_media_binding_type(value: str) -> str:
+    binding_type = str(value or "").strip().lower()
+    if binding_type in _MEDIA_BINDING_TYPES:
+        return binding_type
+    return "manual_attachment"
+
+
+def _clean_media_binding_value(value, limit: int = 255) -> str:
+    return str(value or "").strip()[:limit]
+
+
+def _media_binding_key(
+    binding_type: str,
+    resource_name: str,
+    field_name: str = "",
+    record_key: str = "",
+    slot_key: str = "",
+) -> str:
+    raw = "|".join(
+        [
+            str(binding_type or "").strip(),
+            str(resource_name or "").strip(),
+            str(field_name or "").strip(),
+            str(record_key or "").strip(),
+            str(slot_key or "").strip(),
+        ]
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _json_object(value) -> dict:
+    if isinstance(value, dict):
+        return value
+    try:
+        parsed = json.loads(str(value or "").strip() or "{}")
+    except Exception:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _serialize_media_binding(binding: MediaBinding) -> dict:
+    return {
+        "id": int(binding.id),
+        "asset_id": int(binding.asset_id),
+        "binding_type": str(binding.binding_type or ""),
+        "resource_name": str(binding.resource_name or ""),
+        "field_name": str(binding.field_name or ""),
+        "record_key": str(binding.record_key or ""),
+        "slot_key": str(binding.slot_key or ""),
+        "extra": _json_object(binding.extra_json),
+        "created_by": int(binding.created_by or 0) if binding.created_by else None,
+        "created_by_username": str(binding.created_by_username or ""),
+        "created_at": binding.created_at.isoformat() if binding.created_at else None,
+    }
+
+
+def _reference_payload(
+    ref_type: str,
+    resource: str,
+    *,
+    field_name: str = "",
+    record_key: str = "",
+    slot_key: str = "",
+    source: str = "binding",
+    binding_id: int | None = None,
+    created_at: str | None = None,
+) -> dict:
+    return {
+        "type": str(ref_type or "").strip(),
+        "resource": str(resource or "").strip(),
+        "field_name": str(field_name or "").strip(),
+        "record_key": str(record_key or "").strip(),
+        "slot_key": str(slot_key or "").strip(),
+        "source": str(source or "").strip(),
+        "binding_id": int(binding_id) if binding_id else None,
+        "created_at": created_at,
+    }
+
+
 def _read_uploaded_media_image(file_storage):
     if file_storage is None:
         raise ValueError("file is required")
@@ -4188,10 +4279,107 @@ def _media_asset_query():
     return MediaAsset.query.order_by(MediaAsset.created_at.desc(), MediaAsset.id.desc())
 
 
+def _safe_media_binding_status(value: str) -> str:
+    status = str(value or "").strip().lower()
+    if status in {"all", "bound", "unbound"}:
+        return status
+    return ""
+
+
+def _filter_media_query_by_binding_status(query, binding_status: str):
+    status = _safe_media_binding_status(binding_status)
+    if not status or status == "all":
+        return query
+    bound_asset_ids = db.session.query(MediaBinding.asset_id).distinct()
+    if status == "bound":
+        return query.filter(MediaAsset.id.in_(bound_asset_ids))
+    return query.filter(~MediaAsset.id.in_(bound_asset_ids))
+
+
+def _binding_counts_for_asset_ids(asset_ids: list[int]) -> dict[int, int]:
+    normalized_ids = []
+    for asset_id in asset_ids or []:
+        try:
+            normalized_ids.append(int(asset_id))
+        except Exception:
+            continue
+    if not normalized_ids:
+        return {}
+    rows = (
+        db.session.query(MediaBinding.asset_id, db.func.count(MediaBinding.id))
+        .filter(MediaBinding.asset_id.in_(normalized_ids))
+        .group_by(MediaBinding.asset_id)
+        .all()
+    )
+    return {
+        int(asset_id): int(binding_count or 0)
+        for asset_id, binding_count in rows
+        if asset_id is not None
+    }
+
+
 def _find_media_asset_references(asset: MediaAsset) -> list[dict]:
     references: list[dict] = []
+    seen: set[tuple] = set()
+
+    def add_reference(payload: dict):
+        key = (
+            str(payload.get("type") or ""),
+            str(payload.get("resource") or ""),
+            str(payload.get("field_name") or ""),
+            str(payload.get("record_key") or ""),
+            str(payload.get("slot_key") or ""),
+            str(payload.get("source") or ""),
+        )
+        if key in seen:
+            return
+        seen.add(key)
+        references.append(payload)
+
+    binding_rows = (
+        MediaBinding.query.filter_by(asset_id=int(asset.id))
+        .order_by(MediaBinding.created_at.desc(), MediaBinding.id.desc())
+        .all()
+    )
+    for binding in binding_rows:
+        add_reference(
+            _reference_payload(
+                str(binding.binding_type or ""),
+                str(binding.resource_name or ""),
+                field_name=str(binding.field_name or ""),
+                record_key=str(binding.record_key or ""),
+                slot_key=str(binding.slot_key or ""),
+                source="binding",
+                binding_id=int(binding.id),
+                created_at=binding.created_at.isoformat() if binding.created_at else None,
+            )
+        )
+
     public_url = str(asset.public_url or "").strip()
     object_key = str(asset.object_key or "").strip()
+    asset_id = int(asset.id or 0)
+
+    site_slots = _json_object(get_setting("site_asset_slots_json", "{}"))
+    for slot_key, payload in site_slots.items():
+        if not isinstance(payload, dict):
+            continue
+        slot_asset_id = payload.get("asset_id")
+        slot_url = str(payload.get("public_url") or "").strip()
+        slot_key_value = str(payload.get("object_key") or "").strip()
+        if (
+            (slot_asset_id and int(slot_asset_id) == asset_id)
+            or (public_url and slot_url == public_url)
+            or (object_key and slot_key_value == object_key)
+        ):
+            add_reference(
+                _reference_payload(
+                    "site_asset",
+                    "site_asset_slots_json",
+                    slot_key=str(slot_key or ""),
+                    source="settings",
+                )
+            )
+
     if not public_url and not object_key:
         return references
 
@@ -4201,7 +4389,13 @@ def _find_media_asset_references(asset: MediaAsset) -> list[dict]:
             with open(path, "r", encoding="utf-8") as handle:
                 content = handle.read()
             if (public_url and public_url in content) or (object_key and object_key in content):
-                references.append({"type": "doc", "resource": doc.get("filename") or ""})
+                add_reference(
+                    _reference_payload(
+                        "doc_image",
+                        str(doc.get("filename") or ""),
+                        source="scan",
+                    )
+                )
         except Exception:
             continue
 
@@ -4236,11 +4430,488 @@ def _find_media_asset_references(asset: MediaAsset) -> list[dict]:
             with db.engine.connect() as conn:
                 hit = conn.execute(sql, params).first()
             if hit:
-                references.append({"type": "table", "resource": table_name})
+                add_reference(
+                    _reference_payload(
+                        "table_field",
+                        table_name,
+                        source="scan",
+                    )
+                )
         except Exception:
             continue
 
+    references.sort(
+        key=lambda item: (
+            str(item.get("source") or ""),
+            str(item.get("type") or ""),
+            str(item.get("resource") or ""),
+            str(item.get("field_name") or ""),
+            str(item.get("record_key") or ""),
+            str(item.get("slot_key") or ""),
+        )
+    )
     return references
+
+
+_LEGACY_PICTUREID_FIELD = "pictureid"
+_LEGACY_PICTUREID_SOURCE_TYPE = "legacy_pictureid"
+_LEGACY_PICTUREID_CAPTION_COLUMNS = (
+    "Notes",
+    "notes",
+    "Caption",
+    "caption",
+    "Title",
+    "title",
+    "Description",
+    "description",
+    "Name",
+    "name",
+)
+
+
+def _legacy_pictureid_safe_value(value) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", str(value or "").strip()).strip("-")
+    return cleaned[:255]
+
+
+def _legacy_pictureid_asset_object_key(pictureid: str) -> str:
+    return f"picture/{pictureid}.png"
+
+
+def _legacy_pictureid_caption(row: dict) -> str:
+    if not isinstance(row, dict):
+        return ""
+    for column in _LEGACY_PICTUREID_CAPTION_COLUMNS:
+        value = str(row.get(column) or "").strip()
+        if value:
+            return value[:255]
+    return ""
+
+
+def _parse_table_list_arg(raw_value) -> list[str] | None:
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, (list, tuple, set)):
+        values = raw_value
+    else:
+        values = str(raw_value or "").split(",")
+    normalized = []
+    seen = set()
+    for item in values:
+        table = str(item or "").strip()
+        if not table or table in seen:
+            continue
+        seen.add(table)
+        normalized.append(table)
+    return normalized
+
+
+def _legacy_pictureid_candidate_tables(selected_tables: list[str] | None = None) -> tuple[list[str], list[str]]:
+    allowed_tables = _admin_all_tables(include_internal=False)
+    requested = selected_tables or allowed_tables
+    valid: list[str] = []
+    invalid: list[str] = []
+    for table in requested:
+        if table not in allowed_tables:
+            invalid.append(table)
+            continue
+        _, col_names = _get_table_columns(table)
+        if not col_names or _LEGACY_PICTUREID_FIELD not in col_names:
+            invalid.append(table)
+            continue
+        valid.append(table)
+    return valid, invalid
+
+
+def _legacy_pictureid_candidate_rows(table: str, limit: int | None = None) -> tuple[list[dict], list[str]]:
+    cols, col_names = _get_table_columns(table)
+    if not col_names or _LEGACY_PICTUREID_FIELD not in col_names:
+        return [], col_names or []
+    sql_text = (
+        f"SELECT * FROM `{table}` "
+        f"WHERE `{_LEGACY_PICTUREID_FIELD}` IS NOT NULL "
+        f"AND TRIM(CAST(`{_LEGACY_PICTUREID_FIELD}` AS CHAR)) <> ''"
+    )
+    params: dict[str, object] = {}
+    if limit and int(limit) > 0:
+        sql_text += " LIMIT :limit"
+        params["limit"] = int(limit)
+    sql = text(sql_text)
+    rows: list[dict] = []
+    with db.engine.connect() as conn:
+        for row in conn.execute(sql, params).fetchall():
+            try:
+                rows.append(dict(row._mapping))
+            except AttributeError:
+                rows.append(dict(row))
+    return rows, col_names
+
+
+def _legacy_pictureid_row_summary(table: str, row: dict, col_names: list[str]) -> dict | None:
+    pictureid_raw = str(row.get(_LEGACY_PICTUREID_FIELD) or "").strip()
+    pictureid = _legacy_pictureid_safe_value(pictureid_raw)
+    if not pictureid:
+        return None
+    record_key, match_columns = _admin_build_record_key(table, row, col_names)
+    caption = _legacy_pictureid_caption(row)
+    object_key = _legacy_pictureid_asset_object_key(pictureid)
+    public_url = _minio_public_url(object_key)
+    return {
+        "pictureid": pictureid_raw,
+        "pictureid_normalized": pictureid,
+        "record_key": record_key,
+        "match_columns": match_columns,
+        "caption": caption,
+        "object_key": object_key,
+        "public_url": public_url,
+        "source_field": _LEGACY_PICTUREID_FIELD,
+    }
+
+
+def _legacy_pictureid_preview(selected_tables: list[str] | None = None, sample_limit: int = 5) -> dict:
+    tables, invalid_tables = _legacy_pictureid_candidate_tables(selected_tables)
+    bucket = str(current_app.config.get("MINIO_BUCKET") or "").strip()
+    public_base = _get_minio_public_base()
+    table_payloads = []
+    total_candidates = 0
+    total_with_record_key = 0
+    for table in tables:
+        rows, col_names = _legacy_pictureid_candidate_rows(table)
+        candidates = []
+        with_record_key = 0
+        for row in rows:
+            summary = _legacy_pictureid_row_summary(table, row, col_names)
+            if not summary:
+                continue
+            candidates.append(summary)
+            if summary.get("record_key"):
+                with_record_key += 1
+        total_candidates += len(candidates)
+        total_with_record_key += with_record_key
+        table_payloads.append(
+            {
+                "table": table,
+                "display_name": _admin_display_name(table),
+                "candidate_count": len(candidates),
+                "with_record_key_count": with_record_key,
+                "sample_rows": candidates[: max(int(sample_limit or 0), 0)],
+            }
+        )
+    return {
+        "tables": table_payloads,
+        "invalid_tables": invalid_tables,
+        "summary": {
+            "table_count": len(table_payloads),
+            "candidate_count": total_candidates,
+            "with_record_key_count": total_with_record_key,
+            "migration_ready": bool(bucket and public_base),
+            "bucket_configured": bool(bucket),
+            "public_base_configured": bool(public_base),
+        },
+    }
+
+
+def _legacy_pictureid_migrate(selected_tables: list[str] | None = None, *, dry_run: bool = True, actor=None) -> dict:
+    bucket = str(current_app.config.get("MINIO_BUCKET") or "").strip()
+    public_base = _get_minio_public_base()
+    if not bucket or not public_base:
+        raise ValueError("MinIO bucket/public base must be configured before migration")
+
+    tables, invalid_tables = _legacy_pictureid_candidate_tables(selected_tables)
+    actor = actor or current_admin()
+    created_assets = 0
+    reused_assets = 0
+    created_bindings = 0
+    existing_bindings = 0
+    skipped_rows = 0
+    table_payloads = []
+    asset_cache: dict[str, MediaAsset] = {}
+
+    for table in tables:
+        rows, col_names = _legacy_pictureid_candidate_rows(table)
+        table_created_assets = 0
+        table_reused_assets = 0
+        table_created_bindings = 0
+        table_existing_bindings = 0
+        table_skipped_rows = 0
+        for row in rows:
+            summary = _legacy_pictureid_row_summary(table, row, col_names)
+            if not summary or not summary.get("record_key"):
+                table_skipped_rows += 1
+                skipped_rows += 1
+                continue
+
+            object_key = str(summary.get("object_key") or "")
+            public_url = str(summary.get("public_url") or "")
+            record_key = str(summary.get("record_key") or "")
+            pictureid = str(summary.get("pictureid_normalized") or "")
+            caption = str(summary.get("caption") or "")
+
+            asset = asset_cache.get(object_key)
+            if asset is None:
+                asset = (
+                    MediaAsset.query.filter_by(object_key=object_key)
+                    .order_by(MediaAsset.id.desc())
+                    .first()
+                )
+                if asset is None:
+                    asset = MediaAsset(
+                        bucket=bucket,
+                        object_key=object_key,
+                        public_url=public_url,
+                        mime_type="image/png",
+                        file_ext=".png",
+                        size_bytes=0,
+                        title=caption or f"{_admin_display_name(table)} {pictureid}",
+                        alt_text=caption,
+                        original_filename=f"{pictureid}.png",
+                        source_type=_LEGACY_PICTUREID_SOURCE_TYPE,
+                        created_by=int(actor.id) if actor else None,
+                        created_by_username=str(actor.username) if actor else "",
+                    )
+                    if not dry_run:
+                        db.session.add(asset)
+                        db.session.flush()
+                    created_assets += 1
+                    table_created_assets += 1
+                else:
+                    reused_assets += 1
+                    table_reused_assets += 1
+                asset_cache[object_key] = asset
+            else:
+                reused_assets += 1
+                table_reused_assets += 1
+
+            asset_id = int(getattr(asset, "id", 0) or 0)
+            existing_binding = None
+            if asset_id > 0:
+                existing_binding = (
+                    MediaBinding.query.filter_by(
+                        asset_id=asset_id,
+                        binding_type="table_field",
+                        resource_name=table,
+                        field_name=_LEGACY_PICTUREID_FIELD,
+                        record_key=record_key,
+                        slot_key="",
+                    )
+                    .order_by(MediaBinding.id.asc())
+                    .first()
+                )
+            if existing_binding:
+                existing_bindings += 1
+                table_existing_bindings += 1
+                continue
+
+            if not dry_run:
+                binding = MediaBinding(
+                    asset_id=asset_id,
+                    binding_type="table_field",
+                    binding_key=_media_binding_key("table_field", table, _LEGACY_PICTUREID_FIELD, record_key, ""),
+                    resource_name=table,
+                    field_name=_LEGACY_PICTUREID_FIELD,
+                    record_key=record_key,
+                    slot_key="",
+                    extra_json=json.dumps(
+                        {
+                            "legacy_pictureid": str(summary.get("pictureid") or ""),
+                            "legacy_url": public_url,
+                            "source_field": _LEGACY_PICTUREID_FIELD,
+                            "caption": caption,
+                        },
+                        ensure_ascii=False,
+                    ),
+                    created_by=int(actor.id) if actor else None,
+                    created_by_username=str(actor.username) if actor else "",
+                )
+                db.session.add(binding)
+            created_bindings += 1
+            table_created_bindings += 1
+
+        table_payloads.append(
+            {
+                "table": table,
+                "display_name": _admin_display_name(table),
+                "created_assets": table_created_assets,
+                "reused_assets": table_reused_assets,
+                "created_bindings": table_created_bindings,
+                "existing_bindings": table_existing_bindings,
+                "skipped_rows": table_skipped_rows,
+            }
+        )
+
+    if not dry_run:
+        db.session.commit()
+    return {
+        "dry_run": bool(dry_run),
+        "tables": table_payloads,
+        "invalid_tables": invalid_tables,
+        "summary": {
+            "table_count": len(table_payloads),
+            "created_assets": created_assets,
+            "reused_assets": reused_assets,
+            "created_bindings": created_bindings,
+            "existing_bindings": existing_bindings,
+            "skipped_rows": skipped_rows,
+        },
+    }
+
+
+def _legacy_pictureid_sync_asset(summary: dict, actor=None) -> MediaAsset | None:
+    pictureid = str((summary or {}).get("pictureid_normalized") or "").strip()
+    object_key = str((summary or {}).get("object_key") or "").strip()
+    public_url = str((summary or {}).get("public_url") or "").strip()
+    caption = str((summary or {}).get("caption") or "").strip()
+    table = str((summary or {}).get("table") or "").strip()
+    if not pictureid or not object_key or not public_url:
+        return None
+
+    asset = (
+        MediaAsset.query.filter_by(object_key=object_key)
+        .order_by(MediaAsset.id.desc())
+        .first()
+    )
+    if asset:
+        return asset
+
+    bucket = str(current_app.config.get("MINIO_BUCKET") or "").strip()
+    if not bucket:
+        return None
+
+    actor = actor or current_admin()
+    asset = MediaAsset(
+        bucket=bucket,
+        object_key=object_key,
+        public_url=public_url,
+        mime_type="image/png",
+        file_ext=".png",
+        size_bytes=0,
+        title=caption or f"{_admin_display_name(table)} {pictureid}",
+        alt_text=caption,
+        original_filename=f"{pictureid}.png",
+        source_type=_LEGACY_PICTUREID_SOURCE_TYPE,
+        created_by=int(actor.id) if actor else None,
+        created_by_username=str(actor.username) if actor else "",
+    )
+    db.session.add(asset)
+    db.session.flush()
+    return asset
+
+
+def _sync_legacy_pictureid_field_binding(table: str, row: dict, col_names: list[str], actor=None) -> None:
+    if _LEGACY_PICTUREID_FIELD not in set(col_names or []):
+        return
+    if not isinstance(row, dict) or not row:
+        return
+
+    try:
+        summary = _legacy_pictureid_row_summary(table, row, col_names)
+        record_key, _ = _admin_build_record_key(table, row, col_names)
+        if not record_key:
+            return
+
+        existing_bindings = (
+            MediaBinding.query.filter_by(
+                binding_type="table_field",
+                resource_name=table,
+                field_name=_LEGACY_PICTUREID_FIELD,
+                record_key=record_key,
+                slot_key="",
+            )
+            .order_by(MediaBinding.id.asc())
+            .all()
+        )
+
+        if not summary:
+            if existing_bindings:
+                for binding in existing_bindings:
+                    db.session.delete(binding)
+                db.session.commit()
+            return
+
+        asset = _legacy_pictureid_sync_asset(summary, actor=actor)
+        if asset is None:
+            return
+
+        asset_id = int(getattr(asset, "id", 0) or 0)
+        if asset_id <= 0:
+            return
+
+        target_binding = None
+        stale_bindings: list[MediaBinding] = []
+        for binding in existing_bindings:
+            if int(getattr(binding, "asset_id", 0) or 0) == asset_id and target_binding is None:
+                target_binding = binding
+            else:
+                stale_bindings.append(binding)
+
+        extra_payload = json.dumps(
+            {
+                "legacy_pictureid": str(summary.get("pictureid") or ""),
+                "legacy_url": str(summary.get("public_url") or ""),
+                "source_field": _LEGACY_PICTUREID_FIELD,
+                "caption": str(summary.get("caption") or ""),
+            },
+            ensure_ascii=False,
+        )
+
+        actor = actor or current_admin()
+        if target_binding is None:
+            target_binding = MediaBinding(
+                asset_id=asset_id,
+                binding_type="table_field",
+                binding_key=_media_binding_key("table_field", table, _LEGACY_PICTUREID_FIELD, record_key, ""),
+                resource_name=table,
+                field_name=_LEGACY_PICTUREID_FIELD,
+                record_key=record_key,
+                slot_key="",
+                extra_json=extra_payload,
+                created_by=int(actor.id) if actor else None,
+                created_by_username=str(actor.username) if actor else "",
+            )
+            db.session.add(target_binding)
+        else:
+            target_binding.extra_json = extra_payload
+
+        for binding in stale_bindings:
+            db.session.delete(binding)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to sync legacy pictureid media binding for %s", table)
+
+
+def _clear_record_media_bindings(table: str, row: dict, col_names: list[str]) -> None:
+    if not isinstance(row, dict) or not row:
+        return
+
+    try:
+        record_key, _ = _admin_build_record_key(table, row, col_names)
+        if not record_key:
+            return
+
+        binding_rows = (
+            MediaBinding.query.filter_by(
+                resource_name=table,
+                record_key=record_key,
+            )
+            .order_by(MediaBinding.id.asc())
+            .all()
+        )
+        if not binding_rows:
+            return
+
+        removed = False
+        for binding in binding_rows:
+            binding_type = str(getattr(binding, "binding_type", "") or "").strip()
+            if binding_type not in {"table_field", "table_record_slot"}:
+                continue
+            db.session.delete(binding)
+            removed = True
+        if removed:
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to clear media bindings for %s", table)
 
 def _minio_stream_response(client, bucket: str, key: str, table: str, fmt: str):
     obj = client.get_object(bucket, key)
@@ -4956,6 +5627,131 @@ def _admin_fetch_row(conn, table: str, original_row: dict, col_names: list):
     except AttributeError:
         return dict(row)
 
+
+def _admin_build_record_key(table: str, original_row: dict, col_names: list):
+    match_columns = _admin_table_match_columns(table, original_row, col_names)
+    if not match_columns:
+        return "", []
+    parts: list[str] = []
+    for column in match_columns:
+        value = original_row.get(column)
+        if value is None:
+            text_value = "null"
+        elif isinstance(value, (dict, list)):
+            try:
+                text_value = json.dumps(value, ensure_ascii=False, sort_keys=True)
+            except Exception:
+                text_value = str(value)
+        else:
+            text_value = str(value)
+        text_value = text_value.strip() or "''"
+        if len(text_value) > 160:
+            text_value = f"{text_value[:157]}..."
+        parts.append(f"{column}={text_value}")
+    return " | ".join(parts), match_columns
+
+
+def _attach_public_row_media_bindings(table: str, rows: list[dict], col_names: list[str]) -> list[dict]:
+    if not table or not rows or not col_names:
+        return rows
+
+    keyed_rows: list[tuple[dict, str, list[str]]] = []
+    seen_record_keys: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        record_key, match_columns = _admin_build_record_key(table, row, col_names)
+        media_payload = {
+            "record_key": record_key,
+            "match_columns": list(match_columns or []),
+            "fields": {},
+            "slots": {},
+        }
+        row["__media"] = media_payload
+        if not record_key:
+            continue
+        keyed_rows.append((row, record_key, list(match_columns or [])))
+        if record_key not in seen_record_keys:
+            seen_record_keys.append(record_key)
+
+    if not seen_record_keys:
+        return rows
+
+    binding_rows = (
+        MediaBinding.query.filter(
+            MediaBinding.resource_name == table,
+            MediaBinding.record_key.in_(seen_record_keys),
+            MediaBinding.binding_type.in_(["table_field", "table_record_slot"]),
+        )
+        .order_by(MediaBinding.created_at.asc(), MediaBinding.id.asc())
+        .all()
+    )
+    if not binding_rows:
+        return rows
+
+    asset_map: dict[int, dict] = {}
+    for binding in binding_rows:
+        try:
+            asset_id = int(getattr(binding, "asset_id", 0) or 0)
+        except Exception:
+            asset_id = 0
+        if asset_id <= 0 or asset_id in asset_map:
+            continue
+        asset = db.session.get(MediaAsset, asset_id)
+        if asset:
+            asset_map[asset_id] = _serialize_media_asset(asset)
+
+    bindings_by_record: dict[str, list[MediaBinding]] = {}
+    for binding in binding_rows:
+        record_key = str(getattr(binding, "record_key", "") or "").strip()
+        if not record_key:
+            continue
+        bindings_by_record.setdefault(record_key, []).append(binding)
+
+    for row, record_key, match_columns in keyed_rows:
+        media_payload = row.get("__media") or {}
+        media_payload["record_key"] = record_key
+        media_payload["match_columns"] = list(match_columns or [])
+        field_entries: dict[str, list[dict]] = {}
+        slot_entries: dict[str, list[dict]] = {}
+        for binding in bindings_by_record.get(record_key, []):
+            payload = {
+                "binding": _serialize_media_binding(binding),
+                "asset": asset_map.get(int(getattr(binding, "asset_id", 0) or 0)),
+            }
+            binding_type = str(getattr(binding, "binding_type", "") or "").strip()
+            if binding_type == "table_record_slot":
+                slot_key = str(getattr(binding, "slot_key", "") or "").strip()
+                if slot_key:
+                    slot_entries.setdefault(slot_key, []).append(payload)
+                continue
+            field_name = str(getattr(binding, "field_name", "") or "").strip()
+            if field_name:
+                field_entries.setdefault(field_name, []).append(payload)
+        media_payload["fields"] = field_entries
+        media_payload["slots"] = slot_entries
+        row["__media"] = media_payload
+
+    return rows
+
+
+def _serialize_virtual_media_fields(fields: list[dict[str, object]] | None) -> list[dict[str, object]]:
+    safe_fields: list[dict[str, object]] = []
+    for field in fields or []:
+        if not isinstance(field, dict):
+            continue
+        safe_fields.append(
+            {
+                "key": str(field.get("key") or "").strip(),
+                "label": str(field.get("label") or "").strip(),
+                "multiple": bool(field.get("multiple")),
+                "placement": str(field.get("placement") or "record").strip() or "record",
+                "required": bool(field.get("required")),
+                "sort_order": int(field.get("sort_order") or 0),
+            }
+        )
+    return safe_fields
+
 def _admin_table_summary(table: str) -> dict:
     cols, col_names = _get_table_columns(table)
     if not cols:
@@ -5324,11 +6120,13 @@ def admin_table_meta(table):
     label_overrides = get_table_column_labels(table)
     default_visible_columns = get_table_default_visible_columns(table)
     media_fields = get_table_media_field_config(table)
+    virtual_media_fields = get_table_virtual_media_fields(table)
     return jsonify(
         {
             **summary,
             "default_visible_columns": default_visible_columns,
             "media_fields": media_fields,
+            "virtual_media_fields": virtual_media_fields,
             "columns": [
                 {
                     "name": c["name"],
@@ -5415,6 +6213,27 @@ def admin_table_media_fields_update(table):
     return jsonify({"ok": True, "table": table, "fields": after})
 
 
+@bp.route("/admin/api/tables/<table>/virtual_media_fields", methods=["POST"])
+@admin_write_required
+def admin_table_virtual_media_fields_update(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    cols, _ = _get_table_columns(table)
+    if not cols:
+        return jsonify({"error": f"Table '{table}' does not exist"}), 404
+    payload = request.get_json(silent=True) or {}
+    raw_fields = payload.get("fields") or []
+    before, after = save_table_virtual_media_fields(table, raw_fields)
+    audit_admin_action(
+        action="update_virtual_media_fields",
+        table_name="app_settings",
+        record_pk=f"virtual_media_fields:{table}",
+        before=before,
+        after=after,
+    )
+    return jsonify({"ok": True, "table": table, "virtual_media_fields": after})
+
+
 @bp.route("/api/tables/<table>/column_labels", methods=["GET"])
 def public_table_column_labels(table):
     if not _admin_table_allowed(table):
@@ -5435,6 +6254,13 @@ def public_table_media_fields(table):
         return jsonify({"error": f"Table '{table}' is not public"}), 404
     return jsonify({"table": table, "fields": get_table_media_field_config(table)})
 
+
+@bp.route("/api/tables/<table>/virtual_media_fields", methods=["GET"])
+def public_table_virtual_media_fields(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not public"}), 404
+    return jsonify({"table": table, "virtual_media_fields": get_table_virtual_media_fields(table)})
+
 @bp.route("/admin/api/tables/<table>/rows", methods=["POST"])
 @admin_required
 def admin_table_rows(table):
@@ -5447,6 +6273,183 @@ def admin_table_rows(table):
         status = result.pop("status", 400)
         return jsonify(result), status
     return jsonify(result)
+
+
+def _admin_table_record_slot_payloads(table: str, original_row: dict):
+    cols, col_names = _get_table_columns(table)
+    if not cols:
+        return None, None, (jsonify({"error": f"Table '{table}' does not exist"}), 404)
+    if not isinstance(original_row, dict) or not original_row:
+        return None, None, (jsonify({"error": "original_row is required"}), 400)
+
+    record_key, match_columns = _admin_build_record_key(table, original_row, col_names)
+    if not record_key:
+        return None, None, (jsonify({"error": "Unable to identify record"}), 400)
+
+    with db.engine.connect() as conn:
+        row = _admin_fetch_row(conn, table, original_row, col_names)
+    if not row:
+        return None, None, (jsonify({"error": "record not found"}), 404)
+
+    configured_slots = _serialize_virtual_media_fields(get_table_virtual_media_fields(table))
+    configured_slot_map = {str(item.get("key") or ""): item for item in configured_slots}
+    binding_rows = (
+        MediaBinding.query.filter_by(
+            binding_type="table_record_slot",
+            resource_name=table,
+            record_key=record_key,
+        )
+        .order_by(MediaBinding.created_at.asc(), MediaBinding.id.asc())
+        .all()
+    )
+    asset_ids = [int(binding.asset_id) for binding in binding_rows if getattr(binding, "asset_id", None)]
+    asset_map: dict[int, dict] = {}
+    if asset_ids:
+        for asset in MediaAsset.query.filter(MediaAsset.id.in_(asset_ids)).all():
+            asset_map[int(asset.id)] = _serialize_media_asset(asset)
+
+    slot_bindings: dict[str, list[dict]] = {}
+    orphan_slots: dict[str, dict[str, object]] = {}
+    for binding in binding_rows:
+        slot_key = str(binding.slot_key or "").strip()
+        if not slot_key:
+            continue
+        binding_payload = _serialize_media_binding(binding)
+        slot_bindings.setdefault(slot_key, []).append(
+            {
+                "binding": binding_payload,
+                "asset": asset_map.get(int(binding.asset_id)),
+            }
+        )
+        if slot_key not in configured_slot_map:
+            orphan_slots[slot_key] = {
+                "key": slot_key,
+                "label": slot_key,
+                "multiple": True,
+                "placement": "record",
+                "required": False,
+                "sort_order": 9999,
+                "orphan": True,
+            }
+
+    slots = configured_slots + list(orphan_slots.values())
+    slot_payloads = []
+    for slot in slots:
+        slot_key = str(slot.get("key") or "").strip()
+        slot_payloads.append(
+            {
+                **slot,
+                "bindings": slot_bindings.get(slot_key, []),
+            }
+        )
+
+    return {
+        "table": table,
+        "record_key": record_key,
+        "match_columns": match_columns,
+        "row": row,
+        "slots": slot_payloads,
+    }, configured_slot_map, None
+
+
+@bp.route("/admin/api/tables/<table>/record_media_slots", methods=["POST"])
+@admin_required
+def admin_table_record_media_slots(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    payload = request.get_json(silent=True) or {}
+    result, _, error_response = _admin_table_record_slot_payloads(table, payload.get("original_row"))
+    if error_response:
+        return error_response
+    return jsonify(result)
+
+
+@bp.route("/admin/api/tables/<table>/record_media_slots/bind", methods=["POST"])
+@admin_write_required
+def admin_table_record_media_slot_bind(table):
+    if not _admin_table_allowed(table):
+        return jsonify({"error": f"Table '{table}' is not manageable"}), 404
+    payload = request.get_json(silent=True) or {}
+    result, configured_slot_map, error_response = _admin_table_record_slot_payloads(table, payload.get("original_row"))
+    if error_response:
+        return error_response
+
+    slot_key = _clean_media_binding_value(payload.get("slot_key"), 255)
+    if not slot_key:
+        return jsonify({"error": "slot_key is required"}), 400
+    slot = configured_slot_map.get(slot_key)
+    if not slot:
+        return jsonify({"error": "slot_key is not configured for this table"}), 400
+
+    try:
+        asset_id = int(payload.get("asset_id") or 0)
+    except Exception:
+        asset_id = 0
+    if asset_id <= 0:
+        return jsonify({"error": "asset_id is required"}), 400
+    asset = db.session.get(MediaAsset, asset_id)
+    if not asset:
+        return jsonify({"error": "media asset not found"}), 404
+
+    record_key = str(result.get("record_key") or "")
+    replace_existing = bool(payload.get("replace_existing"))
+    actor = current_admin()
+
+    same_binding = (
+        MediaBinding.query.filter_by(
+            asset_id=asset_id,
+            binding_type="table_record_slot",
+            resource_name=table,
+            record_key=record_key,
+            slot_key=slot_key,
+        )
+        .order_by(MediaBinding.id.asc())
+        .first()
+    )
+    if same_binding:
+        return jsonify({"ok": True, "binding": _serialize_media_binding(same_binding), "record_key": record_key})
+
+    slot_existing = (
+        MediaBinding.query.filter_by(
+            binding_type="table_record_slot",
+            resource_name=table,
+            record_key=record_key,
+            slot_key=slot_key,
+        )
+        .order_by(MediaBinding.id.asc())
+        .all()
+    )
+    if slot_existing and not bool(slot.get("multiple")) and not replace_existing:
+        return jsonify({"error": "slot already has a bound image", "record_key": record_key}), 409
+
+    try:
+        if slot_existing and not bool(slot.get("multiple")) and replace_existing:
+            for existing in slot_existing:
+                db.session.delete(existing)
+
+        binding = MediaBinding(
+            asset_id=asset_id,
+            binding_type="table_record_slot",
+            binding_key=_media_binding_key("table_record_slot", table, "", record_key, slot_key),
+            resource_name=table,
+            record_key=record_key,
+            slot_key=slot_key,
+            created_by=int(actor.id) if actor else None,
+            created_by_username=str(actor.username) if actor else "",
+        )
+        db.session.add(binding)
+        db.session.commit()
+        payload = _serialize_media_binding(binding)
+        audit_admin_action(
+            action="bind_record_media_slot",
+            table_name="media_bindings",
+            record_pk=str(binding.id),
+            after=payload,
+        )
+        return jsonify({"ok": True, "binding": payload, "record_key": record_key}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
 
 @bp.route("/admin/api/tables/<table>/create", methods=["POST"])
 @admin_write_required
@@ -5471,8 +6474,11 @@ def admin_table_create(table):
         params[key] = value
     sql = text(f"INSERT INTO `{table}` ({columns_sql}) VALUES ({', '.join(values_sql)})")
     try:
+        inserted_row = None
         with db.engine.begin() as conn:
             conn.execute(sql, params)
+            inserted_row = _admin_fetch_row(conn, table, data, col_names)
+        _sync_legacy_pictureid_field_binding(table, inserted_row or data, col_names, actor=current_admin())
         record_pk = next((str(data.get(col)) for col in _admin_table_match_columns(table, data, col_names) if data.get(col) not in (None, "")), "")
         audit_admin_action(action="create", table_name=table, record_pk=record_pk, after=data)
         return jsonify({"ok": True, "inserted": 1}), 200
@@ -5510,10 +6516,13 @@ def admin_table_update(table):
     merged_row = dict(original_row)
     merged_row.update(updates)
     try:
+        after_row = None
+        before_row = None
         with db.engine.begin() as conn:
             before_row = _admin_fetch_row(conn, table, original_row, col_names)
             result = conn.execute(sql, params)
             after_row = _admin_fetch_row(conn, table, merged_row, col_names) or _admin_fetch_row(conn, table, original_row, col_names)
+        _sync_legacy_pictureid_field_binding(table, after_row or merged_row, col_names, actor=current_admin())
         record_pk = next((str(original_row.get(col)) for col in match_columns if original_row.get(col) not in (None, "")), "")
         audit_admin_action(action="update", table_name=table, record_pk=record_pk, before=before_row or original_row, after=after_row or merged_row)
         return jsonify({"ok": True, "updated": int(result.rowcount or 0)}), 200
@@ -5539,9 +6548,11 @@ def admin_table_delete(table):
         return jsonify({"error": "Unable to identify the row to delete"}), 400
     sql = text(f"DELETE FROM `{table}` WHERE {where_sql} LIMIT 1")
     try:
+        before_row = None
         with db.engine.begin() as conn:
             before_row = _admin_fetch_row(conn, table, original_row, col_names)
             result = conn.execute(sql, params)
+        _clear_record_media_bindings(table, before_row or original_row, col_names)
         record_pk = next((str(original_row.get(col)) for col in match_columns if original_row.get(col) not in (None, "")), "")
         audit_admin_action(action="delete", table_name=table, record_pk=record_pk, before=before_row or original_row)
         return jsonify({"ok": True, "deleted": int(result.rowcount or 0)}), 200
@@ -5621,7 +6632,9 @@ def admin_docs_delete(filename):
 @admin_required
 def admin_media_list():
     search = str(request.args.get("search") or "").strip()
-    source_type = _safe_media_source_type(request.args.get("source_type") or "")
+    source_type_raw = str(request.args.get("source_type") or "").strip()
+    source_type = _safe_media_source_type(source_type_raw) if source_type_raw else ""
+    binding_status = _safe_media_binding_status(request.args.get("binding_status") or "")
     try:
         page = max(int(request.args.get("page") or 1), 1)
     except Exception:
@@ -5644,16 +6657,76 @@ def admin_media_list():
         )
     if source_type and source_type != "all":
         query = query.filter(MediaAsset.source_type == source_type)
+    query = _filter_media_query_by_binding_status(query, binding_status)
     total = int(query.count())
     items = query.offset((page - 1) * page_size).limit(page_size).all()
+    binding_counts = _binding_counts_for_asset_ids([getattr(item, "id", 0) for item in items])
+    payload_items = []
+    for item in items:
+        payload = _serialize_media_asset(item)
+        payload["binding_count"] = int(binding_counts.get(int(getattr(item, "id", 0) or 0), 0))
+        payload_items.append(payload)
     return jsonify(
         {
             "page": page,
             "page_size": page_size,
             "total": total,
-            "items": [_serialize_media_asset(item) for item in items],
+            "items": payload_items,
         }
     )
+
+
+@bp.route("/admin/api/media/legacy_pictureid/preview", methods=["GET"])
+@admin_required
+def admin_media_legacy_pictureid_preview():
+    tables = _parse_table_list_arg(request.args.get("tables"))
+    try:
+        sample_limit = max(min(int(request.args.get("sample_limit") or 5), 20), 0)
+    except Exception:
+        sample_limit = 5
+    payload = _legacy_pictureid_preview(tables, sample_limit=sample_limit)
+    return jsonify(payload), 200
+
+
+@bp.route("/admin/api/media/legacy_pictureid/migrate", methods=["POST"])
+@admin_write_required
+def admin_media_legacy_pictureid_migrate():
+    payload = request.get_json(silent=True) or {}
+    tables = _parse_table_list_arg(payload.get("tables"))
+    dry_run = bool(payload.get("dry_run", True))
+    confirm = bool(payload.get("confirm"))
+    if not dry_run and not confirm:
+        return jsonify({"error": "confirm=true is required to execute migration"}), 400
+    try:
+        result = _legacy_pictureid_migrate(
+            tables,
+            dry_run=dry_run,
+            actor=current_admin(),
+        )
+        if not dry_run:
+            audit_admin_action(
+                action="migrate_legacy_pictureid",
+                table_name="media_bindings",
+                record_pk="legacy_pictureid",
+                after=result.get("summary"),
+            )
+        return jsonify({"ok": True, **result}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+
+
+@bp.route("/admin/api/media/<int:asset_id>", methods=["GET"])
+@admin_required
+def admin_media_detail(asset_id: int):
+    asset = db.session.get(MediaAsset, int(asset_id))
+    if not asset:
+        return jsonify({"error": "media asset not found"}), 404
+    payload = _serialize_media_asset(asset)
+    payload["binding_count"] = int(_binding_counts_for_asset_ids([asset.id]).get(int(asset.id), 0))
+    references = _find_media_asset_references(asset)
+    payload["reference_count"] = len(references)
+    return jsonify({"asset": payload, "references": references}), 200
 
 
 @bp.route("/admin/api/media/upload", methods=["POST"])
@@ -5674,7 +6747,11 @@ def admin_media_upload():
             size_bytes=image_info["size_bytes"],
         ).order_by(MediaAsset.id.desc()).first()
         if existing:
-            return jsonify({"ok": True, "asset": _serialize_media_asset(existing), "deduped": True}), 200
+            payload = _serialize_media_asset(existing)
+            payload["binding_count"] = int(
+                _binding_counts_for_asset_ids([existing.id]).get(int(existing.id), 0)
+            )
+            return jsonify({"ok": True, "asset": payload, "deduped": True}), 200
 
         object_key = _minio_media_object_key(source_type, image_info["sha256"], image_info["file_ext"])
         public_url = _minio_public_url(object_key)
@@ -5709,6 +6786,7 @@ def admin_media_upload():
         db.session.add(asset)
         db.session.commit()
         payload = _serialize_media_asset(asset)
+        payload["binding_count"] = 0
         audit_admin_action(
             action="upload_media",
             table_name="media_assets",
@@ -5717,6 +6795,112 @@ def admin_media_upload():
             user=actor,
         )
         return jsonify({"ok": True, "asset": payload, "deduped": False}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+
+
+@bp.route("/admin/api/media/<int:asset_id>", methods=["POST"])
+@admin_write_required
+def admin_media_update(asset_id: int):
+    asset = db.session.get(MediaAsset, int(asset_id))
+    if not asset:
+        return jsonify({"error": "media asset not found"}), 404
+    payload = request.get_json(silent=True) or {}
+    title = _clean_media_binding_value(payload.get("title"), 255)
+    alt_text = _clean_media_binding_value(payload.get("alt_text"), 255)
+    source_type = _safe_media_source_type(payload.get("source_type") or asset.source_type or "library")
+    before = _serialize_media_asset(asset)
+    try:
+        asset.title = title or asset.title or Path(str(asset.original_filename or "")).stem
+        asset.alt_text = alt_text
+        asset.source_type = source_type
+        db.session.add(asset)
+        db.session.commit()
+        after = _serialize_media_asset(asset)
+        audit_admin_action(
+            action="update_media",
+            table_name="media_assets",
+            record_pk=str(asset.id),
+            before=before,
+            after=after,
+        )
+        references = _find_media_asset_references(asset)
+        after["binding_count"] = int(_binding_counts_for_asset_ids([asset.id]).get(int(asset.id), 0))
+        after["reference_count"] = len(references)
+        return jsonify({"ok": True, "asset": after, "references": references}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+
+
+@bp.route("/admin/api/media/<int:asset_id>/bindings", methods=["POST"])
+@admin_write_required
+def admin_media_binding_create(asset_id: int):
+    asset = db.session.get(MediaAsset, int(asset_id))
+    if not asset:
+        return jsonify({"error": "media asset not found"}), 404
+    payload = request.get_json(silent=True) or {}
+    binding_type = _safe_media_binding_type(payload.get("binding_type") or "")
+    resource_name = _clean_media_binding_value(payload.get("resource_name"), 255)
+    field_name = _clean_media_binding_value(payload.get("field_name"), 255)
+    record_key = _clean_media_binding_value(payload.get("record_key"), 255)
+    slot_key = _clean_media_binding_value(payload.get("slot_key"), 255)
+    extra = payload.get("extra")
+
+    if not resource_name:
+        return jsonify({"error": "resource_name is required"}), 400
+    if binding_type == "table_record_slot" and not slot_key:
+        return jsonify({"error": "slot_key is required for table_record_slot"}), 400
+    if binding_type == "site_asset" and not slot_key:
+        return jsonify({"error": "slot_key is required for site_asset"}), 400
+
+    actor = current_admin()
+    binding = MediaBinding(
+        asset_id=int(asset.id),
+        binding_type=binding_type,
+        binding_key=_media_binding_key(binding_type, resource_name, field_name, record_key, slot_key),
+        resource_name=resource_name,
+        field_name=field_name,
+        record_key=record_key,
+        slot_key=slot_key,
+        extra_json=json.dumps(extra, ensure_ascii=False) if isinstance(extra, dict) else None,
+        created_by=int(actor.id) if actor else None,
+        created_by_username=str(actor.username) if actor else "",
+    )
+    try:
+        db.session.add(binding)
+        db.session.commit()
+        payload = _serialize_media_binding(binding)
+        audit_admin_action(
+            action="create_media_binding",
+            table_name="media_bindings",
+            record_pk=str(binding.id),
+            after=payload,
+        )
+        return jsonify({"ok": True, "binding": payload}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+
+
+@bp.route("/admin/api/media/bindings/<int:binding_id>", methods=["DELETE"])
+@admin_write_required
+def admin_media_binding_delete(binding_id: int):
+    binding = db.session.get(MediaBinding, int(binding_id))
+    if not binding:
+        return jsonify({"error": "media binding not found"}), 404
+    before = _serialize_media_binding(binding)
+    try:
+        db.session.delete(binding)
+        db.session.commit()
+        audit_admin_action(
+            action="delete_media_binding",
+            table_name="media_bindings",
+            record_pk=str(binding.id),
+            before=before,
+        )
+        return jsonify({"ok": True}), 200
     except Exception as exc:
         db.session.rollback()
         return jsonify({"error": str(exc)}), 400
@@ -6411,6 +7595,8 @@ def _query_table_rows(data: dict) -> dict:
     for idx, row in enumerate(results):
         if "__rowid" not in row:
             row["__rowid"] = row_offset + idx + 1
+
+    results = _attach_public_row_media_bindings(table, results, columns)
 
     return {
         "table": table,

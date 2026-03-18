@@ -9,7 +9,7 @@ from sqlalchemy.exc import OperationalError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import db
-from .models import AdminAuditLog, AdminUser, MediaAsset
+from .models import AdminAuditLog, AdminUser, MediaAsset, MediaBinding
 
 ADMIN_SESSION_KEY = "ensure_admin_user_id"
 ADMIN_USERNAME_KEY = "ensure_admin_username"
@@ -18,7 +18,7 @@ ADMIN_CSRF_KEY = "ensure_admin_csrf"
 
 
 def ensure_admin_tables():
-    for table in (AdminUser.__table__, AdminAuditLog.__table__, MediaAsset.__table__):
+    for table in (AdminUser.__table__, AdminAuditLog.__table__, MediaAsset.__table__, MediaBinding.__table__):
         try:
             table.create(bind=db.engine, checkfirst=True)
         except OperationalError as exc:

@@ -9,6 +9,23 @@ export type TableMediaFieldConfig = {
 };
 
 type TableMediaFieldMap = Record<string, TableMediaFieldConfig>;
+export type TableRowMediaEntry = {
+  binding?: {
+    id?: number;
+    binding_type?: string;
+    resource_name?: string;
+    field_name?: string;
+    record_key?: string;
+    slot_key?: string;
+  };
+  asset?: {
+    id?: number;
+    public_url?: string;
+    object_key?: string;
+    title?: string;
+    alt_text?: string;
+  };
+};
 
 const LEGACY_MINIO_PICTURE_TEMPLATE = 'https://minio.lumoxuan.cn/ensure/picture/{value}.png';
 
@@ -179,4 +196,44 @@ export function resolveMediaSource(table: string, field: string, value: unknown,
     return String(config.template).replaceAll('{value}', encodeURIComponent(raw));
   }
   return raw;
+}
+
+function getRowMediaBucket(row: any, bucket: 'fields' | 'slots'): Record<string, TableRowMediaEntry[]> {
+  const media = row && typeof row === 'object' ? row.__media : null;
+  const value = media && typeof media === 'object' ? media[bucket] : null;
+  return value && typeof value === 'object' ? (value as Record<string, TableRowMediaEntry[]>) : {};
+}
+
+export function getRowBoundFieldMediaEntries(row: any, field: string): TableRowMediaEntry[] {
+  const fieldKey = normalizeKey(field);
+  if (!fieldKey) return [];
+  const fields = getRowMediaBucket(row, 'fields');
+  const matches = Array.isArray(fields[fieldKey]) ? fields[fieldKey] : [];
+  return matches;
+}
+
+export function getRowBoundFieldMediaEntry(row: any, field: string): TableRowMediaEntry | null {
+  const matches = getRowBoundFieldMediaEntries(row, field);
+  return matches[0] || null;
+}
+
+export function getRowBoundFieldMediaUrl(row: any, field: string): string {
+  const matches = getRowBoundFieldMediaEntries(row, field);
+  for (const entry of matches) {
+    const url = normalizeKey(entry?.asset?.public_url);
+    if (url) return url;
+  }
+  return '';
+}
+
+export function getRowBoundSlotMediaUrl(row: any, slotKey: string): string {
+  const safeSlotKey = normalizeKey(slotKey);
+  if (!safeSlotKey) return '';
+  const slots = getRowMediaBucket(row, 'slots');
+  const matches = Array.isArray(slots[safeSlotKey]) ? slots[safeSlotKey] : [];
+  for (const entry of matches) {
+    const url = normalizeKey(entry?.asset?.public_url);
+    if (url) return url;
+  }
+  return '';
 }

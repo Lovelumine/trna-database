@@ -72,3 +72,28 @@ class MediaAsset(db.Model):
     created_by = db.Column(db.Integer, index=True)
     created_by_username = db.Column(db.String(64), index=True)
     created_at = db.Column(db.DateTime, server_default=func.now(), index=True)
+
+
+class MediaBinding(db.Model):
+    __tablename__ = "media_bindings"
+
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    asset_id = db.Column(db.BigInteger, db.ForeignKey("media_assets.id", ondelete="CASCADE"), nullable=False, index=True)
+    binding_type = db.Column(db.String(64), nullable=False, index=True)
+    binding_key = db.Column(db.String(64), nullable=False, server_default=text("''"))
+    resource_name = db.Column(db.String(255), nullable=False, index=True)
+    field_name = db.Column(db.String(255), nullable=False, server_default=text("''"))
+    record_key = db.Column(db.String(255), nullable=False, server_default=text("''"), index=True)
+    slot_key = db.Column(db.String(255), nullable=False, server_default=text("''"), index=True)
+    extra_json = db.Column(db.Text)
+    created_by = db.Column(db.Integer, index=True)
+    created_by_username = db.Column(db.String(64), index=True)
+    created_at = db.Column(db.DateTime, server_default=func.now(), index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "asset_id",
+            "binding_key",
+            name="uq_media_binding_location",
+        ),
+    )
