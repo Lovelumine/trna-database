@@ -2,6 +2,8 @@ import { createApp } from 'vue';
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router';
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
+import STable from '@shene/table';
+import '@shene/table/dist/index.css';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
 
@@ -75,4 +77,5 @@ router.afterEach(() => {
 createApp(AdminApp)
   .use(router)
   .use(ElementPlus)
+  .use(STable)
   .mount('#admin-app');

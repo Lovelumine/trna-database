@@ -1,12 +1,8 @@
 <template>
   <section class="workspace-panel">
     <div class="media-layout">
-      <section class="content-card media-card media-card--list">
-        <div class="content-card-header">
-          <div>
-            <h3>{{ t('media.libraryTitle') }}</h3>
-            <p>{{ t('media.libraryHint') }}</p>
-          </div>
+      <section class="content-card media-card media-card--top">
+        <div class="media-top-actions">
           <div class="card-actions">
             <el-button @click="resetFilters">{{ t('media.reset') }}</el-button>
             <el-button type="primary" @click="openUploadDialog">{{ t('media.upload') }}</el-button>
@@ -123,10 +119,10 @@
             class="inline-alert"
           />
 
-          <div v-if="migrationPreview?.invalid_tables?.length" class="media-migration-invalid">
-            <strong>{{ t('media.migrationInvalidTables') }}</strong>
-            <span>{{ migrationPreview.invalid_tables.join(', ') }}</span>
-          </div>
+          <details v-if="migrationPreview?.invalid_tables?.length" class="media-migration-invalid">
+            <summary>{{ t('media.migrationInvalidTablesCompact', { count: migrationPreview.invalid_tables.length }) }}</summary>
+            <p>{{ migrationPreview.invalid_tables.join(', ') }}</p>
+          </details>
 
           <div v-if="migrationPreview?.tables?.length" class="media-migration-table-list">
             <article
@@ -142,12 +138,15 @@
                 <span>{{ t('media.migrationCandidateCount') }} · {{ formatNumber(table.candidate_count || 0) }}</span>
                 <span>{{ t('media.migrationSummaryRecordKeys') }} · {{ formatNumber(table.with_record_key_count || 0) }}</span>
               </div>
-              <ul v-if="table.sample_rows?.length" class="media-migration-samples">
-                <li v-for="sample in table.sample_rows" :key="`${table.table}:${sample.record_key}:${sample.pictureid}`">
-                  <strong>{{ sample.pictureid }}</strong>
-                  <span>{{ sample.record_key }}</span>
-                </li>
-              </ul>
+              <details v-if="table.sample_rows?.length" class="media-migration-samples-disclosure">
+                <summary>{{ t('media.migrationSamplesToggle', { count: table.sample_rows.length }) }}</summary>
+                <ul class="media-migration-samples">
+                  <li v-for="sample in table.sample_rows" :key="`${table.table}:${sample.record_key}:${sample.pictureid}`">
+                    <strong>{{ sample.pictureid }}</strong>
+                    <span>{{ sample.record_key }}</span>
+                  </li>
+                </ul>
+              </details>
               <p v-else class="media-migration-empty">{{ t('media.fieldPreviewEmpty') }}</p>
             </article>
           </div>
@@ -159,7 +158,10 @@
             <span>bindings · +{{ formatNumber(migrationResult.summary.created_bindings || 0) }}</span>
           </div>
         </section>
+      </section>
 
+      <div class="media-content">
+        <section class="content-card media-card media-card--list">
         <div class="media-grid">
           <div v-if="mediaLoading && !mediaItems.length" class="media-skeleton-grid" aria-hidden="true">
             <div v-for="index in query.pageSize" :key="index" class="media-skeleton-card">
@@ -348,6 +350,7 @@
           <p>{{ t('media.selectHint') }}</p>
         </div>
       </section>
+    </div>
     </div>
 
     <el-dialog
@@ -835,12 +838,28 @@ onMounted(() => {
 <style scoped>
 .media-layout {
   display: grid;
+  gap: 18px;
+}
+
+.media-content {
+  display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
   gap: 18px;
+  align-items: start;
 }
 
 .media-card {
   min-width: 0;
+}
+
+.media-card--top {
+  display: grid;
+  gap: 12px;
+}
+
+.media-top-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .media-toolbar {
@@ -919,7 +938,7 @@ onMounted(() => {
   margin: 6px 0 0;
   color: var(--admin-text-muted);
   font-size: 0.86rem;
-  line-height: 1.6;
+  line-height: 1.45;
 }
 
 .media-migration-summary {
@@ -956,14 +975,30 @@ onMounted(() => {
 }
 
 .media-migration-invalid {
-  display: grid;
-  gap: 4px;
-  color: var(--admin-danger, #b91c1c);
-  font-size: 0.85rem;
+  border: 1px dashed color-mix(in srgb, var(--admin-danger, #b91c1c) 20%, var(--admin-border) 80%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--admin-danger, #b91c1c) 3%, var(--admin-surface) 97%);
+  padding: 10px 12px;
+  color: var(--admin-text-muted);
+  font-size: 0.83rem;
 }
 
-.media-migration-invalid strong {
+.media-migration-invalid summary {
+  cursor: pointer;
   color: var(--admin-text);
+  font-weight: 600;
+  list-style: none;
+}
+
+.media-migration-invalid summary::-webkit-details-marker {
+  display: none;
+}
+
+.media-migration-invalid p {
+  margin: 8px 0 0;
+  color: var(--admin-danger, #b91c1c);
+  line-height: 1.55;
+  word-break: break-word;
 }
 
 .media-migration-table-list {
@@ -1006,6 +1041,22 @@ onMounted(() => {
   padding-left: 18px;
   display: grid;
   gap: 6px;
+}
+
+.media-migration-samples-disclosure {
+  display: grid;
+  gap: 8px;
+}
+
+.media-migration-samples-disclosure summary {
+  cursor: pointer;
+  color: var(--admin-text-muted);
+  font-size: 0.82rem;
+  list-style: none;
+}
+
+.media-migration-samples-disclosure summary::-webkit-details-marker {
+  display: none;
 }
 
 .media-migration-samples strong,
@@ -1345,7 +1396,7 @@ onMounted(() => {
 }
 
 @media (max-width: 1360px) {
-  .media-layout {
+  .media-content {
     grid-template-columns: minmax(0, 1fr);
   }
 }

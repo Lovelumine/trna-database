@@ -337,35 +337,40 @@
                 </div>
               </div>
               <div class="table-toolbar">
-                <el-input
-                  size="small"
-                  v-model="tableQuery.searchText"
-                  class="table-search-combo"
-                  :placeholder="t('table.searchPlaceholder')"
-                  clearable
-                  @keyup.enter="runTableSearch"
-                >
-                  <template #prepend>
-                    <el-select
-                      v-model="tableQuery.searchColumn"
-                      size="small"
-                      clearable
-                      class="table-search-combo__select"
-                      :placeholder="t('table.allColumns')"
-                    >
-                      <el-option
-                        v-for="column in selectedTableMeta?.columns || []"
-                        :key="column.name"
-                        :label="columnDisplayLabel(column)"
-                        :value="column.name"
-                      />
-                    </el-select>
-                  </template>
-                </el-input>
-                <el-button size="small" type="primary" @click="runTableSearch">{{ t('table.search') }}</el-button>
+                <div class="table-search-bar">
+                  <el-select
+                    v-model="tableQuery.searchColumn"
+                    size="small"
+                    clearable
+                    class="table-search-bar__select"
+                    :placeholder="t('table.allColumns')"
+                  >
+                    <el-option
+                      v-for="column in selectedTableMeta?.columns || []"
+                      :key="column.name"
+                      :label="columnDisplayLabel(column)"
+                      :value="column.name"
+                    />
+                  </el-select>
+                  <el-input
+                    size="small"
+                    v-model="tableQuery.searchText"
+                    class="table-search-bar__input"
+                    :placeholder="t('table.searchPlaceholder')"
+                    clearable
+                    @keyup.enter="runTableSearch"
+                  />
+                  <el-button size="small" type="primary" class="table-search-bar__submit" @click="runTableSearch">{{ t('table.search') }}</el-button>
+                </div>
               </div>
               <div class="card-actions card-actions--inline">
-                <el-select v-model="tableQuery.pageSize" size="small" class="table-page-size" :placeholder="t('table.pageSize')">
+                <el-select
+                  v-model="tableQuery.pageSize"
+                  size="small"
+                  class="table-page-size"
+                  :placeholder="t('table.pageSize')"
+                  @change="handleTableSizeChange"
+                >
                   <el-option :value="10" label="10 / page" />
                   <el-option :value="20" label="20 / page" />
                   <el-option :value="50" label="50 / page" />
@@ -387,127 +392,33 @@
               class="inline-alert"
             />
 
-            <div
-              ref="tableShellRef"
-              class="table-shell"
-              @mousedown="beginTableDrag"
-            >
-              <el-table
-                ref="tableRef"
-                v-loading="tableLoading"
-                :data="tableRows"
-                border
-                stripe
-                class="workspace-table"
-                table-layout="fixed"
-                :empty-text="t('table.noRows')"
-                @sort-change="handleTableSortChange"
-                @selection-change="handleTableSelectionChange"
+            <div ref="tableShellRef" class="table-shell">
+              <s-table-provider
+                :hover="true"
+                :bordered="true"
+                :locale="adminTableLocale"
+                theme-color="#2563eb"
+                custom-class="admin-s-table-provider"
               >
-                <el-table-column v-if="tableDeleteMode" type="selection" width="52" fixed="left" />
-                <el-table-column
-                  v-for="column in selectedTableMeta?.columns || []"
-                  :key="column.name"
-                  :prop="column.name"
-                  :label="columnDisplayLabel(column)"
-                  :min-width="columnWidth(column)"
-                  sortable="custom"
-                >
-                  <template #default="{ row }">
-                    <div
-                      v-if="isImageDisplayColumn(column.name)"
-                      class="table-cell-media"
-                    >
-                      <button
-                        v-if="rowCellPreviewUrl(row, column.name)"
-                        class="table-cell-media__thumb"
-                        type="button"
-                        @click.stop="openTableImageDialog(row, column.name)"
-                      >
-                        <img
-                          :src="rowCellPreviewUrl(row, column.name)"
-                          :alt="columnDisplayLabel(column)"
-                          class="table-cell-media__image"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </button>
-                      <div v-else class="table-cell-media__empty">—</div>
-                      <span class="table-cell-media__value" :title="displayCellValue(row[column.name])">
-                        {{ displayCellValue(row[column.name]) }}
-                      </span>
-                    </div>
-                    <button
-                      v-else
-                      class="table-cell-display"
-                      :class="{
-                        'table-cell-display--editable': canInlineEditColumn(column.name),
-                        'table-cell-display--editing': isInlineEditing(row, column.name),
-                      }"
-                      type="button"
-                      @dblclick.stop="beginInlineEdit(row, column.name, $event)"
-                    >
-                      <span
-                        class="table-cell-value"
-                        :class="{ 'table-cell-value--empty': displayCellValue(row[column.name]) === '—' }"
-                      >
-                        {{ displayCellValue(row[column.name]) }}
-                      </span>
-                    </button>
-                  </template>
-                </el-table-column>
-                <el-table-column v-if="selectedTableHasVirtualMediaFields" :label="t('table.images')" fixed="right" width="110">
-                  <template #default="{ row }">
-                    <div class="row-actions">
-                      <el-button
-                        size="small"
-                        plain
-                        :disabled="tableDeleteMode"
-                        @click="openRecordMediaSlots(row)"
-                      >
-                        {{ t('table.images') }}
-                      </el-button>
-                    </div>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
-
-            <Teleport to="body">
-              <div
-                v-if="inlineEditRow && inlineEditColumn"
-                class="table-inline-editor"
-                :style="inlineEditStyle"
-                @mousedown.stop
-                @click.stop
-              >
-                <el-input
-                  ref="inlineEditInputRef"
-                  v-model="inlineEditDraft"
-                  type="text"
-                  class="table-inline-editor__input"
-                  @keydown.enter.stop.prevent="handleInlineEditEnter($event, inlineEditColumn)"
-                  @keydown.esc.stop.prevent="cancelInlineEdit"
+                <s-table
+                  ref="tableRef"
+                  class="workspace-table"
+                  :columns="adminTableColumns"
+                  :data-source="tableRows"
+                  :row-key="adminTableRowKey"
+                  :loading="tableLoading"
+                  :stripe="true"
+                  :wrap-text="true"
+                  :bordered="true"
+                  :pagination="adminTablePagination"
+                  :row-selection="adminTableRowSelection"
+                  :scroll-x="adminTableScrollX"
+                  @update:pagination="handleSTablePaginationUpdate"
+                  @change="handleSTableChange"
                 />
-              </div>
-            </Teleport>
-
-            <div class="table-footer">
-              <div class="table-meta-inline">
-                <span>{{ t('table.total') }} · {{ formatNumber(tablePagination.total) }}</span>
-                <span>{{ t('table.page') }} · {{ tablePagination.page }}</span>
-              </div>
-              <el-pagination
-                background
-                layout="total, sizes, prev, pager, next, jumper"
-                :total="tablePagination.total"
-                :current-page="tablePagination.page"
-                :page-size="tableQuery.pageSize"
-                :page-sizes="[10, 20, 50, 100]"
-                @current-change="handleTablePageChange"
-                @size-change="handleTableSizeChange"
-              />
+              </s-table-provider>
             </div>
+
           </div>
         </section>
 
@@ -1008,14 +919,29 @@
       <div class="row-media-picker">
         <p class="row-media-picker__hint">{{ t('rowMedia.pickerHint') }}</p>
         <div class="row-media-picker__toolbar">
+          <input
+            ref="fieldMediaUploadInputRef"
+            class="row-media-picker__upload-input"
+            type="file"
+            accept="image/*"
+            @change="handleFieldMediaUploadChange"
+          />
           <el-input
             v-model="fieldMediaQuery.search"
             :placeholder="t('rowMedia.pickerSearch')"
             @keyup.enter="loadFieldMediaLibrary"
           />
-          <el-button type="primary" :loading="fieldMediaLibraryLoading" @click="loadFieldMediaLibrary">
-            {{ t('media.search') }}
-          </el-button>
+          <div class="row-media-picker__toolbar-actions">
+            <el-checkbox v-model="fieldMediaQuery.onlyUnbound" @change="handleFieldMediaBindingFilterChange">
+              {{ t('rowMedia.onlyUnbound') }}
+            </el-checkbox>
+            <el-button :loading="fieldMediaUploading" @click="fieldMediaUploadInputRef?.click()">
+              {{ t('rowMedia.quickUpload') }}
+            </el-button>
+            <el-button type="primary" :loading="fieldMediaLibraryLoading" @click="loadFieldMediaLibrary">
+              {{ t('media.search') }}
+            </el-button>
+          </div>
         </div>
         <div v-if="fieldMediaAssets.length" class="row-media-picker-grid">
           <button
@@ -1098,7 +1024,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import VueEasyLightbox from 'vue-easy-lightbox';
 import {
@@ -1113,12 +1039,18 @@ import {
   ElMessageBox,
   ElOption,
   ElOptionGroup,
-  ElPagination,
   ElSelect,
-  ElTable,
-  ElTableColumn,
   ElTooltip
 } from 'element-plus';
+import type {
+  STableColumnsType,
+  STableInstance,
+  STableLocale,
+  STablePaginationConfig,
+  STableRowSelection
+} from '@shene/table';
+import enTableLocale from '@shene/table/dist/locale/en';
+import zhTableLocale from '@shene/table/dist/locale/zh_CN';
 import {
   DataAnalysis,
   Document,
@@ -1134,6 +1066,7 @@ import {
 import {
   fetchAdminAIWorkflowSettings,
   fetchAdminMediaList,
+  uploadAdminMedia,
   type AdminVirtualMediaField,
   createAdminDoc,
   createAdminTableRecord,
@@ -1239,9 +1172,12 @@ const fieldMediaPickerVisible = ref(false);
 const fieldMediaPickerMode = ref<'rowForm' | 'tableCell'>('rowForm');
 const fieldMediaPickerColumn = ref('');
 const fieldMediaLibraryLoading = ref(false);
+const fieldMediaUploading = ref(false);
+const fieldMediaUploadInputRef = ref<HTMLInputElement | null>(null);
 const fieldMediaAssets = ref<AdminMediaAsset[]>([]);
 const fieldMediaQuery = reactive({
   search: '',
+  onlyUnbound: false,
   page: 1,
   pageSize: 24,
 });
@@ -1273,14 +1209,12 @@ const textCellDialogOriginalRow = ref<Record<string, any> | null>(null);
 const textCellDialogDraft = ref('');
 const textCellDialogSaving = ref(false);
 const textCellDialogInputRef = ref<any>(null);
-const tableRef = ref<any>(null);
+const tableRef = ref<STableInstance | null>(null);
 const tableDeleteMode = ref(false);
+const tableDeleteSelectionKeys = ref<Array<string | number>>([]);
 const tableDeleteSelection = ref<Record<string, any>[]>([]);
-const tableDragState = reactive({
-  active: false,
-  startX: 0,
-  startScrollLeft: 0,
-});
+let tableCellOriginalRows = new WeakMap<Record<string, any>, Map<string, Record<string, any>>>();
+let tableCellSavingStates = new WeakMap<Record<string, any>, Set<string>>();
 
 const auditDialogVisible = ref(false);
 const selectedAuditRow = ref<AdminAuditRow | null>(null);
@@ -1387,6 +1321,78 @@ const selectedTableDefaultVisibleColumns = computed(() => {
     ? selectedTableMeta.value.default_visible_columns
     : [];
   return saved.length ? saved : getDefaultVisibleColumnNames(selectedTableMeta.value.name);
+});
+const selectedTableIdentityColumns = computed(() => {
+  if (!selectedTableMeta.value) return [];
+  const availableColumns = new Set((selectedTableMeta.value.columns || []).map((column) => column.name));
+  const orderedCandidates = [
+    ...(selectedTableMeta.value.primary_columns || []),
+    'ENSURE_ID',
+    'ensure_id',
+    'id',
+    'ID',
+    'Index',
+    'PMID',
+    'pmid'
+  ];
+  return orderedCandidates.filter((columnName, index, arr) =>
+    availableColumns.has(columnName) && arr.indexOf(columnName) === index
+  );
+});
+const adminTableLocale = computed<STableLocale>(() => ({
+  ...(locale.value === 'zh-CN' ? zhTableLocale : enTableLocale),
+  emptyText: t('table.noRows')
+}));
+const adminTablePagination = computed<STablePaginationConfig>(() => ({
+  current: tablePagination.page,
+  pageSize: tableQuery.pageSize,
+  total: tablePagination.total,
+  showQuickJumper: true,
+  showSizeChanger: false,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  position: ['bottomRight']
+}));
+const adminTableScrollX = computed(() => {
+  const baseColumns = (selectedTableMeta.value?.columns || []).reduce((total, column) => total + columnWidth(column), 0);
+  const deleteColumn = tableDeleteMode.value ? 52 : 0;
+  const slotColumn = selectedTableHasVirtualMediaFields.value ? 110 : 0;
+  return Math.max(baseColumns + deleteColumn + slotColumn + 48, 960);
+});
+const adminTableRowSelection = computed<STableRowSelection<Record<string, any>> | undefined>(() => {
+  if (!tableDeleteMode.value) return undefined;
+  return {
+    type: 'checkbox',
+    fixed: true,
+    columnWidth: 52,
+    selectedRowKeys: tableDeleteSelectionKeys.value,
+    onChange: handleTableSelectionChange
+  };
+});
+const adminTableColumns = computed<STableColumnsType<Record<string, any>>>(() => {
+  const baseColumns = (selectedTableMeta.value?.columns || []).map((column) => ({
+    title: columnDisplayLabel(column),
+    dataIndex: column.name,
+    key: column.name,
+    width: columnWidth(column),
+    sorter: true,
+    sortOrder: tableQuery.sortBy === column.name ? tableSortOrderForSTable(tableQuery.sortOrder) : null,
+    wrapText: true,
+    autoHeight: !isImageDisplayColumn(column.name),
+    customRender: ({ record }: { record: Record<string, any> }) => renderAdminTableCell(record, column.name),
+  }));
+
+  if (selectedTableHasVirtualMediaFields.value) {
+    baseColumns.push({
+      title: t('table.images'),
+      dataIndex: '__record_media_slots__',
+      key: '__record_media_slots__',
+      width: 110,
+      fixed: 'right',
+      customRender: ({ record }: { record: Record<string, any> }) => renderRecordMediaAction(record)
+    });
+  }
+
+  return baseColumns;
 });
 const activeSectionEyebrow = computed(() => {
   if (currentView.value === 'table') return t('section.eyebrowTable');
@@ -1629,6 +1635,242 @@ function columnWidth(columnOrName: string | { name: string }) {
   return Math.min(Math.max(String(label || '').length * 14, 132), 280);
 }
 
+function tableSortOrderForSTable(sortOrder: string) {
+  if (sortOrder === 'desc') return 'descend';
+  if (sortOrder === 'asc') return 'ascend';
+  return null;
+}
+
+function buildAdminTableRowIdentity(row: Record<string, any>) {
+  const parts = selectedTableIdentityColumns.value
+    .map((columnName) => normalizeFieldName(row?.[columnName]))
+    .filter(Boolean);
+  if (parts.length) {
+    return `${currentResource.value}::${parts.join('||')}`;
+  }
+  const fallbackIndex = tableRows.value.indexOf(row);
+  if (fallbackIndex >= 0) {
+    return `${currentResource.value}::fallback::${fallbackIndex}`;
+  }
+  return `${currentResource.value}::json::${JSON.stringify(row || {})}`;
+}
+
+function adminTableRowKey(row: Record<string, any>) {
+  return buildAdminTableRowIdentity(row);
+}
+
+function trackTableCellOriginalRow(row: Record<string, any>, columnName: string) {
+  const normalizedColumn = normalizeFieldName(columnName);
+  let rowSnapshots = tableCellOriginalRows.get(row);
+  if (!rowSnapshots) {
+    rowSnapshots = new Map<string, Record<string, any>>();
+    tableCellOriginalRows.set(row, rowSnapshots);
+  }
+  if (!rowSnapshots.has(normalizedColumn)) {
+    rowSnapshots.set(normalizedColumn, { ...row });
+  }
+}
+
+function getTrackedTableCellOriginalRow(row: Record<string, any>, columnName: string) {
+  return tableCellOriginalRows.get(row)?.get(normalizeFieldName(columnName)) || null;
+}
+
+function isTableCellSaving(row: Record<string, any>, columnName: string) {
+  return Boolean(tableCellSavingStates.get(row)?.has(normalizeFieldName(columnName)));
+}
+
+function setTableCellSaving(row: Record<string, any>, columnName: string, saving: boolean) {
+  const normalizedColumn = normalizeFieldName(columnName);
+  let rowSavingColumns = tableCellSavingStates.get(row);
+
+  if (saving) {
+    if (!rowSavingColumns) {
+      rowSavingColumns = new Set<string>();
+      tableCellSavingStates.set(row, rowSavingColumns);
+    }
+    rowSavingColumns.add(normalizedColumn);
+    return;
+  }
+
+  if (!rowSavingColumns) return;
+  rowSavingColumns.delete(normalizedColumn);
+  if (!rowSavingColumns.size) {
+    tableCellSavingStates.delete(row);
+  }
+}
+
+function clearTrackedTableCellOriginalRow(row: Record<string, any>, columnName: string) {
+  const normalizedColumn = normalizeFieldName(columnName);
+  const rowSnapshots = tableCellOriginalRows.get(row);
+  if (!rowSnapshots) return;
+  rowSnapshots.delete(normalizedColumn);
+}
+
+function clearTableEditTracking() {
+  tableCellOriginalRows = new WeakMap<Record<string, any>, Map<string, Record<string, any>>>();
+  tableCellSavingStates = new WeakMap<Record<string, any>, Set<string>>();
+}
+
+function renderTableTextValue(row: Record<string, any>, columnName: string, preserveLineBreaks = false) {
+  const value = displayCellValue(row[columnName]);
+  return h(
+    'span',
+    {
+      class: ['table-cell-value', { 'table-cell-value--empty': value === '—' }],
+      title: value,
+      style: preserveLineBreaks ? { whiteSpace: 'pre-wrap' } : undefined,
+    },
+    value
+  );
+}
+
+function renderTableImageCell(row: Record<string, any>, columnName: string) {
+  const previewUrl = rowCellPreviewUrl(row, columnName);
+  const value = displayCellValue(row[columnName]);
+  return h('div', { class: 'table-cell-media' }, [
+    previewUrl
+      ? h(
+        'button',
+        {
+          class: 'table-cell-media__thumb',
+          type: 'button',
+          onClick: (event: MouseEvent) => {
+            event.stopPropagation();
+            openTableImageDialog(row, columnName);
+          }
+        },
+        [
+          h('img', {
+            src: previewUrl,
+            alt: columnDisplayLabel(columnName),
+            class: 'table-cell-media__image',
+            loading: 'lazy',
+            decoding: 'async',
+          })
+        ]
+      )
+      : h(
+        'button',
+        {
+          class: 'table-cell-media__empty table-cell-media__empty-button',
+          type: 'button',
+          title: columnDisplayLabel(columnName),
+          onClick: (event: MouseEvent) => {
+            event.stopPropagation();
+            openTableImageDialog(row, columnName);
+          }
+        },
+        '—'
+      ),
+    h('span', { class: 'table-cell-media__value', title: value }, value)
+  ]);
+}
+
+function renderTableTextDialogTrigger(row: Record<string, any>, columnName: string) {
+  return h(
+    'button',
+    {
+      class: [
+        'table-cell-display',
+        'table-cell-display--editable',
+        'table-cell-display--dialog',
+        { 'table-cell-display--editing': isInlineEditing(row, columnName) }
+      ],
+      type: 'button',
+      onDblclick: (event: MouseEvent) => {
+        event.stopPropagation();
+        void openTextCellDialog(row, columnName);
+      }
+    },
+    [renderTableTextValue(row, columnName, true)]
+  );
+}
+
+function renderTableInlineEditTrigger(row: Record<string, any>, columnName: string) {
+  if (isInlineEditing(row, columnName)) {
+    return h(
+      'div',
+      {
+        class: 'table-inline-editor table-inline-editor--embedded',
+        onMousedown: (event: MouseEvent) => event.stopPropagation(),
+        onClick: (event: MouseEvent) => event.stopPropagation(),
+      },
+      [
+        h(ElInput, {
+          ref: inlineEditInputRef,
+          modelValue: inlineEditDraft.value,
+          'onUpdate:modelValue': (value: string) => {
+            inlineEditDraft.value = value;
+          },
+          type: 'text',
+          class: 'table-inline-editor__input',
+          onKeydown: (event: KeyboardEvent) => {
+            if (event.key === 'Enter') {
+              handleInlineEditEnter(event, columnName);
+              return;
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              cancelInlineEdit();
+            }
+          }
+        })
+      ]
+    );
+  }
+
+  return h(
+    'button',
+    {
+      class: [
+        'table-cell-display',
+        'table-cell-display--editable',
+        { 'table-cell-display--editing': isInlineEditing(row, columnName) }
+      ],
+      type: 'button',
+      onDblclick: (event: MouseEvent) => {
+        event.stopPropagation();
+        void beginInlineEdit(row, columnName, event);
+      }
+    },
+    [renderTableTextValue(row, columnName)]
+  );
+}
+
+function renderRecordMediaAction(row: Record<string, any>) {
+  return h('div', { class: 'row-actions' }, [
+    h(
+      ElButton,
+      {
+        size: 'small',
+        plain: true,
+        disabled: tableDeleteMode.value,
+        onClick: (event: MouseEvent) => {
+          event.stopPropagation();
+          openRecordMediaSlots(row);
+        }
+      },
+      { default: () => t('table.images') }
+    )
+  ]);
+}
+
+function renderAdminTableCell(row: Record<string, any>, columnName: string) {
+  if (isImageDisplayColumn(columnName)) {
+    return renderTableImageCell(row, columnName);
+  }
+  if (canInlineEditColumn(columnName) && inlineEditUsesTextarea(columnName, row)) {
+    return renderTableTextDialogTrigger(row, columnName);
+  }
+  if (canInlineEditColumn(columnName)) {
+    return renderTableInlineEditTrigger(row, columnName);
+  }
+  if (inlineEditUsesTextarea(columnName, row)) {
+    return renderTableTextValue(row, columnName, true);
+  }
+  return renderTableTextValue(row, columnName);
+}
+
 function normalizeFieldName(value: unknown) {
   return String(value || '').trim();
 }
@@ -1688,6 +1930,7 @@ function resetRowMediaState() {
   fieldMediaPickerColumn.value = '';
   fieldMediaAssets.value = [];
   fieldMediaQuery.search = '';
+  fieldMediaQuery.onlyUnbound = false;
   fieldMediaQuery.page = 1;
   Object.keys(rowRawFieldVisibility).forEach((key) => delete rowRawFieldVisibility[key]);
 }
@@ -1732,6 +1975,7 @@ async function loadFieldMediaLibrary() {
     const result = await fetchAdminMediaList({
       search: fieldMediaQuery.search || undefined,
       source_type: sourceType,
+      binding_status: fieldMediaQuery.onlyUnbound ? 'unbound' : undefined,
       page: fieldMediaQuery.page,
       page_size: fieldMediaQuery.pageSize,
     });
@@ -1743,10 +1987,54 @@ async function loadFieldMediaLibrary() {
   }
 }
 
+function handleFieldMediaBindingFilterChange() {
+  fieldMediaQuery.page = 1;
+  void loadFieldMediaLibrary();
+}
+
+function suggestedFieldMediaUploadTitle() {
+  const columnName = normalizeFieldName(fieldMediaPickerColumn.value);
+  if (!columnName) return '';
+  if (fieldMediaPickerMode.value === 'tableCell' && tableImageRow.value) {
+    const cellValue = normalizeFieldName(tableImageRow.value[columnName]);
+    if (cellValue) return cellValue;
+  }
+  const rawValue = normalizeFieldName(rowForm[columnName]);
+  if (rawValue) return rawValue;
+  return normalizeFieldName(fieldMediaQuery.search);
+}
+
+async function handleFieldMediaUploadChange(event: Event) {
+  const input = event.target as HTMLInputElement | null;
+  const file = input?.files?.[0] || null;
+  if (!file || !fieldMediaPickerColumn.value) return;
+  fieldMediaUploading.value = true;
+  try {
+    const sourceType = isLegacyPictureidColumn(fieldMediaPickerColumn.value) ? 'legacy_pictureid' : 'library';
+    const suggestedTitle = suggestedFieldMediaUploadTitle();
+    const result = await uploadAdminMedia(file, {
+      csrfToken: csrfToken.value,
+      title: suggestedTitle || undefined,
+      source_type: sourceType,
+    });
+    ElMessage.success(result.deduped ? t('msg.mediaDeduped') : t('msg.mediaUploaded'));
+    await loadFieldMediaLibrary();
+    if (result.asset) {
+      await chooseFieldMediaAsset(result.asset);
+    }
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.mediaUploadFailed'));
+  } finally {
+    fieldMediaUploading.value = false;
+    if (input) input.value = '';
+  }
+}
+
 async function openFieldMediaPicker(columnName: string) {
   fieldMediaPickerMode.value = 'rowForm';
   fieldMediaPickerColumn.value = normalizeFieldName(columnName);
   fieldMediaQuery.search = '';
+  fieldMediaQuery.onlyUnbound = false;
   fieldMediaQuery.page = 1;
   fieldMediaPickerVisible.value = true;
   await loadFieldMediaLibrary();
@@ -1774,7 +2062,10 @@ function clearFieldMedia(columnName: string) {
 function inlineEditUsesTextarea(columnName: string, row?: Record<string, any> | null) {
   const rawValue = row?.[columnName];
   const normalized = rawValue == null ? '' : String(rawValue);
-  return normalized.includes('\n');
+  if (!normalized) return false;
+  if (normalized.includes('\n')) return true;
+  if (normalized.length >= 48) return true;
+  return /[_/\\-]/.test(normalized) && normalized.length >= 28;
 }
 
 function displayCellValue(value: any) {
@@ -1832,6 +2123,7 @@ async function openTableImageReplacementPicker() {
   fieldMediaPickerMode.value = 'tableCell';
   fieldMediaPickerColumn.value = tableImageColumn.value;
   fieldMediaQuery.search = '';
+  fieldMediaQuery.onlyUnbound = false;
   fieldMediaQuery.page = 1;
   fieldMediaPickerVisible.value = true;
   await loadFieldMediaLibrary();
@@ -2001,7 +2293,8 @@ async function persistCellUpdate(
   nextValue: string
 ) {
   if (!selectedTableMeta.value) return false;
-  const previousValue = row[columnName] == null ? '' : String(row[columnName]);
+  const previousValueSource = originalRow || row;
+  const previousValue = previousValueSource[columnName] == null ? '' : String(previousValueSource[columnName]);
   if (nextValue === previousValue) return false;
   await updateAdminTableRecord(
     selectedTableMeta.value.name,
@@ -2022,26 +2315,59 @@ async function persistCellUpdate(
   return true;
 }
 
+async function openTextCellDialog(row: Record<string, any>, columnName: string) {
+  if (!canInlineEditColumn(columnName) || textCellDialogSaving.value) return;
+  if (inlineEditRow.value && (inlineEditRow.value !== row || inlineEditColumn.value !== columnName)) {
+    await saveInlineEdit();
+  }
+  cancelInlineEdit();
+  textCellDialogRow.value = row;
+  textCellDialogColumn.value = columnName;
+  textCellDialogOriginalRow.value = { ...row };
+  textCellDialogDraft.value = row[columnName] == null ? '' : String(row[columnName]);
+  textCellDialogVisible.value = true;
+  await nextTick();
+  const textarea = textCellDialogInputRef.value?.textarea
+    || textCellDialogInputRef.value?.$el?.querySelector?.('textarea');
+  textarea?.focus?.();
+}
+
+async function handleSTableCellEdited(
+  row: Record<string, any>,
+  columnName: string,
+  newRowData: Record<string, any>
+) {
+  if (!selectedTableMeta.value) return;
+  const originalRow = getTrackedTableCellOriginalRow(row, columnName) || { ...row };
+  const nextValue = newRowData?.[columnName] == null ? '' : String(newRowData[columnName]);
+  if (isTableCellSaving(row, columnName)) return;
+  setTableCellSaving(row, columnName, true);
+  try {
+    await persistCellUpdate(row, columnName, originalRow, nextValue);
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.rowSaveFailed'));
+    await loadSelectedTable();
+  } finally {
+    setTableCellSaving(row, columnName, false);
+    clearTrackedTableCellOriginalRow(row, columnName);
+  }
+}
+
 async function beginInlineEdit(row: Record<string, any>, columnName: string, event?: MouseEvent) {
   if (!canInlineEditColumn(columnName) || inlineEditSaving.value) return;
   if (inlineEditUsesTextarea(columnName, row)) {
-    textCellDialogRow.value = row;
-    textCellDialogColumn.value = columnName;
-    textCellDialogOriginalRow.value = { ...row };
-    textCellDialogDraft.value = row[columnName] == null ? '' : String(row[columnName]);
-    textCellDialogVisible.value = true;
-    await nextTick();
-    const textarea = textCellDialogInputRef.value?.textarea
-      || textCellDialogInputRef.value?.$el?.querySelector?.('textarea');
-    textarea?.focus?.();
+    await openTextCellDialog(row, columnName);
     return;
+  }
+  closeTextCellDialog();
+  if (inlineEditRow.value && (inlineEditRow.value !== row || inlineEditColumn.value !== columnName)) {
+    await saveInlineEdit();
   }
   inlineEditRow.value = row;
   inlineEditColumn.value = columnName;
   inlineEditOriginalRow.value = { ...row };
   inlineEditDraft.value = row[columnName] == null ? '' : String(row[columnName]);
   await nextTick();
-  updateInlineEditPosition(event?.currentTarget instanceof HTMLElement ? event.currentTarget : null);
   await focusInlineEditInput();
 }
 
@@ -2070,25 +2396,23 @@ function handleInlineEditEnter(event: KeyboardEvent, columnName: string) {
   void saveInlineEdit();
 }
 
-function handleTableSelectionChange(rows: Record<string, any>[]) {
+function handleTableSelectionChange(selectedKeys: Array<string | number>, rows: Record<string, any>[]) {
   if (!tableDeleteMode.value) return;
+  tableDeleteSelectionKeys.value = Array.isArray(selectedKeys) ? [...selectedKeys] : [];
   tableDeleteSelection.value = Array.isArray(rows) ? [...rows] : [];
 }
 
 function enterTableDeleteMode() {
-  cancelInlineEdit();
   closeTextCellDialog();
   tableDeleteMode.value = true;
+  tableDeleteSelectionKeys.value = [];
   tableDeleteSelection.value = [];
-  nextTick(() => {
-    tableRef.value?.clearSelection?.();
-  });
 }
 
 function cancelTableDeleteMode() {
   tableDeleteMode.value = false;
+  tableDeleteSelectionKeys.value = [];
   tableDeleteSelection.value = [];
-  tableRef.value?.clearSelection?.();
 }
 
 async function confirmDeleteSelectedRows() {
@@ -2354,8 +2678,8 @@ async function loadSelectedTable() {
   if (!table) return;
   tableError.value = '';
   tableLoading.value = true;
-  cancelInlineEdit();
   closeTextCellDialog();
+  clearTableEditTracking();
   cancelTableDeleteMode();
   try {
     if (selectedTableMeta.value && tableQuery.searchColumn) {
@@ -2388,20 +2712,55 @@ function runTableSearch() {
   void loadSelectedTable();
 }
 
-function handleTablePageChange(page: number) {
-  tablePagination.page = page;
+function handleSTablePaginationUpdate(pagination: Partial<STablePaginationConfig>) {
+  const nextPageSize = Number(pagination.pageSize || tableQuery.pageSize);
+  const pageSizeChanged = nextPageSize !== tableQuery.pageSize;
+  const nextPage = Number(pagination.current || (pageSizeChanged ? 1 : tablePagination.page));
+  const pageChanged = nextPage !== tablePagination.page;
+
+  if (!pageSizeChanged && !pageChanged) return;
+
+  if (pageSizeChanged) {
+    tableQuery.pageSize = nextPageSize;
+  }
+  tablePagination.page = pageSizeChanged ? 1 : nextPage;
   void loadSelectedTable();
 }
 
 function handleTableSizeChange(size: number) {
-  tableQuery.pageSize = size;
+  if (Number(size) === tableQuery.pageSize) return;
+  tableQuery.pageSize = Number(size);
   tablePagination.page = 1;
   void loadSelectedTable();
 }
 
-function handleTableSortChange({ prop, order }: { prop?: string; order?: string }) {
-  tableQuery.sortBy = prop || '';
-  tableQuery.sortOrder = order === 'descending' ? 'desc' : 'asc';
+function extractSTableSorter(sorter: any) {
+  const normalized = Array.isArray(sorter) ? sorter[0] : sorter;
+  const field = normalized?.field || normalized?.columnKey || normalized?.dataIndex || normalized?.key;
+  const orderRaw = normalized?.order || normalized?.sortOrder || null;
+  if (!field) return null;
+  if (!orderRaw) {
+    return {
+      field: String(field),
+      order: null,
+    };
+  }
+  return {
+    field: String(field),
+    order: orderRaw === 'descending' || orderRaw === 'descend' ? 'desc' : 'asc',
+  };
+}
+
+function handleSTableChange(_pagination?: Partial<STablePaginationConfig>, _filters?: any, sorter?: any) {
+  const resolved = extractSTableSorter(sorter);
+  if (!resolved) return;
+
+  const nextSortBy = resolved.order ? resolved.field : '';
+  const nextSortOrder = resolved.order || 'asc';
+  if (tableQuery.sortBy === nextSortBy && tableQuery.sortOrder === nextSortOrder) return;
+
+  tableQuery.sortBy = nextSortBy;
+  tableQuery.sortOrder = nextSortOrder;
   tablePagination.page = 1;
   void loadSelectedTable();
 }
@@ -2697,8 +3056,8 @@ async function handleLogout() {
 }
 
 async function refreshCurrentView() {
-  cancelInlineEdit();
   closeTextCellDialog();
+  clearTableEditTracking();
   await loadResources();
   if (currentView.value === 'table' && currentResource.value) {
     await selectTable(currentResource.value);
@@ -2760,8 +3119,6 @@ watch(
 
 onMounted(async () => {
   window.addEventListener('mousedown', handleGlobalInlineMouseDown, true);
-  window.addEventListener('resize', handleInlineEditViewportChange);
-  window.addEventListener('scroll', handleInlineEditViewportChange, true);
   const authed = await ensureAdminSession();
   if (!authed) return;
   await Promise.all([loadResources(), loadLLMSettings(), loadWorkflowSettings(), loadAuditLogs()]);
@@ -2774,9 +3131,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('mousedown', handleGlobalInlineMouseDown, true);
-  window.removeEventListener('resize', handleInlineEditViewportChange);
-  window.removeEventListener('scroll', handleInlineEditViewportChange, true);
-  stopTableDrag();
 });
 </script>
 
@@ -3410,41 +3764,46 @@ onUnmounted(() => {
 }
 
 .table-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 88px;
-  gap: 10px;
+  display: flex;
+  align-items: center;
   margin: 0;
   min-width: 0;
-  align-items: center;
   width: 100%;
-  max-width: 420px;
+  max-width: 560px;
   justify-self: center;
 }
 
-.table-search-combo {
+.table-search-bar {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 112px;
+  gap: 10px;
   min-width: 0;
   width: 100%;
 }
 
-.table-search-combo__select {
-  width: 124px;
+.table-search-bar__select,
+.table-search-bar__input {
+  min-width: 0;
 }
 
-.table-search-combo :deep(.el-input-group__prepend) {
-  padding: 0;
-  border: 0;
-  background: transparent;
+.table-search-bar__select :deep(.el-select__wrapper),
+.table-search-bar__input :deep(.el-input__wrapper) {
+  min-height: 38px;
+  border-radius: 14px;
 }
 
-.table-search-combo__select :deep(.el-select__wrapper) {
-  min-height: 32px;
-  box-shadow: none;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+.table-search-bar__select :deep(.el-select__wrapper) {
+  padding-inline: 12px;
 }
 
-.table-search-combo :deep(.el-input__wrapper) {
-  min-height: 36px;
+.table-search-bar__input :deep(.el-input__wrapper) {
+  padding-inline: 14px;
+}
+
+.table-search-bar__submit {
+  min-height: 38px;
+  border-radius: 14px;
+  font-weight: 700;
 }
 
 .card-actions--inline {
@@ -3467,83 +3826,107 @@ onUnmounted(() => {
 .table-shell {
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
   border: 1px solid var(--admin-border);
   border-radius: 14px;
   background: var(--admin-surface);
-  cursor: grab;
-  scrollbar-gutter: stable both-edges;
-}
-
-.table-shell--dragging {
-  cursor: grabbing;
 }
 
 .workspace-table {
   width: 100%;
 }
 
-.table-shell :deep(.el-table) {
+.table-shell :deep(.s-table) {
   min-width: 100%;
   background: var(--admin-table-row-bg);
   color: var(--admin-text);
-  --el-table-border-color: var(--admin-border);
-  --el-table-header-bg-color: var(--admin-table-header-bg);
-  --el-table-tr-bg-color: var(--admin-table-row-bg);
-  --el-table-row-hover-bg-color: var(--admin-table-row-hover);
-  --el-table-current-row-bg-color: var(--admin-table-row-hover);
-  --el-table-header-text-color: var(--admin-table-header-text);
-  --el-table-text-color: var(--admin-text);
 }
 
-.table-shell :deep(.el-table th.el-table__cell) {
+.table-shell :deep(.s-table__content) {
+  background: var(--admin-table-row-bg);
+}
+
+.table-shell :deep(.s-table__header-cell) {
   font-weight: 800;
-  background: var(--admin-table-header-bg) !important;
+  background: var(--admin-table-header-bg);
   color: var(--admin-table-header-text);
 }
 
-.table-shell :deep(.el-table td.el-table__cell) {
+.table-shell :deep(.s-table__cell),
+.table-shell :deep(.s-table__header-cell) {
+  border-color: var(--admin-border);
+}
+
+.table-shell :deep(.s-table__row) {
   background: var(--admin-table-row-bg);
+}
+
+.table-shell :deep(.s-table__row.s-table__row-odd) {
+  background: var(--admin-table-row-alt);
+}
+
+.table-shell :deep(.s-table__row.s-table__row-hover),
+.table-shell :deep(.s-table__row:hover) {
+  background: var(--admin-table-row-hover);
+}
+
+.table-shell :deep(.s-table__row.s-table__row-selected),
+.table-shell :deep(.s-table__row.s-table__row-selected .s-table__cell) {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.table-shell :deep(.s-table__cell) {
+  background: transparent;
   color: var(--admin-text);
   vertical-align: top;
 }
 
-.table-shell :deep(.el-table .cell) {
+.table-shell :deep(.s-table__cell-inner .s-table__cell-content) {
+  padding: 10px 8px;
+  color: var(--admin-text);
+  line-height: 1.52;
   white-space: normal;
-  overflow: visible;
-  position: relative;
+  word-break: break-word;
 }
 
-.table-shell :deep(.el-table .el-table__row--striped td.el-table__cell) {
-  background: var(--admin-table-row-alt);
+.table-shell :deep(.s-table__cell-fix-left),
+.table-shell :deep(.s-table__cell-fix-right) {
+  background: inherit;
 }
 
-.table-shell :deep(.el-table td.el-table__cell),
-.table-shell :deep(.el-table th.el-table__cell) {
-  border-right-color: var(--admin-border);
-}
-
-.table-shell :deep(.el-table__inner-wrapper),
-.table-shell :deep(.el-table__header-wrapper),
-.table-shell :deep(.el-table__body-wrapper),
-.table-shell :deep(.el-table__fixed),
-.table-shell :deep(.el-table__fixed-right) {
+.table-shell :deep(.s-table__header),
+.table-shell :deep(.s-table__body),
+.table-shell :deep(.s-table__summary) {
   background: var(--admin-table-row-bg);
 }
 
-.table-shell :deep(.el-table__fixed-right-patch) {
-  background: var(--admin-table-header-bg);
+.table-shell :deep(.s-table__cell-edit-wrap .el-input__wrapper) {
+  min-height: 44px;
+  padding-inline: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--admin-accent);
+  background: var(--admin-surface);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
-.table-cell-media {
+.table-shell :deep(.s-table__pagination) {
+  margin: 0;
+  padding: 0 16px 16px;
+}
+
+.table-shell :deep(.s-table__center-viewport),
+.table-shell :deep(.s-table__horizontal-scroll-viewport) {
+  scrollbar-gutter: stable both-edges;
+}
+
+.table-shell :deep(.table-cell-media) {
   display: grid;
   justify-items: center;
   gap: 8px;
   padding: 6px 0;
 }
 
-.table-cell-media__thumb {
+.table-shell :deep(.table-cell-media__thumb) {
   width: 92px;
   height: 92px;
   padding: 0;
@@ -3554,7 +3937,7 @@ onUnmounted(() => {
   cursor: zoom-in;
 }
 
-.table-cell-media__image {
+.table-shell :deep(.table-cell-media__image) {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -3562,7 +3945,7 @@ onUnmounted(() => {
   background: var(--admin-surface);
 }
 
-.table-cell-media__empty {
+.table-shell :deep(.table-cell-media__empty) {
   width: 92px;
   height: 92px;
   border: 1px dashed var(--admin-border);
@@ -3574,39 +3957,18 @@ onUnmounted(() => {
   font-weight: 700;
 }
 
-.table-cell-media__value {
+.table-shell :deep(.table-cell-media__empty-button) {
+  padding: 0;
+  cursor: pointer;
+}
+
+.table-shell :deep(.table-cell-media__value) {
   width: 100%;
   text-align: center;
   color: var(--admin-text-muted);
   font-size: 0.82rem;
   line-height: 1.35;
   word-break: break-word;
-}
-
-.table-shell :deep(.el-table__body tr:hover > td.el-table__cell) {
-  background: var(--admin-table-row-hover) !important;
-}
-
-:global(body.admin-table-dragging) {
-  user-select: none;
-  cursor: grabbing;
-}
-
-.table-footer {
-  margin-top: 16px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.table-meta-inline {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  color: var(--admin-text-muted);
-  font-size: 0.92rem;
 }
 
 .summary-strip-actions {
@@ -3621,39 +3983,39 @@ onUnmounted(() => {
   font-weight: 700;
 }
 
-.row-actions {
+.table-shell :deep(.row-actions) {
   display: flex;
   gap: 8px;
 }
 
-.table-cell-display {
+.table-shell :deep(.table-cell-display) {
   width: 100%;
-  min-height: 52px;
+  min-height: 48px;
   padding: 10px 8px;
   border: none;
   background: transparent;
   text-align: left;
   display: flex;
   align-items: flex-start;
-  cursor: default;
+  cursor: pointer;
 }
 
-.table-cell-display--editable {
-  cursor: text;
-}
-
-.table-cell-display--editable:hover {
+.table-shell :deep(.table-cell-display:hover) {
   background: var(--admin-surface-muted);
   border-radius: 10px;
 }
 
-.table-cell-display--editing {
+.table-shell :deep(.table-cell-display--editable) {
+  cursor: text;
+}
+
+.table-shell :deep(.table-cell-display--editing) {
   background: var(--admin-surface);
   border-radius: 12px;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
 }
 
-.table-cell-value {
+.table-shell :deep(.table-cell-value) {
   width: 100%;
   overflow: visible;
   text-overflow: unset;
@@ -3663,14 +4025,17 @@ onUnmounted(() => {
   color: var(--admin-text);
 }
 
-.table-cell-value--empty {
+.table-shell :deep(.table-cell-value--empty) {
   color: var(--admin-text-faint);
 }
 
 .table-inline-editor {
-  position: fixed;
-  z-index: 2600;
+  width: 100%;
   pointer-events: auto;
+}
+
+.table-inline-editor--embedded {
+  padding: 6px 8px;
 }
 
 .table-inline-editor__input {
@@ -3678,14 +4043,13 @@ onUnmounted(() => {
 }
 
 .table-inline-editor__input :deep(.el-input__wrapper) {
-  min-height: 48px;
-  padding-inline: 16px;
-  border-radius: 16px;
+  min-height: 42px;
+  padding-inline: 12px;
+  border-radius: 12px;
   border: 1px solid var(--admin-accent);
   background: var(--admin-surface);
   box-shadow:
-    0 16px 32px rgba(15, 23, 42, 0.12),
-    0 0 0 3px rgba(37, 99, 235, 0.14);
+    0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
 .table-image-workbench {
@@ -3973,6 +4337,19 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
+  align-items: center;
+}
+
+.row-media-picker__toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.row-media-picker__upload-input {
+  display: none;
 }
 
 .row-media-picker-grid {
@@ -4462,9 +4839,12 @@ onUnmounted(() => {
   }
 
   .table-toolbar {
-    grid-template-columns: minmax(260px, 1fr) 88px;
     max-width: none;
     justify-self: stretch;
+  }
+
+  .table-search-bar {
+    grid-template-columns: 148px minmax(0, 1fr) 104px;
   }
 
   .summary-strip,
@@ -4511,7 +4891,6 @@ onUnmounted(() => {
 
   .overview-stat-grid,
   .summary-grid,
-  .table-toolbar,
   .llm-grid,
   .row-form-grid,
   .doc-editor-layout--split,
@@ -4522,6 +4901,12 @@ onUnmounted(() => {
 
   .summary-strip {
     flex-wrap: wrap;
+  }
+
+  .table-toolbar,
+  .table-search-bar {
+    width: 100%;
+    max-width: none;
   }
 
   .label-form-row {
@@ -4535,6 +4920,10 @@ onUnmounted(() => {
 
   .table-image-workbench,
   .table-image-workbench__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .table-search-bar {
     grid-template-columns: 1fr;
   }
 }
