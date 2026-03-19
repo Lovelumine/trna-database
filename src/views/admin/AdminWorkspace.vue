@@ -1310,7 +1310,6 @@ const inlineEditColumn = ref('');
 const inlineEditOriginalRow = ref<Record<string, any> | null>(null);
 const inlineEditDraft = ref('');
 const inlineEditSaving = ref(false);
-const inlineEditInputRef = ref<any>(null);
 const inlineEditOverlayRect = reactive({
   top: 0,
   left: 0,
@@ -1911,14 +1910,21 @@ function renderTableInlineEditTrigger(row: Record<string, any>, columnName: stri
         onClick: (event: MouseEvent) => event.stopPropagation(),
       },
       [
-        h(ElInput, {
-          ref: inlineEditInputRef,
-          modelValue: inlineEditDraft.value,
-          'onUpdate:modelValue': (value: string) => {
-            inlineEditDraft.value = value;
-          },
+        h('input', {
+          value: inlineEditDraft.value,
           type: 'text',
           class: 'table-inline-editor__input',
+          spellcheck: false,
+          autofocus: true,
+          onInput: (event: Event) => {
+            const target = event.target as HTMLInputElement | null;
+            inlineEditDraft.value = target?.value ?? '';
+          },
+          onBlur: () => {
+            if (isInlineEditing(row, columnName) && !inlineEditSaving.value) {
+              void saveInlineEdit();
+            }
+          },
           onKeydown: (event: KeyboardEvent) => {
             if (event.key === 'Enter') {
               handleInlineEditEnter(event, columnName);
@@ -2345,9 +2351,8 @@ function updateInlineEditPosition(anchor?: HTMLElement | null) {
 
 async function focusInlineEditInput() {
   await nextTick();
-  inlineEditInputRef.value?.focus?.();
-  const nativeInput = inlineEditInputRef.value?.input
-    || inlineEditInputRef.value?.$el?.querySelector?.('input');
+  const nativeInput = tableShellRef.value?.querySelector('.table-inline-editor__input') as HTMLInputElement | null;
+  nativeInput?.focus?.();
   if (typeof nativeInput?.select === 'function') {
     nativeInput.select();
   }
@@ -4390,16 +4395,23 @@ onUnmounted(() => {
 
 .table-inline-editor__input {
   width: 100%;
-}
-
-.table-inline-editor__input :deep(.el-input__wrapper) {
   min-height: 42px;
-  padding-inline: 12px;
+  padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--admin-accent);
   background: var(--admin-surface);
   box-shadow:
     0 0 0 2px rgba(37, 99, 235, 0.12);
+  color: var(--admin-text);
+  font: inherit;
+  line-height: 1.45;
+  outline: none;
+}
+
+.table-inline-editor__input:focus {
+  border-color: var(--admin-accent);
+  box-shadow:
+    0 0 0 2px rgba(37, 99, 235, 0.14);
 }
 
 .table-image-workbench {
