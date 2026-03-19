@@ -57,107 +57,6 @@
           :title="mediaError"
           class="inline-alert"
         />
-
-        <section class="media-migration-panel">
-          <div class="media-migration-panel__head">
-            <div>
-              <strong>{{ t('media.migrationTitle') }}</strong>
-              <p>{{ t('media.migrationHint') }}</p>
-            </div>
-            <div class="card-actions">
-              <el-button :loading="migrationLoading" @click="loadLegacyPreview">
-                {{ t('media.migrationRefresh') }}
-              </el-button>
-              <el-button type="primary" plain :loading="migrationRunning" @click="runLegacyMigration(true)">
-                {{ t('media.migrationDryRun') }}
-              </el-button>
-              <el-button
-                type="primary"
-                :loading="migrationRunning"
-                :disabled="!migrationPreview?.summary?.migration_ready"
-                @click="runLegacyMigration(false)"
-              >
-                {{ t('media.migrationExecute') }}
-              </el-button>
-            </div>
-          </div>
-
-          <el-alert
-            v-if="migrationError"
-            type="error"
-            :closable="false"
-            show-icon
-            :title="migrationError"
-            class="inline-alert"
-          />
-
-          <div v-if="migrationPreview" class="media-migration-summary">
-            <article>
-              <span>{{ t('media.migrationSummaryTables') }}</span>
-              <strong>{{ formatNumber(migrationPreview.summary.table_count || 0) }}</strong>
-            </article>
-            <article>
-              <span>{{ t('media.migrationSummaryCandidates') }}</span>
-              <strong>{{ formatNumber(migrationPreview.summary.candidate_count || 0) }}</strong>
-            </article>
-            <article>
-              <span>{{ t('media.migrationSummaryRecordKeys') }}</span>
-              <strong>{{ formatNumber(migrationPreview.summary.with_record_key_count || 0) }}</strong>
-            </article>
-            <article>
-              <span>{{ t('media.migrationSummaryReady') }}</span>
-              <strong>{{ migrationPreview.summary.migration_ready ? t('media.migrationReadyYes') : t('media.migrationReadyNo') }}</strong>
-            </article>
-          </div>
-
-          <el-alert
-            v-if="migrationPreview && !migrationPreview.summary.migration_ready"
-            type="warning"
-            :closable="false"
-            show-icon
-            :title="t('media.migrationWarning')"
-            class="inline-alert"
-          />
-
-          <details v-if="migrationPreview?.invalid_tables?.length" class="media-migration-invalid">
-            <summary>{{ t('media.migrationInvalidTablesCompact', { count: migrationPreview.invalid_tables.length }) }}</summary>
-            <p>{{ migrationPreview.invalid_tables.join(', ') }}</p>
-          </details>
-
-          <div v-if="migrationPreview?.tables?.length" class="media-migration-table-list">
-            <article
-              v-for="table in migrationPreview.tables"
-              :key="table.table"
-              class="media-migration-table-card"
-            >
-              <header>
-                <strong>{{ table.display_name }}</strong>
-                <span>{{ table.table }}</span>
-              </header>
-              <div class="media-migration-table-meta">
-                <span>{{ t('media.migrationCandidateCount') }} · {{ formatNumber(table.candidate_count || 0) }}</span>
-                <span>{{ t('media.migrationSummaryRecordKeys') }} · {{ formatNumber(table.with_record_key_count || 0) }}</span>
-              </div>
-              <details v-if="table.sample_rows?.length" class="media-migration-samples-disclosure">
-                <summary>{{ t('media.migrationSamplesToggle', { count: table.sample_rows.length }) }}</summary>
-                <ul class="media-migration-samples">
-                  <li v-for="sample in table.sample_rows" :key="`${table.table}:${sample.record_key}:${sample.pictureid}`">
-                    <strong>{{ sample.pictureid }}</strong>
-                    <span>{{ sample.record_key }}</span>
-                  </li>
-                </ul>
-              </details>
-              <p v-else class="media-migration-empty">{{ t('media.fieldPreviewEmpty') }}</p>
-            </article>
-          </div>
-
-          <div v-if="migrationResult" class="media-migration-result">
-            <strong>{{ t('media.migrationResult') }}</strong>
-            <span>{{ t('media.migrationSummaryCandidates') }} · {{ formatNumber(migrationResult.summary.created_assets + migrationResult.summary.reused_assets) }}</span>
-            <span>{{ migrationResult.dry_run ? t('media.migrationDryRun') : t('media.migrationExecute') }}</span>
-            <span>bindings · +{{ formatNumber(migrationResult.summary.created_bindings || 0) }}</span>
-          </div>
-        </section>
       </section>
 
       <div class="media-content">
@@ -417,14 +316,10 @@ import {
 import {
   deleteAdminMedia,
   fetchAdminMediaDetail,
-  fetchAdminLegacyPictureidPreview,
   fetchAdminMediaList,
-  runAdminLegacyPictureidMigration,
   saveAdminMedia,
   uploadAdminMedia,
   type AdminMediaAsset,
-  type AdminLegacyPictureidMigrateResponse,
-  type AdminLegacyPictureidPreviewResponse,
   type AdminMediaReference,
 } from '@/utils/admin';
 import { useAdminI18n } from '@/utils/adminI18n';
@@ -443,11 +338,6 @@ const mediaLoading = ref(false);
 const mediaError = ref('');
 const mediaItems = ref<AdminMediaAsset[]>([]);
 const mediaTotal = ref(0);
-const migrationLoading = ref(false);
-const migrationRunning = ref(false);
-const migrationError = ref('');
-const migrationPreview = ref<AdminLegacyPictureidPreviewResponse | null>(null);
-const migrationResult = ref<AdminLegacyPictureidMigrateResponse | null>(null);
 const selectedAssetId = ref<number | null>(null);
 const selectedAssetDetail = ref<AdminMediaAsset | null>(null);
 const assetReferences = ref<AdminMediaReference[]>([]);
@@ -675,57 +565,6 @@ async function loadMedia() {
   }
 }
 
-async function loadLegacyPreview() {
-  migrationLoading.value = true;
-  migrationError.value = '';
-  try {
-    migrationPreview.value = await fetchAdminLegacyPictureidPreview({ sample_limit: 4 });
-  } catch (error: any) {
-    migrationError.value = error?.message || t('msg.mediaMigrationPreviewFailed');
-  } finally {
-    migrationLoading.value = false;
-  }
-}
-
-async function runLegacyMigration(dryRun: boolean) {
-  if (!dryRun) {
-    try {
-      await ElMessageBox.confirm(
-        t('confirm.mediaMigrationExecute'),
-        t('confirm.deleteTitle'),
-        {
-          type: 'warning',
-          confirmButtonText: t('media.migrationExecute'),
-          cancelButtonText: t('dialog.cancel'),
-        }
-      );
-    } catch {
-      return;
-    }
-  }
-
-  migrationRunning.value = true;
-  migrationError.value = '';
-  try {
-    migrationResult.value = await runAdminLegacyPictureidMigration(
-      {
-        dry_run: dryRun,
-        confirm: !dryRun,
-      },
-      props.csrfToken
-    );
-    ElMessage.success(dryRun ? t('msg.mediaMigrationDryRunDone') : t('msg.mediaMigrationDone'));
-    await Promise.all([loadLegacyPreview(), loadMedia()]);
-    emit('changed');
-  } catch (error: any) {
-    const message = error?.message || t('msg.mediaMigrationPreviewFailed');
-    migrationError.value = message;
-    ElMessage.error(message);
-  } finally {
-    migrationRunning.value = false;
-  }
-}
-
 async function submitUpload() {
   if (!uploadForm.file) {
     ElMessage.error(t('msg.mediaFileRequired'));
@@ -816,7 +655,7 @@ async function copyText(value: string) {
 
 defineExpose({
   refresh: async () => {
-    await Promise.all([loadMedia(), loadLegacyPreview()]);
+    await loadMedia();
   },
 });
 
@@ -831,7 +670,6 @@ watch(
 
 onMounted(() => {
   void loadMedia();
-  void loadLegacyPreview();
 });
 </script>
 
@@ -909,180 +747,6 @@ onMounted(() => {
   background: color-mix(in srgb, var(--admin-accent-soft) 72%, var(--admin-surface) 28%);
   border-color: color-mix(in srgb, var(--admin-accent) 50%, var(--admin-border) 50%);
   color: var(--admin-accent-strong);
-}
-
-.media-migration-panel {
-  margin-bottom: 18px;
-  border: 1px solid var(--admin-border);
-  border-radius: 18px;
-  background: var(--admin-surface-muted);
-  padding: 16px;
-  display: grid;
-  gap: 14px;
-}
-
-.media-migration-panel__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.media-migration-panel__head strong {
-  display: block;
-  color: var(--admin-text);
-  font-size: 1rem;
-}
-
-.media-migration-panel__head p {
-  margin: 6px 0 0;
-  color: var(--admin-text-muted);
-  font-size: 0.86rem;
-  line-height: 1.45;
-}
-
-.media-migration-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.media-migration-summary article,
-.media-migration-result {
-  border: 1px solid var(--admin-border);
-  border-radius: 14px;
-  background: var(--admin-surface);
-  padding: 12px 14px;
-}
-
-.media-migration-summary span,
-.media-migration-summary strong,
-.media-migration-result strong,
-.media-migration-result span {
-  display: block;
-}
-
-.media-migration-summary span,
-.media-migration-result span {
-  color: var(--admin-text-muted);
-  font-size: 0.8rem;
-}
-
-.media-migration-summary strong {
-  margin-top: 6px;
-  color: var(--admin-text);
-  font-size: 1.05rem;
-}
-
-.media-migration-invalid {
-  border: 1px dashed color-mix(in srgb, var(--admin-danger, #b91c1c) 20%, var(--admin-border) 80%);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--admin-danger, #b91c1c) 3%, var(--admin-surface) 97%);
-  padding: 10px 12px;
-  color: var(--admin-text-muted);
-  font-size: 0.83rem;
-}
-
-.media-migration-invalid summary {
-  cursor: pointer;
-  color: var(--admin-text);
-  font-weight: 600;
-  list-style: none;
-}
-
-.media-migration-invalid summary::-webkit-details-marker {
-  display: none;
-}
-
-.media-migration-invalid p {
-  margin: 8px 0 0;
-  color: var(--admin-danger, #b91c1c);
-  line-height: 1.55;
-  word-break: break-word;
-}
-
-.media-migration-table-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.media-migration-table-card {
-  border: 1px solid var(--admin-border);
-  border-radius: 16px;
-  background: var(--admin-surface);
-  padding: 14px;
-  display: grid;
-  gap: 10px;
-}
-
-.media-migration-table-card header {
-  display: grid;
-  gap: 3px;
-}
-
-.media-migration-table-card strong {
-  color: var(--admin-text);
-}
-
-.media-migration-table-card header span,
-.media-migration-table-meta {
-  color: var(--admin-text-muted);
-  font-size: 0.82rem;
-}
-
-.media-migration-table-meta {
-  display: grid;
-  gap: 4px;
-}
-
-.media-migration-samples {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 6px;
-}
-
-.media-migration-samples-disclosure {
-  display: grid;
-  gap: 8px;
-}
-
-.media-migration-samples-disclosure summary {
-  cursor: pointer;
-  color: var(--admin-text-muted);
-  font-size: 0.82rem;
-  list-style: none;
-}
-
-.media-migration-samples-disclosure summary::-webkit-details-marker {
-  display: none;
-}
-
-.media-migration-samples strong,
-.media-migration-samples span {
-  display: block;
-}
-
-.media-migration-samples span,
-.media-migration-empty {
-  color: var(--admin-text-muted);
-  font-size: 0.8rem;
-}
-
-.media-migration-empty {
-  margin: 0;
-}
-
-.media-migration-result {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-  align-items: center;
-}
-
-.media-migration-result strong {
-  color: var(--admin-text);
 }
 
 .media-grid {
@@ -1406,14 +1070,6 @@ onMounted(() => {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .media-migration-panel__head,
-  .media-migration-result {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .media-migration-summary,
-  .media-migration-table-list,
   .media-meta-grid {
     grid-template-columns: minmax(0, 1fr);
   }

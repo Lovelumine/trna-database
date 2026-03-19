@@ -258,7 +258,53 @@ def test_find_media_asset_references_merges_binding_settings_and_docs(
     assert references[0]["slot_key"] == "structure_figure"
     assert references[1]["resource"] == "help.md"
     assert references[2]["resource"] == "site_asset_slots_json"
-    assert references[2]["slot_key"] == "homepage.hero_logo"
+
+
+def test_sync_doc_image_bindings_replaces_existing_bindings(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    asset = _make_asset()
+    previous_binding = SimpleNamespace(
+        id=12,
+        asset_id=asset.id,
+        binding_type="doc_image",
+        resource_name="help.md",
+        field_name="",
+        record_key="",
+        slot_key="image_999",
+        extra_json=None,
+        created_by=None,
+        created_by_username="",
+        created_at=None,
+    )
+    fake_session = FakeSession()
+    original_session = routes.db.session
+    original_binding_query = routes.MediaBinding.__dict__.get("query")
+    original_asset_query = routes.MediaAsset.__dict__.get("query")
+    type.__setattr__(routes.MediaBinding, "query", FakeBindingQuery([previous_binding]))
+    type.__setattr__(routes.MediaAsset, "query", FakeFilterByRouter([asset]))
+    monkeypatch.setattr(routes.db, "session", fake_session)
+
+    try:
+        bindings = routes._sync_doc_image_bindings(
+            "help.md",
+            f"![Overview image]({asset.public_url})",
+            actor=None,
+        )
+    finally:
+        monkeypatch.setattr(routes.db, "session", original_session)
+        if original_binding_query is not None:
+            type.__setattr__(routes.MediaBinding, "query", original_binding_query)
+        if original_asset_query is not None:
+            type.__setattr__(routes.MediaAsset, "query", original_asset_query)
+
+    assert previous_binding in fake_session.deleted
+    created_binding = next(obj for obj in fake_session.added if isinstance(obj, MediaBinding))
+    assert created_binding.binding_type == "doc_image"
+    assert created_binding.resource_name == "help.md"
+    assert created_binding.slot_key == "image_001"
+    assert bindings[0]["binding_type"] == "doc_image"
+    assert bindings[0]["resource_name"] == "help.md"
 
 
 def test_admin_media_detail_and_delete_are_blocked_by_references(
@@ -563,55 +609,7 @@ def test_admin_table_record_media_slot_bind_replaces_single_slot(media_app: Flas
     assert fake_session.deleted == [existing_binding]
 
 
-def test_admin_media_legacy_pictureid_preview_returns_summary(media_app: Flask, monkeypatch: pytest.MonkeyPatch):
-    _mock_admin(monkeypatch)
-    monkeypatch.setattr(
-        routes,
-        "_legacy_pictureid_preview",
-        lambda tables, sample_limit=5: {
-            "tables": [
-                {
-                    "table": "nonsense_sup_rna",
-                    "display_name": "Natural Nonsense sup-tRNA",
-                    "candidate_count": 52,
-                    "with_record_key_count": 52,
-                    "sample_rows": [
-                        {
-                            "pictureid": "914869",
-                            "pictureid_normalized": "914869",
-                            "record_key": "PMID=12345678",
-                            "match_columns": ["PMID"],
-                            "caption": "example caption",
-                            "object_key": "picture/914869.png",
-                            "public_url": "https://example.com/picture/914869.png",
-                            "source_field": "pictureid",
-                        }
-                    ],
-                }
-            ],
-            "invalid_tables": [],
-            "summary": {
-                "table_count": 1,
-                "candidate_count": 52,
-                "with_record_key_count": 52,
-                "migration_ready": True,
-                "bucket_configured": True,
-                "public_base_configured": True,
-            },
-        },
-    )
-
-    client = media_app.test_client()
-    _login_admin(client)
-
-    response = client.get("/admin/api/media/legacy_pictureid/preview?tables=nonsense_sup_rna")
-    assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["summary"]["candidate_count"] == 52
-    assert payload["tables"][0]["sample_rows"][0]["pictureid"] == "914869"
-
-
-def test_admin_media_legacy_pictureid_migrate_requires_confirm_when_not_dry_run(
+def test_admin_media_legacy_pictureid_migration_endpoints_are_removed(
     media_app: Flask,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -619,56 +617,15 @@ def test_admin_media_legacy_pictureid_migrate_requires_confirm_when_not_dry_run(
     client = media_app.test_client()
     csrf_token = _login_admin(client)
 
-    response = client.post(
+    preview = client.get("/admin/api/media/legacy_pictureid/preview")
+    execute = client.post(
         "/admin/api/media/legacy_pictureid/migrate",
         headers={"X-CSRF-Token": csrf_token},
-        json={"dry_run": False, "tables": ["nonsense_sup_rna"]},
+        json={"dry_run": True},
     )
-    assert response.status_code == 400
-    assert response.get_json()["error"] == "confirm=true is required to execute migration"
 
-
-def test_legacy_pictureid_migrate_creates_asset_and_binding(
-    media_app: Flask,
-    monkeypatch: pytest.MonkeyPatch,
-):
-    _mock_admin(monkeypatch)
-    media_app.config["MINIO_BUCKET"] = "ensure"
-    fake_session = FakeSession(asset=None)
-    monkeypatch.setattr(routes, "db", SimpleNamespace(session=fake_session, engine=SimpleNamespace()))
-    monkeypatch.setattr(routes, "_get_minio_public_base", lambda: "https://example.com/ensure")
-    monkeypatch.setattr(routes, "_legacy_pictureid_candidate_tables", lambda tables=None: (["nonsense_sup_rna"], []))
-    monkeypatch.setattr(
-        routes,
-        "_legacy_pictureid_candidate_rows",
-        lambda table, limit=None: ([{"PMID": "12345678", "pictureid": "914869", "Notes": "caption"}], ["PMID", "pictureid", "Notes"]),
-    )
-    monkeypatch.setattr(routes, "_admin_build_record_key", lambda table, row, col_names: ("PMID=12345678", ["PMID"]))
-    monkeypatch.setattr(routes, "_admin_display_name", lambda table: "Natural Nonsense sup-tRNA")
-    monkeypatch.setattr(routes, "audit_admin_action", lambda *args, **kwargs: None)
-    original_asset_query = routes.MediaAsset.__dict__.get("query")
-    original_binding_query = routes.MediaBinding.__dict__.get("query")
-    type.__setattr__(routes.MediaAsset, "query", FakeAssetQueryRouter(None))
-    type.__setattr__(routes.MediaBinding, "query", FakeBindingQueryRouter(None, []))
-
-    try:
-        with media_app.app_context():
-            result = routes._legacy_pictureid_migrate(
-                ["nonsense_sup_rna"],
-                dry_run=False,
-                actor=SimpleNamespace(id=7, username="media-admin"),
-            )
-    finally:
-        if original_asset_query is not None:
-            type.__setattr__(routes.MediaAsset, "query", original_asset_query)
-        if original_binding_query is not None:
-            type.__setattr__(routes.MediaBinding, "query", original_binding_query)
-
-    assert result["dry_run"] is False
-    assert result["summary"]["created_assets"] == 1
-    assert result["summary"]["created_bindings"] == 1
-    assert any(isinstance(obj, MediaAsset) for obj in fake_session.added)
-    assert any(isinstance(obj, MediaBinding) for obj in fake_session.added)
+    assert preview.status_code == 404
+    assert execute.status_code == 404
 
 
 def test_attach_public_row_media_bindings_adds_bound_field_asset(
@@ -707,6 +664,49 @@ def test_attach_public_row_media_bindings_adds_bound_field_asset(
 
     assert rows[0]["__media"]["record_key"] == "id=1"
     assert rows[0]["__media"]["fields"]["pictureid"][0]["asset"]["public_url"] == asset.public_url
+
+
+def test_attach_alignment_result_media_enriches_row_data_with_bound_asset(
+    media_app: Flask,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    asset = _make_asset()
+    binding = SimpleNamespace(
+        id=12,
+        asset_id=11,
+        binding_type="table_field",
+        resource_name="nonsense_sup_rna",
+        field_name="pictureid",
+        record_key="id=1",
+        slot_key="",
+        extra_json=json.dumps({"legacy_pictureid": "914869"}),
+        created_by=None,
+        created_by_username="",
+        created_at=None,
+    )
+    fake_session = FakeSession(asset=asset)
+    monkeypatch.setattr(routes, "db", SimpleNamespace(session=fake_session))
+    monkeypatch.setattr(routes, "_admin_build_record_key", lambda table, row, col_names: ("id=1", ["id"]))
+    original_query = routes.MediaBinding.__dict__.get("query")
+    type.__setattr__(routes.MediaBinding, "query", FakeBindingQuery([binding]))
+
+    try:
+        results = routes._attach_alignment_result_media(
+            [
+                {
+                    "file": "nonsense_sup_rna",
+                    "columns": ["id", "pictureid"],
+                    "row_data": {"id": 1, "pictureid": "914869"},
+                }
+            ]
+        )
+    finally:
+        if original_query is not None:
+            type.__setattr__(routes.MediaBinding, "query", original_query)
+
+    row_data = results[0]["row_data"]
+    assert row_data["__media"]["record_key"] == "id=1"
+    assert row_data["__media"]["fields"]["pictureid"][0]["asset"]["public_url"] == asset.public_url
 
 
 def test_sync_legacy_pictureid_field_binding_creates_asset_and_binding(

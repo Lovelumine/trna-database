@@ -19,16 +19,16 @@ Users can search for the target disease or gene in the search bar, and find the 
 For a particular disease, users can click on the "\+" to display detailed information\. By clicking on the links, it is also possible to jump to references as well as data sources\. In addition, if users encounters problems during the search process, users can click on the AI assistant <a id="_Hlk170493689"></a>“Yingying” in the lower right corner of the page to seek help from it, thus increasing users experience and improving the efficiency of the search\.
 
 
-![](https://minio.lumoxuan.cn/ensure/help/Find%20disease-specific%20information.png)
+![Find_disease-specific_information](https://minio.lumoxuan.cn/ensure/media/docs/2026/03/d073cc6aabc860a7d42bd4aebc0f7f9097c2dbc78a0628ac55e5a7c5d71f3523.png)
 
-![](https://minio.lumoxuan.cn/ensure/help/Coding%20Variation%20in%20Genetic%20Disease.jpeg)
+![Coding_Variation_in_Genetic_Disease](https://minio.lumoxuan.cn/ensure/media/docs/2026/03/0f4b6d9307df5babf9cd5b92e87978639be598ba4aff104881664e7dbed2bc1c.jpg)
 
-![](https://minio.lumoxuan.cn/ensure/help/Coding%20Variation%20in%20Cancer.jpeg)
+![Coding_Variation_in_Cancer](https://minio.lumoxuan.cn/ensure/media/docs/2026/03/72fc6e13fa1738f365c17a9f7e6c4f5e9d9f26a6661be9989c137b482719bdbd.jpg)
 
-![](https://minio.lumoxuan.cn/ensure/help/AI%20assistant%20yingying.jpeg)
+![AI_assistant_yingying](https://minio.lumoxuan.cn/ensure/media/docs/2026/03/d128ce4de897e2cd53bdc819fb9e3f893a8b95172e588365a6e70adff0633b9a.jpg)
 
 Note: The descriptions of variants in this module are all using the HGV Format \([https://hgvs\-nomenclature\.org/stable/background/simple/](https://hgvs-nomenclature.org/stable/background/simple/)\), e\.g\.;
 
-![](https://minio.lumoxuan.cn/ensure/help/HGV%20Format1.png)
+![HGV_Format1](https://minio.lumoxuan.cn/ensure/media/docs/2026/03/318aa75810d7a70eebb67ad59b5b38e55bce31a36b3716202b74b531fe5a32f0.jpg)
 
-![](https://minio.lumoxuan.cn/ensure/help/HGV%20Format2.png)
+![HGV_Format2](https://minio.lumoxuan.cn/ensure/media/docs/2026/03/40a5778f5729caa35b4769fcc80e49cb4ddb65f1b078333bbe45e2eec807e1ae.jpg)

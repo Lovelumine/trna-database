@@ -163,10 +163,12 @@
               <p v-if="record.Notes">
                 <b>Notes:</b>
                 <img
-                  :src="resolveMediaSource(TABLE_NAME, 'Notes', record.Notes)"
-                  @click="showLightboxByUrl(resolveMediaSource(TABLE_NAME, 'Notes', record.Notes))"
+                  v-if="getNotesImageUrl(record)"
+                  :src="getNotesImageUrl(record)"
+                  @click="showLightboxByUrl(getNotesImageUrl(record))"
                   style="width: 100px; cursor: pointer;"
                 />
+                <span v-else>{{ record.Notes }}</span>
               </p>
             </div>
           </template>
@@ -268,18 +270,26 @@ export default defineComponent({
     const hideLightbox = () => { visible.value = false; };
 
     const getStructureImageUrl = (record: any) => {
-      const boundPicture = getRowBoundFieldMediaUrl(record, 'pictureid');
-      if (boundPicture) return boundPicture;
       const boundStructure = getRowBoundFieldMediaUrl(record, 'Structure of sup-tRNA');
       if (boundStructure) return boundStructure;
-      const legacyPicture = resolveMediaSource(TABLE_NAME, 'pictureid', record?.pictureid);
-      if (legacyPicture) return legacyPicture;
+      const boundPicture = getRowBoundFieldMediaUrl(record, 'pictureid');
+      if (boundPicture) return boundPicture;
       return resolveMediaSource(TABLE_NAME, 'Structure of sup-tRNA', record?.['Structure of sup-tRNA']);
     };
 
     const getStructurePreviewList = (record: any) => {
       const url = getStructureImageUrl(record);
       return url ? [url] : [];
+    };
+
+    const getNotesImageUrl = (record: any) => {
+      const boundNotes = getRowBoundFieldMediaUrl(record, 'Notes');
+      if (boundNotes) return boundNotes;
+      const resolved = resolveMediaSource(TABLE_NAME, 'Notes', record?.Notes);
+      if (/^(https?:)?\/\//i.test(resolved) || resolved.startsWith('data:') || resolved.startsWith('/')) {
+        return resolved;
+      }
+      return '';
     };
 
     const loadStats = async () => {
@@ -596,7 +606,7 @@ export default defineComponent({
       hideLightbox,
       getStructureImageUrl,
       getStructurePreviewList,
-      resolveMediaSource,
+      getNotesImageUrl,
       highlightMutation,
 
       // 分页

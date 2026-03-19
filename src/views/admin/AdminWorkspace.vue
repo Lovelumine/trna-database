@@ -110,51 +110,58 @@
     </aside>
 
     <section class="workspace-main">
-      <header class="workspace-topbar">
-        <div class="workspace-topbar-copy">
-          <p class="workspace-eyebrow">{{ activeSectionEyebrow }}</p>
-          <h2>{{ activeSectionTitle }}</h2>
-          <div v-if="currentView === 'table'" class="workspace-subtitle-control">
-            <span>{{ t('table.currentTable') }}</span>
-            <el-select
-              :model-value="currentResource"
-              filterable
-              class="workspace-subtitle-select"
-              :placeholder="t('table.pickFromTop')"
-              @change="handleTableSelectChange"
-            >
-              <el-option-group
-                v-for="group in groupedTableResources"
-                :key="group.key"
-                :label="group.label"
+      <header class="workspace-topbar" :class="{ 'workspace-topbar--compact': currentView === 'doc' }">
+        <div class="workspace-topbar-copy" :class="{ 'workspace-topbar-copy--compact': currentView === 'doc' }">
+          <template v-if="currentView === 'doc'">
+            <div class="workspace-doc-header">
+              <div class="workspace-doc-header__copy">
+                <p class="workspace-eyebrow">{{ activeSectionEyebrow }}</p>
+                <h2>{{ activeSectionTitle }}</h2>
+              </div>
+              <el-select
+                :model-value="currentResource"
+                filterable
+                class="workspace-subtitle-select workspace-subtitle-select--doc"
+                :placeholder="t('doc.pickFromTop')"
+                @change="handleDocSelectChange"
               >
                 <el-option
-                  v-for="table in group.items"
-                  :key="table.name"
-                  :label="table.label"
-                  :value="table.name"
+                  v-for="doc in docsResources"
+                  :key="doc.filename"
+                  :label="doc.filename"
+                  :value="doc.filename"
                 />
-              </el-option-group>
-            </el-select>
-          </div>
-          <div v-else-if="currentView === 'doc'" class="workspace-subtitle-control">
-            <span>{{ t('doc.currentDoc') }}</span>
-            <el-select
-              :model-value="currentResource"
-              filterable
-              class="workspace-subtitle-select workspace-subtitle-select--doc"
-              :placeholder="t('doc.pickFromTop')"
-              @change="handleDocSelectChange"
-            >
-              <el-option
-                v-for="doc in docsResources"
-                :key="doc.filename"
-                :label="doc.filename"
-                :value="doc.filename"
-              />
-            </el-select>
-          </div>
-          <p>{{ activeSectionDescription }}</p>
+              </el-select>
+            </div>
+          </template>
+          <template v-else>
+            <p class="workspace-eyebrow">{{ activeSectionEyebrow }}</p>
+            <h2>{{ activeSectionTitle }}</h2>
+            <div v-if="currentView === 'table'" class="workspace-subtitle-control">
+              <span>{{ t('table.currentTable') }}</span>
+              <el-select
+                :model-value="currentResource"
+                filterable
+                class="workspace-subtitle-select"
+                :placeholder="t('table.pickFromTop')"
+                @change="handleTableSelectChange"
+              >
+                <el-option-group
+                  v-for="group in groupedTableResources"
+                  :key="group.key"
+                  :label="group.label"
+                >
+                  <el-option
+                    v-for="table in group.items"
+                    :key="table.name"
+                    :label="table.label"
+                    :value="table.name"
+                  />
+                </el-option-group>
+              </el-select>
+            </div>
+            <p>{{ activeSectionDescription }}</p>
+          </template>
         </div>
 
         <div class="workspace-topbar-actions">
@@ -452,6 +459,13 @@
                     {{ t('doc.modePreview') }}
                   </button>
                 </div>
+                <el-button
+                  v-if="selectedDocIsMarkdown && currentResource"
+                  plain
+                  @click="openDocOnSite"
+                >
+                  {{ t('doc.openOnSite') }}
+                </el-button>
                 <el-button @click="createDoc">{{ t('doc.create') }}</el-button>
                 <el-button
                   v-if="selectedDoc?.editable"
@@ -491,7 +505,32 @@
                   <strong>{{ t('doc.sourceMarkdown') }}</strong>
                   <span>{{ t('doc.modeSourceHint') }}</span>
                 </header>
-                <textarea v-model="docEditorContent" class="doc-editor"></textarea>
+                <div class="doc-editor-toolbar">
+                  <div class="doc-editor-toolbar__group">
+                    <el-button size="small" plain @click="insertDocHeading">H2</el-button>
+                    <el-button size="small" plain @click="insertDocBold">{{ t('doc.insertBold') }}</el-button>
+                    <el-button size="small" plain @click="insertDocLink">{{ t('doc.insertLink') }}</el-button>
+                  </div>
+                  <div class="doc-editor-toolbar__group">
+                    <input
+                      ref="docImageUploadInputRef"
+                      class="row-media-picker__upload-input"
+                      type="file"
+                      accept="image/*"
+                      @change="handleDocImageUploadChange"
+                    />
+                    <el-button size="small" plain @click="openDocImagePicker">{{ t('doc.insertImage') }}</el-button>
+                    <el-button size="small" :loading="docImageUploading" @click="docImageUploadInputRef?.click()">
+                      {{ t('doc.uploadAndInsert') }}
+                    </el-button>
+                  </div>
+                </div>
+                <textarea
+                  ref="docEditorTextareaRef"
+                  v-model="docEditorContent"
+                  class="doc-editor"
+                  @input="resizeDocEditorTextarea"
+                ></textarea>
               </section>
 
               <section v-if="!selectedDoc?.editable || docViewMode !== 'edit'" class="doc-panel">
@@ -508,7 +547,12 @@
               </section>
             </div>
             <div v-else-if="selectedDoc?.editable" class="doc-editor-shell">
-              <textarea v-model="docEditorContent" class="doc-editor"></textarea>
+              <textarea
+                ref="docEditorTextareaRef"
+                v-model="docEditorContent"
+                class="doc-editor"
+                @input="resizeDocEditorTextarea"
+              ></textarea>
             </div>
             <div v-else class="doc-preview doc-preview--raw">
               <pre>{{ docEditorContent }}</pre>
@@ -534,7 +578,7 @@
                 <el-button type="primary" :loading="llmSaving" @click="saveLLMConfig">{{ t('llm.save') }}</el-button>
               </div>
 
-              <div class="llm-grid">
+              <div class="llm-grid llm-grid--runtime">
                 <el-form-item :label="t('field.provider')">
                   <el-select v-model="llmForm.active_provider">
                     <el-option label="DeepSeek" value="deepseek" />
@@ -595,7 +639,7 @@
                 <el-button type="primary" :loading="workflowSaving" @click="saveWorkflowConfig">{{ t('llm.save') }}</el-button>
               </div>
 
-              <div class="llm-grid">
+              <div class="llm-grid llm-grid--workflow">
                 <el-form-item :label="t('workflow.enable')">
                   <el-switch v-model="workflowForm.workflow_enable" />
                 </el-form-item>
@@ -970,6 +1014,65 @@
       </template>
     </el-dialog>
 
+    <el-dialog
+      v-model="docImagePickerVisible"
+      :title="t('doc.imagePickerTitle')"
+      width="min(980px, 94vw)"
+      destroy-on-close
+    >
+      <div class="row-media-picker">
+        <p class="row-media-picker__hint">{{ t('doc.imagePickerHint') }}</p>
+        <div class="row-media-picker__toolbar">
+          <el-input
+            v-model="docImageQuery.search"
+            :placeholder="t('doc.imageSearchPlaceholder')"
+            @keyup.enter="loadDocImageLibrary"
+          />
+          <div class="row-media-picker__toolbar-actions">
+            <el-select v-model="docImageQuery.sourceType" @change="handleDocImageSearchChange">
+              <el-option value="all" :label="t('media.sourceAll')" />
+              <el-option value="library" :label="t('media.sourceLibrary')" />
+              <el-option value="docs" :label="t('media.sourceDocs')" />
+              <el-option value="table" :label="t('media.sourceTable')" />
+              <el-option value="site" :label="t('media.sourceSite')" />
+              <el-option value="legacy_pictureid" :label="t('media.sourceLegacyPictureid')" />
+              <el-option value="other" :label="t('media.sourceOther')" />
+            </el-select>
+            <el-button :loading="docImageUploading" @click="docImageUploadInputRef?.click()">
+              {{ t('doc.uploadAndInsert') }}
+            </el-button>
+            <el-button type="primary" :loading="docImageLibraryLoading" @click="loadDocImageLibrary">
+              {{ t('media.search') }}
+            </el-button>
+          </div>
+        </div>
+        <div v-if="docImageAssets.length" class="row-media-picker-grid">
+          <button
+            v-for="asset in docImageAssets"
+            :key="asset.id"
+            type="button"
+            class="row-media-picker-card"
+            @click="chooseDocImageAsset(asset)"
+          >
+            <div class="row-media-picker-card__thumb">
+              <img :src="asset.public_url" :alt="asset.alt_text || asset.title || asset.original_filename" />
+            </div>
+            <div class="row-media-picker-card__copy">
+              <strong>{{ asset.title || asset.original_filename }}</strong>
+              <span>{{ asset.alt_text || asset.original_filename }}</span>
+            </div>
+            <span class="row-media-picker-card__action">{{ t('doc.insertImageAction') }}</span>
+          </button>
+        </div>
+        <div v-else class="row-media-picker-empty">
+          {{ t('rowMedia.libraryEmpty') }}
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="docImagePickerVisible = false">{{ t('dialog.cancel') }}</el-button>
+      </template>
+    </el-dialog>
+
     <AdminTableMediaFieldsDialog
       v-model="mediaFieldDialogVisible"
       :csrf-token="csrfToken"
@@ -1154,6 +1257,18 @@ const docPreviewRef = ref<HTMLElement | null>(null);
 const docPreviewLightboxVisible = ref(false);
 const docPreviewImages = ref<string[]>([]);
 const docPreviewImageIndex = ref(0);
+const docEditorTextareaRef = ref<HTMLTextAreaElement | null>(null);
+const docImagePickerVisible = ref(false);
+const docImageLibraryLoading = ref(false);
+const docImageUploading = ref(false);
+const docImageUploadInputRef = ref<HTMLInputElement | null>(null);
+const docImageAssets = ref<AdminMediaAsset[]>([]);
+const docImageQuery = reactive({
+  search: '',
+  sourceType: 'docs',
+  page: 1,
+  pageSize: 24,
+});
 const mediaPanelRef = ref<{ refresh: () => Promise<void> } | null>(null);
 const routeSwitching = ref(false);
 let routeSwitchToken = 0;
@@ -1945,7 +2060,7 @@ function isRawFieldVisible(columnName: string) {
 }
 
 function extractLegacyPictureidFromAsset(asset: AdminMediaAsset) {
-  const candidates = [asset.object_key, asset.original_filename, asset.title]
+  const candidates = [asset.original_filename, asset.title, asset.object_key]
     .map((value) => normalizeFieldName(value))
     .filter(Boolean);
   for (const candidate of candidates) {
@@ -2494,6 +2609,12 @@ function openSiteInNewTab() {
   window.open('/', '_blank', 'noopener,noreferrer');
 }
 
+function openDocOnSite() {
+  if (!currentResource.value) return;
+  const href = `/help.html?file=${encodeURIComponent(currentResource.value)}`;
+  window.open(href, '_blank', 'noopener,noreferrer');
+}
+
 function handleTableSelectChange(tableName: string) {
   if (!tableName) return;
   navigate('table', tableName);
@@ -2539,6 +2660,179 @@ function handleDocPreviewClick(event: MouseEvent) {
   docPreviewImages.value = sources.length ? sources : [source];
   docPreviewImageIndex.value = index >= 0 ? index : 0;
   docPreviewLightboxVisible.value = true;
+}
+
+function resizeDocEditorTextarea() {
+  const textarea = docEditorTextareaRef.value;
+  if (!textarea) return;
+  textarea.style.height = 'auto';
+  const minHeight = window.innerWidth < 960 ? 420 : 560;
+  textarea.style.height = `${Math.max(minHeight, textarea.scrollHeight)}px`;
+}
+
+function getDocEditorSelectionRange() {
+  const content = String(docEditorContent.value || '');
+  const textarea = docEditorTextareaRef.value;
+  if (!textarea) {
+    return {
+      start: content.length,
+      end: content.length,
+      text: '',
+    };
+  }
+  const start = textarea.selectionStart ?? 0;
+  const end = textarea.selectionEnd ?? start;
+  return {
+    start,
+    end,
+    text: content.slice(start, end),
+  };
+}
+
+function replaceDocEditorSelection(nextValue: string, selectionStartOffset?: number, selectionEndOffset?: number) {
+  const { start, end } = getDocEditorSelectionRange();
+  const content = String(docEditorContent.value || '');
+  docEditorContent.value = `${content.slice(0, start)}${nextValue}${content.slice(end)}`;
+  void nextTick(() => {
+    const textarea = docEditorTextareaRef.value;
+    if (!textarea) return;
+    textarea.focus();
+    const nextStart = start + (selectionStartOffset ?? nextValue.length);
+    const nextEnd = start + (selectionEndOffset ?? nextValue.length);
+    textarea.setSelectionRange(nextStart, nextEnd);
+    resizeDocEditorTextarea();
+  });
+}
+
+function docImageLabelFromValue(value: unknown) {
+  const normalized = normalizeFieldName(value);
+  if (!normalized) return '';
+  const tail = normalized.split('/').pop() || normalized;
+  return tail.replace(/\.[A-Za-z0-9]+$/, '').trim();
+}
+
+function escapeMarkdownLabel(value: string) {
+  return String(value || '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/([\[\]])/g, '\\$1')
+    .trim();
+}
+
+function buildDocImageMarkdown(asset: AdminMediaAsset) {
+  const existing = normalizeFieldName(asset.markdown);
+  if (existing) return existing;
+  const altText = escapeMarkdownLabel(
+    normalizeFieldName(asset.alt_text || asset.title) || docImageLabelFromValue(asset.original_filename) || 'image'
+  );
+  return `![${altText || 'image'}](${asset.public_url})`;
+}
+
+function buildDocBlockInsertion(snippet: string) {
+  const content = String(docEditorContent.value || '');
+  const { start, end } = getDocEditorSelectionRange();
+  const before = content.slice(0, start);
+  const after = content.slice(end);
+  const prefix = !before ? '' : before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+  const suffix = !after ? '' : after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : '\n\n';
+  return {
+    insertion: `${prefix}${snippet}${suffix}`,
+    prefixLength: prefix.length,
+    snippetLength: snippet.length,
+  };
+}
+
+function insertDocHeading() {
+  const { text } = getDocEditorSelectionRange();
+  const selectedText = normalizeFieldName(text);
+  const placeholder = selectedText || 'Section title';
+  const insertion = `## ${placeholder}\n\n`;
+  const selectionStart = selectedText ? insertion.length : 3;
+  const selectionEnd = selectedText ? insertion.length : 3 + placeholder.length;
+  replaceDocEditorSelection(insertion, selectionStart, selectionEnd);
+}
+
+function insertDocBold() {
+  const { text } = getDocEditorSelectionRange();
+  const selectedText = text || 'highlight';
+  const insertion = `**${selectedText}**`;
+  const selectionStart = text ? insertion.length : 2;
+  const selectionEnd = text ? insertion.length : 2 + selectedText.length;
+  replaceDocEditorSelection(insertion, selectionStart, selectionEnd);
+}
+
+function insertDocLink() {
+  const { text } = getDocEditorSelectionRange();
+  const label = escapeMarkdownLabel(normalizeFieldName(text) || 'link text');
+  const url = 'https://';
+  const insertion = `[${label}](${url})`;
+  const selectionStart = insertion.indexOf(url);
+  replaceDocEditorSelection(insertion, selectionStart, selectionStart + url.length);
+}
+
+async function loadDocImageLibrary() {
+  docImageLibraryLoading.value = true;
+  try {
+    const result = await fetchAdminMediaList({
+      search: docImageQuery.search || undefined,
+      source_type: docImageQuery.sourceType === 'all' ? undefined : docImageQuery.sourceType,
+      page: docImageQuery.page,
+      page_size: docImageQuery.pageSize,
+    });
+    docImageAssets.value = Array.isArray(result.items) ? result.items : [];
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.mediaLoadFailed'));
+  } finally {
+    docImageLibraryLoading.value = false;
+  }
+}
+
+function handleDocImageSearchChange() {
+  docImageQuery.page = 1;
+  void loadDocImageLibrary();
+}
+
+async function openDocImagePicker() {
+  docImageQuery.search = '';
+  docImageQuery.sourceType = 'docs';
+  docImageQuery.page = 1;
+  docImagePickerVisible.value = true;
+  await loadDocImageLibrary();
+}
+
+function insertDocImageMarkdown(markdown: string) {
+  const block = buildDocBlockInsertion(markdown);
+  replaceDocEditorSelection(block.insertion, block.prefixLength + block.snippetLength, block.prefixLength + block.snippetLength);
+}
+
+async function chooseDocImageAsset(asset: AdminMediaAsset) {
+  insertDocImageMarkdown(buildDocImageMarkdown(asset));
+  docImagePickerVisible.value = false;
+}
+
+async function handleDocImageUploadChange(event: Event) {
+  const input = event.target as HTMLInputElement | null;
+  const file = input?.files?.[0] || null;
+  if (!file) return;
+  docImageUploading.value = true;
+  try {
+    const defaultLabel = docImageLabelFromValue(file.name);
+    const result = await uploadAdminMedia(file, {
+      csrfToken: csrfToken.value,
+      title: defaultLabel || undefined,
+      alt_text: defaultLabel || undefined,
+      source_type: 'docs',
+    });
+    ElMessage.success(result.deduped ? t('msg.mediaDeduped') : t('msg.mediaUploaded'));
+    await loadDocImageLibrary();
+    if (result.asset) {
+      await chooseDocImageAsset(result.asset);
+    }
+  } catch (error: any) {
+    ElMessage.error(error?.message || t('msg.mediaUploadFailed'));
+  } finally {
+    docImageUploading.value = false;
+    if (input) input.value = '';
+  }
 }
 
 async function syncRouteState() {
@@ -2918,6 +3212,8 @@ async function loadSelectedDoc() {
     docViewMode.value = selectedDoc.value.editable
       ? (isMarkdownDoc(selectedDoc.value) ? 'split' : 'edit')
       : 'preview';
+    await nextTick();
+    resizeDocEditorTextarea();
   } catch (error: any) {
     docError.value = error?.message || t('msg.docLoadFailed');
   } finally {
@@ -3089,14 +3385,27 @@ watch(
       docPreviewHtml.value = '';
       docPreviewImages.value = [];
       docPreviewLightboxVisible.value = false;
+      await nextTick();
+      resizeDocEditorTextarea();
       return;
     }
     docPreviewHtml.value = await renderMarkdown(content || '');
     await nextTick();
     decorateDocPreviewImages();
     docPreviewImages.value = getDocPreviewImageSources();
+    resizeDocEditorTextarea();
   },
   { immediate: true }
+);
+
+watch(
+  () => [currentView.value, docViewMode.value, selectedDoc.value?.filename || '', selectedDoc.value?.editable ? '1' : '0'] as const,
+  async ([view]) => {
+    if (view !== 'doc') return;
+    await nextTick();
+    resizeDocEditorTextarea();
+  },
+  { flush: 'post' }
 );
 
 watch(
@@ -3398,6 +3707,28 @@ onUnmounted(() => {
   min-width: 0;
 }
 
+.workspace-topbar--compact {
+  align-items: center;
+  padding-block: 18px 14px;
+}
+
+.workspace-topbar-copy--compact {
+  gap: 6px;
+}
+
+.workspace-doc-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 12px 18px;
+  align-items: end;
+}
+
+.workspace-doc-header__copy {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
 .workspace-eyebrow {
   margin: 0;
   color: #2563eb;
@@ -3412,6 +3743,11 @@ onUnmounted(() => {
   font-size: clamp(2rem, 3vw, 2.8rem);
   line-height: 1.05;
   color: var(--admin-text);
+}
+
+.workspace-topbar--compact h2 {
+  font-size: clamp(1.6rem, 2.4vw, 2.1rem);
+  line-height: 1.08;
 }
 
 .workspace-subtitle-control {
@@ -3465,6 +3801,10 @@ onUnmounted(() => {
   align-items: center;
 }
 
+.workspace-topbar--compact .workspace-topbar-actions {
+  gap: 8px;
+}
+
 .topbar-tools {
   display: inline-flex;
   align-items: center;
@@ -3513,6 +3853,11 @@ onUnmounted(() => {
   background: var(--admin-surface);
 }
 
+.workspace-topbar--compact .topbar-chip {
+  min-width: 108px;
+  padding: 8px 10px;
+}
+
 .topbar-chip span,
 .topbar-chip strong {
   display: block;
@@ -3529,6 +3874,11 @@ onUnmounted(() => {
   margin-top: 4px;
   color: var(--admin-text);
   font-size: 1rem;
+}
+
+.workspace-topbar--compact .topbar-chip strong {
+  margin-top: 2px;
+  font-size: 0.94rem;
 }
 
 .workspace-content {
@@ -4236,6 +4586,31 @@ onUnmounted(() => {
   gap: 14px 18px;
 }
 
+.llm-grid :deep(.el-form-item),
+.row-form-grid :deep(.el-form-item),
+.label-form-grid :deep(.el-form-item) {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.llm-grid :deep(.el-form-item__content),
+.row-form-grid :deep(.el-form-item__content),
+.label-form-grid :deep(.el-form-item__content) {
+  min-width: 0;
+}
+
+.llm-grid--workflow {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.llm-grid--workflow :deep(.el-input-number) {
+  width: min(100%, 220px);
+}
+
+.llm-grid--workflow .workflow-checkboxes {
+  min-height: 0;
+}
+
 .label-form-row {
   display: grid;
   grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) auto;
@@ -4486,8 +4861,8 @@ onUnmounted(() => {
   border-radius: 14px;
   background: var(--admin-surface);
   overflow: hidden;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
 }
 
 .doc-panel-head {
@@ -4515,16 +4890,33 @@ onUnmounted(() => {
   font-size: 0.78rem;
 }
 
+.doc-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--admin-border);
+  background: color-mix(in srgb, var(--admin-surface-muted) 72%, transparent);
+}
+
+.doc-editor-toolbar__group {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .doc-editor {
   width: 100%;
-  min-height: 66vh;
-  max-height: 74vh;
   border: none;
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
   padding: 20px;
   font: 14px/1.7 'SFMono-Regular', 'Consolas', monospace;
   color: var(--admin-text);
   background: var(--admin-surface);
+  min-height: 560px;
 }
 
 .doc-editor:focus {
@@ -4533,8 +4925,7 @@ onUnmounted(() => {
 
 .doc-preview {
   padding: 20px;
-  max-height: 74vh;
-  overflow: auto;
+  overflow: visible;
 }
 
 .doc-preview--raw {
@@ -4866,6 +5257,10 @@ onUnmounted(() => {
     padding: 18px 18px 16px;
   }
 
+  .workspace-topbar--compact {
+    align-items: flex-start;
+  }
+
   .workspace-content {
     padding: 18px;
   }
@@ -4887,6 +5282,11 @@ onUnmounted(() => {
   .topbar-tools {
     width: 100%;
     min-width: 0;
+  }
+
+  .workspace-doc-header {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .overview-stat-grid,

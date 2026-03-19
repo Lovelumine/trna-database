@@ -1,0 +1,96 @@
+{
+  "docs_dir": "/home/yingying/Documents/trna-database/public/docs",
+  "apply": true,
+  "doc_count": 8,
+  "docs": [
+    {
+      "filename": "0-ENSURE-Overview.md",
+      "image_refs": 0,
+      "rewritten": 0,
+      "created_assets": 0,
+      "reused_assets_by_url": 0,
+      "reused_assets_by_hash": 0,
+      "failures": [],
+      "updated": false
+    },
+    {
+      "filename": "1-introduction.md",
+      "image_refs": 0,
+      "rewritten": 0,
+      "created_assets": 0,
+      "reused_assets_by_url": 0,
+      "reused_assets_by_hash": 0,
+      "failures": [],
+      "updated": false
+    },
+    {
+      "filename": "2-Coding Variation Disease.md",
+      "image_refs": 6,
+      "rewritten": 6,
+      "created_assets": 6,
+      "reused_assets_by_url": 0,
+      "reused_assets_by_hash": 0,
+      "failures": [],
+      "updated": true
+    },
+    {
+      "filename": "3-Natural Sup-tRNA.md",
+      "image_refs": 3,
+      "rewritten": 3,
+      "created_assets": 3,
+      "reused_assets_by_url": 0,
+      "reused_assets_by_hash": 0,
+      "failures": [],
+      "updated": true
+    },
+    {
+      "filename": "4-Engineered Sup-tRNA.md",
+      "image_refs": 5,
+      "rewritten": 5,
+      "created_assets": 5,
+      "reused_assets_by_url": 0,
+      "reused_assets_by_hash": 0,
+      "failures": [],
+      "updated": true
+    },
+    {
+      "filename": "5-Modification with Function.md",
+      "image_refs": 5,
+      "rewritten": 5,
+      "created_assets": 5,
+      "reused_assets_by_url": 0,
+      "reused_assets_by_hash": 0,
+      "failures": [],
+      "updated": true
+    },
+    {
+      "filename": "98-API-Reference.md",
+      "image_refs": 0,
+      "rewritten": 0,
+      "created_assets": 0,
+      "reused_assets_by_url": 0,
+      "reused_assets_by_hash": 0,
+      "failures": [],
+      "updated": false
+    },
+    {
+      "filename": "99-Site-Map.md",
+      "image_refs": 0,
+      "rewritten": 0,
+      "created_assets": 0,
+      "reused_assets_by_url": 0,
+      "reused_assets_by_hash": 0,
+      "failures": [],
+      "updated": false
+    }
+  ],
+  "summary": {
+    "image_refs": 19,
+    "rewritten_refs": 19,
+    "created_assets": 19,
+    "reused_assets_by_url": 0,
+    "reused_assets_by_hash": 0,
+    "updated_docs": 4,
+    "failures": 0
+  }
+}

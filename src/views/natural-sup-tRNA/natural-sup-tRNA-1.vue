@@ -250,12 +250,10 @@ export default defineComponent({
     const hideLightbox = () => { visible.value = false; };
 
     const getStructureImageUrl = (record: any) => {
-      const boundPicture = getRowBoundFieldMediaUrl(record, 'pictureid');
-      if (boundPicture) return boundPicture;
       const boundStructure = getRowBoundFieldMediaUrl(record, 'Structure of sup-tRNA');
       if (boundStructure) return boundStructure;
-      const legacyPicture = resolveMediaSource(TABLE_NAME, 'pictureid', record?.pictureid);
-      if (legacyPicture) return legacyPicture;
+      const boundPicture = getRowBoundFieldMediaUrl(record, 'pictureid');
+      if (boundPicture) return boundPicture;
       return resolveMediaSource(TABLE_NAME, 'Structure of sup-tRNA', record?.['Structure of sup-tRNA']);
     };
 

@@ -27,22 +27,11 @@ export type TableRowMediaEntry = {
   };
 };
 
-const LEGACY_MINIO_PICTURE_TEMPLATE = 'https://minio.lumoxuan.cn/ensure/picture/{value}.png';
-
 const DEFAULT_MEDIA_FIELD_CONFIG: Record<string, TableMediaFieldMap> = {
   nonsense_sup_rna: {
     'Structure of sup-tRNA': {
       renderer: 'image',
       source: 'direct',
-      width: 100,
-      height: 100,
-      fit: 'cover',
-      preview: true,
-    },
-    pictureid: {
-      renderer: 'image',
-      source: 'template',
-      template: LEGACY_MINIO_PICTURE_TEMPLATE,
       width: 100,
       height: 100,
       fit: 'cover',
@@ -58,40 +47,11 @@ const DEFAULT_MEDIA_FIELD_CONFIG: Record<string, TableMediaFieldMap> = {
       fit: 'cover',
       preview: true,
     },
-    pictureid: {
-      renderer: 'image',
-      source: 'template',
-      template: LEGACY_MINIO_PICTURE_TEMPLATE,
-      width: 100,
-      height: 100,
-      fit: 'cover',
-      preview: true,
-    },
-    Notes: {
-      renderer: 'image',
-      source: 'template',
-      template: LEGACY_MINIO_PICTURE_TEMPLATE,
-      width: 100,
-      height: 100,
-      fit: 'cover',
-      preview: true,
-    },
   },
   construction_sup_trna: {
     'Structure of sup-tRNA': {
       renderer: 'image',
       source: 'direct',
-      width: 100,
-      height: 100,
-      fit: 'cover',
-      preview: true,
-    },
-  },
-  blast_results: {
-    pictureid: {
-      renderer: 'image',
-      source: 'template',
-      template: LEGACY_MINIO_PICTURE_TEMPLATE,
       width: 100,
       height: 100,
       fit: 'cover',

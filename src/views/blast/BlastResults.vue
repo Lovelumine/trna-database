@@ -84,9 +84,10 @@
                       <pre class="pairwise">{{ stripScore(cleanString(entry[1])) }}</pre>
                     </template>
                     <template v-else-if="cleanString(entry[0]) === 'pictureid'">
-                      <button @click="showLightbox(cleanString(entry[1]))">
+                      <button v-if="getPictureUrl(record)" @click="showLightbox(getPictureUrl(record))">
                         View Image
                       </button>
+                      <span v-else class="link-disabled">Unavailable</span>
                     </template>
                     <template v-else-if="/specie/i.test(cleanString(entry[0]))">
                       <i>{{ cleanString(entry[1]) }}</i>
@@ -124,6 +125,7 @@ import en from '@shene/table/dist/locale/en';
 import { createPagination } from '../../utils/table';
 const pagination = createPagination();
 import VueEasyLightbox from 'vue-easy-lightbox';
+import { getRowBoundFieldMediaUrl } from '@/utils/tableMedia';
 import {
   visible,
   lightboxImgs,
@@ -290,9 +292,18 @@ function formatKey(key: string): string {
 
 function filterRow(key: unknown, val: unknown): boolean {
   const k = cleanString(key);
+  if (k === '__media') return false;
   if (excludeKeys.includes(k)) return false;
   const v = val == null ? '' : cleanString(val);
   return v.trim().length > 0;
+}
+
+function getPictureUrl(record: ResultRow): string {
+  const row = record?.row_data;
+  if (!row || typeof row !== 'object') return '';
+  const boundPicture = getRowBoundFieldMediaUrl(row, 'pictureid');
+  if (boundPicture) return boundPicture;
+  return getRowBoundFieldMediaUrl(row, 'Structure of sup-tRNA');
 }
 
 /* ------------------- 对齐解析与上色逻辑 ------------------- */

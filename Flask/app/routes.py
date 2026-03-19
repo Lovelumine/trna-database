@@ -3232,7 +3232,7 @@ def _execute_tool(name: str, params: dict):
         data = params.copy()
         try:
             if data.get("tables"):
-                return {"results": search_in_mysql(data, db.engine)}
+                return {"results": _attach_alignment_result_media(search_in_mysql(data, db.engine))}
             return {"results": search_in_csvs(data)}
         except Exception as exc:
             return {"error": str(exc)}
@@ -4186,6 +4186,11 @@ def _media_binding_key(
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+_DOC_MARKDOWN_IMAGE_RE = re.compile(
+    r'!\[(?P<alt>[^\]]*)\]\(\s*(?P<src>[^)\s]+)(?:\s+"(?P<title>[^"]*)")?\s*\)'
+)
+
+
 def _json_object(value) -> dict:
     if isinstance(value, dict):
         return value
@@ -4194,6 +4199,88 @@ def _json_object(value) -> dict:
     except Exception:
         return {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def _extract_markdown_image_refs(markdown: str) -> list[dict]:
+    refs: list[dict] = []
+    for index, match in enumerate(_DOC_MARKDOWN_IMAGE_RE.finditer(str(markdown or ""))):
+        refs.append(
+            {
+                "index": int(index),
+                "raw": str(match.group(0) or ""),
+                "alt": str(match.group("alt") or ""),
+                "src": str(match.group("src") or "").strip(),
+                "title": str(match.group("title") or ""),
+                "start": int(match.start()),
+                "end": int(match.end()),
+            }
+        )
+    return refs
+
+
+def _find_media_asset_for_doc_src(src: str) -> MediaAsset | None:
+    normalized = str(src or "").strip()
+    if not normalized:
+        return None
+    asset = MediaAsset.query.filter_by(public_url=normalized).order_by(MediaAsset.id.desc()).first()
+    if asset:
+        return asset
+    public_base = _get_minio_public_base()
+    object_key = ""
+    if public_base and normalized.startswith(f"{public_base.rstrip('/')}/"):
+        object_key = normalized[len(public_base.rstrip("/")) + 1 :]
+    if object_key:
+        asset = MediaAsset.query.filter_by(object_key=object_key).order_by(MediaAsset.id.desc()).first()
+        if asset:
+            return asset
+    return None
+
+
+def _clear_doc_image_bindings(filename: str) -> None:
+    resource_name = _clean_media_binding_value(filename, 255)
+    if not resource_name:
+        return
+    existing = MediaBinding.query.filter_by(binding_type="doc_image", resource_name=resource_name).all()
+    for binding in existing:
+        db.session.delete(binding)
+
+
+def _sync_doc_image_bindings(filename: str, markdown: str, actor=None) -> list[dict]:
+    resource_name = _clean_media_binding_value(filename, 255)
+    if not resource_name:
+        return []
+    refs = _extract_markdown_image_refs(markdown)
+    try:
+        _clear_doc_image_bindings(resource_name)
+        db.session.flush()
+        created: list[MediaBinding] = []
+        for ref in refs:
+            asset = _find_media_asset_for_doc_src(ref.get("src") or "")
+            if not asset:
+                continue
+            slot_key = f"image_{int(ref.get('index') or 0) + 1:03d}"
+            extra = {
+                "src": str(ref.get("src") or ""),
+                "alt": str(ref.get("alt") or ""),
+                "title": str(ref.get("title") or ""),
+            }
+            binding = MediaBinding(
+                asset_id=int(asset.id),
+                binding_type="doc_image",
+                binding_key=_media_binding_key("doc_image", resource_name, "", "", slot_key),
+                resource_name=resource_name,
+                slot_key=slot_key,
+                extra_json=json.dumps(extra, ensure_ascii=False),
+                created_by=int(actor.id) if actor else None,
+                created_by_username=str(actor.username) if actor else "",
+            )
+            db.session.add(binding)
+            created.append(binding)
+        db.session.commit()
+        return [_serialize_media_binding(binding) for binding in created]
+    except Exception:
+        db.session.rollback()
+        raise
 
 
 def _serialize_media_binding(binding: MediaBinding) -> dict:
@@ -4488,65 +4575,6 @@ def _legacy_pictureid_caption(row: dict) -> str:
     return ""
 
 
-def _parse_table_list_arg(raw_value) -> list[str] | None:
-    if raw_value is None:
-        return None
-    if isinstance(raw_value, (list, tuple, set)):
-        values = raw_value
-    else:
-        values = str(raw_value or "").split(",")
-    normalized = []
-    seen = set()
-    for item in values:
-        table = str(item or "").strip()
-        if not table or table in seen:
-            continue
-        seen.add(table)
-        normalized.append(table)
-    return normalized
-
-
-def _legacy_pictureid_candidate_tables(selected_tables: list[str] | None = None) -> tuple[list[str], list[str]]:
-    allowed_tables = _admin_all_tables(include_internal=False)
-    requested = selected_tables or allowed_tables
-    valid: list[str] = []
-    invalid: list[str] = []
-    for table in requested:
-        if table not in allowed_tables:
-            invalid.append(table)
-            continue
-        _, col_names = _get_table_columns(table)
-        if not col_names or _LEGACY_PICTUREID_FIELD not in col_names:
-            invalid.append(table)
-            continue
-        valid.append(table)
-    return valid, invalid
-
-
-def _legacy_pictureid_candidate_rows(table: str, limit: int | None = None) -> tuple[list[dict], list[str]]:
-    cols, col_names = _get_table_columns(table)
-    if not col_names or _LEGACY_PICTUREID_FIELD not in col_names:
-        return [], col_names or []
-    sql_text = (
-        f"SELECT * FROM `{table}` "
-        f"WHERE `{_LEGACY_PICTUREID_FIELD}` IS NOT NULL "
-        f"AND TRIM(CAST(`{_LEGACY_PICTUREID_FIELD}` AS CHAR)) <> ''"
-    )
-    params: dict[str, object] = {}
-    if limit and int(limit) > 0:
-        sql_text += " LIMIT :limit"
-        params["limit"] = int(limit)
-    sql = text(sql_text)
-    rows: list[dict] = []
-    with db.engine.connect() as conn:
-        for row in conn.execute(sql, params).fetchall():
-            try:
-                rows.append(dict(row._mapping))
-            except AttributeError:
-                rows.append(dict(row))
-    return rows, col_names
-
-
 def _legacy_pictureid_row_summary(table: str, row: dict, col_names: list[str]) -> dict | None:
     pictureid_raw = str(row.get(_LEGACY_PICTUREID_FIELD) or "").strip()
     pictureid = _legacy_pictureid_safe_value(pictureid_raw)
@@ -4565,194 +4593,6 @@ def _legacy_pictureid_row_summary(table: str, row: dict, col_names: list[str]) -
         "object_key": object_key,
         "public_url": public_url,
         "source_field": _LEGACY_PICTUREID_FIELD,
-    }
-
-
-def _legacy_pictureid_preview(selected_tables: list[str] | None = None, sample_limit: int = 5) -> dict:
-    tables, invalid_tables = _legacy_pictureid_candidate_tables(selected_tables)
-    bucket = str(current_app.config.get("MINIO_BUCKET") or "").strip()
-    public_base = _get_minio_public_base()
-    table_payloads = []
-    total_candidates = 0
-    total_with_record_key = 0
-    for table in tables:
-        rows, col_names = _legacy_pictureid_candidate_rows(table)
-        candidates = []
-        with_record_key = 0
-        for row in rows:
-            summary = _legacy_pictureid_row_summary(table, row, col_names)
-            if not summary:
-                continue
-            candidates.append(summary)
-            if summary.get("record_key"):
-                with_record_key += 1
-        total_candidates += len(candidates)
-        total_with_record_key += with_record_key
-        table_payloads.append(
-            {
-                "table": table,
-                "display_name": _admin_display_name(table),
-                "candidate_count": len(candidates),
-                "with_record_key_count": with_record_key,
-                "sample_rows": candidates[: max(int(sample_limit or 0), 0)],
-            }
-        )
-    return {
-        "tables": table_payloads,
-        "invalid_tables": invalid_tables,
-        "summary": {
-            "table_count": len(table_payloads),
-            "candidate_count": total_candidates,
-            "with_record_key_count": total_with_record_key,
-            "migration_ready": bool(bucket and public_base),
-            "bucket_configured": bool(bucket),
-            "public_base_configured": bool(public_base),
-        },
-    }
-
-
-def _legacy_pictureid_migrate(selected_tables: list[str] | None = None, *, dry_run: bool = True, actor=None) -> dict:
-    bucket = str(current_app.config.get("MINIO_BUCKET") or "").strip()
-    public_base = _get_minio_public_base()
-    if not bucket or not public_base:
-        raise ValueError("MinIO bucket/public base must be configured before migration")
-
-    tables, invalid_tables = _legacy_pictureid_candidate_tables(selected_tables)
-    actor = actor or current_admin()
-    created_assets = 0
-    reused_assets = 0
-    created_bindings = 0
-    existing_bindings = 0
-    skipped_rows = 0
-    table_payloads = []
-    asset_cache: dict[str, MediaAsset] = {}
-
-    for table in tables:
-        rows, col_names = _legacy_pictureid_candidate_rows(table)
-        table_created_assets = 0
-        table_reused_assets = 0
-        table_created_bindings = 0
-        table_existing_bindings = 0
-        table_skipped_rows = 0
-        for row in rows:
-            summary = _legacy_pictureid_row_summary(table, row, col_names)
-            if not summary or not summary.get("record_key"):
-                table_skipped_rows += 1
-                skipped_rows += 1
-                continue
-
-            object_key = str(summary.get("object_key") or "")
-            public_url = str(summary.get("public_url") or "")
-            record_key = str(summary.get("record_key") or "")
-            pictureid = str(summary.get("pictureid_normalized") or "")
-            caption = str(summary.get("caption") or "")
-
-            asset = asset_cache.get(object_key)
-            if asset is None:
-                asset = (
-                    MediaAsset.query.filter_by(object_key=object_key)
-                    .order_by(MediaAsset.id.desc())
-                    .first()
-                )
-                if asset is None:
-                    asset = MediaAsset(
-                        bucket=bucket,
-                        object_key=object_key,
-                        public_url=public_url,
-                        mime_type="image/png",
-                        file_ext=".png",
-                        size_bytes=0,
-                        title=caption or f"{_admin_display_name(table)} {pictureid}",
-                        alt_text=caption,
-                        original_filename=f"{pictureid}.png",
-                        source_type=_LEGACY_PICTUREID_SOURCE_TYPE,
-                        created_by=int(actor.id) if actor else None,
-                        created_by_username=str(actor.username) if actor else "",
-                    )
-                    if not dry_run:
-                        db.session.add(asset)
-                        db.session.flush()
-                    created_assets += 1
-                    table_created_assets += 1
-                else:
-                    reused_assets += 1
-                    table_reused_assets += 1
-                asset_cache[object_key] = asset
-            else:
-                reused_assets += 1
-                table_reused_assets += 1
-
-            asset_id = int(getattr(asset, "id", 0) or 0)
-            existing_binding = None
-            if asset_id > 0:
-                existing_binding = (
-                    MediaBinding.query.filter_by(
-                        asset_id=asset_id,
-                        binding_type="table_field",
-                        resource_name=table,
-                        field_name=_LEGACY_PICTUREID_FIELD,
-                        record_key=record_key,
-                        slot_key="",
-                    )
-                    .order_by(MediaBinding.id.asc())
-                    .first()
-                )
-            if existing_binding:
-                existing_bindings += 1
-                table_existing_bindings += 1
-                continue
-
-            if not dry_run:
-                binding = MediaBinding(
-                    asset_id=asset_id,
-                    binding_type="table_field",
-                    binding_key=_media_binding_key("table_field", table, _LEGACY_PICTUREID_FIELD, record_key, ""),
-                    resource_name=table,
-                    field_name=_LEGACY_PICTUREID_FIELD,
-                    record_key=record_key,
-                    slot_key="",
-                    extra_json=json.dumps(
-                        {
-                            "legacy_pictureid": str(summary.get("pictureid") or ""),
-                            "legacy_url": public_url,
-                            "source_field": _LEGACY_PICTUREID_FIELD,
-                            "caption": caption,
-                        },
-                        ensure_ascii=False,
-                    ),
-                    created_by=int(actor.id) if actor else None,
-                    created_by_username=str(actor.username) if actor else "",
-                )
-                db.session.add(binding)
-            created_bindings += 1
-            table_created_bindings += 1
-
-        table_payloads.append(
-            {
-                "table": table,
-                "display_name": _admin_display_name(table),
-                "created_assets": table_created_assets,
-                "reused_assets": table_reused_assets,
-                "created_bindings": table_created_bindings,
-                "existing_bindings": table_existing_bindings,
-                "skipped_rows": table_skipped_rows,
-            }
-        )
-
-    if not dry_run:
-        db.session.commit()
-    return {
-        "dry_run": bool(dry_run),
-        "tables": table_payloads,
-        "invalid_tables": invalid_tables,
-        "summary": {
-            "table_count": len(table_payloads),
-            "created_assets": created_assets,
-            "reused_assets": reused_assets,
-            "created_bindings": created_bindings,
-            "existing_bindings": existing_bindings,
-            "skipped_rows": skipped_rows,
-        },
     }
 
 
@@ -5735,6 +5575,33 @@ def _attach_public_row_media_bindings(table: str, rows: list[dict], col_names: l
     return rows
 
 
+def _attach_alignment_result_media(results: list[dict]) -> list[dict]:
+    if not isinstance(results, list) or not results:
+        return results
+
+    grouped_rows: dict[tuple[str, tuple[str, ...]], list[dict]] = {}
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        table = str(item.get("file") or "").strip()
+        row_data = item.get("row_data")
+        if not table or not isinstance(row_data, dict):
+            continue
+        raw_columns = item.get("columns")
+        if isinstance(raw_columns, list) and raw_columns:
+            col_names = tuple(str(col).strip() for col in raw_columns if str(col).strip())
+        else:
+            col_names = tuple(str(col).strip() for col in row_data.keys() if str(col).strip())
+        if not col_names:
+            continue
+        grouped_rows.setdefault((table, col_names), []).append(row_data)
+
+    for (table, col_names), rows in grouped_rows.items():
+        _attach_public_row_media_bindings(table, rows, list(col_names))
+
+    return results
+
+
 def _serialize_virtual_media_fields(fields: list[dict[str, object]] | None) -> list[dict[str, object]]:
     safe_fields: list[dict[str, object]] = []
     for field in fields or []:
@@ -6576,6 +6443,7 @@ def admin_docs_create():
             return jsonify({"error": "document already exists"}), 400
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(content)
+        _sync_doc_image_bindings(filename, content, actor=current_admin())
         audit_admin_action(action="create_doc", table_name="public_docs", record_pk=filename, after={"filename": filename})
         return jsonify({"ok": True, "doc": _admin_read_doc(filename)}), 200
     except Exception as exc:
@@ -6603,6 +6471,7 @@ def admin_docs_save(filename):
         before = _admin_read_doc(filename)
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(content)
+        _sync_doc_image_bindings(filename, content, actor=current_admin())
         after = _admin_read_doc(filename)
         audit_admin_action(action="update_doc", table_name="public_docs", record_pk=filename, before={"content": before.get("content", "")[:1000]}, after={"content": after.get("content", "")[:1000]})
         return jsonify({"ok": True, "doc": after}), 200
@@ -6620,6 +6489,8 @@ def admin_docs_delete(filename):
             return jsonify({"error": "only markdown documents can be deleted"}), 400
         before = _admin_read_doc(filename)
         os.remove(path)
+        _clear_doc_image_bindings(filename)
+        db.session.commit()
         audit_admin_action(action="delete_doc", table_name="public_docs", record_pk=filename, before={"content": before.get("content", "")[:1000]})
         return jsonify({"ok": True}), 200
     except FileNotFoundError:
@@ -6674,47 +6545,6 @@ def admin_media_list():
             "items": payload_items,
         }
     )
-
-
-@bp.route("/admin/api/media/legacy_pictureid/preview", methods=["GET"])
-@admin_required
-def admin_media_legacy_pictureid_preview():
-    tables = _parse_table_list_arg(request.args.get("tables"))
-    try:
-        sample_limit = max(min(int(request.args.get("sample_limit") or 5), 20), 0)
-    except Exception:
-        sample_limit = 5
-    payload = _legacy_pictureid_preview(tables, sample_limit=sample_limit)
-    return jsonify(payload), 200
-
-
-@bp.route("/admin/api/media/legacy_pictureid/migrate", methods=["POST"])
-@admin_write_required
-def admin_media_legacy_pictureid_migrate():
-    payload = request.get_json(silent=True) or {}
-    tables = _parse_table_list_arg(payload.get("tables"))
-    dry_run = bool(payload.get("dry_run", True))
-    confirm = bool(payload.get("confirm"))
-    if not dry_run and not confirm:
-        return jsonify({"error": "confirm=true is required to execute migration"}), 400
-    try:
-        result = _legacy_pictureid_migrate(
-            tables,
-            dry_run=dry_run,
-            actor=current_admin(),
-        )
-        if not dry_run:
-            audit_admin_action(
-                action="migrate_legacy_pictureid",
-                table_name="media_bindings",
-                record_pk="legacy_pictureid",
-                after=result.get("summary"),
-            )
-        return jsonify({"ok": True, **result}), 200
-    except Exception as exc:
-        db.session.rollback()
-        return jsonify({"error": str(exc)}), 400
-
 
 @bp.route("/admin/api/media/<int:asset_id>", methods=["GET"])
 @admin_required
@@ -7470,7 +7300,7 @@ def search():
 
     try:
         if data.get("tables"):
-            topn = search_in_mysql(data, db.engine)
+            topn = _attach_alignment_result_media(search_in_mysql(data, db.engine))
         else:
             topn = search_in_csvs(data)
         return jsonify(topn), 200

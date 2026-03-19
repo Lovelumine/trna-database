@@ -233,63 +233,6 @@ export type AdminMediaDetailResponse = {
   references: AdminMediaReference[];
 };
 
-export type AdminLegacyPictureidPreviewRow = {
-  pictureid: string;
-  pictureid_normalized: string;
-  record_key: string;
-  match_columns: string[];
-  caption: string;
-  object_key: string;
-  public_url: string;
-  source_field: string;
-};
-
-export type AdminLegacyPictureidPreviewTable = {
-  table: string;
-  display_name: string;
-  candidate_count: number;
-  with_record_key_count: number;
-  sample_rows: AdminLegacyPictureidPreviewRow[];
-};
-
-export type AdminLegacyPictureidPreviewResponse = {
-  tables: AdminLegacyPictureidPreviewTable[];
-  invalid_tables: string[];
-  summary: {
-    table_count: number;
-    candidate_count: number;
-    with_record_key_count: number;
-    migration_ready: boolean;
-    bucket_configured: boolean;
-    public_base_configured: boolean;
-  };
-};
-
-export type AdminLegacyPictureidMigrateResponse = {
-  ok: boolean;
-  dry_run: boolean;
-  invalid_tables: string[];
-  tables: Array<{
-    table: string;
-    display_name: string;
-    candidate_count: number;
-    created_assets: number;
-    reused_assets: number;
-    created_bindings: number;
-    existing_bindings: number;
-    skipped_rows: number;
-  }>;
-  summary: {
-    table_count: number;
-    candidate_count: number;
-    created_assets: number;
-    reused_assets: number;
-    created_bindings: number;
-    existing_bindings: number;
-    skipped_rows: number;
-  };
-};
-
 async function parseJson(resp: Response) {
   return resp.json().catch(() => ({}));
 }
@@ -616,38 +559,6 @@ export async function deleteAdminMedia(assetId: number, csrfToken: string) {
     throw error;
   }
   return json;
-}
-
-export async function fetchAdminLegacyPictureidPreview(params: {
-  tables?: string[];
-  sample_limit?: number;
-} = {}): Promise<AdminLegacyPictureidPreviewResponse> {
-  const query = new URLSearchParams();
-  if (params.tables?.length) query.set('tables', params.tables.join(','));
-  if (params.sample_limit != null) query.set('sample_limit', String(params.sample_limit));
-  const resp = await fetch(`/admin/api/media/legacy_pictureid/preview${query.toString() ? `?${query.toString()}` : ''}`, {
-    method: 'GET',
-    cache: 'no-store',
-    credentials: 'same-origin',
-  });
-  return (await ensureOk(resp, '加载历史 pictureid 预览失败')) as AdminLegacyPictureidPreviewResponse;
-}
-
-export async function runAdminLegacyPictureidMigration(
-  payload: {
-    tables?: string[];
-    dry_run?: boolean;
-    confirm?: boolean;
-  },
-  csrfToken: string
-): Promise<AdminLegacyPictureidMigrateResponse> {
-  const resp = await fetch('/admin/api/media/legacy_pictureid/migrate', {
-    method: 'POST',
-    headers: adminJsonHeaders(csrfToken),
-    credentials: 'same-origin',
-    body: JSON.stringify(payload),
-  });
-  return (await ensureOk(resp, '执行历史 pictureid 迁移失败')) as AdminLegacyPictureidMigrateResponse;
 }
 
 export async function saveAdminLLMSettings(payload: Record<string, any>): Promise<AdminLLMSettings> {
