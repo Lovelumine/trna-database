@@ -138,6 +138,38 @@ python Flask/scripts/start_backend.py --host 0.0.0.0 --port 8020
 python Flask/scripts/start_backend.py --install
 ```
 
+Linux 开机自启动推荐使用用户级 systemd 服务，不需要 `screen`：
+
+```bash
+./deploy/systemd/install-user-service.sh
+```
+
+查看状态和日志：
+
+```bash
+systemctl --user status ensure-backend.service
+journalctl --user -u ensure-backend.service -f
+```
+
+重启或停止服务：
+
+```bash
+systemctl --user restart ensure-backend.service
+systemctl --user stop ensure-backend.service
+```
+
+如果希望电脑开机后、用户还没登录桌面时也自动启动，需要执行一次：
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
+禁用自启动并停止服务：
+
+```bash
+systemctl --user disable --now ensure-backend.service
+```
+
 3. 启动前端
 
 ```bash

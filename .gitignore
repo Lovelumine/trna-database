@@ -51,6 +51,9 @@ Flask/.venv/
 Flask/.deps_installed.system
 Flask/.requirements.system.sha256
 
+# Local-only literature curation workspace
+field-curation-workdir/
+
 # Large media/fonts kept locally but not tracked
 *.mp4
 *.ttf
