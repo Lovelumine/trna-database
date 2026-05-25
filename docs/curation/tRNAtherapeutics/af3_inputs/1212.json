@@ -1,0 +1,17 @@
+{
+  "name": "PREFOLD",
+  "modelSeeds": [
+    1
+  ],
+  "sequences": [
+    {
+      "rna": {
+        "id": "PRE",
+        "sequence": "ACCAGGAUGGCCGAGUGGUUAAGGCGUUUGACUCUAGUUCAAAUGGACAUAUGUCUGCGUGGGUUCGAACCCCACUCCUGGUA"
+      }
+    }
+  ],
+  "bondedAtomPairs": [],
+  "dialect": "alphafold3",
+  "version": 1
+}

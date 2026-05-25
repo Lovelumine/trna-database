@@ -1,0 +1,6 @@
+ENSURE_ID	Index	aa_and_anticodon_of_sup-tRNA	xlsx_id	reason
+ensure-187	187	Tyr(UUA)	TyrTAAchr11.trna9;TyrTAAchr7.trna6	ACE sequence match count=2
+ensure-224	224	Tyr(UUA)	TyrTAAchr11.trna9;TyrTAAchr7.trna6	ACE sequence match count=2
+ensure-232	232	Tyr(CUA)	TyrTAGchr11.trna9;TyrTAGchr7.trna6	ACE sequence match count=2
+ensure-269	269	Tyr(CUA)	TyrTAGchr11.trna9;TyrTAGchr7.trna6	ACE sequence match count=2
+ensure-542	542	Trp(UCA)	Xenopus_tropicalis_tRNA-Trp-CCA-8-1	no_id

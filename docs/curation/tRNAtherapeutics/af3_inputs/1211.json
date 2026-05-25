@@ -1,0 +1,17 @@
+{
+  "name": "PRDFOLD",
+  "modelSeeds": [
+    1
+  ],
+  "sequences": [
+    {
+      "rna": {
+        "id": "PRD",
+        "sequence": "ACCAGGAUGGCCGAGUGGUUAAGGCGUUGGACUUCAGAUCCAAUGGACAUAUGUCUGCGUGGGUUCGAACCCCACUCCUGGUA"
+      }
+    }
+  ],
+  "bondedAtomPairs": [],
+  "dialect": "alphafold3",
+  "version": 1
+}

@@ -1,0 +1,66 @@
+PMID	PMCID	status	tgz_url	tgz_path	paper_files	supplement_files	other_files	error
+1344892		no_pmcid			0	0	0	No PMCID in PubMed metadata
+2096017		no_pmcid			0	0	0	No PMCID in PubMed metadata
+2193162		no_pmcid			0	0	0	No PMCID in PubMed metadata
+2251270	PMC55144	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC55144' is not Open Access
+2602139	PMC335204	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC335204' is not Open Access
+2990894	PMC554172	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC554172' is not Open Access
+3045821	PMC282030	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC282030' is not Open Access
+3532123	PMC386822	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC386822' is not Open Access
+6254058	PMC350002	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC350002' is not Open Access
+6308765		no_pmcid			0	0	0	No PMCID in PubMed metadata
+6310546	PMC347000	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC347000' is not Open Access
+6363071		no_pmcid			0	0	0	No PMCID in PubMed metadata
+8416930		no_pmcid			0	0	0	No PMCID in PubMed metadata
+9294168	PMC23315	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC23315' is not Open Access
+9331409		no_pmcid			0	0	0	No PMCID in PubMed metadata
+9447966	PMC108781	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC108781' is not Open Access
+9465022	PMC19007	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC19007' is not Open Access
+10220370	PMC21768	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC21768' is not Open Access
+10498252		no_pmcid			0	0	0	No PMCID in PubMed metadata
+11226228	PMC30127	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC30127' is not Open Access
+11564556		no_pmcid			0	0	0	No PMCID in PubMed metadata
+11717406	PMC64678	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC64678' is not Open Access
+11866580		no_pmcid			0	0	0	No PMCID in PubMed metadata
+12409460	PMC135798	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC135798' is not Open Access
+12466560	PMC137983	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC137983' is not Open Access
+12582239	PMC150238	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC150238' is not Open Access
+15187228	PMC428441	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC428441' is not Open Access
+15222758		no_pmcid			0	0	0	No PMCID in PubMed metadata
+15576346	PMC535668	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC535668' is not Open Access
+17360621	PMC1805618	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC1805618' is not Open Access
+17685515		no_pmcid			0	0	0	No PMCID in PubMed metadata
+17698637	PMC1986817	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC1986817' is not Open Access
+19378306	PMC2873846	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC2873846' is not Open Access
+19749377		no_pmcid			0	0	0	No PMCID in PubMed metadata
+19852970		no_pmcid			0	0	0	No PMCID in PubMed metadata
+20571084	PMC2965240	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/db/d9/PMC2965240.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/20571084_PMC2965240.tar.gz	2	2	18	
+23103832		no_pmcid			0	0	0	No PMCID in PubMed metadata
+23274575		no_pmcid			0	0	0	No PMCID in PubMed metadata
+23379331	PMC3855549	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC3855549' is not Open Access
+23874413	PMC3709914	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/07/6d/PMC3709914.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/23874413_PMC3709914.tar.gz	2	0	12	
+23924161	PMC3783214	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC3783214' is not Open Access
+24386240	PMC3875453	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/63/55/PMC3875453.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/24386240_PMC3875453.tar.gz	6	0	12	
+24424122	PMC4135406	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC4135406' is not Open Access
+25918386	PMC4434778	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC4434778' is not Open Access
+26405058		no_pmcid			0	0	0	No PMCID in PubMed metadata
+26694948	PMC4959848	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC4959848' is not Open Access
+28076288	PMC5389517	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/bc/98/PMC5389517.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/28076288_PMC5389517.tar.gz	2	1	10	
+29155943	PMC5728406	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/e4/ea/PMC5728406.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/29155943_PMC5728406.tar.gz	2	1	12	
+30112727		no_pmcid			0	0	0	No PMCID in PubMed metadata
+30778053	PMC6379413	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/85/ea/PMC6379413.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/30778053_PMC6379413.tar.gz	2	6	10	
+31346230	PMC6658472	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/36/56/PMC6658472.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/31346230_PMC6658472.tar.gz	2	1	10	
+33069552	PMC7961839	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC7961839' is not Open Access
+34158503	PMC8219837	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/8c/a8/PMC8219837.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/34158503_PMC8219837.tar.gz	2	4	10	
+34341535		no_pmcid			0	0	0	No PMCID in PubMed metadata
+35322228	PMC9446716	not_in_oa_subset			0	0	0	idIsNotOpenAccess: identifier 'PMC9446716' is not Open Access
+35532803		no_pmcid			0	0	0	No PMCID in PubMed metadata
+37258671	PMC10284701	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/63/89/PMC10284701.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/37258671_PMC10284701.tar.gz	2	8	28	
+38042487	PMC10790091	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/22/28/PMC10790091.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/38042487_PMC10790091.tar.gz	2	1	12	
+38580646	PMC10997658	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/72/44/PMC10997658.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/38580646_PMC10997658.tar.gz	2	4	14	
+38777090		no_pmcid			0	0	0	No PMCID in PubMed metadata
+39558163	PMC11662663	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/ab/63/PMC11662663.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/39558163_PMC11662663.tar.gz	2	1	14	
+40491751	PMC12148385	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/82/23/PMC12148385.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/40491751_PMC12148385.tar.gz	2	1	2	
+40539513	PMC12204705	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/c8/36/PMC12204705.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/40539513_PMC12204705.tar.gz	2	1	16	
+40650978	PMC12255306	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/84/cc/PMC12255306.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/40650978_PMC12255306.tar.gz	2	1	22	
+41261131	PMC12675287	oa_package_downloaded	https://ftp.ncbi.nlm.nih.gov/pub/pmc/deprecated/oa_package/38/1f/PMC12675287.tar.gz	field-curation-workdir/full_tRNAtherapeutics/oa_packages/41261131_PMC12675287.tar.gz	2	20	30	

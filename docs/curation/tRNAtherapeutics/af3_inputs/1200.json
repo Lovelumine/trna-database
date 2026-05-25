@@ -1,0 +1,17 @@
+{
+  "name": "PRAFOLD",
+  "modelSeeds": [
+    1
+  ],
+  "sequences": [
+    {
+      "rna": {
+        "id": "PRA",
+        "sequence": "ACCAGGAUGGCCGAGUGGUUAAGGCGUCUGACUCUAGAUCAGAUGGACAUAUGUCCGCGUGGGUUCGAACCCCACUCCUGGUA"
+      }
+    }
+  ],
+  "bondedAtomPairs": [],
+  "dialect": "alphafold3",
+  "version": 1
+}

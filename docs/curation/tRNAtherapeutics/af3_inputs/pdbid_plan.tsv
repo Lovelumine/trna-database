@@ -1,0 +1,7 @@
+PMID	ENSURE_ID	pdbid	job	prefix	json	sup-tRNA_gene	sup_len	Related_disease
+30778053	ensure-364	PRF	PRFFOLD	ensure-af3/prffold/	field-curation-workdir/full_tRNAtherapeutics/af3_inputs/ensure-364.json	ACCAGGATGGCCAAGTAGTTAAAGGCACTGGACTTCAGAGCCAATGGACATATGTCTGTGTGGGTTTGAACCCCACTCCTGGTG	84	Model protein
+41261131	1200	PRA	PRAFOLD	ensure-af3/prafold/	field-curation-workdir/full_tRNAtherapeutics/af3_inputs/1200.json	tRNA-Leu-TAA-1-1+hp12ta>cg+hp13gc>ta	83	Disease-agnostic PTC rescue
+41261131	1204	PRB	PRBFOLD	ensure-af3/prbfold/	field-curation-workdir/full_tRNAtherapeutics/af3_inputs/1204.json	tRNA-Leu-TAA-1-1+hp12ta>cg+hp13gc>cg	83	Disease-agnostic PTC rescue
+41261131	1210	PRC	PRCFOLD	ensure-af3/prcfold/	field-curation-workdir/full_tRNAtherapeutics/af3_inputs/1210.json	mouse tRNA-Leu-TAA-2-1	83	In vivo GFP reporter
+41261131	1211	PRD	PRDFOLD	ensure-af3/prdfold/	field-curation-workdir/full_tRNAtherapeutics/af3_inputs/1211.json	mouse tRNA-Leu-TAA-2-1	83	In vivo GFP reporter
+41261131	1212	PRE	PREFOLD	ensure-af3/prefold/	field-curation-workdir/full_tRNAtherapeutics/af3_inputs/1212.json	mouse tRNA-Leu-TAA-2-1+hp13gc>ta+mut38a>t	83	Hurler syndrome
