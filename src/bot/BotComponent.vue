@@ -255,9 +255,19 @@
         <!-- 输入 -->
         <div id="input-area">
           <label id="deep-review-toggle" :class="{ disabled: loading }">
-            <input v-model="deepReviewEnabled" type="checkbox" :disabled="loading" />
-            <span>Deep retrieval & review</span>
+            <input v-model="thinkingEnabled" type="checkbox" :disabled="loading" />
+            <span>Thinking</span>
           </label>
+          <select
+            id="thinking-effort-select"
+            v-model="reasoningEffort"
+            :disabled="loading || !thinkingEnabled"
+            aria-label="Reasoning effort"
+          >
+            <option v-for="effort in reasoningEffortOptions" :key="effort" :value="effort">
+              {{ effort }}
+            </option>
+          </select>
           <input
             id="chat-input"
             v-model="inputText"
@@ -312,6 +322,10 @@ import { fetchChatModelConfig } from '@/utils/chatConfig';
 import { ElIcon } from 'element-plus';
 import { Close } from '@element-plus/icons-vue';
 
+const CHAT_MODEL = 'deepseek-v4-pro';
+const THINKING_STORAGE_KEY = 'ai_thinking_enabled';
+const REASONING_EFFORT_STORAGE_KEY = 'ai_reasoning_effort';
+
 export default defineComponent({
   name: 'BotComponent',
   components: { ElIcon, Close },
@@ -324,11 +338,13 @@ export default defineComponent({
     );
     const chat = ref(useChat(apiKey, { key: activeSessionId.value }));
     const sessionOptions = ref<Array<{ id: string; title: string }>>([]);
-    const modelOptions = ref<string[]>(['deepseek-chat', 'deepseek-reasoner', 'qwen3:32b', 'gemma3:27b']);
-    const deepReviewEnabled = ref(localStorage.getItem('ai_deep_review_enabled') === '1');
-    const selectedModel = ref(
-      localStorage.getItem('ai_chat_model') || 'deepseek-chat'
-    );
+    const modelOptions = ref<string[]>([CHAT_MODEL]);
+    const reasoningEffortOptions = ref<('high' | 'max')[]>(['high', 'max']);
+    const thinkingEnabled = ref(localStorage.getItem(THINKING_STORAGE_KEY) === '1');
+    const storedEffort = localStorage.getItem(REASONING_EFFORT_STORAGE_KEY);
+    const reasoningEffort = ref<'high' | 'max'>(storedEffort === 'max' ? 'max' : 'high');
+    const selectedModel = ref(CHAT_MODEL);
+    localStorage.setItem('ai_chat_model', CHAT_MODEL);
     const showSessionSelect = ref(false);
     const showModelSelect = ref(false);
     const headerRef = ref<HTMLDivElement | null>(null);
@@ -638,11 +654,10 @@ export default defineComponent({
       if (hasSentMessage === 'true') showExampleQuestions.value = false;
       const chatConfig = await fetchChatModelConfig();
       if (chatConfig?.model_options?.length) {
-        modelOptions.value = chatConfig.model_options;
+        modelOptions.value = chatConfig.model_options.filter(model => model === CHAT_MODEL);
       }
-      if (!selectedModel.value || !modelOptions.value.includes(selectedModel.value)) {
-        selectedModel.value = chatConfig?.active_model || modelOptions.value[0] || '';
-      }
+      selectedModel.value = CHAT_MODEL;
+      localStorage.setItem('ai_chat_model', CHAT_MODEL);
       await rebindSlider();
       window.addEventListener('storage', loadSessions);
       window.addEventListener('click', handleDocClick);
@@ -697,8 +712,11 @@ export default defineComponent({
     watch(selectedModel, (next) => {
       localStorage.setItem('ai_chat_model', next);
     }, { immediate: true });
-    watch(deepReviewEnabled, (next) => {
-      localStorage.setItem('ai_deep_review_enabled', next ? '1' : '0');
+    watch(thinkingEnabled, (next) => {
+      localStorage.setItem(THINKING_STORAGE_KEY, next ? '1' : '0');
+    }, { immediate: true });
+    watch(reasoningEffort, (next) => {
+      localStorage.setItem(REASONING_EFFORT_STORAGE_KEY, next);
     }, { immediate: true });
     watch(
       () => getChatOpen(),
@@ -882,7 +900,8 @@ export default defineComponent({
         overrideText: text,
         model: selectedModel.value,
         history: buildHistoryPayload(historySource, { excludeMessageId: editingMessageId.value }),
-        deepReview: deepReviewEnabled.value
+        thinkingEnabled: thinkingEnabled.value,
+        reasoningEffort: reasoningEffort.value
       });
       showExampleQuestions.value = false;
       localStorage.setItem('hasSentMessage', 'true');
@@ -995,7 +1014,8 @@ export default defineComponent({
         overrideText: userMsg.text,
         model: selectedModel.value,
         history: buildHistoryPayload(historySource),
-        deepReview: deepReviewEnabled.value
+        thinkingEnabled: thinkingEnabled.value,
+        reasoningEffort: reasoningEffort.value
       });
       if (!result?.aborted) {
         editingMessageId.value = null;
@@ -1004,7 +1024,8 @@ export default defineComponent({
 
     return {
       element, startDrag, chat,
-      activeSessionId, sessionOptions, selectedModel, modelOptions, deepReviewEnabled,
+      activeSessionId, sessionOptions, selectedModel, modelOptions, thinkingEnabled,
+      reasoningEffortOptions, reasoningEffort,
       toggleChat, sendMessage, previewImage,
       renderedMessages, safeMessages, chatContent,
       loading, fillExample, showExampleQuestions, exampleWrap,
@@ -1361,6 +1382,19 @@ export default defineComponent({
 }
 #deep-review-toggle.disabled{
   opacity:0.6;
+}
+#thinking-effort-select{
+  min-height:34px;
+  padding:0 28px 0 10px;
+  border-radius:10px;
+  border:1px solid rgba(148, 163, 184, 0.22);
+  background:rgba(148, 163, 184, 0.08);
+  color:var(--app-text);
+  font-size:11px;
+  font-weight:600;
+}
+#thinking-effort-select:disabled{
+  opacity:0.55;
 }
 #chat-input{
   flex-grow:1;

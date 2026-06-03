@@ -6,14 +6,20 @@ Base URL: same origin as the web app. Unless noted, all endpoints are JSON.
 - `GET /health` → `OK`
 
 #### Chat (AI Yingying)
-- `GET /chat/api/application/profile` → `{ data: { id: "ollama-local" } }`
+- `GET /chat/api/application/profile` → `{ data: { id: "ensure-chat", active_model: "deepseek-v4-pro" } }`
 - `GET /chat/api/open?application_id=...` → `{ data: "<chat_id>" }`
 - `POST /chat/api/title` → `{ title: "..." }`
 - `POST /chat/api/chat_message/<chat_id>` → SSE stream
 
 Example:
 ```json
-{ "message": "What is a natural sup-tRNA?", "model": "qwen3:32b", "stream": true }
+{
+  "message": "What is a natural sup-tRNA?",
+  "model": "deepseek-v4-pro",
+  "stream": true,
+  "thinking_enabled": true,
+  "reasoning_effort": "high"
+}
 ```
 
 #### Tables & Data

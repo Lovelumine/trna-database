@@ -193,26 +193,25 @@
         <button
           class="model-sheet-backdrop"
           type="button"
-          aria-label="Close model picker"
+          aria-label="Close effort picker"
           @click="closeMobileModelPicker"
         ></button>
         <div class="model-sheet">
           <div class="model-sheet-header">
-            <div class="model-sheet-kicker">Mobile model picker</div>
-            <h3 id="mobile-model-picker-title">Choose response model</h3>
-            <p>The current model stays fixed until you change it again.</p>
+            <div class="model-sheet-kicker">Thinking effort</div>
+            <h3 id="mobile-model-picker-title">Choose effort</h3>
           </div>
           <div class="model-sheet-options">
             <button
-              v-for="model in modelOptions"
-              :key="model"
+              v-for="effort in reasoningEffortOptions"
+              :key="effort"
               class="model-sheet-option"
-              :class="{ active: model === selectedModel }"
+              :class="{ active: effort === reasoningEffort }"
               type="button"
-              @click="chooseMobileModel(model)"
+              @click="chooseMobileModel(effort)"
             >
-              <span>{{ model }}</span>
-              <span v-if="model === selectedModel" class="model-sheet-check">Selected</span>
+              <span>{{ effort }}</span>
+              <span v-if="effort === reasoningEffort" class="model-sheet-check">Selected</span>
             </button>
           </div>
         </div>
@@ -239,21 +238,21 @@
         <div class="input-icons">
           <label class="composer-toggle" :class="{ disabled: !noteAcknowledged || loading }">
             <input
-              v-model="deepReviewEnabled"
+              v-model="thinkingEnabled"
               type="checkbox"
               :disabled="!noteAcknowledged || loading"
             />
-            <span>Deep retrieval & review</span>
+            <span>Thinking</span>
           </label>
           <div v-if="!isMobileViewport" class="composer-model-shell">
             <select
-              v-model="selectedModel"
+              v-model="reasoningEffort"
               class="composer-model-select"
-              :disabled="!noteAcknowledged || loading"
-              aria-label="Model selection"
+              :disabled="!noteAcknowledged || loading || !thinkingEnabled"
+              aria-label="Reasoning effort"
             >
-              <option v-for="model in modelOptions" :key="model" :value="model">
-                {{ model }}
+              <option v-for="effort in reasoningEffortOptions" :key="effort" :value="effort">
+                {{ effort }}
               </option>
             </select>
             <span class="composer-model-caret" aria-hidden="true">
@@ -266,10 +265,10 @@
             v-else
             class="mobile-model-button"
             type="button"
-            :disabled="!noteAcknowledged || loading"
+            :disabled="!noteAcknowledged || loading || !thinkingEnabled"
             @click="openMobileModelPicker"
           >
-            <span class="mobile-model-button-label">Model</span>
+            <span class="mobile-model-button-label">Effort</span>
             <span class="mobile-model-button-value">{{ mobileModelLabel }}</span>
             <span class="mobile-model-button-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24">
@@ -314,7 +313,9 @@ import 'element-plus/dist/index.css';
 const COMPOSER_MIN_HEIGHT = 44;
 const COMPOSER_MAX_HEIGHT = 180;
 const MOBILE_BREAKPOINT = 860;
-const DEEP_REVIEW_STORAGE_KEY = 'ai_deep_review_enabled';
+const CHAT_MODEL = 'deepseek-v4-pro';
+const THINKING_STORAGE_KEY = 'ai_thinking_enabled';
+const REASONING_EFFORT_STORAGE_KEY = 'ai_reasoning_effort';
 
 export default defineComponent({
   name: 'ChatBox',
@@ -329,11 +330,10 @@ export default defineComponent({
   },
   setup(props, { emit }) {
     const apiBaseURL = import.meta.env.VITE_CHAT_API_BASE || '/chat/api';
-    const modelOptions = ref<string[]>(['deepseek-chat', 'deepseek-reasoner', 'qwen3:32b', 'gemma3:27b']);
-    const selectedModel = ref(localStorage.getItem('ai_chat_model') || 'deepseek-chat');
-    watch(selectedModel, (next) => {
-      localStorage.setItem('ai_chat_model', next);
-    });
+    const modelOptions = ref<string[]>([CHAT_MODEL]);
+    const reasoningEffortOptions = ref<('high' | 'max')[]>(['high', 'max']);
+    const selectedModel = ref(CHAT_MODEL);
+    localStorage.setItem('ai_chat_model', CHAT_MODEL);
     const {
       messages,
       newMessage,
@@ -359,7 +359,15 @@ export default defineComponent({
     const titleRequested = ref(false);
     const isMobileViewport = ref(false);
     const mobileModelPickerOpen = ref(false);
-    const deepReviewEnabled = ref(localStorage.getItem(DEEP_REVIEW_STORAGE_KEY) === '1');
+    const thinkingEnabled = ref(localStorage.getItem(THINKING_STORAGE_KEY) === '1');
+    const storedEffort = localStorage.getItem(REASONING_EFFORT_STORAGE_KEY);
+    const reasoningEffort = ref<'high' | 'max'>(storedEffort === 'max' ? 'max' : 'high');
+    watch(thinkingEnabled, (next) => {
+      localStorage.setItem(THINKING_STORAGE_KEY, next ? '1' : '0');
+    });
+    watch(reasoningEffort, (next) => {
+      localStorage.setItem(REASONING_EFFORT_STORAGE_KEY, next);
+    });
 
     const botAvatar = 'https://framerusercontent.com/images/p0mVMX1aJictMR1RM9fE1PrTrRQ.png';
     const userAvatar = 'https://framerusercontent.com/images/JnbQ2qAMPu3VRXkbzDhwoMnHpk.png';
@@ -394,11 +402,10 @@ export default defineComponent({
       window.addEventListener('resize', syncViewport);
       const config = await fetchChatModelConfig();
       if (config && Array.isArray(config.model_options) && config.model_options.length) {
-        modelOptions.value = config.model_options;
+        modelOptions.value = config.model_options.filter(model => model === CHAT_MODEL);
       }
-      if (config && (!selectedModel.value || !modelOptions.value.includes(selectedModel.value))) {
-        selectedModel.value = config.active_model || modelOptions.value[0] || '';
-      }
+      selectedModel.value = CHAT_MODEL;
+      localStorage.setItem('ai_chat_model', CHAT_MODEL);
       nextTick(resizeComposer);
     });
 
@@ -426,10 +433,6 @@ export default defineComponent({
         nextTick(resizeComposer);
       }
     );
-
-    watch(deepReviewEnabled, (next) => {
-      localStorage.setItem(DEEP_REVIEW_STORAGE_KEY, next ? '1' : '0');
-    });
 
     // 抽取 Search result(s) 证据的工具函数（宽松匹配）
     const splitSearchResult = (raw: string) => {
@@ -533,7 +536,8 @@ export default defineComponent({
         overrideText: text,
         model: getSelectedModel(),
         history: buildHistoryPayload(historySource),
-        deepReview: deepReviewEnabled.value
+        thinkingEnabled: thinkingEnabled.value,
+        reasoningEffort: reasoningEffort.value
       });
       if (!result?.aborted) {
         editingMessageId.value = null;
@@ -565,7 +569,7 @@ export default defineComponent({
     const storageKey = () => `ai_chat_session_${props.conversationId}`;
     const getSelectedModel = () => selectedModel.value;
     const mobileModelLabel = computed(() => {
-      const text = selectedModel.value || 'Model';
+      const text = reasoningEffort.value || 'high';
       return text.length > 20 ? `${text.slice(0, 20)}...` : text;
     });
     const openMobileModelPicker = () => {
@@ -575,8 +579,8 @@ export default defineComponent({
     const closeMobileModelPicker = () => {
       mobileModelPickerOpen.value = false;
     };
-    const chooseMobileModel = (model: string) => {
-      selectedModel.value = model;
+    const chooseMobileModel = (effort: 'high' | 'max') => {
+      reasoningEffort.value = effort;
       closeMobileModelPicker();
     };
     const visibleProgressTools = computed(() => progressToolTrace.value.slice(-6));
@@ -810,7 +814,8 @@ export default defineComponent({
         overrideText: userMsg.text,
         model: getSelectedModel(),
         history: buildHistoryPayload(historySource),
-        deepReview: deepReviewEnabled.value
+        thinkingEnabled: thinkingEnabled.value,
+        reasoningEffort: reasoningEffort.value
       });
     };
 
@@ -821,13 +826,15 @@ export default defineComponent({
       handlePrimaryAction,
       selectedModel,
       modelOptions,
+      reasoningEffortOptions,
+      thinkingEnabled,
+      reasoningEffort,
       isMobileViewport,
       mobileModelPickerOpen,
       mobileModelLabel,
       progressStatus,
       progressDetail,
       progressDraftPreview,
-      deepReviewEnabled,
       visibleProgressJudges,
       visibleProgressTools,
       openMobileModelPicker,

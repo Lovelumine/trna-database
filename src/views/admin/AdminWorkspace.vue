@@ -605,7 +605,7 @@
                 </el-form-item>
 
                 <el-form-item :label="t('field.deepseekDefaultModel')">
-                  <el-input v-model="llmForm.deepseek_default_model" placeholder="deepseek-chat" />
+                  <el-input v-model="llmForm.deepseek_default_model" placeholder="deepseek-v4-pro" />
                 </el-form-item>
 
                 <el-form-item class="span-2" :label="t('field.deepseekApiKey')">
@@ -621,7 +621,7 @@
                 </el-form-item>
 
                 <el-form-item :label="t('field.ollamaDefaultModel')">
-                  <el-input v-model="llmForm.ollama_default_model" placeholder="qwen3:32b" />
+                  <el-input v-model="llmForm.ollama_default_model" placeholder="" />
                 </el-form-item>
 
                 <el-form-item class="span-2" :label="t('field.ollamaModels')">
@@ -1395,9 +1395,9 @@ const activeModelLabel = computed(() => {
   const active = String(llmForm.active_model || '').trim();
   if (active) return active;
   if (llmForm.active_provider === 'deepseek') {
-    return String(llmForm.deepseek_default_model || '').trim() || 'deepseek-chat';
+    return String(llmForm.deepseek_default_model || '').trim() || 'deepseek-v4-pro';
   }
-  return String(llmForm.ollama_default_model || '').trim() || 'qwen3:32b';
+  return String(llmForm.ollama_default_model || '').trim() || '';
 });
 const pageBusy = computed(() => resourcesLoading.value || tableLoading.value || docLoading.value || llmSaving.value || workflowSaving.value);
 const editableColumns = computed(() => (selectedTableMeta.value?.columns || []).filter((column) => column.name !== 'Index'));

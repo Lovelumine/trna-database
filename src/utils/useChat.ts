@@ -58,20 +58,23 @@ type SendOptions = {
   model?: string;
   history?: ChatHistoryMessage[];
   deepReview?: boolean;
+  thinkingEnabled?: boolean;
+  reasoningEffort?: 'high' | 'max';
 };
 
 const defaultGreeting = 'Hello, I am your virtual assistant YingYing. How can I assist you today?';
 const sessions = new Map<string, ChatSession>();
 const apiBaseURL = import.meta.env.VITE_CHAT_API_BASE || '/chat/api';
-const mask = (s?: string) => (s ? s.replace(/.(?=.{4})/g, '*') : '');
 
-const logAuth = (session: ChatSession, where: string, url: string, method: string) => {
-  console.log(`[useChat] ${method} ${url}`);
-  console.log(`[useChat] ${where} Authorization(m): ${mask(session.apiKey)}`);
+const debugChatLog = (...args: unknown[]) => {
   // @ts-ignore
-  if (import.meta.env?.VITE_DEBUG_LOG_FULL_AUTH === '1') {
-    console.warn('[useChat] Authorization(FULL,DEBUG): Bearer ' + session.apiKey);
+  if (import.meta.env?.VITE_DEBUG_CHAT_LOG === '1') {
+    console.log(...args);
   }
+};
+
+const logAuth = (_session: ChatSession, where: string, url: string, method: string) => {
+  debugChatLog(`[useChat] ${method} ${url} (${where})`);
 };
 
 const authHeaders = (session: ChatSession) => ({
@@ -120,7 +123,7 @@ const fetchApplicationProfile = async (session: ChatSession, signal?: AbortSigna
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     session.applicationId = data?.data?.id || '';
-    console.log('[useChat] applicationId:', session.applicationId);
+    debugChatLog('[useChat] applicationId:', session.applicationId);
   } catch (e) {
     console.error('Error fetching application profile:', e);
   }
@@ -151,7 +154,7 @@ const openChatSession = async (session: ChatSession, signal?: AbortSignal) => {
 
     const data = await response.json();
     session.chatId = data?.data || '';
-    console.log('[useChat] chatId:', session.chatId);
+    debugChatLog('[useChat] chatId:', session.chatId);
   } catch (e) {
     console.error('Error opening chat session:', e);
   }
@@ -165,7 +168,7 @@ const initializeChatSession = async (session: ChatSession, signal?: AbortSignal)
   if (session.initializing) {
     return session.initializing;
   }
-  console.log('[useChat] apiBaseURL:', apiBaseURL);
+  debugChatLog('[useChat] apiBaseURL:', apiBaseURL);
   session.initializing = (async () => {
     try {
       if (!session.applicationId) {
@@ -269,6 +272,12 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
       }
       if (typeof options.deepReview === 'boolean') {
         payload.deep_review = options.deepReview;
+      }
+      if (typeof options.thinkingEnabled === 'boolean') {
+        payload.thinking_enabled = options.thinkingEnabled;
+      }
+      if (options.reasoningEffort) {
+        payload.reasoning_effort = options.reasoningEffort;
       }
 
       const response = await fetch(url, {
@@ -376,7 +385,7 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
           }
         }
       }
-      console.log('[useChat] stream ended');
+      debugChatLog('[useChat] stream ended');
       return { aborted: false };
     } catch (e: any) {
       if (e?.name === 'AbortError') {
@@ -431,7 +440,7 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
     session.progressJudgeTrace.value = [];
     session.progressDraftPreview.value = null;
     session.messages.value = [];
-    console.log('[useChat] resetChat with new apiKey(m):', mask(session.apiKey));
+    debugChatLog('[useChat] resetChat');
     await initializeChatSession(session);
     session.messages.value.push({ id: 1, text: defaultGreeting, sender: 'bot' });
   };

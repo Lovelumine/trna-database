@@ -191,7 +191,7 @@ _TIMEZONE_ALIASES = {
 
 def _get_ollama_config():
     base = current_app.config.get("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"
-    model = current_app.config.get("OLLAMA_MODEL") or "qwen3:32b"
+    model = current_app.config.get("OLLAMA_MODEL") or ""
     timeout = current_app.config.get("OLLAMA_TIMEOUT") or 120
     system_prompt = current_app.config.get("OLLAMA_SYSTEM_PROMPT") or ""
     max_messages = current_app.config.get("OLLAMA_MAX_MESSAGES") or 20
@@ -213,7 +213,7 @@ def _get_llm_runtime(requested_model: str = "", requested_provider: str = "") ->
 
     ollama_models = cfg.get("ollama_models") or []
     deepseek_models = cfg.get("deepseek_models") or []
-    active_provider = str(cfg.get("active_provider") or "ollama").strip().lower()
+    active_provider = str(cfg.get("active_provider") or "deepseek").strip().lower()
 
     if not provider:
         if model and model in deepseek_models:
@@ -224,15 +224,21 @@ def _get_llm_runtime(requested_model: str = "", requested_provider: str = "") ->
             provider = active_provider
 
     if provider not in ("ollama", "deepseek"):
-        provider = active_provider if active_provider in ("ollama", "deepseek") else "ollama"
+        provider = active_provider if active_provider in ("ollama", "deepseek") else "deepseek"
+
+    provider_models = deepseek_models if provider == "deepseek" else ollama_models
+    if model and provider_models and model not in provider_models:
+        model = ""
 
     if not model:
         model = str(cfg.get("active_model") or "").strip()
+    if model and provider_models and model not in provider_models:
+        model = ""
     if not model:
         model = (
-            str(cfg.get("deepseek_default_model") or "deepseek-chat")
+            str(cfg.get("deepseek_default_model") or "deepseek-v4-pro")
             if provider == "deepseek"
-            else str(cfg.get("ollama_default_model") or "qwen3:32b")
+            else str(cfg.get("ollama_default_model") or "")
         )
 
     runtime = {
@@ -241,7 +247,7 @@ def _get_llm_runtime(requested_model: str = "", requested_provider: str = "") ->
         "timeout": float(cfg.get("timeout") or 120),
         "system_prompt": str(cfg.get("system_prompt") or ""),
         "max_messages": int(cfg.get("max_messages") or 20),
-        "ollama_base_url": str(cfg.get("ollama_base_url") or "http://127.0.0.1:11434"),
+        "ollama_base_url": str(cfg.get("ollama_base_url") or ""),
         "deepseek_base_url": str(cfg.get("deepseek_base_url") or "https://api.deepseek.com"),
         "deepseek_api_key": str(cfg.get("deepseek_api_key") or ""),
         "model_options": list(cfg.get("model_options") or []),
@@ -851,11 +857,32 @@ def _ollama_once(base: str, model: str, messages: list, timeout: float) -> str:
     return msg.get("content") or ""
 
 
-def _deepseek_stream(base: str, api_key: str, model: str, messages: list, timeout: float):
+def _normalize_deepseek_thinking_options(runtime: dict) -> dict:
+    enabled = bool(runtime.get("thinking_enabled", False))
+    effort = str(runtime.get("reasoning_effort") or "high").strip().lower()
+    if effort not in ("high", "max"):
+        effort = "high"
+    options = {
+        "thinking": {"type": "enabled" if enabled else "disabled"},
+    }
+    if enabled:
+        options["reasoning_effort"] = effort
+    return options
+
+
+def _apply_deepseek_thinking(runtime: dict, payload: dict) -> dict:
+    next_runtime = dict(runtime or {})
+    next_runtime["thinking_enabled"] = bool((payload or {}).get("thinking_enabled", False))
+    next_runtime["reasoning_effort"] = str((payload or {}).get("reasoning_effort") or "high").strip().lower()
+    return next_runtime
+
+
+def _deepseek_stream(base: str, api_key: str, model: str, messages: list, timeout: float, runtime: dict | None = None):
     if not api_key:
         raise RuntimeError("DeepSeek API key is not configured")
     url = base.rstrip("/") + "/chat/completions"
     payload = {"model": model, "messages": messages, "stream": True}
+    payload.update(_normalize_deepseek_thinking_options(runtime or {}))
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -881,11 +908,12 @@ def _deepseek_stream(base: str, api_key: str, model: str, messages: list, timeou
         yield content, done
 
 
-def _deepseek_once(base: str, api_key: str, model: str, messages: list, timeout: float) -> str:
+def _deepseek_once(base: str, api_key: str, model: str, messages: list, timeout: float, runtime: dict | None = None) -> str:
     if not api_key:
         raise RuntimeError("DeepSeek API key is not configured")
     url = base.rstrip("/") + "/chat/completions"
     payload = {"model": model, "messages": messages, "stream": False}
+    payload.update(_normalize_deepseek_thinking_options(runtime or {}))
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -901,7 +929,7 @@ def _deepseek_once(base: str, api_key: str, model: str, messages: list, timeout:
 
 
 def _llm_stream(runtime: dict, messages: list, model: str = ""):
-    provider = str(runtime.get("provider") or "ollama")
+    provider = str(runtime.get("provider") or "deepseek")
     chosen_model = str(model or runtime.get("model") or "").strip()
     timeout = float(runtime.get("timeout") or 120)
     if provider == "deepseek":
@@ -911,9 +939,10 @@ def _llm_stream(runtime: dict, messages: list, model: str = ""):
             chosen_model,
             messages,
             timeout,
+            runtime,
         )
     return _ollama_stream(
-        str(runtime.get("ollama_base_url") or "http://127.0.0.1:11434"),
+        str(runtime.get("ollama_base_url") or ""),
         chosen_model,
         messages,
         timeout,
@@ -921,7 +950,7 @@ def _llm_stream(runtime: dict, messages: list, model: str = ""):
 
 
 def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | None = None) -> str:
-    provider = str(runtime.get("provider") or "ollama")
+    provider = str(runtime.get("provider") or "deepseek")
     chosen_model = str(model or runtime.get("model") or "").strip()
     timeout_value = float(timeout if timeout is not None else (runtime.get("timeout") or 120))
     if provider == "deepseek":
@@ -931,9 +960,10 @@ def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | N
             chosen_model,
             messages,
             timeout_value,
+            runtime,
         )
     return _ollama_once(
-        str(runtime.get("ollama_base_url") or "http://127.0.0.1:11434"),
+        str(runtime.get("ollama_base_url") or ""),
         chosen_model,
         messages,
         timeout_value,
@@ -6886,7 +6916,7 @@ def chat_message(chat_id):
         return jsonify({"error": "missing message"}), 400
     stream_requested = bool(payload.get("stream", True))
 
-    runtime = _get_llm_runtime(payload.get("model"))
+    runtime = _apply_deepseek_thinking(_get_llm_runtime(payload.get("model")), payload)
     model = _select_chat_model(payload.get("model"), str(runtime.get("model") or ""))
     system_prompt = str(runtime.get("system_prompt") or "")
     max_messages = int(runtime.get("max_messages") or 20)

@@ -9,8 +9,8 @@ from . import db
 from .models import AppSetting
 
 
-DEFAULT_DEEPSEEK_MODELS = ["deepseek-chat", "deepseek-reasoner"]
-DEFAULT_OLLAMA_MODELS = ["qwen3:32b", "gemma3:27b"]
+DEFAULT_DEEPSEEK_MODELS = ["deepseek-v4-pro"]
+DEFAULT_OLLAMA_MODELS = []
 DEFAULT_AI_MAX_RETRIEVAL_ROUNDS = 2
 DEFAULT_AI_MAX_TOOL_STEPS_PER_ROUND = 4
 DEFAULT_AI_MAX_TOTAL_TOOL_STEPS = 12
@@ -19,17 +19,17 @@ DEFAULT_AI_CONVERSATION_ROUTER_TIMEOUT = 15
 DEFAULT_AI_ROUTER_CONFIDENCE_THRESHOLD = 0.7
 
 DEFAULT_SETTING_FACTORIES = {
-    "llm_active_provider": lambda: "ollama",
-    "llm_active_model": lambda: str(current_app.config.get("OLLAMA_MODEL") or "qwen3:32b"),
+    "llm_active_provider": lambda: "deepseek",
+    "llm_active_model": lambda: str(current_app.config.get("DEEPSEEK_MODEL") or "deepseek-v4-pro"),
     "llm_timeout": lambda: str(current_app.config.get("OLLAMA_TIMEOUT") or 120),
     "llm_max_messages": lambda: str(current_app.config.get("OLLAMA_MAX_MESSAGES") or 20),
     "llm_system_prompt": lambda: str(current_app.config.get("OLLAMA_SYSTEM_PROMPT") or ""),
     "llm_ollama_base_url": lambda: str(current_app.config.get("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"),
-    "llm_ollama_default_model": lambda: str(current_app.config.get("OLLAMA_MODEL") or "qwen3:32b"),
+    "llm_ollama_default_model": lambda: "",
     "llm_ollama_models_json": lambda: json.dumps(DEFAULT_OLLAMA_MODELS, ensure_ascii=False),
     "llm_deepseek_base_url": lambda: str(current_app.config.get("DEEPSEEK_BASE_URL") or "https://api.deepseek.com"),
     "llm_deepseek_api_key": lambda: str(current_app.config.get("DEEPSEEK_API_KEY") or ""),
-    "llm_deepseek_default_model": lambda: str(current_app.config.get("DEEPSEEK_MODEL") or "deepseek-chat"),
+    "llm_deepseek_default_model": lambda: str(current_app.config.get("DEEPSEEK_MODEL") or "deepseek-v4-pro"),
     "llm_deepseek_models_json": lambda: json.dumps(DEFAULT_DEEPSEEK_MODELS, ensure_ascii=False),
     "ai_workflow_enable": lambda: "1",
     "ai_conversation_router_enable": lambda: "1",
@@ -153,7 +153,7 @@ def get_llm_settings(include_secrets: bool = False) -> dict:
 
     default_system_prompt = str(current_app.config.get("OLLAMA_SYSTEM_PROMPT") or "").strip()
 
-    active_provider = str(get_setting("llm_active_provider", "ollama") or "ollama").strip().lower()
+    active_provider = str(get_setting("llm_active_provider", "deepseek") or "deepseek").strip().lower()
     active_model = str(get_setting("llm_active_model", "") or "").strip()
 
     ollama_models = _json_list(
@@ -166,13 +166,13 @@ def get_llm_settings(include_secrets: bool = False) -> dict:
     )
 
     if active_provider not in ("ollama", "deepseek"):
-        active_provider = "ollama"
+        active_provider = "deepseek"
 
     if not active_model:
         active_model = (
-            str(get_setting("llm_deepseek_default_model", "deepseek-chat"))
+            str(get_setting("llm_deepseek_default_model", "deepseek-v4-pro"))
             if active_provider == "deepseek"
-            else str(get_setting("llm_ollama_default_model", "qwen3:32b"))
+            else str(get_setting("llm_ollama_default_model", ""))
         )
 
     model_options = []
@@ -189,10 +189,10 @@ def get_llm_settings(include_secrets: bool = False) -> dict:
         "max_messages": _int_text(get_setting("llm_max_messages", 20), 20),
         "system_prompt": str(get_setting("llm_system_prompt", default_system_prompt) or "").strip() or default_system_prompt,
         "ollama_base_url": str(get_setting("llm_ollama_base_url", "http://127.0.0.1:11434") or "").strip(),
-        "ollama_default_model": str(get_setting("llm_ollama_default_model", "qwen3:32b") or "").strip(),
+        "ollama_default_model": str(get_setting("llm_ollama_default_model", "") or "").strip(),
         "ollama_models": ollama_models,
         "deepseek_base_url": str(get_setting("llm_deepseek_base_url", "https://api.deepseek.com") or "").strip(),
-        "deepseek_default_model": str(get_setting("llm_deepseek_default_model", "deepseek-chat") or "").strip(),
+        "deepseek_default_model": str(get_setting("llm_deepseek_default_model", "deepseek-v4-pro") or "").strip(),
         "deepseek_models": deepseek_models,
         "model_options": model_options,
     }
@@ -220,7 +220,7 @@ def save_llm_settings(payload: dict):
         return json.dumps(dedup or fallback, ensure_ascii=False)
 
     updates = {
-        "llm_active_provider": str(payload.get("active_provider") or "ollama").strip().lower(),
+        "llm_active_provider": str(payload.get("active_provider") or "deepseek").strip().lower(),
         "llm_active_model": str(payload.get("active_model") or "").strip(),
         "llm_timeout": str(payload.get("timeout") or "120").strip(),
         "llm_max_messages": str(payload.get("max_messages") or "20").strip(),
@@ -238,7 +238,7 @@ def save_llm_settings(payload: dict):
 
     provider = updates["llm_active_provider"]
     if provider not in ("ollama", "deepseek"):
-        provider = "ollama"
+        provider = "deepseek"
         updates["llm_active_provider"] = provider
 
     if not updates["llm_active_model"]:

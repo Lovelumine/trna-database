@@ -58,10 +58,10 @@ class Config:
     MEDIA_UPLOAD_MAX_BYTES = int(os.getenv("MEDIA_UPLOAD_MAX_BYTES", str(10 * 1024 * 1024)))
 
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://192.168.236.2:11434")
-    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:32b")
+    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "")
     OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "120"))
     DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-    DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+    DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
     DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "").strip()
     OLLAMA_SYSTEM_PROMPT = os.getenv(
         "OLLAMA_SYSTEM_PROMPT",
