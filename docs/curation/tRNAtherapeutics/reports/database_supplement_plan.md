@@ -41,26 +41,30 @@
 
 `field-curation-workdir/full_tRNAtherapeutics/row_gap_report.tsv`
 
-## 可立即进入 AF3 队列的 pdbid 缺口
+## AF3 pdbid 缺口处理状态
 
-这些行的序列和二级结构已存在，只差三维结构模型。已生成 AF3 输入文件，不应在 CIF 上传前回填 `pdbid`。
+这些行的序列和二级结构已存在，原先只差三维结构模型。2026-06-05 已完成 AF3 预测、CIF 上传和数据库 `pdbid` 回填；实时库 `Engineered_sup_tRNA` 当前 `pdbid` 缺口为 0。
 
 | PMID | ENSURE_ID | 计划 pdbid | 说明 |
 | --- | --- | --- | --- |
-| 30778053 | ensure-364 | PRF | 无同序列模型可复用，需 AF3 |
-| 41261131 | 1200 | PRA | 需 AF3 |
-| 41261131 | 1204 | PRB | 需 AF3 |
-| 41261131 | 1210 | PRC | 需 AF3 |
-| 41261131 | 1211 | PRD | 需 AF3 |
-| 41261131 | 1212 | PRE | 需 AF3 |
+| 30778053 | ensure-364 | PRF | AF3 新预测；无同序列模型可复用 |
+| 41261131 | 1200 | PRA | AF3 新预测；reporter screen hit，不作为疾病治疗验证证据 |
+| 41261131 | 1204 | PRB | AF3 新预测；reporter screen hit，不作为疾病治疗验证证据 |
+| 41261131 | 1210 | PRC | AF3 新预测；in vivo GFP reporter |
+| 41261131 | 1211 | PRD | AF3 新预测；in vivo GFP reporter |
+| 41261131 | 1212 | PRE | AF3 新预测；Hurler syndrome 相关验证 |
 
 AF3 输入目录：
 
 `field-curation-workdir/full_tRNAtherapeutics/af3_inputs/`
 
-AF3 完成并上传 MinIO 后再运行：
+已执行回填 SQL：
 
 `field-curation-workdir/full_tRNAtherapeutics/af3_inputs/update_pdbid_after_af3_upload.sql`
+
+完成记录：
+
+`docs/curation/tRNAtherapeutics/reports/af3_missing_pdbid_completion_20260605.md`
 
 ## 建议补库顺序
 
@@ -68,11 +72,11 @@ AF3 完成并上传 MinIO 后再运行：
 2. 优先处理 `30778053`，因为它占 95 个 origin sequence/secondary-structure 缺口，且 OA package 和 supplementary 已经下载。
 3. 再处理 `39558163`，缺 3 个 origin sequence，已有 PMC/OA 材料。
 4. 对没有 PMCID 的 21 篇，等待用户提供全文 PDF/补充数据后再补。
-5. `pdbid` 等 AF3 CIF 上传完成后统一回填。
+5. `pdbid` 的 AF3 CIF 已上传并完成回填；后续只需继续处理 origin sequence/secondary-structure 缺口。
 
 ## 当前不应执行的操作
 
 - 不应把 PMC challenge HTML 当作 supplementary。
 - 不应从 `sup-tRNA_gene` 中的序列字符串直接当作 origin sequence。
 - 不应在没有论文证据时用“反向改 anticodon”的方式推断 origin sequence。
-- 不应提前回填 `PRA-PRF` 这些 `pdbid`，因为 MinIO 中还没有对应 CIF。
+- 不应为没有论文证据的剩余字段做推断式补库；尤其不能把 reporter screen hit 写成疾病治疗验证。

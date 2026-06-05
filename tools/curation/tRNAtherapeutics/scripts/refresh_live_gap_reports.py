@@ -17,6 +17,7 @@ BASE = ROOT / "field-curation-workdir" / "full_tRNAtherapeutics"
 SNAPSHOTS = BASE / "snapshots"
 MANIFEST = BASE / "paper_manifest.tsv"
 ROW_GAP_REPORT = BASE / "row_gap_report.tsv"
+FIELD_GAP_REPORT = BASE / "field_gap_report.tsv"
 TABLE = "Engineered_sup_tRNA"
 
 HIGH_VALUE_FIELDS = [
@@ -181,14 +182,60 @@ def refresh_row_gap_report(rows: list[dict[str, str]]) -> None:
     )
 
 
+def refresh_field_gap_report(rows: list[dict[str, str]]) -> None:
+    manifest_rows = list(csv.DictReader(MANIFEST.open(encoding="utf-8"), delimiter="\t"))
+    title_by_pmid = {row.get("PMID", ""): row.get("title", "") for row in manifest_rows}
+    by_pmid: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for row in rows:
+        by_pmid[str(row.get("PMID", "")).strip()].append(row)
+
+    out = []
+    for pmid, pmid_rows in by_pmid.items():
+        counts = {
+            field: sum(1 for item in pmid_rows if is_blank(item.get(field)))
+            for field in HIGH_VALUE_FIELDS
+        }
+        if not any(counts.values()):
+            continue
+        out.append(
+            {
+                "PMID": pmid,
+                "row_count": len(pmid_rows),
+                "title": title_by_pmid.get(pmid, ""),
+                "missing_pdbid": counts["pdbid"],
+                "missing_origin_secondary_structure": counts["Secondary structure"],
+                "missing_sup_secondary_structure": counts["Secondary structure of sup-trna"],
+                "missing_origin_sequence": counts["Sequence_of_origin_tRNA"],
+                "missing_sup_sequence": counts["Sequence_of_sup-tRNA"],
+            }
+        )
+    out.sort(key=lambda item: int(item["PMID"]) if str(item["PMID"]).isdigit() else 10**12)
+    write_tsv(
+        FIELD_GAP_REPORT,
+        out,
+        [
+            "PMID",
+            "row_count",
+            "title",
+            "missing_pdbid",
+            "missing_origin_secondary_structure",
+            "missing_sup_secondary_structure",
+            "missing_origin_sequence",
+            "missing_sup_sequence",
+        ],
+    )
+
+
 def main() -> int:
     snapshot, rows = export_live_table()
     refresh_manifest(rows)
     refresh_row_gap_report(rows)
+    refresh_field_gap_report(rows)
     print(snapshot)
     print(f"rows {len(rows)}")
     print(MANIFEST)
     print(ROW_GAP_REPORT)
+    print(FIELD_GAP_REPORT)
     return 0
 
 
