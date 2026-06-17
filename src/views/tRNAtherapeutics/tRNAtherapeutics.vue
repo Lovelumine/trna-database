@@ -19,12 +19,13 @@
       <s-table-provider :hover="true" theme-color="#00ACF5" :locale="locale">
         <s-table
           :columns="pmidColumns"
-          :data-source="paginatedFilteredPmidData"
+          :data-source="filteredPmidData"
           :pagination="pagination"
           :row-key="record => record.PMID"
           :expand-row-by-click="true"
           :size="tableSize"
           @change="handleTableChange"
+          @pagination-change="handlePaginationChange"
         >
           <template #expandedRowRender="{ record }">
             <!-- 触发展开即按 PMID 调后端 /search 拉取，仅该 PMID 相关行 -->
@@ -37,11 +38,28 @@
           </template>
 
           <template #default="{ text, column }">
-            <span v-if="column.dataIndex === 'PMID'">
-              <a :href="`https://pubmed.ncbi.nlm.nih.gov/${text}`" target="_blank">{{ text }}</a>
-            </span>
-            <span v-else-if="column.dataIndex === 'Source'"><em>{{ text }}</em></span>
-            <span v-else>{{ text }}</span>
+            <el-tooltip
+              :content="cellTooltipContent(text, column)"
+              placement="top"
+              effect="light"
+              :show-after="150"
+              :hide-after="0"
+              :disabled="!cellTooltipContent(text, column)"
+            >
+              <a
+                v-if="column.dataIndex === 'PMID'"
+                :href="`https://pubmed.ncbi.nlm.nih.gov/${text}`"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="pmid-link-button"
+                :aria-label="cellTooltipContent(text, column)"
+                @click.stop
+              >
+                <Link />
+              </a>
+              <span v-else-if="column.dataIndex === 'Source'" class="pmid-text-cell"><em>{{ text }}</em></span>
+              <span v-else class="pmid-text-cell">{{ text }}</span>
+            </el-tooltip>
           </template>
         </s-table>
       </s-table-provider>
@@ -66,7 +84,8 @@ import { STableProvider } from '@shene/table';
 import tRNAtherapeutics1 from './tRNAtherapeutics-1.vue';
 import en from '@shene/table/dist/locale/en';
 import type { EChartsOption } from 'echarts';
-import { ElSkeleton } from 'element-plus';
+import { ElSkeleton, ElTooltip } from 'element-plus';
+import { Link } from '@element-plus/icons-vue';
 import TableToolbar from '@/components/TableToolbar.vue';
 
 const locale = ref(en);
@@ -78,7 +97,7 @@ const PERPOS_TABLE = 'engineered_sup_trna_perpos_counts';
 
 export default {
   name: 'tRNAtherapeutics',
-  components: { tRNAtherapeutics1, STableProvider, ElSkeleton, TableToolbar },
+  components: { tRNAtherapeutics1, STableProvider, ElSkeleton, ElTooltip, Link, TableToolbar },
   setup() {
     // ===== 加载状态 =====
     const loadingPmid = ref(true);  // PMID 主表格（MySQL）
@@ -130,38 +149,84 @@ export default {
     const tableSize    = ref<'small'|'default'|'large'>('default');
     const rawPmidData  = ref<any[]>([]);
     const pagination   = ref({ current:1, pageSize:10, total:0, showSizeChanger:true, showQuickJumper:true });
+    const selectedPubYear = ref('');
+    const pubDateSortOrder = ref<'desc'|'asc'>('desc');
 
-    const pmidColumns = ref([
-      { title:'PMID', dataIndex:'PMID', key:'PMID', width:100, resizable:true,
-        customRender: ({ text }: any) => (
-          <a href={`https://pubmed.ncbi.nlm.nih.gov/${text}`} target="_blank">{text}</a>
-        )
-      },
-      { title:'Title', dataIndex:'Title', key:'Title', width:500, ellipsis:true, resizable:true },
-      { title:'Source', dataIndex:'Source', key:'Source', width:150, resizable:true,
+    const pubYearOptions = computed(() => {
+      return Array.from(new Set(
+        rawPmidData.value
+          .map(row => String(row.PubYear ?? ''))
+          .filter(Boolean)
+      )).sort((a, b) => Number(b) - Number(a));
+    });
+
+    const pubDateFilterOptions = computed(() => [
+      { text: 'All years', value: '__all__' },
+      ...pubYearOptions.value.map(year => ({ text: year, value: year }))
+    ]);
+
+    const pmidColumns = computed(() => [
+      { title:'Title', dataIndex:'Title', key:'Title', width:760, ellipsis:true, resizable:true },
+      { title:'Source', dataIndex:'Source', key:'Source', width:180, resizable:true,
         customRender: ({ text }: any) => <em>{text}</em>
       },
-      { title:'Author', dataIndex:'Author', key:'Author', width:200, ellipsis:true, resizable:true },
-      { title:'PubDate', dataIndex:'PubDate', key:'PubDate', width:120, resizable:true }
+      { title:'Author', dataIndex:'Author', key:'Author', width:480, ellipsis:true, resizable:true },
+      {
+        title:'PubDate',
+        dataIndex:'PubDate',
+        key:'PubDate',
+        width:126,
+        resizable:true,
+        sorter: true,
+        sortOrder: pubDateSortOrder.value === 'desc' ? 'descend' : 'ascend',
+        sortDirections: ['descend', 'ascend'],
+        filter: {
+          type: 'single',
+          list: pubDateFilterOptions.value,
+          resetValue: '',
+          onFilter: (value: string, record: any) => {
+            if (!value || value === '__all__') return true;
+            return String(record.PubYear ?? '') === String(value);
+          }
+        }
+      },
+      { title:'ID', dataIndex:'PMID', key:'PMID', width:48, align:'center', resizable:true,
+        customRender: ({ text }: any) => (
+          <a
+            href={`https://pubmed.ncbi.nlm.nih.gov/${text}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="pmid-link-button"
+            aria-label={`Open PubMed ${text}`}
+          >
+            <Link />
+          </a>
+        )
+      }
     ]);
-    const pmidSearchableColumns = pmidColumns.value;
+    const pmidSearchableColumns = computed(() => pmidColumns.value);
 
     const filteredPmidData = computed(() => {
-      if (!searchText.value) return rawPmidData.value;
-      return rawPmidData.value.filter(r => {
-        const hay = (searchColumn.value
-          ? String(r[searchColumn.value])
-          : Object.values(r).join(' ')
-        ).toLowerCase();
-        return hay.includes(searchText.value.toLowerCase());
+      let data = rawPmidData.value;
+      if (selectedPubYear.value) {
+        data = data.filter(r => String(r.PubYear ?? '') === selectedPubYear.value);
+      }
+      if (searchText.value) {
+        data = data.filter(r => {
+          const hay = (searchColumn.value
+            ? String(r[searchColumn.value])
+            : Object.values(r).join(' ')
+          ).toLowerCase();
+          return hay.includes(searchText.value.toLowerCase());
+        });
+      }
+      return [...data].sort((a, b) => {
+        const left = Number(a._pubDateMs ?? -Infinity);
+        const right = Number(b._pubDateMs ?? -Infinity);
+        return pubDateSortOrder.value === 'desc' ? right - left : left - right;
       });
     });
-    const paginatedFilteredPmidData = computed(() => {
-      const start = (pagination.value.current - 1) * pagination.value.pageSize;
-      return filteredPmidData.value.slice(start, start + pagination.value.pageSize);
-    });
-
-    watch([searchText, searchColumn], () => {
+    watch([searchText, searchColumn, selectedPubYear, pubDateSortOrder], () => {
       pagination.value.current = 1;
     });
 
@@ -185,12 +250,37 @@ export default {
       }
     );
 
-    const handleTableChange = (pag: any) => {
+    const handleTableChange = (pag: any, filters?: Record<string, any>, sorter?: any) => {
+      const selectedYear = Array.isArray(filters?.PubDate) ? String(filters?.PubDate?.[0] ?? '') : '';
+      selectedPubYear.value = selectedYear === '__all__' ? '' : selectedYear;
+      if (!Array.isArray(filters?.PubDate) || !filters?.PubDate?.length) {
+        selectedPubYear.value = '';
+      }
+
+      const order = Array.isArray(sorter) ? sorter[0]?.order : sorter?.order;
+      if (order === 'ascend') pubDateSortOrder.value = 'asc';
+      if (order === 'descend') pubDateSortOrder.value = 'desc';
+
       pagination.value = { ...pagination.value, ...pag };
       const total = filteredPmidData.value.length;
       pagination.value.total = total;
       const maxPage = Math.max(1, Math.ceil(total / pagination.value.pageSize));
       if (pagination.value.current > maxPage) pagination.value.current = maxPage;
+    };
+
+    const handlePaginationChange = (pag: any) => {
+      pagination.value = { ...pagination.value, ...pag };
+      const total = filteredPmidData.value.length;
+      pagination.value.total = total;
+      const maxPage = Math.max(1, Math.ceil(total / pagination.value.pageSize));
+      if (pagination.value.current > maxPage) pagination.value.current = maxPage;
+    };
+
+    const cellTooltipContent = (text: unknown, column: any) => {
+      const value = String(text ?? '').trim();
+      if (!value) return '';
+      if (column?.dataIndex === 'PMID') return `Open PubMed ${value}`;
+      return value;
     };
 
     // ===== 图表：读取聚合后的 MySQL 表 =====
@@ -263,6 +353,11 @@ export default {
       return Number.isNaN(ms) ? -Infinity : ms;
     };
 
+    const extractPubYear = (value: string) => {
+      const match = String(value || '').match(/\b(19|20)\d{2}\b/);
+      return match?.[0] ?? '';
+    };
+
     const formatAuthors = (value: string) => {
       if (!value) return '';
       const trimmed = value.trim();
@@ -287,16 +382,10 @@ export default {
           sort_order: 'asc',
           case_insensitive: true
         });
-        const sortedRows = rows
-          .map((row) => ({
-            row,
-            sortMs: parsePubDateMs(String(row.PubDate ?? ''))
-          }))
-          .sort((a, b) => b.sortMs - a.sortMs)
-          .map(({ row }) => row);
-
-        rawPmidData.value = sortedRows.map((row) => ({
+        rawPmidData.value = rows.map((row) => ({
           PubDate: formatPubDate(String(row.PubDate ?? '')),
+          PubYear: extractPubYear(String(row.PubDate ?? '')),
+          _pubDateMs: parsePubDateMs(String(row.PubDate ?? '')),
           Source: String(row.Source ?? ''),
           Author: formatAuthors(String(row.Author ?? '')),
           Title: String(row.Title ?? ''),
@@ -342,9 +431,14 @@ export default {
       searchText,
       searchColumn,
       tableSize,
+      selectedPubYear,
+      pubDateSortOrder,
+      pubYearOptions,
       pagination,
-      paginatedFilteredPmidData,
+      filteredPmidData,
       handleTableChange,
+      handlePaginationChange,
+      cellTooltipContent,
 
       perPositionOption,
       loadingPmid,
@@ -362,6 +456,10 @@ export default {
 
 <style scoped>
 .site--main {
+  box-sizing: border-box;
+  width: min(1760px, calc(100vw - 128px));
+  max-width: none;
+  margin: 0 auto;
   padding: 20px;
   color: var(--app-text);
   --thera-card-bg: #ffffff;
@@ -376,6 +474,8 @@ export default {
 }
 .skeleton-wrapper { width: 100%; }
 .table-section {
+  width: 100%;
+  box-sizing: border-box;
   margin-bottom: 30px;
   background: var(--thera-card-bg);
   border: 1px solid var(--thera-card-border);
@@ -386,10 +486,47 @@ export default {
 :deep(.s-table)          { border-radius: 8px; overflow: hidden; }
 :deep(.s-table-header),
 :deep(.s-table__header)   { background: var(--thera-table-header-bg); }
+:deep(.s-table .s-table__column-sort) {
+  background: inherit;
+}
+:deep(.s-table__body .s-table__column-sort) {
+  background: inherit;
+}
 :deep(.s-table-row:hover){ background: var(--thera-row-hover) !important; }
 h2 { margin-bottom: 16px; color: var(--app-text); }
 h3 { margin-bottom: 12px; color: var(--app-text); }
 .el-skeleton__wrapper { background-color: var(--thera-skeleton-bg); }
+:deep(.pmid-text-cell) {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:deep(.pmid-link-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  color: var(--app-text);
+  background: var(--app-surface);
+  font-size: 16px;
+  line-height: 1;
+  text-decoration: none;
+}
+:deep(.pmid-link-button svg) {
+  width: 16px;
+  height: 16px;
+}
+:deep(.pmid-link-button:hover) {
+  border-color: #2f65b0;
+  color: #2f65b0;
+  background: rgba(47, 101, 176, 0.08);
+}
 @media (prefers-color-scheme: dark) {
   .site--main {
     --thera-card-bg: var(--app-surface);
@@ -399,6 +536,13 @@ h3 { margin-bottom: 12px; color: var(--app-text); }
     --thera-skeleton-bg: var(--app-surface-2);
     --thera-input-bg: var(--app-surface);
     --thera-input-border: var(--app-border);
+  }
+}
+
+@media (max-width: 900px) {
+  .site--main {
+    width: 100%;
+    padding: 20px;
   }
 }
 
