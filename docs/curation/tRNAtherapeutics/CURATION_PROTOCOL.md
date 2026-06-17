@@ -22,6 +22,18 @@
 4. DOI landing page：没有 PMCID 或需要补救时下载；不能把 DOI landing page 当作全文 PDF。
 5. 手动下载：没有 PMCID、publisher 阻挡、OA 包不可用、补充文件无法自动获取时，写入人工清单。
 
+手动下载的文件先放到 `data/tmp/{PMID}/`，例如：
+
+- `data/tmp/{PMID}/fulltext.pdf`
+- `data/tmp/{PMID}/supplement_1.pdf`
+- `data/tmp/{PMID}/supplement_2.xlsx`
+- `data/tmp/{PMID}/supplement_3.docx`
+
+完成文件格式验证和内容核对后，再把有效文件同步到本地忽略目录
+`field-curation-workdir/full_tRNAtherapeutics/papers/{PMID}/` 或
+`field-curation-workdir/full_tRNAtherapeutics/supplementary/{PMID}/`。原始 PDF、补充表格、
+OA 包和下载中间文件不提交到 GitHub；只提交整理后的 notes、reports、manifests、SQL 草稿和脚本。
+
 主要来源说明：
 
 - PMC FTP/OA 文件服务说明：https://pmc.ncbi.nlm.nih.gov/tools/ftp/

@@ -2,7 +2,32 @@
 
 这里不包含已经拿到 PMC HTML/XML 的普通 DOI 403 问题，只列真正影响全文/附件证据链的事项。
 
+## 2026-06-08 当前 live gap 仍需人工补源
+
+总检查报告：[auto_downloadable_remaining_review.md](auto_downloadable_remaining_review.md)
+
+- [PMID 11866580](<https://pubmed.ncbi.nlm.nih.gov/11866580/>): ACS DOI [10.1021/ja012307j](<https://doi.org/10.1021/ja012307j>) 自动访问返回 Cloudflare 403；需要全文 PDF/HTML 和可能的 supporting information。
+- [PMID 15222758](<https://pubmed.ncbi.nlm.nih.gov/15222758/>): ACS DOI [10.1021/bi035542i](<https://doi.org/10.1021/bi035542i>) 自动访问返回 Cloudflare 403；需要全文确认现有 suppressor sequence 的 origin/source。
+- [PMID 17698637](<https://pubmed.ncbi.nlm.nih.gov/17698637/>): main article [PMC1986817](<https://pmc.ncbi.nlm.nih.gov/articles/PMC1986817/>) and linked THG73 source Saks 1996 were checked. Need manual review of Saks 1996 Figure 2 sequence-storage convention (74-mer FokI transcript versus 76-mer full-length/ligated molecule) and full text for ENAS source [Cload et al. 1996](<https://doi.org/10.1016/S1074-5521(96)90181-0>) / [Kleina et al. 1990](<https://pubmed.ncbi.nlm.nih.gov/2193162/>).
+- [PMID 19378306](<https://pubmed.ncbi.nlm.nih.gov/19378306/>): PMC article [PMC2873846](<https://pmc.ncbi.nlm.nih.gov/articles/PMC2873846/>) is readable, but supplement link [NIHMS146422-supplement-Supplemental_Information.pdf](<https://pmc.ncbi.nlm.nih.gov/articles/instance/2873846/bin/NIHMS146422-supplement-Supplemental_Information.pdf>) downloaded as challenge HTML; need real supplementary PDF.
+- [PMID 19749377](<https://pubmed.ncbi.nlm.nih.gov/19749377/>): OUP DOI [10.1093/nass/nrp148](<https://doi.org/10.1093/nass/nrp148>) automatic access returned Cloudflare 403; need full text.
+- [PMID 23274575](<https://pubmed.ncbi.nlm.nih.gov/23274575/>): Elsevier DOI [10.1016/j.biochi.2012.12.010](<https://doi.org/10.1016/j.biochi.2012.12.010>) only returned landing/redirect HTML; need full text/supplement to validate `ensure-836` origin.
+- [PMID 23379331](<https://pubmed.ncbi.nlm.nih.gov/23379331/>): PMC article [PMC3855549](<https://pmc.ncbi.nlm.nih.gov/articles/PMC3855549/>) is readable, but supplement link [NIHMS507917-supplement-SI.pdf](<https://pmc.ncbi.nlm.nih.gov/articles/instance/3855549/bin/NIHMS507917-supplement-SI.pdf>) downloaded as challenge HTML; need real supplementary PDF for `ensure-849`.
+- [PMID 33069552](<https://pubmed.ncbi.nlm.nih.gov/33069552/>): PMC article [PMC7961839](<https://pmc.ncbi.nlm.nih.gov/articles/PMC7961839/>) is readable, but supplement link [NIHMS1639676-supplement-1.pdf](<https://pmc.ncbi.nlm.nih.gov/articles/instance/7961839/bin/NIHMS1639676-supplement-1.pdf>) downloaded as challenge HTML; need real supplement Tables S1/S2.
+- [PMID 30778053](<https://pubmed.ncbi.nlm.nih.gov/30778053/>): OA package and Supplementary Data are already downloaded and exhausted under exact-match rules. Remaining 85 origin gaps need either a stronger origin mapping source or manual acceptance of a broader reconstruction rule.
+
 ## 需要人工下载全文
+
+### [PMID 31346230](<https://pubmed.ncbi.nlm.nih.gov/31346230/>)
+
+- Title: Inducible orthogonal aminoacylation demonstrates that charging is required for mitochondrial tRNA import in Trypanosoma brucei.
+- DOI: [10.1038/s41598-019-47268-4](<https://doi.org/10.1038/s41598-019-47268-4>)
+- PubMed: [PMID 31346230](<https://pubmed.ncbi.nlm.nih.gov/31346230/>)
+- Rows: 1
+- Current status: fulltext_and_supplement_available; linked construct source PMID 23818609 downloaded; Addgene plasmid supplied oMeYRS/nsGFP, while the final tRNA construct was synthesized by Genescript.
+- Local note: [31346230.md](../notes/31346230.md)
+- Review report: [31346230_sequence_evidence_review.md](31346230_sequence_evidence_review.md)
+- Current sequence status: resolved and updated in live DB on 2026-06-06. Addgene #50831 full-sequence visualization data support the Ec Tyr(CUA) sequence with `GACTCTAAATC`; PMID 31346230 states that the encoded terminal `CCA` was omitted. The row now has 82-nt origin/suppressor sequences, secondary structures, and Sprinzl JSON. Remaining manual check: verify whether the pre-existing `pdbid=AFU` has a real CIF/model matching this final 82-nt sequence.
 
 ### [PMID 1344892](<https://pubmed.ncbi.nlm.nih.gov/1344892/>)
 
@@ -53,8 +78,13 @@
 - Title: Construction of a UGA suppressor tRNA by modification in vitro of yeast tRNACys.
 - DOI: [10.1111/j.1432-1033.1984.tb07883.x](<https://doi.org/10.1111/j.1432-1033.1984.tb07883.x>)
 - PubMed: [PMID 6363071](<https://pubmed.ncbi.nlm.nih.gov/6363071/>)
+- Wiley PDF direct: [download page](<https://onlinelibrary.wiley.com/doi/pdfdirect/10.1111/j.1432-1033.1984.tb07883.x>)
+- Wiley article page: [article page](<https://onlinelibrary.wiley.com/doi/10.1111/j.1432-1033.1984.tb07883.x>)
+- Mendeley catalogue: [catalogue record](<https://www.mendeley.com/catalogue/458a2ae8-7a12-38aa-8413-827f26a87ca4/>)
+- Mendeley full-text resolver: [resolver link](<https://www.mendeley.com/catalogue/api/fulltext-resolver/458a2ae8-7a12-38aa-8413-827f26a87ca4/>)
 - Rows: 1
 - Current status: pubmed_only_manual_fulltext_needed
+- Reason: Wiley article/PDF returned Cloudflare 403 during automated checks on 2026-06-08; Mendeley resolver redirected to sign-in/error page; EuropePMC reports no PDF and no supplementary files. Abstract confirms the GCA-to-UCA anticodon replacement but does not provide complete tRNA sequence evidence.
 - Local note: [6363071.md](../notes/6363071.md)
 - Local paper folder: [papers](../papers/6363071/)
 - Local supplementary folder: [supplementary](../supplementary/6363071/)
@@ -131,10 +161,12 @@
 - DOI: [10.1021/ja071773r](<https://doi.org/10.1021/ja071773r>)
 - PubMed: [PMID 17685515](<https://pubmed.ncbi.nlm.nih.gov/17685515/>)
 - Rows: 8
-- Current status: pubmed_only_manual_fulltext_needed
+- Current status: fulltext_and_linked_sources_available; review CCA storage convention before SQL execution
 - Local note: [17685515.md](../notes/17685515.md)
 - Local paper folder: [papers](../papers/17685515/)
 - Local supplementary folder: [supplementary](../supplementary/17685515/)
+- Review report: [17685515_derived_sequence_update_review.md](17685515_derived_sequence_update_review.md)
+- Remaining manual review: confirm whether this table should store encoded 3' `CCA`; Kwon 2006 main article supports 76-mer transcripts.
 
 ### [PMID 19749377](<https://pubmed.ncbi.nlm.nih.gov/19749377/>)
 
@@ -376,8 +408,12 @@
 - DOI: [10.1111/j.1432-1033.1984.tb07883.x](<https://doi.org/10.1111/j.1432-1033.1984.tb07883.x>)
 - PMCID: Not found
 - PubMed: [PMID 6363071](<https://pubmed.ncbi.nlm.nih.gov/6363071/>)
+- Wiley PDF direct: [download page](<https://onlinelibrary.wiley.com/doi/pdfdirect/10.1111/j.1432-1033.1984.tb07883.x>)
+- Wiley article page: [article page](<https://onlinelibrary.wiley.com/doi/10.1111/j.1432-1033.1984.tb07883.x>)
+- Mendeley catalogue: [catalogue record](<https://www.mendeley.com/catalogue/458a2ae8-7a12-38aa-8413-827f26a87ca4/>)
+- Mendeley full-text resolver: [resolver link](<https://www.mendeley.com/catalogue/api/fulltext-resolver/458a2ae8-7a12-38aa-8413-827f26a87ca4/>)
 - Status: pubmed_only_manual_fulltext_needed
-- Reason: no valid supplementary file after automated PMC/OA pass.
+- Reason: Wiley article/PDF returned Cloudflare 403 during automated checks on 2026-06-08; Mendeley resolver redirected to sign-in/error page; EuropePMC reports no PDF and no supplementary files. Abstract confirms the GCA-to-UCA anticodon replacement but does not provide complete tRNA sequence evidence.
 - Local note: [6363071.md](../notes/6363071.md)
 - Local paper folder: [papers](../papers/6363071/)
 - Local supplementary folder: [supplementary](../supplementary/6363071/)
@@ -425,7 +461,7 @@
 - PMCID: [PMC108781](<https://pmc.ncbi.nlm.nih.gov/articles/PMC108781/>)
 - PubMed: [PMID 9447966](<https://pubmed.ncbi.nlm.nih.gov/9447966/>)
 - Status: pmc_html_fulltext_no_oa_package
-- Reason: no valid supplementary file after automated PMC/OA pass.
+- Reason: sequence/structure gaps were resolved on 2026-06-08 using PMID 9447966 plus original molecular characterization PMID 3221861 Fig. 2b. No valid supplementary file was discovered automatically; no sequence/structure manual task remains.
 - Local note: [9447966.md](../notes/9447966.md)
 - Local paper folder: [papers](../papers/9447966/)
 - Local supplementary folder: [supplementary](../supplementary/9447966/)
@@ -604,11 +640,12 @@
 - DOI: [10.1021/ja071773r](<https://doi.org/10.1021/ja071773r>)
 - PMCID: Not found
 - PubMed: [PMID 17685515](<https://pubmed.ncbi.nlm.nih.gov/17685515/>)
-- Status: pubmed_only_manual_fulltext_needed
-- Reason: no valid supplementary file after automated PMC/OA pass.
+- Status: fulltext_and_linked_sources_available; review CCA storage convention before SQL execution
+- Reason: ACS SI is available locally and contains MALDI-MS spectra only; Furter 1998 and Kwon 2006 main articles are now available locally and support the tRNA sequence/mutation evidence.
 - Local note: [17685515.md](../notes/17685515.md)
 - Local paper folder: [papers](../papers/17685515/)
 - Local supplementary folder: [supplementary](../supplementary/17685515/)
+- Review report: [17685515_derived_sequence_update_review.md](17685515_derived_sequence_update_review.md)
 
 ### [PMID 17698637](<https://pubmed.ncbi.nlm.nih.gov/17698637/>)
 
@@ -757,7 +794,7 @@
 ### [PMID 33069552](<https://pubmed.ncbi.nlm.nih.gov/33069552/>)
 
 - Title: Genetic code expansion in mammalian cells: A plasmid system comparison.
-- DOI: [10.1016/j.bmc.2020.115772](<https://doi.org/10.1016/j.bmc.2020.115772>)
+- DOI: [10.3390/molecules26051208](<https://doi.org/10.3390/molecules26051208>)
 - PMCID: [PMC7961839](<https://pmc.ncbi.nlm.nih.gov/articles/PMC7961839/>)
 - PubMed: [PMID 33069552](<https://pubmed.ncbi.nlm.nih.gov/33069552/>)
 - Status: pmc_html_fulltext_no_oa_package

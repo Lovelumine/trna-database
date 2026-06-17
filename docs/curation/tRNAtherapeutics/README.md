@@ -30,6 +30,8 @@ Those files remain under the ignored local directory:
 
 Some report links point to local `papers/` or `supplementary/` folders. Those links are useful inside the local workspace but are intentionally not mirrored here.
 
+Manual downloads should be staged under `data/tmp/{PMID}/` first, using names such as `fulltext.pdf`, `supplement_1.pdf`, `supplement_2.xlsx`, or `supplement_3.docx`. After format validation and curation review, move or copy the verified files into the ignored local workspace under `field-curation-workdir/full_tRNAtherapeutics/papers/{PMID}/` or `field-curation-workdir/full_tRNAtherapeutics/supplementary/{PMID}/`. Only GitHub-safe derivatives belong in this directory.
+
 ## Regeneration Scripts
 
 The scripts used to create these reports are tracked under:
