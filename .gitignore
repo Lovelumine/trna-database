@@ -24,6 +24,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
+codex_accounts_*.json
 test.py
 test.js
 .log
@@ -53,6 +54,9 @@ Flask/.requirements.system.sha256
 
 # Local-only literature curation workspace
 field-curation-workdir/
+
+# Private registration / software copyright application materials
+docs/data_deposit_registration/
 
 # Large media/fonts kept locally but not tracked
 *.mp4
