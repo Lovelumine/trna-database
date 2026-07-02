@@ -87,6 +87,7 @@ import type { EChartsOption } from 'echarts';
 import { ElSkeleton, ElTooltip } from 'element-plus';
 import { Link } from '@element-plus/icons-vue';
 import TableToolbar from '@/components/TableToolbar.vue';
+import { VChart } from '@/utils/registerCharts';
 
 const locale = ref(en);
 
@@ -97,7 +98,7 @@ const PERPOS_TABLE = 'engineered_sup_trna_perpos_counts';
 
 export default {
   name: 'tRNAtherapeutics',
-  components: { tRNAtherapeutics1, STableProvider, ElSkeleton, ElTooltip, Link, TableToolbar },
+  components: { tRNAtherapeutics1, STableProvider, ElSkeleton, ElTooltip, Link, TableToolbar, VChart },
   setup() {
     // ===== 加载状态 =====
     const loadingPmid = ref(true);  // PMID 主表格（MySQL）

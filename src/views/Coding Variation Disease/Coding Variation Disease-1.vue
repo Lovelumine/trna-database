@@ -92,6 +92,7 @@ import type { EChartsOption } from 'echarts';
 import { allColumns as baseColumns, selectedColumns } from './CodingVariation1Columns';
 import TableToolbar from '@/components/TableToolbar.vue';
 import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
+import { VChart } from '@/utils/registerCharts';
 
 type DataType = { [key: string]: string };
 
@@ -100,7 +101,7 @@ const locale = ref(en);
 
 export default defineComponent({
   name: 'CodingVariationDisease',
-  components: { ElTag, ElSpace, ElSelect, ElOption, TableToolbar },
+  components: { ElTag, ElSpace, ElSelect, ElOption, TableToolbar, VChart },
   setup() {
     const TABLE_NAME = 'coding_variation_genetic_disease';
     const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));

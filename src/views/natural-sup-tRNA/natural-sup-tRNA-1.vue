@@ -201,19 +201,18 @@ import VueEasyLightbox from 'vue-easy-lightbox';
 import { highlightMutation } from '../../utils/highlightMutation.js';
 import { getTagType } from '../../utils/tag.js';
 import type { EChartsOption } from 'echarts';
-import 'echarts/lib/chart/bar';
-import 'echarts/lib/chart/heatmap';
 import { allColumns as baseColumns, selectedColumns } from './naturalSupTRNAColumns';
 import TableToolbar from '@/components/TableToolbar.vue';
 import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 import { getRowBoundFieldMediaUrl, resolveMediaSource } from '@/utils/tableMedia';
+import { VChart } from '@/utils/registerCharts';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
 
 export default defineComponent({
   name: 'NaturalSupTRNA',
-  components: { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption, VueEasyLightbox, TableToolbar },
+  components: { ElTooltip, ElTag, ElSpace, ElImage, ElSelect, ElOption, VueEasyLightbox, TableToolbar, VChart },
   setup() {
     const TABLE_NAME = 'nonsense_sup_rna';
     const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));

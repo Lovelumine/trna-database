@@ -107,13 +107,14 @@ import type { EChartsOption } from 'echarts';
 import { allColumns as baseColumns, selectedColumns } from './CodingVariationCancerColumns';
 import TableToolbar from '@/components/TableToolbar.vue';
 import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
+import { VChart } from '@/utils/registerCharts';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
 
 export default defineComponent({
   name: 'CodingVariationDisease2',
-  components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, TableToolbar },
+  components: { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, TableToolbar, VChart },
   setup() {
     const TABLE_NAME = 'coding_variation_cancer';
     const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));

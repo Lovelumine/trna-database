@@ -6,6 +6,7 @@ This file defines what belongs in Git and what should stay local.
 
 - Application source code under `src/`, `Flask/`, and other maintained code directories.
 - GitHub-safe documentation under `docs/`.
+- Non-secret deployment inventory under `docs/DEPLOYMENT.md`.
 - Reproducible curation outputs: notes, reports, manifests, extraction TSV files, SQL drafts, and scripts.
 - Small public assets required by the frontend.
 

@@ -30,32 +30,6 @@ import './utils/icons';
 //动态美化效果
 import VWave from 'v-wave';
 
-import * as echarts from 'echarts/core'
-import {
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  LegendComponent,
-  VisualMapComponent
-} from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
-import VChart from 'vue-echarts'
-import { BarChart, LineChart,TreemapChart, HeatmapChart } from 'echarts/charts'
-import 'echarts-wordcloud';
-
-echarts.use([
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  BarChart,
-  CanvasRenderer,
-  LegendComponent,
-  VisualMapComponent,
-  TreemapChart,
-  LineChart,
-  HeatmapChart
-])
-
 // 引入组件
 const Home = () => import('./views/Home.vue');
 const CodingVariationDisease = () => import('./views/Coding Variation Disease/Coding Variation Disease.vue');
@@ -172,9 +146,6 @@ const app = createApp(App);
 
 initTheme();
 
-app.component('VChart', VChart)
-
-
 // 注册所有图标组件
 for (const name in ElIcons) {
   app.component(name, (ElIcons as any)[name]);
@@ -217,17 +188,19 @@ app.use(VueMatomo, {
 
 app.mount('#app');
 
-// 预加载其他路由组件
-const prefetchRoutes = MAIN_PREFETCH_ROUTE_PATHS;
-
-prefetchRoutes.forEach(route => {
-  router.resolve({ path: route }).matched.forEach(record => {
-    const loadComponent = record.components.default as any;
-    if (typeof loadComponent === 'function') {
-      loadComponent().then((component: any) => {
-        // Optionally, you can store the loaded component for future use
-        // For example, in a global store or local variable
-      });
-    }
+const prefetchLightRoutes = () => {
+  MAIN_PREFETCH_ROUTE_PATHS.forEach(route => {
+    router.resolve({ path: route }).matched.forEach(record => {
+      const loadComponent = record.components.default as any;
+      if (typeof loadComponent === 'function') {
+        void loadComponent();
+      }
+    });
   });
-});
+};
+
+if ('requestIdleCallback' in window) {
+  window.requestIdleCallback(prefetchLightRoutes, { timeout: 2500 });
+} else {
+  window.setTimeout(prefetchLightRoutes, 1500);
+}

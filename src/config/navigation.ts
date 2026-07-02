@@ -56,10 +56,6 @@ export const HELP_EXTERNAL_ROUTE_PATHS = [
 ];
 
 export const MAIN_PREFETCH_ROUTE_PATHS = [
-  APP_PATHS.disease,
-  APP_PATHS.therapeutics,
-  APP_PATHS.natural,
-  APP_PATHS.elements,
   APP_PATHS.about,
   APP_PATHS.download,
 ];

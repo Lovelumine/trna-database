@@ -7,3 +7,10 @@ interface ImportMetaEnv {
   interface ImportMeta {
     readonly env: ImportMetaEnv
   }
+
+interface Window {
+  requestIdleCallback?: (
+    callback: IdleRequestCallback,
+    options?: IdleRequestOptions
+  ) => number;
+}

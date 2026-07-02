@@ -25,11 +25,12 @@
 </template>
 
 <script lang="tsx">
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineAsyncComponent, defineComponent, ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import NavBar from './components/NavBar.vue';
 import FooterComp from './components/Footer.vue';
-import BotComponent from './bot/BotComponent.vue';
+
+const BotComponent = defineAsyncComponent(() => import('./bot/BotComponent.vue'));
 
 export default defineComponent({
   components: {

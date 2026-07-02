@@ -230,11 +230,12 @@ import en from '@shene/table/dist/locale/en';
 import TableToolbar from '@/components/TableToolbar.vue';
 import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 import { getRowBoundFieldMediaUrl, resolveMediaSource } from '@/utils/tableMedia';
+import { VChart } from '@/utils/registerCharts';
 const locale = ref(en);
 
 export default defineComponent({
   name: 'NaturalSupTRNA',
-  components: { ElTooltip, ElImage, ElSelect, ElOption, VueEasyLightbox, TableToolbar },
+  components: { ElTooltip, ElImage, ElSelect, ElOption, VueEasyLightbox, TableToolbar, VChart },
   setup() {
     const TABLE_NAME = 'frameshift_sup_trna';
     const allColumns = ref(cloneColumnsWithLabels(TABLE_NAME, baseColumns));
