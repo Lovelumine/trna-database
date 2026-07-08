@@ -7,39 +7,31 @@
       <div class="center-align">
         <ConceptMap />
       </div>
-      <div class="table-section" id="aars-recognition">
-        <trna-elements-2 />
-      </div>
-                  <div class="table-section" id="eftu">
-        <trna-elements-3 />
-      </div>
-          <div class="table-section" id="ribosome-interaction">
-      <trna-ribosome-interaction-sites />
-    </div>
-      <div class="table-section" id="function-modification">
-        <trna-elements-1 />
-      </div>
+      <LazyMount class="table-section" id="aars-recognition" placeholder-height="520px" reserve-space>
+        <TrnaElements2 />
+      </LazyMount>
+      <LazyMount class="table-section" id="eftu" placeholder-height="520px" reserve-space>
+        <TrnaElements3 />
+      </LazyMount>
+      <LazyMount class="table-section" id="ribosome-interaction" placeholder-height="520px" reserve-space>
+        <TrnaRibosomeInteractionSites />
+      </LazyMount>
+      <LazyMount class="table-section" id="function-modification" placeholder-height="520px" reserve-space>
+        <TrnaElements1 />
+      </LazyMount>
 
     </div>
   </template>
-  
-  <script>
-  import TrnaElements1 from './function and modification.vue';
-  import TrnaElements2 from './aaRS recognition.vue';
-  import TrnaElements3 from './EFTU.vue';
-  import TrnaRibosomeInteractionSites from './tRNA-ribosome Interaction Sites.vue';
+
+  <script setup>
+  import { defineAsyncComponent } from 'vue';
+  import LazyMount from '@/components/LazyMount.vue';
   import ConceptMap from '../../components/ConceptMap.vue'
-  
-  export default {
-    name: 'TrnaElements',
-    components: {
-      TrnaElements1,
-      TrnaElements2,
-      TrnaElements3,
-      ConceptMap,
-      TrnaRibosomeInteractionSites
-    },
-  };
+
+  const TrnaElements1 = defineAsyncComponent(() => import('./function and modification.vue'));
+  const TrnaElements2 = defineAsyncComponent(() => import('./aaRS recognition.vue'));
+  const TrnaElements3 = defineAsyncComponent(() => import('./EFTU.vue'));
+  const TrnaRibosomeInteractionSites = defineAsyncComponent(() => import('./tRNA-ribosome Interaction Sites.vue'));
   </script>
   
   <style scoped>

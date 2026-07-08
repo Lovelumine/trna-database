@@ -107,7 +107,7 @@ import type { EChartsOption } from 'echarts';
 import { allColumns as baseColumns, selectedColumns } from './CodingVariationCancerColumns';
 import TableToolbar from '@/components/TableToolbar.vue';
 import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
-import { VChart } from '@/utils/registerCharts';
+import VChart from '@/components/LazyChart.vue';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);

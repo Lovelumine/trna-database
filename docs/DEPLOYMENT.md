@@ -25,9 +25,9 @@ Secondary frontend host:
 
 The entry files matched during verification:
 
-- `index.html`: `042760ffe42b79fa4ab1a2d9410638d0acb6b917bd7fcf6849e7cfecd32ebd17`
-- `admin.html`: `d13dc6eaeeedb07344fc134bdbf51d7a4772e485a66b1d7080803e02c692d0c1`
-- `help.html`: `ddf2ef0b3c94168a6b9226b1994c4e100aa5a9bfeb8d12b05a04e048db70e6d9`
+- `index.html`: `aff1f4ccb4162a5909bf0cad7a9d7947a872396cf0825d8a864ad930fc861eb5`
+- `admin.html`: `067c27373160bff5e4990dbce6f0c67f3cf11f17ce4b39755e963f0ea07759be`
+- `help.html`: `e9fffc4b2c768996c89b7cd4a18e21cb3b5d9d7f13dbed84c5dc049fbfcff70a`
 
 ## Backend
 

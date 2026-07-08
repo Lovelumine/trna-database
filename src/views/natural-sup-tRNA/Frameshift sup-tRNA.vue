@@ -230,7 +230,7 @@ import en from '@shene/table/dist/locale/en';
 import TableToolbar from '@/components/TableToolbar.vue';
 import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 import { getRowBoundFieldMediaUrl, resolveMediaSource } from '@/utils/tableMedia';
-import { VChart } from '@/utils/registerCharts';
+import VChart from '@/components/LazyChart.vue';
 const locale = ref(en);
 
 export default defineComponent({

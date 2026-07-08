@@ -87,7 +87,7 @@ import type { EChartsOption } from 'echarts';
 import { ElSkeleton, ElTooltip } from 'element-plus';
 import { Link } from '@element-plus/icons-vue';
 import TableToolbar from '@/components/TableToolbar.vue';
-import { VChart } from '@/utils/registerCharts';
+import VChart from '@/components/LazyChart.vue';
 
 const locale = ref(en);
 

@@ -92,7 +92,7 @@ import type { EChartsOption } from 'echarts';
 import { allColumns as baseColumns, selectedColumns } from './CodingVariation1Columns';
 import TableToolbar from '@/components/TableToolbar.vue';
 import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
-import { VChart } from '@/utils/registerCharts';
+import VChart from '@/components/LazyChart.vue';
 
 type DataType = { [key: string]: string };
 

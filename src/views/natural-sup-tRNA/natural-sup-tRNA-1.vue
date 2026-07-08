@@ -205,7 +205,7 @@ import { allColumns as baseColumns, selectedColumns } from './naturalSupTRNAColu
 import TableToolbar from '@/components/TableToolbar.vue';
 import { cloneColumnsWithLabels, getRuntimeColumnsWithLabels, getRuntimeVisibleColumnKeys } from '@/utils/tableColumnLabels';
 import { getRowBoundFieldMediaUrl, resolveMediaSource } from '@/utils/tableMedia';
-import { VChart } from '@/utils/registerCharts';
+import VChart from '@/components/LazyChart.vue';
 
 import en from '@shene/table/dist/locale/en';
 const locale = ref(en);
