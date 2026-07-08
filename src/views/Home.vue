@@ -225,6 +225,9 @@ export default {
 .site--main {
   padding: 20px;
   color: var(--home-body);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   --home-heading: var(--app-text);
   --home-body: var(--app-text-muted);
   --home-subtle: var(--app-text-faint);
@@ -237,6 +240,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 28px;
+  min-width: 0;
 }
 
 .hero {
@@ -245,6 +249,11 @@ export default {
   gap: 18px;
   align-items: start;
   padding: 12px 0 4px;
+  min-width: 0;
+}
+
+.hero-main {
+  min-width: 0;
 }
 
 .kicker {
@@ -260,6 +269,8 @@ export default {
   line-height: 1.2;
   margin: 12px 0 14px;
   color: var(--home-heading);
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 .cite-inline {
@@ -274,6 +285,7 @@ export default {
   line-height: 1.7;
   color: var(--home-body);
   max-width: 38rem;
+  overflow-wrap: break-word;
 }
 
 .cta-row {
@@ -291,6 +303,8 @@ export default {
   text-decoration: none;
   border: 1px solid transparent;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .btn-primary {
@@ -492,6 +506,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .section-title {
@@ -596,6 +611,43 @@ export default {
 }
 
 @media (max-width: 640px) {
+  .site--main {
+    padding: 14px;
+  }
+
+  .hero-title {
+    font-size: clamp(1.95rem, 8.5vw, 2.25rem);
+    line-height: 1.14;
+  }
+
+  .cite-inline {
+    display: flex;
+    margin: 10px 0 0;
+  }
+
+  .lead {
+    max-width: 100%;
+    font-size: 0.98rem;
+  }
+
+  .cta-row {
+    gap: 10px;
+  }
+
+  .btn {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .section-title {
+    gap: 12px;
+  }
+
+  .figure-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .image-card {
     height: 260px;
   }

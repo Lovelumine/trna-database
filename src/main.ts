@@ -1,9 +1,8 @@
-import { createApp } from 'vue';
+import { createApp, defineAsyncComponent } from 'vue';
 import App from './App.vue';
 import { initTheme } from './utils/theme';
 import { createRouter, createWebHistory, RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
 import PageNotFound from './views/404.vue'; // 引入404组件
-import EnsureSTable from './components/EnsureSTable.vue'
 
 // 引入样式
 import './style.css';
@@ -13,15 +12,9 @@ import './assets/bot.css';
 import './assets/search.css';
 // import 'vue-easy-lightbox/dist/vue-easy-lightbox.css';
 
-import ElementPlus from 'element-plus';
-import 'element-plus/dist/index.css';
-import * as ElIcons from '@element-plus/icons-vue'; // 引入 Element Plus 图标
-
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css'; // 引入 NProgress 样式
 
-// FontAwesome 图标库配置
-import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 // 导入图标
@@ -43,15 +36,9 @@ const Download = () => import('./views/download/download.vue');
 const AIYingying = () => import('./views/AIYingying/AIYingying.vue');
 const BlastSearch = () => import('./views/blast/BlastSearch.vue'); // 新添加的 BLAST 搜索组件
 const audio = () => import('./views/audio/audio.vue');
-// 引入表格组件
-import STable from '@shene/table';
-import '@shene/table/dist/index.css';
-import 'vxe-table/lib/style.css';
-import VXETable from 'vxe-table';
+const EnsureSTable = defineAsyncComponent(() => import('./components/EnsureSTable.vue'));
 import VueMatomo from 'vue-matomo';
 
-import VueSidebarMenu from 'vue-sidebar-menu';
-import 'vue-sidebar-menu/dist/vue-sidebar-menu.css';
 import { APP_PATHS, MAIN_PREFETCH_ROUTE_PATHS } from './config/navigation';
 
 function redirectLegacyAdminRoute(to: RouteLocationNormalized) {
@@ -146,20 +133,11 @@ const app = createApp(App);
 
 initTheme();
 
-// 注册所有图标组件
-for (const name in ElIcons) {
-  app.component(name, (ElIcons as any)[name]);
-}
-
 app.component('font-awesome-icon', FontAwesomeIcon);
 
-app.use(STable);
 app.component('s-table', EnsureSTable)
-app.use(VXETable);
 app.use(router);
 app.use(VWave, {});
-app.use(ElementPlus);
-app.use(VueSidebarMenu);
 
 // 配置 Vue Matomo
 app.use(VueMatomo, {

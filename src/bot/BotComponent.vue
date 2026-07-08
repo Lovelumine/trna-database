@@ -93,7 +93,7 @@
             class="close-button"
             aria-label="Close chat"
           >
-            <el-icon><close /></el-icon>
+            <Close class="close-icon" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -319,7 +319,6 @@ import { useDraggable } from './Draggable';
 import { useChat } from '../utils/useChat';
 import { useMarkdown } from '../utils/useMarkdown';
 import { fetchChatModelConfig } from '@/utils/chatConfig';
-import { ElIcon } from 'element-plus';
 import { Close } from '@element-plus/icons-vue';
 
 const CHAT_MODEL = 'deepseek-v4-pro';
@@ -328,7 +327,7 @@ const REASONING_EFFORT_STORAGE_KEY = 'ai_reasoning_effort';
 
 export default defineComponent({
   name: 'BotComponent',
-  components: { ElIcon, Close },
+  components: { Close },
   setup() {
     const apiKey = import.meta.env.VITE_API_KEY;
 

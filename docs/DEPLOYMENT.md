@@ -1,6 +1,6 @@
 # Deployment Notes
 
-Verified on 2026-07-02.
+Verified on 2026-07-08.
 
 ## Frontend
 
@@ -25,9 +25,9 @@ Secondary frontend host:
 
 The entry files matched during verification:
 
-- `index.html`: `f51682a5edbe7e9c9f8ac7944d6a2b71b070c2981a692224e02607b95e82d8d3`
-- `admin.html`: `da12e973cb7b074c161cba828383805ec61b1f7bca6e71d40045357151c57d59`
-- `help.html`: `a6f4da180f6283e19a5a03ac67a53fbee9fe6280e9460b18a4f767a3784186e8`
+- `index.html`: `042760ffe42b79fa4ab1a2d9410638d0acb6b917bd7fcf6849e7cfecd32ebd17`
+- `admin.html`: `d13dc6eaeeedb07344fc134bdbf51d7a4772e485a66b1d7080803e02c692d0c1`
+- `help.html`: `ddf2ef0b3c94168a6b9226b1994c4e100aa5a9bfeb8d12b05a04e048db70e6d9`
 
 ## Backend
 

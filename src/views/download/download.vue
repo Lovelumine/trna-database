@@ -25,6 +25,20 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="download-card-list" aria-label="Download files">
+        <article v-for="file in downloadData" :key="file.table" class="download-card">
+          <div class="download-card__content">
+            <span class="download-card__category">{{ file.category }}</span>
+            <button class="download-card__name" type="button" @click="downloadFile(file)">
+              {{ file.name }}
+            </button>
+          </div>
+          <el-button type="primary" class="download-card__button" @click="downloadFile(file)">
+            Download
+          </el-button>
+        </article>
+      </div>
     </div>
   </div>
 </template>
@@ -160,6 +174,10 @@ export default {
   animation: fadeInUp 1s ease-in-out;
 }
 
+.download-card-list {
+  display: none;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -177,6 +195,119 @@ export default {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .download-page {
+    padding: 8px 0 20px;
+  }
+
+  .download-header {
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .download-header h1 {
+    font-size: clamp(2.05rem, 9.5vw, 2.35rem);
+    line-height: 1.08;
+    margin: 0;
+  }
+
+  .download-actions {
+    width: 100%;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--app-border-light);
+    border-radius: 8px;
+    background: var(--app-surface);
+  }
+
+  .format-select {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .download-all-button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .format-select :deep(.el-select__wrapper),
+  .download-all-button {
+    min-height: 40px;
+  }
+
+  :deep(.el-progress) {
+    margin-top: 8px;
+  }
+
+  .animated-table {
+    display: none;
+  }
+
+  .download-card-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .download-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    background: var(--farallon-background-white);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  }
+
+  .download-card__content {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .download-card__category {
+    color: var(--app-text-faint);
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .download-card__name {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--link-inline);
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  .download-card__button {
+    width: auto;
+    min-width: 104px;
+    min-height: 38px;
+    padding: 0 12px;
+  }
+
+  @media (max-width: 420px) {
+    .download-card {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    .download-card__button {
+      width: 100%;
+      min-height: 36px;
+    }
   }
 }
 </style>

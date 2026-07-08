@@ -14,6 +14,98 @@ const allowedOrigins = new Set([
   'http://127.0.0.1:5174',
 ]);
 
+function includesAny(value, needles) {
+  return needles.some(needle => value.includes(needle));
+}
+
+function vendorChunk(id) {
+  if (!id.includes('node_modules')) {
+    return;
+  }
+
+  const normalized = id.split(path.sep).join('/');
+
+  if (includesAny(normalized, ['/node_modules/vue/', '/node_modules/@vue/', '/node_modules/vue-router/'])) {
+    return 'vue-vendor';
+  }
+  if (includesAny(normalized, ['/node_modules/@element-plus/icons-vue/'])) {
+    return 'element-icons';
+  }
+  if (includesAny(normalized, [
+    '/node_modules/element-plus/',
+    '/node_modules/@element-plus/',
+    '/node_modules/@popperjs/',
+    '/node_modules/@sxzz/',
+    '/node_modules/async-validator/',
+    '/node_modules/dayjs/',
+    '/node_modules/lodash-unified/',
+    '/node_modules/memoize-one/',
+    '/node_modules/normalize-wheel-es/',
+  ])) {
+    return 'element-plus';
+  }
+  if (includesAny(normalized, ['/node_modules/@shene/table/', '/node_modules/vxe-table/', '/node_modules/xe-utils/'])) {
+    return 'table-vendor';
+  }
+  if (includesAny(normalized, [
+    '/node_modules/echarts/',
+    '/node_modules/echarts-wordcloud/',
+    '/node_modules/vue-echarts/',
+    '/node_modules/zrender/',
+    '/node_modules/tslib/',
+    '/node_modules/vue-demi/',
+  ])) {
+    return 'echarts';
+  }
+  if (includesAny(normalized, ['/node_modules/d3', '/node_modules/internmap/'])) {
+    return 'd3';
+  }
+  if (includesAny(normalized, ['/node_modules/ngl/'])) {
+    return 'ngl';
+  }
+  if (includesAny(normalized, [
+    '/node_modules/three/',
+    '/node_modules/molstar/',
+    '/node_modules/rxjs/',
+    '/node_modules/fp-ts/',
+    '/node_modules/react/',
+    '/node_modules/react-dom/',
+  ])) {
+    return 'structure-vendor';
+  }
+  if (includesAny(normalized, [
+    '/node_modules/markdown-it/',
+    '/node_modules/marked/',
+    '/node_modules/linkify-it/',
+    '/node_modules/mdurl/',
+    '/node_modules/entities/',
+    '/node_modules/uc.micro/',
+  ])) {
+    return 'markdown';
+  }
+  if (includesAny(normalized, [
+    '/node_modules/vue-easy-lightbox/',
+    '/node_modules/vue3-video-play/',
+    '/node_modules/hls.js/',
+    '/node_modules/srt-parser-2/',
+  ])) {
+    return 'media';
+  }
+  if (includesAny(normalized, ['/node_modules/@fortawesome/'])) {
+    return 'fontawesome';
+  }
+  if (includesAny(normalized, [
+    '/node_modules/axios/',
+    '/node_modules/lodash',
+    '/node_modules/nprogress/',
+    '/node_modules/v-wave/',
+    '/node_modules/vue-matomo/',
+  ])) {
+    return 'app-vendor';
+  }
+  return 'vendor-misc';
+}
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -50,7 +142,8 @@ export default defineConfig({
   build: {
     sourcemap: false, // 生产环境中不生成 source map
     minify: 'terser', // 确保使用 terser 进行代码压缩和混淆
-    cssCodeSplit: false, // 确保 CSS 分割到单独的文件中
+    cssCodeSplit: true, // 按入口和异步模块拆分 CSS，避免单个样式包过大
+    chunkSizeWarningLimit: 1000,
     assetsInlineLimit: 4096, // 将小于 4KB 的文件内联到 JavaScript 中
     outDir: 'dist', // 设置构建输出目录
     rollupOptions: {
@@ -60,30 +153,7 @@ export default defineConfig({
         help: path.resolve(__dirname, 'help.html'),
       },
       output: {
-        manualChunks(id) {
-          if (!id.includes('node_modules')) {
-            return;
-          }
-          if (id.includes('element-plus')) {
-            return 'element-plus';
-          }
-          if (id.includes('echarts')) {
-            return 'echarts';
-          }
-          if (id.includes('d3')) {
-            return 'd3';
-          }
-          if (id.includes('ngl')) {
-            return 'ngl';
-          }
-          if (id.includes('markdown-it') || id.includes('marked')) {
-            return 'markdown';
-          }
-          if (id.includes('vue-easy-lightbox') || id.includes('vue3-video-play')) {
-            return 'media';
-          }
-          return 'vendor'; // 其他第三方库
-        }
+        manualChunks: vendorChunk
       }
     }
   },

@@ -90,7 +90,6 @@
       </div>
     </div>
   </template>
-  
   <script>
   export default {
     name: 'ContactPage'
@@ -163,9 +162,49 @@
   }
   
   @media (max-width: 768px) {
+    .site--main {
+      padding: 14px;
+    }
+
+    .container-fluid {
+      padding: 0;
+      background: transparent;
+      color: var(--app-text);
+      text-align: left;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .box-card {
+      margin-bottom: 16px;
+      border-radius: 8px;
+    }
+
+    .contact-card :deep(.el-card__body),
+    .tools-card :deep(.el-card__body) {
+      padding: 18px;
+    }
+
+    .mail {
+      line-height: 1.65;
+    }
+
+    .mail strong {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .mail a {
+      overflow-wrap: anywhere;
+    }
+
+    .info-text {
+      line-height: 1.65;
+    }
+
     .tool-card {
       width: 100%;
+      border-radius: 8px;
     }
   }
   </style>
-  

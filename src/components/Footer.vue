@@ -106,4 +106,33 @@ export default {
 .site--footer .footer-content .about-link:hover {
   color: var(--farallon-text-light-hover);
 }
+
+@media (max-width: 640px) {
+  .site--footer {
+    padding: 18px 20px 22px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .site--footer .footer-content {
+    max-width: 340px;
+  }
+
+  .site--footer .footer-content .beian-source-code {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    line-height: 1.35;
+  }
+
+  .site--footer .footer-content .beian-source-code .separator {
+    display: none;
+  }
+
+  .site--footer .footer-content .beian-link,
+  .site--footer .footer-content .source-code-link,
+  .site--footer .footer-content .about-link {
+    white-space: nowrap;
+  }
+}
 </style>

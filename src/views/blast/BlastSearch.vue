@@ -1,6 +1,6 @@
 <template>
   <div class="search-service">
-    <h2>tRNA Search Service</h2>
+    <h2>BLAST Search</h2>
 
     <div class="controls">
       <!-- 左侧：Query + 参数 -->
@@ -444,5 +444,80 @@ html.dark .search-service {
   --blast-progress-bg: var(--app-border);
   --blast-reset-bg: var(--app-surface-2);
   --blast-reset-hover: rgba(148, 163, 184, 0.4);
+}
+
+@media (max-width: 640px) {
+  .search-service {
+    margin: 1rem auto;
+  }
+
+  .controls {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.8rem;
+    padding: 0.85rem;
+  }
+
+  .left-controls,
+  .right-controls {
+    min-width: 0;
+    gap: 0.65rem;
+  }
+
+  .query-input {
+    width: 100%;
+    min-height: 86px;
+    box-sizing: border-box;
+  }
+
+  .sliders {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+
+  .slider-control label {
+    margin-bottom: 0.2rem;
+  }
+
+  .inline {
+    display: grid;
+    grid-template-columns: 1fr minmax(72px, 96px) minmax(76px, auto);
+    align-items: center;
+  }
+
+  .inline .reset-button {
+    margin-left: 0;
+    min-height: 40px;
+  }
+
+  .db-pills {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.45rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .pill {
+    width: 100%;
+    max-width: none;
+    min-height: 42px;
+    border-radius: 999px;
+    padding: 0.38rem 0.75rem;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  .button-wrapper {
+    margin-top: 0.9rem;
+  }
+
+  .run-button {
+    width: min(100%, 250px);
+  }
+
+  .progress-bar {
+    width: 100%;
+  }
 }
 </style>

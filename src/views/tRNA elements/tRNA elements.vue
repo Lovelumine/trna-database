@@ -52,6 +52,33 @@
   justify-content: center;
   align-items: center;
   height: 400px; /* 设置高度占据整个视口，使其垂直居中 */
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .site--main {
+    box-sizing: border-box;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+
+  .site--main :deep(h2) {
+    margin: 0 0 22px;
+    font-size: clamp(1.45rem, 7vw, 1.75rem);
+    line-height: 1.3;
+  }
+
+  .table-section {
+    margin-bottom: 48px;
+  }
+
+  .center-align {
+    height: auto;
+    min-height: 300px;
+    align-items: flex-start;
+  }
 }
   </style>
   

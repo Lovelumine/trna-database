@@ -420,6 +420,7 @@
 
 
 <script lang="tsx">
+import 'element-plus/dist/index.css';
 import { defineComponent, ref, onMounted, computed, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import TranStructure from '@/components/TranStructure.vue';

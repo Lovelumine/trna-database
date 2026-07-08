@@ -40,7 +40,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import 'element-plus/dist/index.css';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { ElSegmented, ElSelect, ElOption } from 'element-plus';
 import TableSearchBar from '@/components/TableSearchBar.vue';
 
@@ -141,11 +142,32 @@ const showColumnsControl = computed(() => {
   return Array.isArray(props.selectedColumns);
 });
 
-const sizeOptions = computed(() => [
-  { label: props.sizeLabels.small, value: 'small' },
-  { label: props.sizeLabels.default, value: 'default' },
-  { label: props.sizeLabels.large, value: 'large' }
-]);
+const compactViewport = ref(false);
+
+let compactMediaQuery: MediaQueryList | null = null;
+
+const syncCompactViewport = () => {
+  compactViewport.value = !!compactMediaQuery?.matches;
+};
+
+onMounted(() => {
+  compactMediaQuery = window.matchMedia('(max-width: 520px)');
+  syncCompactViewport();
+  compactMediaQuery.addEventListener('change', syncCompactViewport);
+});
+
+onBeforeUnmount(() => {
+  compactMediaQuery?.removeEventListener('change', syncCompactViewport);
+});
+
+const sizeOptions = computed(() => {
+  const compact = compactViewport.value;
+  return [
+    { label: compact ? 'Compact' : props.sizeLabels.small, value: 'small' },
+    { label: compact ? 'Default' : props.sizeLabels.default, value: 'default' },
+    { label: compact ? 'Large' : props.sizeLabels.large, value: 'large' }
+  ];
+});
 </script>
 
 <style scoped>
@@ -180,6 +202,49 @@ const sizeOptions = computed(() => [
 
   .table-toolbar__search {
     min-width: 100%;
+  }
+
+  .table-toolbar__size,
+  .table-toolbar__columns,
+  .table-toolbar__actions {
+    width: 100%;
+  }
+
+  .table-toolbar__size :deep(.el-segmented) {
+    width: 100%;
+  }
+
+  .table-toolbar__size :deep(.el-segmented__item) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .table-toolbar__column-select {
+    width: 100%;
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .table-toolbar {
+    gap: 10px;
+  }
+
+  .table-toolbar__size :deep(.el-segmented) {
+    --el-segmented-item-selected-bg-color: var(--app-accent);
+    border-radius: 8px;
+    padding: 2px;
+    background: var(--app-surface-2);
+  }
+
+  .table-toolbar__size :deep(.el-segmented__item) {
+    min-height: 34px;
+  }
+
+  .table-toolbar__size :deep(.el-segmented__item-label) {
+    padding: 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 </style>

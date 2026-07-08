@@ -1,6 +1,6 @@
 <template>
-<div>
-  <div id='container' style="width: 100%;height: 100%"></div>
+<div class="concept-map">
+  <div ref="container" class="concept-map__container"></div>
 </div>
 </template>
 
@@ -389,10 +389,16 @@ export default {
           .x(function(d) { return d.x; })
           .y(function(d) { return d.y; });
 
-      var svg = d3.select("#container").append("svg")
-          .attr("width","700px")
-          .attr("height", "700px")
+      const container = d3.select(this.$refs.container);
+      container.selectAll("*").remove();
+
+      var svg = container.append("svg")
+          .attr("class", "concept-map__svg")
           .attr("viewBox", "0 0 960 960")
+          .attr("preserveAspectRatio", "xMidYMid meet")
+          .style("display", "block")
+          .style("width", "100%")
+          .style("height", "auto")
           .append("g")
           .attr("transform", "translate(" + diameter / 2 + "," + diameter / 2 + ")");
 
@@ -541,3 +547,15 @@ export default {
 }
 </script>
 
+<style scoped>
+.concept-map {
+  width: min(700px, 100%);
+  max-width: 100%;
+  min-width: 0;
+}
+
+.concept-map__container {
+  width: 100%;
+  min-width: 0;
+}
+</style>

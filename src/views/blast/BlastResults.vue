@@ -13,7 +13,8 @@
       <!-- 主表格单元格渲染 -->
       <template #bodyCell="{ column, text, record }">
         <span v-if="column.dataIndex === 'file'">{{ mapFileToDb(text) }}</span>
-        <span v-else-if="column.dataIndex === 'score'">{{ (text as number).toFixed(1) }}</span>
+        <span v-else-if="column.dataIndex === 'score'">{{ formatNumber(text, 1) }}</span>
+        <span v-else-if="isPercentColumn(column.dataIndex)">{{ formatPercent(text) }}</span>
         <span v-else-if="column.dataIndex === 'column'">{{ cleanString(text) }}</span>
         <span v-else-if="column.dataIndex === 'open'">
           <a
@@ -31,6 +32,17 @@
       <!-- 展开行渲染 -->
       <template #expandedRowRender="{ record }">
         <div class="expanded-content">
+          <div v-if="hasAlignmentMetrics(record)" class="alignment-metrics">
+            <span><strong>Identity</strong>{{ formatPercent(record.identity) }}</span>
+            <span><strong>QCov</strong>{{ formatPercent(record.query_coverage) }}</span>
+            <span><strong>TCov</strong>{{ formatPercent(record.target_coverage) }}</span>
+            <span><strong>Norm</strong>{{ formatPercent(record.normalized_score) }}</span>
+            <span><strong>Mode</strong>{{ formatMode(record.alignment_mode) }}</span>
+            <span><strong>K</strong>{{ record.kmer_size ?? '-' }}</span>
+            <span><strong>K-hit</strong>{{ record.kmer_hits ?? 0 }}</span>
+            <span><strong>Gaps</strong>{{ record.gaps ?? '-' }}</span>
+          </div>
+
           <!-- 图例 -->
           <div class="align-legend">
             <span class="legend-item"><i class="legend-dot match"></i>Match</span>
@@ -140,6 +152,14 @@ interface ResultRow {
   score: number;
   alignment: string;          // 三行文本：target 行、match 行（可有可无）、query 行
   row_data: Record<string, any>;
+  identity?: number;
+  query_coverage?: number;
+  target_coverage?: number;
+  normalized_score?: number;
+  alignment_mode?: string;
+  kmer_hits?: number;
+  kmer_size?: number;
+  gaps?: number;
 }
 
 const props = defineProps<{
@@ -163,6 +183,9 @@ const columns = [
   { title: 'Row', dataIndex: 'row', key: 'row', width: 60 },
   { title: 'Column', dataIndex: 'column', key: 'column', width: 150 },
   { title: 'Score', dataIndex: 'score', key: 'score', width: 80, sorter: (a, b) => a.score - b.score },
+  { title: 'Identity', dataIndex: 'identity', key: 'identity', width: 90, sorter: (a, b) => numericMetric(a.identity) - numericMetric(b.identity) },
+  { title: 'QCov', dataIndex: 'query_coverage', key: 'query_coverage', width: 80, sorter: (a, b) => numericMetric(a.query_coverage) - numericMetric(b.query_coverage) },
+  { title: 'TCov', dataIndex: 'target_coverage', key: 'target_coverage', width: 80, sorter: (a, b) => numericMetric(a.target_coverage) - numericMetric(b.target_coverage) },
   { title: 'View in page', dataIndex: 'open', key: 'open', width: 140 }
 ] as STableColumnsType<any>;
 
@@ -285,6 +308,40 @@ function cleanString(x: unknown): string {
   return x.replace(/^\ufeff/, '').replace(/ï»¿/g, '');
 }
 
+function numericMetric(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatNumber(value: unknown, digits = 1): string {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed.toFixed(digits) : '-';
+}
+
+function formatPercent(value: unknown): string {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return '-';
+  return `${parsed.toFixed(parsed % 1 === 0 ? 0 : 1)}%`;
+}
+
+function isPercentColumn(dataIndex: unknown): boolean {
+  return ['identity', 'query_coverage', 'target_coverage', 'normalized_score'].includes(String(dataIndex));
+}
+
+function formatMode(value: unknown): string {
+  const mode = cleanString(value).trim();
+  return mode ? mode.toUpperCase() : '-';
+}
+
+function hasAlignmentMetrics(record: ResultRow): boolean {
+  return (
+    record.identity != null ||
+    record.query_coverage != null ||
+    record.target_coverage != null ||
+    record.normalized_score != null
+  );
+}
+
 // 下划线变空格
 function formatKey(key: string): string {
   return cleanString(key).replace(/_/g, ' ');
@@ -367,6 +424,30 @@ function cellClass(idx: number, text: string) {
   padding: 0.5rem 1rem;
   background: var(--app-surface);
   color: var(--app-text);
+}
+
+.alignment-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-text);
+  font-size: 12px;
+}
+
+.alignment-metrics span {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.alignment-metrics strong {
+  color: var(--app-text-muted);
+  font-weight: 600;
 }
 
 /* 图例 */
@@ -498,5 +579,31 @@ function cellClass(idx: number, text: string) {
 :global(html.dark) .row-data-table {
   --blast-highlight: #f7d580;
   --blast-highlight-text: #1f2937;
+}
+
+@media (max-width: 640px) {
+  .expanded-content {
+    padding: 0.5rem 0;
+  }
+
+  .alignment-metrics,
+  .align-legend {
+    gap: 6px 10px;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .alignment {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .key-cell {
+    width: 132px;
+  }
+
+  .row-data-table td {
+    padding: 4px 6px;
+  }
 }
 </style>

@@ -205,18 +205,46 @@ const clearInput = () => {
 
 @media (max-width: 720px) {
   .table-search {
-    flex-wrap: wrap;
-    border-radius: 16px;
-    padding: 6px 10px;
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    gap: 0 8px;
+    min-height: 0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
   }
 
   .table-search__divider {
     display: none;
   }
 
+  .table-search__icon {
+    align-self: center;
+  }
+
+  .table-search__input {
+    min-width: 0;
+    padding: 4px 0;
+  }
+
+  .table-search__clear {
+    align-self: center;
+    padding: 0 2px;
+  }
+
   .table-search__select {
+    grid-column: 1 / -1;
     width: 100%;
-    min-width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--app-border-light);
+  }
+
+  :deep(.table-search__select .el-select__wrapper) {
+    min-height: 32px;
+    padding: 0;
   }
 }
 </style>
