@@ -19,14 +19,9 @@ export function useChat(apiKey: string) {
   let chatId = '';
 
   // —— 日志与打码（便于排查 401/404）——
-  const mask = (s?: string) => (s ? s.replace(/.(?=.{4})/g, '*') : '');
   const log = (...args: any[]) => console.log('[useChat]', ...args);
 
-  const authHeaders = () => ({
-    // ✅ 统一标准头名与 Bearer 前缀
-    Authorization: `Bearer ${apiKey}`,
-    Accept: 'application/json',
-  });
+  const authHeaders = () => ({ Accept: 'application/json' });
 
   const toggleChat = () => { isChatOpen.value = !isChatOpen.value; };
 
@@ -34,7 +29,7 @@ export function useChat(apiKey: string) {
   const fetchApplicationProfile = async () => {
     try {
       const url = `${apiBaseURL}/application/profile`;
-      log('GET', url, 'Authorization(m):', mask(apiKey));
+      log('GET', url);
       const resp = await fetch(url, { method: 'GET', headers: authHeaders() });
       const txt = await resp.text();
       if (!resp.ok) {
@@ -191,7 +186,7 @@ export function useChat(apiKey: string) {
   };
 
   const initializeChat = async () => {
-    log('apiBaseURL:', apiBaseURL, 'Authorization(m):', mask(apiKey));
+    log('apiBaseURL:', apiBaseURL);
     try {
       await fetchApplicationProfile();
       await openChatSession();

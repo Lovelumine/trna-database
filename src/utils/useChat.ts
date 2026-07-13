@@ -5,6 +5,7 @@ type ChatMessage = {
   text: string;
   sender: string;
   image?: string | null;
+  sources?: Record<string, unknown>[];
 };
 
 type ChatToolTrace = {
@@ -59,7 +60,6 @@ type SendOptions = {
   history?: ChatHistoryMessage[];
   deepReview?: boolean;
   thinkingEnabled?: boolean;
-  reasoningEffort?: 'high' | 'max';
 };
 
 const defaultGreeting = 'Hello, I am your virtual assistant YingYing. How can I assist you today?';
@@ -77,10 +77,7 @@ const logAuth = (_session: ChatSession, where: string, url: string, method: stri
   debugChatLog(`[useChat] ${method} ${url} (${where})`);
 };
 
-const authHeaders = (session: ChatSession) => ({
-  Authorization: `Bearer ${session.apiKey}`,
-  accept: 'application/json'
-});
+const authHeaders = (_session: ChatSession) => ({ accept: 'application/json' });
 
 const composeBotMessageText = (main: string, evidence: string) => {
   const mainText = String(main || '').trim();
@@ -276,10 +273,6 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
       if (typeof options.thinkingEnabled === 'boolean') {
         payload.thinking_enabled = options.thinkingEnabled;
       }
-      if (options.reasoningEffort) {
-        payload.reasoning_effort = options.reasoningEffort;
-      }
-
       const response = await fetch(url, {
         method: 'POST',
         headers: { ...authHeaders(session), 'Content-Type': 'application/json' },
@@ -357,7 +350,13 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
               continue;
             }
             if (eventType === 'evidence') {
-              evidence = String(parsed?.content || '').trim();
+              const evidencePayload = parsed?.content;
+              evidence = typeof evidencePayload === 'string'
+                ? evidencePayload.trim()
+                : String(evidencePayload?.text || evidencePayload?.content || '').trim();
+              const rawSources = Array.isArray(parsed?.sources)
+                ? parsed.sources
+                : (Array.isArray(evidencePayload?.sources) ? evidencePayload.sources : []);
               const effectiveId = botMessageId ?? Date.now();
               if (botMessageId === null) botMessageId = effectiveId;
               const hasBotMessage = session.messages.value.some(v => v.id === botMessageId);
@@ -365,7 +364,10 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
                 session.messages.value.push({ id: effectiveId, text: '', sender: 'bot' });
               }
               const m = session.messages.value.find(v => v.id === botMessageId);
-              if (m) m.text = composeBotMessageText(complete, evidence);
+              if (m) {
+                m.text = composeBotMessageText(complete, evidence);
+                if (rawSources.length) m.sources = rawSources;
+              }
               continue;
             }
             const content = parsed?.content ?? '';

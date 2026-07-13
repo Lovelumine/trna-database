@@ -1,13 +1,18 @@
 <template>
   <div class="search-service">
     <h2>BLAST Search</h2>
+    <p class="page-intro">Compare a modified tRNA sequence with selected ENSURE datasets.</p>
 
     <div class="controls">
-      <!-- 左侧：Query + 参数 -->
       <div class="left-controls">
+        <div class="section-heading">
+          <span class="step">1</span>
+          <div><h3>Query and scoring</h3><p>Enter a sequence and adjust alignment penalties.</p></div>
+        </div>
         <div class="control-group">
-          <label>Query Sequence:</label>
+          <label for="blast-query">Query sequence</label>
           <textarea
+            id="blast-query"
             v-model="querySeq"
             class="query-input"
             :disabled="loading"
@@ -16,28 +21,28 @@
 
         <div class="sliders">
           <div class="slider-control">
-            <label>Match: {{ match }}</label>
+            <label><span>Match</span><output>{{ match }}</output></label>
             <input
               type="range" min="0" max="5" step="0.1"
               v-model.number="match" :disabled="loading"
             />
           </div>
           <div class="slider-control">
-            <label>Mismatch: {{ mismatch }}</label>
+            <label><span>Mismatch</span><output>{{ mismatch }}</output></label>
             <input
               type="range" min="-5" max="0" step="0.1"
               v-model.number="mismatch" :disabled="loading"
             />
           </div>
           <div class="slider-control">
-            <label>Gap Open: {{ gapOpen }}</label>
+            <label><span>Gap open</span><output>{{ gapOpen }}</output></label>
             <input
               type="range" min="-5" max="0" step="0.1"
               v-model.number="gapOpen" :disabled="loading"
             />
           </div>
           <div class="slider-control">
-            <label>Gap Extend: {{ gapExtend }}</label>
+            <label><span>Gap extend</span><output>{{ gapExtend }}</output></label>
             <input
               type="range" min="-5" max="0" step="0.1"
               v-model.number="gapExtend" :disabled="loading"
@@ -46,46 +51,47 @@
         </div>
 
         <div class="control-group inline">
-          <label>Results Count:</label>
+          <label for="result-count">Maximum results</label>
           <input
+            id="result-count"
             type="number" v-model.number="numResults"
             min="1" max="50"
             class="number-input"
             :disabled="loading"
           />
-          <!-- Reset 按钮 -->
-          <button class="reset-button" @click="resetDefaults" :disabled="loading">
-            Reset
-          </button>
         </div>
       </div>
 
-      <!-- 右侧：数据库 Pills -->
       <div class="right-controls">
-        <label class="db-label">Databases:</label>
+        <div class="section-heading">
+          <span class="step">2</span>
+          <div><h3>Target databases</h3><p>Select one or more datasets to search.</p></div>
+        </div>
         <div class="db-pills">
           <button
             v-for="db in databases"
             :key="db.name"
             :class="['pill', { active: selectedDbs.includes(db.name), disabled: loading }]"
+            :aria-pressed="selectedDbs.includes(db.name)"
             @click="!loading && toggleDb(db.name)"
           >
-            {{ db.name }}
+            <span class="pill-check" aria-hidden="true">{{ selectedDbs.includes(db.name) ? '✓' : '' }}</span>
+            <span>{{ db.name }}</span>
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- 搜索按钮 + 进度 -->
-    <div class="button-wrapper">
-      <button
-        class="run-button"
-        :class="{ loading: loading, done: progress === 100 }"
-        @click="runSearch"
-        :disabled="loading"
-      >{{ loading ? 'Searching…' : 'Run Search' }}</button>
-      <div v-if="loading || progress===100" class="progress-bar">
-        <div class="progress" :style="{ width: progress+'%' }"></div>
+      <div class="button-wrapper">
+        <button class="reset-button" @click="resetDefaults" :disabled="loading">Reset parameters</button>
+        <button
+          class="run-button"
+          :class="{ loading: loading, done: progress === 100 }"
+          @click="runSearch"
+          :disabled="loading || !selectedDbs.length"
+        >{{ loading ? 'Searching…' : 'Run search' }}</button>
+        <div v-if="loading || progress===100" class="progress-bar">
+          <div class="progress" :style="{ width: progress+'%' }"></div>
+        </div>
       </div>
     </div>
 
@@ -203,192 +209,292 @@ async function runSearch(){
 
 <style scoped>
 .search-service {
-  max-width: 900px;
-  margin: 2rem auto;
-  font-family: Arial, sans-serif;
+  width: min(1180px, calc(100% - 48px));
+  margin: 2.5rem auto;
   color: var(--app-text);
-  --blast-panel-bg: #fafafa;
-  --blast-panel-border: #e5e7eb;
-  --blast-input-bg: #ffffff;
-  --blast-input-border: #cccccc;
-  --blast-input-text: var(--app-text);
-  --blast-pill-bg: #ffffff;
-  --blast-pill-border: #cccccc;
-  --blast-pill-text: var(--app-text);
-  --blast-pill-active-bg: #007acc;
-  --blast-pill-active-text: #ffffff;
-  --blast-slider-track: #d1d5db;
-  --blast-slider-fill: #007acc;
-  --blast-progress-bg: #dddddd;
-  --blast-reset-bg: #cccccc;
-  --blast-reset-hover: #999999;
+  min-width: 0;
 }
+
 h2 {
-  text-align: center;
-  margin-bottom: 1rem;
+  margin: 0 0 0.35rem;
   color: var(--app-text);
 }
+
+.page-intro {
+  margin: 0 0 2rem;
+  color: var(--app-text-muted);
+  font-size: 0.98rem;
+}
+
 .controls {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 1rem;
-  background: var(--blast-panel-bg);
-  border: 1px solid var(--blast-panel-border);
-  padding: 1rem;
-  border-radius: 6px;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.85fr);
+  border-top: 1px solid var(--app-border);
+  border-bottom: 1px solid var(--app-border);
 }
+
 .left-controls,
 .right-controls {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 1.25rem;
+  padding: 1.6rem 1.75rem 1.75rem 0;
+  min-width: 0;
 }
+
+.right-controls {
+  padding: 1.6rem 0 1.75rem 1.75rem;
+  border-left: 1px solid var(--app-border);
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.section-heading h3 {
+  margin: 0 0 0.2rem;
+  font: inherit;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.section-heading p {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 0.85rem;
+}
+
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 1.7rem;
+  border-radius: 50%;
+  color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 12%, transparent);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
 .control-group {
   display: flex;
   flex-direction: column;
+  gap: 0.45rem;
 }
+
+.control-group > label,
+.inline > label {
+  color: var(--app-text);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
 .inline {
   flex-direction: row;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-/* Query 加高 */
 .query-input {
-  font-family: monospace;
-  padding: 0.5rem;
-  border: 1px solid var(--blast-input-border);
-  border-radius: 4px;
-  min-height: 100px;
+  width: 100%;
+  min-height: 128px;
+  box-sizing: border-box;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
   resize: vertical;
-  background: var(--blast-input-bg);
-  color: var(--blast-input-text);
+  background: var(--app-surface-2);
+  color: var(--app-text);
+  font: 0.92rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.015em;
+  outline: none;
 }
 
-/* 滑块 */
+.query-input:focus,
+.number-input:focus {
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 14%, transparent);
+}
+
 .sliders {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.8rem;
+  gap: 1.15rem 1.5rem;
 }
+
+.slider-control { min-width: 0; }
+
 .slider-control label {
-  font-size: 0.9rem;
-  margin-bottom: 0.3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.55rem;
+  color: var(--app-text-muted);
+  font-size: 0.84rem;
 }
+
+.slider-control output {
+  min-width: 2.6rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 5px;
+  text-align: center;
+  color: var(--app-text);
+  background: var(--app-surface-2);
+  font-variant-numeric: tabular-nums;
+}
+
 .slider-control input {
   width: 100%;
+  margin: 0;
   appearance: none;
   height: 4px;
   border-radius: 999px;
-  background: var(--blast-slider-track);
+  background: var(--app-border);
   outline: none;
 }
+
 .slider-control input::-webkit-slider-thumb {
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--blast-slider-fill);
-  border: 2px solid #ffffff;
-}
-.slider-control input::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--blast-slider-fill);
-  border: 2px solid #ffffff;
+  background: var(--app-accent);
+  border: 3px solid var(--app-surface);
+  box-shadow: 0 0 0 1px var(--app-accent);
 }
 
-/* Pills */
-.db-label {
-  font-weight: bold;
+.slider-control input::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--app-accent);
+  border: 3px solid var(--app-surface);
 }
+
 .db-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  display: grid;
+  gap: 0.45rem;
 }
+
 .pill {
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--blast-pill-border);
-  border-radius: 12px;
-  background: var(--blast-pill-bg);
-  color: var(--blast-pill-text);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 38px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--app-text-muted);
+  text-align: left;
   cursor: pointer;
-  transition: 0.2s;
-  font-size: 0.9rem;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-size: 0.86rem;
 }
+
+.pill:hover { background: var(--app-surface-2); color: var(--app-text); }
+
 .pill.active {
-  background: var(--blast-pill-active-bg);
-  color: var(--blast-pill-active-text);
-  border-color: var(--blast-pill-active-bg);
+  background: color-mix(in srgb, var(--app-accent) 10%, transparent);
+  color: var(--app-text);
 }
+
+.pill-check {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.pill.active .pill-check {
+  border-color: var(--app-accent);
+  background: var(--app-accent);
+}
+
 .pill.disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* 结果数输入 */
 .number-input {
-  width: 4rem;
-  padding: 0.3rem;
-  border: 1px solid var(--blast-input-border);
-  border-radius: 4px;
-  background: var(--blast-input-bg);
-  color: var(--blast-input-text);
+  width: 4.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--app-border);
+  border-radius: 7px;
+  background: var(--app-surface-2);
+  color: var(--app-text);
+  outline: none;
 }
 
-/* 按钮 + 进度 */
 .button-wrapper {
   grid-column: 1 / -1;
-  text-align: center;
-  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+  position: relative;
+  padding: 1rem 0;
+  border-top: 1px solid var(--app-border);
 }
+
 .run-button {
-  padding: 0.6rem 1.8rem;
-  background: #007acc;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: 0.2s;
   min-width: 150px;
+  padding: 0.68rem 1.4rem;
+  background: var(--app-accent);
+  color: #fff;
+  border: 1px solid var(--app-accent);
+  border-radius: 7px;
+  cursor: pointer;
+  font-weight: 650;
 }
-.run-button.loading {
-  background: #f0ad4e;
+
+.run-button:hover:not(:disabled) { filter: brightness(1.07); }
+.run-button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.reset-button {
+  padding: 0.68rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--app-text-muted);
+  cursor: pointer;
 }
-.run-button.done {
-  background: #5cb85c;
-}
-.run-button:disabled {
-  cursor: not-allowed;
-}
+
+.reset-button:hover:not(:disabled) { color: var(--app-text); background: var(--app-surface-2); }
+
 .progress-bar {
-  margin-top: 0.4rem;
-  width: 60%;
-  height: 6px;
-  background: var(--blast-progress-bg);
-  border-radius: 3px;
-  margin-left: auto;
-  margin-right: auto;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
+  background: var(--app-border);
   overflow: hidden;
 }
+
 .progress {
   height: 100%;
-  background: #f0ad4e;
+  background: var(--app-accent);
   transition: width 0.2s;
-}
-.run-button.done + .progress-bar .progress {
-  background: #5cb85c;
 }
 
 .error {
   margin: 1rem 0;
-  color: #c00;
-  text-align: center;
+  color: var(--app-danger, #dc2626);
+  padding-left: 0.8rem;
+  border-left: 3px solid currentColor;
 }
 
-/* 结果表 */
 .results-table {
   margin-top: 1.5rem;
 }
@@ -398,125 +504,62 @@ h2 {
   white-space: pre-wrap;
 }
 
-.inline .reset-button {
-  margin-left: 0.5rem;
-  padding: 0.3rem 0.6rem;
-  background: var(--blast-reset-bg);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.inline .reset-button:hover:not(:disabled) {
-  background: var(--blast-reset-hover);
-}
 .reset-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-@media (prefers-color-scheme: dark) {
-  .search-service {
-    --blast-panel-bg: var(--app-surface);
-    --blast-panel-border: var(--app-border);
-    --blast-input-bg: var(--app-surface-2);
-    --blast-input-border: var(--app-border);
-    --blast-pill-bg: var(--app-surface-2);
-    --blast-pill-border: var(--app-border);
-    --blast-pill-text: var(--app-text);
-    --blast-slider-track: var(--app-border);
-    --blast-progress-bg: var(--app-border);
-    --blast-reset-bg: var(--app-surface-2);
-    --blast-reset-hover: rgba(148, 163, 184, 0.4);
-  }
-}
-
-:global(:root[data-theme="dark"]) .search-service,
-html.dark .search-service {
-  --blast-panel-bg: var(--app-surface);
-  --blast-panel-border: var(--app-border);
-  --blast-input-bg: var(--app-surface-2);
-  --blast-input-border: var(--app-border);
-  --blast-pill-bg: var(--app-surface-2);
-  --blast-pill-border: var(--app-border);
-  --blast-pill-text: var(--app-text);
-  --blast-slider-track: var(--app-border);
-  --blast-progress-bg: var(--app-border);
-  --blast-reset-bg: var(--app-surface-2);
-  --blast-reset-hover: rgba(148, 163, 184, 0.4);
-}
-
-@media (max-width: 640px) {
+@media (max-width: 860px) {
   .search-service {
     margin: 1rem auto;
   }
 
   .controls {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.8rem;
-    padding: 0.85rem;
   }
 
   .left-controls,
   .right-controls {
-    min-width: 0;
-    gap: 0.65rem;
+    padding: 1.25rem 0;
   }
 
+  .right-controls { border-left: 0; border-top: 1px solid var(--app-border); }
+
+  .db-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .search-service {
+    width: calc(100% - 32px);
+    margin: 1rem auto;
+    padding-bottom: 64px;
+  }
+
+  .page-intro { margin-bottom: 1.25rem; }
+
   .query-input {
-    width: 100%;
-    min-height: 86px;
-    box-sizing: border-box;
+    min-height: 110px;
   }
 
   .sliders {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.65rem;
-  }
-
-  .slider-control label {
-    margin-bottom: 0.2rem;
+    gap: 0.85rem;
   }
 
   .inline {
-    display: grid;
-    grid-template-columns: 1fr minmax(72px, 96px) minmax(76px, auto);
-    align-items: center;
-  }
-
-  .inline .reset-button {
-    margin-left: 0;
-    min-height: 40px;
+    justify-content: space-between;
   }
 
   .db-pills {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 0.45rem;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-
-  .pill {
-    width: 100%;
-    max-width: none;
-    min-height: 42px;
-    border-radius: 999px;
-    padding: 0.38rem 0.75rem;
-    line-height: 1.35;
-    white-space: normal;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .button-wrapper {
-    margin-top: 0.9rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .run-button {
-    width: min(100%, 250px);
-  }
-
-  .progress-bar {
     width: 100%;
   }
 }

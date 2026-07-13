@@ -53,7 +53,7 @@ const title = ref(hasList ? videoList.value[defaultIndex].title : '');
 
 // 🚩 和 VideoPlayer.vue 的类型保持一致：若子组件是 `ligthOff`，这里也写 `ligthOff`
 const options = reactive({
-  width: '800px',
+  width: '100%',
   height: '450px',
   color: '#409eff',
   title: hasList ? videoList.value[defaultIndex].title : '',
@@ -86,21 +86,53 @@ const handleSelectVideo = (video: Video) => {
 </script>
 
 <style scoped>
-.site--main { padding: 20px; }
-.content-container { display: flex; }
-.video-area { flex: 1; }
+.site--main {
+  padding: 20px;
+  color: var(--app-text);
+}
+
+.content-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  align-items: start;
+  gap: 20px;
+}
+
+.video-area {
+  min-width: 0;
+}
+
 .sidebar {
-  margin-left: 20px;
-  width: 300px;
-  max-height: calc(100vh - 100px);
+  width: 100%;
+  max-height: min(680px, calc(100vh - 100px));
   overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
+
 .ai-assistant-fullwidth {
-  padding: 20px;
-  background-color: #f0f4f8;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--app-border-light);
+}
+
+@media (max-width: 900px) {
+  .content-container {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    max-height: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .site--main {
+    padding: 12px;
+  }
+
+  .site--main h1 {
+    overflow-wrap: anywhere;
+  }
 }
 </style>

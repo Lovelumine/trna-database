@@ -24,6 +24,7 @@ import math
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote, urlencode
 from zoneinfo import ZoneInfo
 from sqlalchemy import text, bindparam, Integer, or_
 import re
@@ -51,6 +52,7 @@ from .settings_store import (
     get_table_default_visible_columns,
     get_table_media_field_config,
     get_table_virtual_media_fields,
+    redact_llm_settings_for_audit,
     save_ai_workflow_settings,
     save_llm_settings,
     save_table_column_labels,
@@ -213,20 +215,28 @@ def _get_llm_runtime(requested_model: str = "", requested_provider: str = "") ->
 
     ollama_models = cfg.get("ollama_models") or []
     deepseek_models = cfg.get("deepseek_models") or []
+    xiaomi_models = cfg.get("xiaomi_models") or []
     active_provider = str(cfg.get("active_provider") or "deepseek").strip().lower()
 
     if not provider:
         if model and model in deepseek_models:
             provider = "deepseek"
+        elif model and model in xiaomi_models:
+            provider = "xiaomi"
         elif model and model in ollama_models:
             provider = "ollama"
         else:
             provider = active_provider
 
-    if provider not in ("ollama", "deepseek"):
-        provider = active_provider if active_provider in ("ollama", "deepseek") else "deepseek"
+    supported_providers = ("ollama", "deepseek", "xiaomi")
+    if provider not in supported_providers:
+        provider = active_provider if active_provider in supported_providers else "deepseek"
 
-    provider_models = deepseek_models if provider == "deepseek" else ollama_models
+    provider_models = {
+        "deepseek": deepseek_models,
+        "xiaomi": xiaomi_models,
+        "ollama": ollama_models,
+    }.get(provider, [])
     if model and provider_models and model not in provider_models:
         model = ""
 
@@ -235,11 +245,11 @@ def _get_llm_runtime(requested_model: str = "", requested_provider: str = "") ->
     if model and provider_models and model not in provider_models:
         model = ""
     if not model:
-        model = (
-            str(cfg.get("deepseek_default_model") or "deepseek-v4-pro")
-            if provider == "deepseek"
-            else str(cfg.get("ollama_default_model") or "")
-        )
+        model = {
+            "deepseek": str(cfg.get("deepseek_default_model") or "deepseek-v4-pro"),
+            "xiaomi": str(cfg.get("xiaomi_default_model") or "mimo-v2.5-pro"),
+            "ollama": str(cfg.get("ollama_default_model") or ""),
+        }.get(provider, "")
 
     runtime = {
         "provider": provider,
@@ -250,9 +260,12 @@ def _get_llm_runtime(requested_model: str = "", requested_provider: str = "") ->
         "ollama_base_url": str(cfg.get("ollama_base_url") or ""),
         "deepseek_base_url": str(cfg.get("deepseek_base_url") or "https://api.deepseek.com"),
         "deepseek_api_key": str(cfg.get("deepseek_api_key") or ""),
+        "xiaomi_base_url": str(cfg.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
+        "xiaomi_api_key": str(cfg.get("xiaomi_api_key") or ""),
         "model_options": list(cfg.get("model_options") or []),
         "ollama_models": list(ollama_models),
         "deepseek_models": list(deepseek_models),
+        "xiaomi_models": list(xiaomi_models),
     }
     return runtime
 
@@ -727,6 +740,10 @@ def _route_conversation_request(
     force_evidence: bool,
 ) -> dict:
     fallback = _fallback_conversation_route(question, session_messages, intent, force_evidence)
+    if _extract_ensure_ids(question or "") and fallback.get("route") == "knowledge_retrieval":
+        fallback["confidence"] = 1.0
+        fallback["reason"] = "exact_ensure_id_retrieval"
+        return fallback
     if not workflow.get("conversation_router_enable", True):
         return fallback
 
@@ -889,6 +906,9 @@ def _deepseek_stream(base: str, api_key: str, model: str, messages: list, timeou
     }
     resp = requests.post(url, json=payload, headers=headers, stream=True, timeout=timeout)
     resp.raise_for_status()
+    # Some compatible SSE APIs omit a charset. Force UTF-8 so non-ASCII token
+    # chunks are not decoded as ISO-8859-1 by requests.
+    resp.encoding = "utf-8"
     for line in resp.iter_lines(decode_unicode=True):
         if not line:
             continue
@@ -928,6 +948,66 @@ def _deepseek_once(base: str, api_key: str, model: str, messages: list, timeout:
     return message.get("content") or ""
 
 
+def _normalize_xiaomi_thinking_options(runtime: dict) -> dict:
+    return {
+        "thinking": {
+            "type": "enabled" if bool(runtime.get("thinking_enabled", False)) else "disabled",
+        },
+    }
+
+
+def _xiaomi_stream(base: str, api_key: str, model: str, messages: list, timeout: float, runtime: dict | None = None):
+    if not api_key:
+        raise RuntimeError("Xiaomi MiMo API key is not configured")
+    url = base.rstrip("/") + "/chat/completions"
+    payload = {"model": model, "messages": messages, "stream": True}
+    payload.update(_normalize_xiaomi_thinking_options(runtime or {}))
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    resp = requests.post(url, json=payload, headers=headers, stream=True, timeout=timeout)
+    resp.raise_for_status()
+    # MiMo currently omits a charset on some streaming responses. Its JSON/SSE
+    # payload is UTF-8, so make that explicit before iter_lines decodes it.
+    resp.encoding = "utf-8"
+    for line in resp.iter_lines(decode_unicode=True):
+        if not line or not line.startswith("data:"):
+            continue
+        raw = line[5:].strip()
+        if raw == "[DONE]":
+            yield "", True
+            return
+        data = json.loads(raw)
+        choices = data.get("choices") or []
+        if not choices:
+            continue
+        delta = choices[0].get("delta") or {}
+        content = delta.get("content") or ""
+        done = choices[0].get("finish_reason") is not None
+        yield content, done
+
+
+def _xiaomi_once(base: str, api_key: str, model: str, messages: list, timeout: float, runtime: dict | None = None) -> str:
+    if not api_key:
+        raise RuntimeError("Xiaomi MiMo API key is not configured")
+    url = base.rstrip("/") + "/chat/completions"
+    payload = {"model": model, "messages": messages, "stream": False}
+    payload.update(_normalize_xiaomi_thinking_options(runtime or {}))
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+    resp.raise_for_status()
+    data = resp.json() or {}
+    choices = data.get("choices") or []
+    if not choices:
+        return ""
+    message = choices[0].get("message") or {}
+    return message.get("content") or ""
+
+
 def _llm_stream(runtime: dict, messages: list, model: str = ""):
     provider = str(runtime.get("provider") or "deepseek")
     chosen_model = str(model or runtime.get("model") or "").strip()
@@ -936,6 +1016,15 @@ def _llm_stream(runtime: dict, messages: list, model: str = ""):
         return _deepseek_stream(
             str(runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
             str(runtime.get("deepseek_api_key") or ""),
+            chosen_model,
+            messages,
+            timeout,
+            runtime,
+        )
+    if provider == "xiaomi":
+        return _xiaomi_stream(
+            str(runtime.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
+            str(runtime.get("xiaomi_api_key") or ""),
             chosen_model,
             messages,
             timeout,
@@ -957,6 +1046,15 @@ def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | N
         return _deepseek_once(
             str(runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
             str(runtime.get("deepseek_api_key") or ""),
+            chosen_model,
+            messages,
+            timeout_value,
+            runtime,
+        )
+    if provider == "xiaomi":
+        return _xiaomi_once(
+            str(runtime.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
+            str(runtime.get("xiaomi_api_key") or ""),
             chosen_model,
             messages,
             timeout_value,
@@ -1327,8 +1425,23 @@ def _expand_query_text(text: str) -> str:
 def _extract_ensure_ids(text: str) -> list:
     if not text:
         return []
-    raw = re.findall(r"\bensure[-_ ]?\d+\b", text, flags=re.IGNORECASE)
-    return [r.strip() for r in raw if r.strip()]
+    # Accept public-facing forms such as ENSURE-1206, ENSURE_ID 1206, and
+    # coordinated queries such as "ENSURE_ID 1206 and 1211".
+    series_pattern = re.compile(
+        r"\bensure(?:[-_ ]?ids?)?[-_ ]*"
+        r"(\d{1,9}(?:\s*(?:,|/|、|和|与|及|and|&)\s*\d{1,9})*)",
+        flags=re.IGNORECASE,
+    )
+    seen = set()
+    result = []
+    for match in series_pattern.finditer(str(text)):
+        for digits in re.findall(r"\d{1,9}", match.group(1)):
+            normalized = digits.lstrip("0") or "0"
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            result.append(f"ENSURE-{normalized}")
+    return result
 
 def _expand_ensure_ids(ids: list) -> list:
     variants = set()
@@ -1340,6 +1453,9 @@ def _expand_ensure_ids(ids: list) -> list:
         base = digits.lstrip("0") or "0"
         padded = base.zfill(4) if len(base) < 4 else base
         for num in {base, padded}:
+            # Engineered_sup_tRNA stores ENSURE_ID as a bare numeric value,
+            # while other datasets and URLs use ENSURE- / ENSURE_ prefixes.
+            variants.add(num)
             for sep in ("", "-", "_"):
                 variants.add(f"ENSURE{sep}{num}")
     return sorted(variants)
@@ -1465,10 +1581,574 @@ def _strict_allowed_response(question: str) -> str:
         return "你好，我是Yingying（荧荧）。可以帮你查询 ENSURE 的内容。"
     return ""
 
-def _format_evidence_block(evidence: str) -> str:
+_STRUCTURED_SOURCE_FIELDS = (
+    "source_id",
+    "source_type",
+    "table",
+    "record_pk",
+    "ENSURE_ID",
+    "PMID",
+    "DOI",
+    "url",
+    "excerpt",
+)
+
+_STRUCTURED_SOURCE_CONTEXT_MAX_SOURCES = 16
+_STRUCTURED_SOURCE_CONTEXT_MAX_EXCERPT_CHARS = 400
+_STRUCTURED_SOURCE_CONTEXT_MAX_CHARS = 7000
+
+_TABLE_SOURCE_ROUTES = {
+    "coding_variation_cancer": "/CodingVariationDisease",
+    "coding_variation_genetic_disease": "/CodingVariationDisease",
+    "nonsense_sup_rna": "/naturalsuptRNA",
+    "frameshift_sup_trna": "/naturalsuptRNA",
+    "Engineered_sup_tRNA": "/tRNAtherapeutics",
+    "function_and_modification": "/tRNAElements",
+    "aars_recognition": "/tRNAElements",
+    "ef_tu": "/tRNAElements",
+}
+
+
+def _source_pair(
+    row: dict,
+    exact_names: tuple[str, ...] = (),
+    contains: tuple[str, ...] = (),
+) -> tuple[str, str]:
+    if not isinstance(row, dict):
+        return "", ""
+    lowered = {str(key).lower(): key for key in row.keys()}
+    for name in exact_names:
+        key = lowered.get(str(name).lower())
+        if key is not None and row.get(key) not in (None, ""):
+            return str(key), _compact_value(row.get(key), 500)
+    for key, value in row.items():
+        low = str(key).lower()
+        if value not in (None, "") and any(token in low for token in contains):
+            return str(key), _compact_value(value, 500)
+    return "", ""
+
+
+def _source_value(row: dict, exact_names: tuple[str, ...] = (), contains: tuple[str, ...] = ()) -> str:
+    return _source_pair(row, exact_names, contains)[1]
+
+
+def _split_pmids(value) -> list[str]:
+    """Return individual, URL-safe PubMed identifiers from a mixed field."""
+    seen = set()
+    pmids = []
+    for pmid in re.findall(r"(?<!\d)\d{5,9}(?!\d)", str(value or "")):
+        if pmid in seen:
+            continue
+        seen.add(pmid)
+        pmids.append(pmid)
+    return pmids
+
+
+def _normalize_doi(value: str) -> str:
+    doi = str(value or "").strip()
+    doi = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", doi, flags=re.IGNORECASE)
+    return doi.strip().strip("<>[]{}.,; ")
+
+
+def _split_dois(value) -> list[str]:
+    seen = set()
+    dois = []
+    for match in re.findall(
+        r"10\.\d{4,9}/[-._;()/:A-Z0-9]+",
+        str(value or ""),
+        flags=re.IGNORECASE,
+    ):
+        doi = _normalize_doi(match.rstrip(".,;)"))
+        if not doi or doi.lower() in seen:
+            continue
+        seen.add(doi.lower())
+        dois.append(doi)
+    return dois
+
+
+def _document_source_url(path: str) -> str:
+    filename = os.path.basename(str(path or "").replace("\\", "/").strip())
+    if not filename:
+        return ""
+    return "/help.html?" + urlencode({"file": filename})
+
+
+def _table_source_url(
+    table: str,
+    *,
+    search_column: str = "",
+    search_text: str = "",
+) -> str:
+    route = _TABLE_SOURCE_ROUTES.get(str(table or "").strip())
+    if not route:
+        return ""
+    params = {"table": str(table).strip(), "expand": "1"}
+    if search_column and search_text:
+        params["search_column"] = str(search_column).strip()
+        params["search_text"] = str(search_text).strip()
+    return route + "?" + urlencode(params)
+
+
+def _new_structured_source(
+    source_type: str,
+    *,
+    table: str = "",
+    record_pk: str = "",
+    ensure_id: str = "",
+    pmid: str = "",
+    doi: str = "",
+    url: str = "",
+    excerpt: str = "",
+) -> dict:
+    normalized_pmids = _split_pmids(pmid)
+    normalized_pmid = normalized_pmids[0] if normalized_pmids else ""
+    normalized_doi = _normalize_doi(doi)
+    normalized_url = str(url or "").strip()
+    normalized_ensure_id = _compact_value(ensure_id, 240)
+    if not normalized_url and normalized_ensure_id:
+        normalized_url = "/expanded/" + quote(normalized_ensure_id, safe="")
+    if not normalized_url and normalized_pmid:
+        normalized_url = f"https://pubmed.ncbi.nlm.nih.gov/{normalized_pmid}/"
+    if not normalized_url and normalized_doi:
+        normalized_url = "https://doi.org/" + quote(normalized_doi, safe="/")
+    return {
+        "source_id": "",
+        "source_type": str(source_type or "evidence").strip() or "evidence",
+        "table": str(table or "").strip(),
+        "record_pk": _compact_value(record_pk, 240),
+        "ENSURE_ID": normalized_ensure_id,
+        "PMID": normalized_pmid,
+        "DOI": normalized_doi,
+        "url": normalized_url,
+        "excerpt": _compact_value(excerpt, 900),
+    }
+
+
+def _table_row_sources(table: str, row: dict, source_type: str = "table_row") -> list[dict]:
+    row_map = dict(row or {})
+    columns = list(row_map.keys())
+    ensure_column, ensure_id = _source_pair(
+        row_map,
+        exact_names=("ENSURE_ID", "ensure_id", "ENSUREID"),
+        contains=("ensure_id", "ensureid"),
+    )
+    pmid_column, pmid_value = _source_pair(
+        row_map,
+        exact_names=("PMID", "PubMed_ID", "PubMedID"),
+        contains=("pmid", "pubmed"),
+    )
+    _, doi_value = _source_pair(row_map, exact_names=("DOI",), contains=("doi",))
+    record_column, record_value = _source_pair(
+        row_map,
+        exact_names=("ID", "id", "record_id", "Record_ID"),
+    )
+    pmids = _split_pmids(pmid_value)
+    dois = _split_dois(doi_value)
+    record_pk = ensure_id or record_value or (pmids[0] if pmids else "") or (dois[0] if dois else "")
+    fields = _pick_row_fields(row_map, columns, 10, 260)
+    excerpt = "; ".join(f"{key}: {value}" for key, value in fields)
+    search_column = ensure_column or record_column or pmid_column
+    search_text = ensure_id or record_value or (pmids[0] if pmids else "")
+    url = ""
+    if not ensure_id:
+        url = _table_source_url(table, search_column=search_column, search_text=search_text)
+
+    # A database field can contain several PMIDs. Each citation source must
+    # carry exactly one legal PMID so the UI never constructs a malformed URL.
+    identifiers = [(pmid, dois[0] if len(dois) == 1 else "") for pmid in pmids]
+    if not identifiers:
+        identifiers = [("", doi) for doi in dois] or [("", "")]
+    return [
+        _new_structured_source(
+            source_type,
+            table=table,
+            record_pk=record_pk,
+            ensure_id=ensure_id,
+            pmid=pmid,
+            doi=doi,
+            url=url,
+            excerpt=excerpt,
+        )
+        for pmid, doi in identifiers
+    ]
+
+
+def _pubmed_item_source(item: dict, source_type: str) -> dict:
+    item = dict(item or {})
+    pmid_value = _source_value(item, exact_names=("pmid", "PMID"), contains=("pmid",))
+    doi_value = _source_value(item, exact_names=("doi", "DOI"), contains=("doi",))
+    pmids = _split_pmids(pmid_value)
+    dois = _split_dois(doi_value)
+    pmid = pmids[0] if pmids else ""
+    doi = dois[0] if dois else _normalize_doi(doi_value)
+    parts = []
+    for key in ("title", "journal", "pubdate", "authors", "abstract"):
+        value = item.get(key)
+        if isinstance(value, list):
+            value = ", ".join(str(part) for part in value if str(part).strip())
+        value = _compact_value(value, 700)
+        if value:
+            parts.append(f"{key}: {value}")
+    return _new_structured_source(
+        source_type,
+        record_pk=pmid or doi,
+        pmid=pmid,
+        doi=doi,
+        excerpt="; ".join(parts),
+    )
+
+
+def _tool_result_sources(name: str, result: dict) -> list[dict]:
+    if not isinstance(result, dict) or result.get("error"):
+        return []
+    sources: list[dict] = []
+    if name == "table_rows":
+        table = str(result.get("table") or "")
+        for row in result.get("rows") or []:
+            if isinstance(row, dict):
+                sources.extend(_table_row_sources(table, row))
+        return sources
+    if name == "ensure_lookup":
+        for hit in result.get("hits") or []:
+            if not isinstance(hit, dict):
+                continue
+            table = str(hit.get("table") or "")
+            for row in hit.get("rows") or []:
+                if isinstance(row, dict):
+                    sources.extend(_table_row_sources(table, row, "ensure_record"))
+        return sources
+    if name in {"pubmed_search", "pubmed_fetch"}:
+        source_type = "pubmed_article" if name == "pubmed_search" else "pubmed_abstract"
+        for item in result.get("items") or []:
+            if isinstance(item, dict):
+                sources.append(_pubmed_item_source(item, source_type))
+        return sources
+    if name == "docs_search":
+        for hit in result.get("hits") or []:
+            if not isinstance(hit, dict):
+                continue
+            path = str(hit.get("source") or hit.get("filename") or "").strip()
+            sources.append(_new_structured_source(
+                "document",
+                record_pk=path,
+                url=_document_source_url(path),
+                excerpt=str(hit.get("snippet") or ""),
+            ))
+        return sources
+    if name == "doc_get":
+        filename = str(result.get("filename") or "").strip()
+        return [_new_structured_source(
+            "document",
+            record_pk=filename,
+            url=_document_source_url(filename),
+            excerpt=str(result.get("content") or ""),
+        )]
+    if name == "repo_search":
+        for hit in result.get("hits") or []:
+            if not isinstance(hit, dict):
+                continue
+            path = str(hit.get("path") or "").strip()
+            line = str(hit.get("line") or "").strip()
+            sources.append(_new_structured_source(
+                "repository",
+                record_pk=f"{path}:{line}" if line else path,
+                excerpt=str(hit.get("snippet") or ""),
+            ))
+        return sources
+    if name == "repo_file":
+        path = str(result.get("path") or "").strip()
+        start_line = str(result.get("start_line") or "").strip()
+        end_line = str(result.get("end_line") or "").strip()
+        location = path
+        if start_line:
+            location += f":{start_line}"
+            if end_line and end_line != start_line:
+                location += f"-{end_line}"
+        return [_new_structured_source(
+            "repository",
+            record_pk=location,
+            excerpt=str(result.get("content") or ""),
+        )]
+    if name == "search_alignment":
+        rows = result.get("results") or []
+        if isinstance(rows, dict):
+            rows = rows.get("rows") or rows.get("results") or []
+        for row in rows[:20] if isinstance(rows, list) else []:
+            if isinstance(row, dict):
+                table = str(row.get("table") or row.get("source_table") or "")
+                sources.extend(_table_row_sources(table, row, "alignment_result"))
+        return sources
+    if name in {"table_info", "table_stats"}:
+        table = str(result.get("table") or "")
+        try:
+            excerpt = json.dumps(result, ensure_ascii=False, default=str)
+        except Exception:
+            excerpt = str(result)
+        return [_new_structured_source(
+            "table_metadata" if name == "table_info" else "table_statistic",
+            table=table,
+            record_pk=table,
+            url=_table_source_url(table),
+            excerpt=excerpt,
+        )]
+    if name in {"site_map", "api_reference"}:
+        filename = "public/docs/99-Site-Map.md" if name == "site_map" else "public/docs/98-API-Reference.md"
+        return [_new_structured_source(
+            "document",
+            record_pk=filename,
+            url=_document_source_url(filename),
+            excerpt=str(result.get("content") or ""),
+        )]
+    if name == "current_time":
+        return [_new_structured_source(
+            "runtime",
+            record_pk=str(result.get("timezone") or "current_time"),
+            excerpt=_tool_summary(name, result),
+        )]
+    return []
+
+
+def _rag_evidence_sources(evidence: str) -> list[dict]:
+    sources: list[dict] = []
+    for raw_line in str(evidence or "").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("Tool `"):
+            continue
+        line = re.sub(r"^\d+[.)]\s*", "", line)
+        doc_match = re.match(r"Doc\s+`([^`]+)`\s*[—-]\s*(.*)", line, flags=re.IGNORECASE)
+        table_match = re.match(r"Table\s+`([^`]+)`(?:\s+[^—-]*)?\s*[—-]\s*(.*)", line, flags=re.IGNORECASE)
+        source_type = "rag_evidence"
+        table = ""
+        record_pk = ""
+        excerpt = line
+        if doc_match:
+            source_type = "document"
+            record_pk = doc_match.group(1).strip()
+            excerpt = doc_match.group(2).strip()
+        elif table_match:
+            source_type = "table_evidence"
+            table = table_match.group(1).strip()
+            record_pk = table
+            excerpt = table_match.group(2).strip()
+        pmids = _split_pmids(line)
+        doi_match = re.search(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+", line, flags=re.IGNORECASE)
+        ensure_match = re.search(r"\bENSURE[-_ ]?\d+\b", line, flags=re.IGNORECASE)
+        ensure_id = ensure_match.group(0) if ensure_match else ""
+        doi = doi_match.group(0).rstrip(".,;)") if doi_match else ""
+        url = ""
+        if source_type == "document":
+            url = _document_source_url(record_pk)
+        elif table:
+            url = _table_source_url(table)
+        identifiers = pmids or [""]
+        for pmid in identifiers:
+            sources.append(_new_structured_source(
+                source_type,
+                table=table,
+                record_pk=record_pk or ensure_id or pmid or doi,
+                ensure_id=ensure_id,
+                pmid=pmid,
+                doi=doi if len(identifiers) == 1 else "",
+                url=url,
+                excerpt=excerpt,
+            ))
+    return sources
+
+
+def _build_structured_sources(
+    rag_evidence: str,
+    tool_cache: dict | None = None,
+    tool_trace: list | None = None,
+    max_sources: int = _STRUCTURED_SOURCE_CONTEXT_MAX_SOURCES,
+) -> list[dict]:
+    # Exact tool output is more useful than generated RAG summaries. Keep the
+    # latter as a fallback, but never let it consume S1 before a real row or
+    # PubMed record.
+    candidates: list[dict] = []
+    cached_tool_names = set()
+    for key, result in (tool_cache or {}).items():
+        name = str(key or "").split(":", 1)[0]
+        cached_tool_names.add(name)
+        candidates.extend(_tool_result_sources(name, result))
+    for trace in tool_trace or []:
+        if not isinstance(trace, dict):
+            continue
+        name = str(trace.get("tool") or "").strip()
+        summary = str(trace.get("summary") or "").strip()
+        if not name or not summary or name in cached_tool_names:
+            continue
+        candidates.append(_new_structured_source(
+            "tool_trace",
+            record_pk=name,
+            excerpt=summary,
+        ))
+    candidates.extend(_rag_evidence_sources(rag_evidence))
+
+    source_priority = {
+        "ensure_record": 0,
+        "table_row": 1,
+        "alignment_result": 2,
+        "pubmed_abstract": 3,
+        "pubmed_article": 4,
+        "table_statistic": 5,
+        "table_metadata": 6,
+        "document": 7,
+        "repository": 8,
+        "runtime": 9,
+        "tool_trace": 10,
+        "table_evidence": 11,
+        "rag_evidence": 12,
+    }
+    candidates = [
+        candidate
+        for _, candidate in sorted(
+            enumerate(candidates),
+            key=lambda item: (
+                source_priority.get(str((item[1] or {}).get("source_type") or ""), 20),
+                item[0],
+            ),
+        )
+    ]
+
+    sources: list[dict] = []
+    seen = set()
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        normalized = {field: str(candidate.get(field) or "").strip() for field in _STRUCTURED_SOURCE_FIELDS}
+        if not normalized.get("excerpt") and not any(
+            normalized.get(field) for field in ("table", "record_pk", "ENSURE_ID", "PMID", "DOI", "url")
+        ):
+            continue
+        if normalized.get("source_type") == "rag_evidence" and not any(
+            normalized.get(field) for field in ("table", "record_pk", "ENSURE_ID", "PMID", "DOI", "url")
+        ):
+            # The human-readable evidence trace still contains this text. A
+            # source card without an identity or destination is not useful.
+            continue
+        signature = tuple(normalized.get(field, "") for field in _STRUCTURED_SOURCE_FIELDS if field != "source_id")
+        if signature in seen:
+            continue
+        seen.add(signature)
+        normalized["source_id"] = f"S{len(sources) + 1}"
+        sources.append(normalized)
+        if max_sources and len(sources) >= max_sources:
+            break
+    return sources
+
+
+def _structured_sources_context(
+    sources: list[dict],
+    *,
+    max_sources: int = _STRUCTURED_SOURCE_CONTEXT_MAX_SOURCES,
+    max_excerpt_chars: int = _STRUCTURED_SOURCE_CONTEXT_MAX_EXCERPT_CHARS,
+    max_chars: int = _STRUCTURED_SOURCE_CONTEXT_MAX_CHARS,
+) -> str:
+    if not sources:
+        return ""
+    lines = [
+        "Structured source ledger (cite factual claims with the exact [S#] identifiers below):"
+    ]
+    for source in sources[:max(0, int(max_sources or 0))]:
+        metadata = []
+        for key in ("source_type", "table", "record_pk", "ENSURE_ID", "PMID", "DOI", "url"):
+            value = str(source.get(key) or "").strip()
+            if value:
+                metadata.append(f"{key}={value}")
+        excerpt = _compact_value(source.get("excerpt"), max(40, int(max_excerpt_chars or 0)))
+        line = f"[{source.get('source_id')}] " + "; ".join(metadata)
+        remaining = max(0, int(max_chars or 0) - len("\n".join(lines)) - len(line) - 11)
+        if excerpt and remaining > 40:
+            line += f"; excerpt={_compact_value(excerpt, min(len(excerpt), remaining))}"
+        if max_chars and len("\n".join(lines + [line])) > max_chars:
+            break
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _attach_structured_sources(context: str, sources: list[dict]) -> str:
+    ledger = _structured_sources_context(sources)
+    return "\n\n".join(part for part in (str(context or "").strip(), ledger) if part)
+
+
+_SOURCE_CITATION_RE = re.compile(r"\[S(\d+)\]", flags=re.IGNORECASE)
+
+
+def _validate_answer_source_citations(
+    answer: str,
+    sources: list[dict],
+    *,
+    require_citation: bool = False,
+) -> tuple[str, list[str], list[str]]:
+    """Remove invented [S#] tokens and enforce one real citation if required."""
+    valid_order = [
+        str(source.get("source_id") or "").strip()
+        for source in sources or []
+        if str(source.get("source_id") or "").strip()
+    ]
+    valid = set(valid_order)
+    cited = []
+    removed = []
+
+    def replace(match):
+        source_id = f"S{match.group(1)}"
+        if source_id not in valid:
+            if source_id not in removed:
+                removed.append(source_id)
+            return ""
+        if source_id not in cited:
+            cited.append(source_id)
+        return f"[{source_id}]"
+
+    cleaned = _SOURCE_CITATION_RE.sub(replace, str(answer or ""))
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\s+([,.;:!?，。；：！？])", r"\1", cleaned).strip()
+    if require_citation and cleaned and valid_order and not cited:
+        cited.append(valid_order[0])
+        cleaned = f"{cleaned} [{valid_order[0]}]"
+    return cleaned, cited, removed
+
+
+def _structured_sources_markdown(sources: list[dict]) -> str:
+    if not sources:
+        return ""
+    lines = ["Structured sources:"]
+    for source in sources:
+        source_id = str(source.get("source_id") or "")
+        source_type = str(source.get("source_type") or "evidence")
+        location = str(source.get("record_pk") or source.get("table") or "").strip()
+        label = f"**[{source_id}]** {source_type}"
+        if location:
+            label += f" `{location}`"
+        pmid = str(source.get("PMID") or "").strip()
+        doi = str(source.get("DOI") or "").strip()
+        url = str(source.get("url") or "").strip()
+        identifiers = []
+        if pmid:
+            identifiers.append(f"PMID {pmid}")
+        if doi:
+            identifiers.append(f"DOI {doi}")
+        if identifiers:
+            label += " — " + ", ".join(identifiers)
+        if url:
+            label += f" ([open source]({url}))"
+        excerpt = str(source.get("excerpt") or "").strip()
+        if excerpt:
+            label += f" — {excerpt}"
+        lines.append(f"- {label}")
+    return "\n".join(lines)
+
+
+def _format_evidence_block(evidence: str, sources: list[dict] | None = None) -> str:
+    parts = []
+    structured = _structured_sources_markdown(sources or [])
+    if structured:
+        parts.append(structured)
     if evidence:
-        return "\n\nSearch results:\n" + evidence
-    return "\n\nSearch results:\nNo relevant records found."
+        parts.append("Evidence trace:\n" + evidence)
+    if not parts:
+        parts.append("No relevant records found.")
+    return "\n\nSearch results:\n" + "\n\n".join(parts)
 
 # ---------------------- Tool Router & Helpers ----------------------
 
@@ -1623,7 +2303,7 @@ def _resolve_repo_path_hint(raw_hint: str) -> str:
 def _looks_like_repo_question(question: str) -> bool:
     q = str(question or "")
     return bool(re.search(
-        r"源码|代码|实现|架构|组件|前端|后端|仓库|repo|repository|codebase|source code|"
+        r"源码|代码|实现|架构|组件|前端|后端|仓库|\brepo\b|\brepository\b|codebase|source code|"
         r"vue|flask|typescript|javascript|python|hook|composable|函数|模块|页面怎么实现|"
         r"\.vue\b|\.py\b|\.ts\b|\.tsx\b|\.js\b|README|wsgi|config\.py",
         q,
@@ -2145,6 +2825,15 @@ def _plan_tools(question: str, rag_context: str, max_steps: int):
     enable, _, router_model, router_timeout, _ = _get_tool_router_config()
     if not enable:
         return []
+    ensure_ids = _extract_ensure_ids(question or "")
+    if ensure_ids:
+        return _sanitize_tool_plan(
+            [
+                {"tool": "ensure_lookup", "params": {"ensure_id": ensure_id}}
+                for ensure_id in ensure_ids
+            ],
+            max_steps,
+        )
     runtime = _get_llm_runtime(router_model)
     router_model = router_model or str(runtime.get("model") or "")
     messages = [{"role": "system", "content": _tool_plan_prompt(max_steps)}]
@@ -2595,8 +3284,19 @@ def _augment_plan_with_heuristics(plan: list, question: str, max_steps: int) -> 
         plan.insert(insert_at, {"tool": "repo_search", "params": {"query": str(question or ""), "limit": 8}})
         tools_in_plan.add("repo_search")
     ensure_ids = _extract_ensure_ids(question or "")
-    if ensure_ids and "ensure_lookup" not in tools_in_plan:
-        plan.insert(0, {"tool": "ensure_lookup", "params": {"ensure_id": ensure_ids[0]}})
+    if ensure_ids:
+        # Exact identifiers outrank probabilistic planner output. Put every
+        # requested ENSURE row first and discard any planner-generated lookup
+        # that may have lost or rewritten an identifier.
+        plan = [
+            item
+            for item in plan
+            if not isinstance(item, dict) or item.get("tool") != "ensure_lookup"
+        ]
+        plan = [
+            {"tool": "ensure_lookup", "params": {"ensure_id": ensure_id}}
+            for ensure_id in ensure_ids
+        ] + plan
     if re.search(r"\bENSURE\b|trna\.lumoxuan\.cn", str(question or ""), flags=re.IGNORECASE):
         if re.search(r"发表|论文|publication|paper|pmid|doi|nar|nucleic acids research", str(question or ""), flags=re.IGNORECASE):
             if "doc_get" not in tools_in_plan:
@@ -2764,6 +3464,10 @@ def _answer_prompt() -> str:
     return (
         "You are an expert assistant. Answer the user's question using ONLY the evidence provided. "
         "Do not invent PMIDs, methods, counts, or claims. "
+        "The evidence may include a structured source ledger with identifiers such as [S1]. "
+        "For every factual claim supported by retrieved evidence, cite one or more exact ledger identifiers inline, for example [S1] or [S1][S2]. "
+        "Never invent a source identifier and never cite an identifier that is absent from the structured source ledger. "
+        "If no structured source ledger is provided, do not fabricate [S#] citations. "
         "Do NOT interpret method tags (e.g., T66) unless the evidence explicitly defines them. "
         "Avoid speculative language such as '可能', '推测', 'likely', 'suggests'. "
         "If abstracts are provided, summarize them accurately without adding new claims. "
@@ -2796,6 +3500,8 @@ def _critic_prompt() -> str:
         "\"revised_answer\":\"...\"}\n"
         "Rules:\n"
         "- If any claim is not supported, verdict must be need_more_evidence or revise.\n"
+        "- If a structured source ledger is present, factual claims must use valid inline [S#] citations from that ledger.\n"
+        "- Treat invented, missing, or mismatched [S#] citations as unsupported claims.\n"
         "- If the answer contains speculative words (可能/推测/likely/suggest), verdict must be revise or need_more_evidence.\n"
         "- If more evidence is needed and you can name the tools, include tool_calls.\n"
         "- If you can rewrite the answer using only evidence, set verdict=revise and provide revised_answer.\n"
@@ -2849,7 +3555,12 @@ def _critique_answer(runtime: dict, question: str, answer: str, evidence: str) -
         {"role": "user", "content": f"Question:\n{question}\n\nAnswer:\n{answer}"},
     ]
     try:
-        reply = _llm_once(runtime, messages)
+        critic_runtime = dict(runtime or {})
+        # The critic returns a compact JSON verdict. Provider thinking tokens
+        # add substantial latency here without improving the user-visible
+        # synthesis, so reserve Thinking for the answer-generation call.
+        critic_runtime["thinking_enabled"] = False
+        reply = _llm_once(critic_runtime, messages)
     except Exception:
         return {}
     return _parse_critic_output(reply)
@@ -2875,24 +3586,21 @@ def _finalize_answer(
         cache,
         max_chars,
     )
-    if not workflow.get("final_critic_enable", True) and int(signals.get("pubmed_abstracts", 0) or 0) <= 0:
+    sources_local = _build_structured_sources(rag_evidence, cache, tool_trace)
+    context_local = _attach_structured_sources(context_local, sources_local)
+    review_enabled = bool(workflow.get("final_critic_enable", True))
+    if not review_enabled:
         yield {
             "type": "status",
-            "status": "Preparing final answer stream",
-            "detail": "Deep review is disabled for this request, so the assistant will stream the answer directly from the current evidence.",
+            "status": "Generating final answer",
+            "detail": "Deep review is disabled for this request, so the assistant will generate one answer from the current evidence without a critic pass.",
         }
-        return {
-            "answer": "",
-            "context": context_local,
-            "evidence": evidence_local,
-            "answer_pmids": [],
-            "invalid_pmids": [],
+    else:
+        yield {
+            "type": "status",
+            "status": "Generating reviewed answer",
+            "detail": "Drafting an evidence-grounded final answer from the accumulated retrieval context.",
         }
-    yield {
-        "type": "status",
-        "status": "Generating reviewed answer",
-        "detail": "Drafting an evidence-grounded final answer from the accumulated retrieval context.",
-    }
     complete = _generate_answer(
         runtime,
         system_prompt,
@@ -2901,11 +3609,12 @@ def _finalize_answer(
         question,
         style_prompt,
     ).strip()
-    yield _draft_preview_event(complete, "Draft answer preview")
+    if review_enabled:
+        yield _draft_preview_event(complete, "Draft answer preview")
     answer_pmids = []
     invalid_pmids = []
 
-    if workflow.get("final_critic_enable", True):
+    if review_enabled:
         yield {
             "type": "status",
             "status": "Reviewing answer",
@@ -2940,6 +3649,8 @@ def _finalize_answer(
                     cache,
                     max_chars,
                 )
+                sources_local = _build_structured_sources(rag_evidence, cache, tool_trace)
+                context_local = _attach_structured_sources(context_local, sources_local)
                 yield {
                     "type": "status",
                     "status": "Regenerating final answer",
@@ -2969,83 +3680,30 @@ def _finalize_answer(
     yield {
         "type": "status",
         "status": "Validating citations",
-        "detail": "Checking that any cited PMIDs are supported by the current evidence trace.",
+        "detail": "Checking that PMIDs and inline [S#] references resolve to the current evidence ledger.",
     }
     answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
     if invalid_pmids:
-        correction_hint = (
-            "The answer included PMIDs not present in the evidence: "
-            + ", ".join(invalid_pmids)
-            + ". Remove or correct them while keeping the rest."
-        )
-        complete = _generate_answer(
-            runtime,
-            system_prompt,
-            session_messages,
-            context_local,
-            question,
-            style_prompt + "\n" + correction_hint,
-        ).strip()
-        _, invalid_pmids = _check_answer_pmids(complete, context_local)
-        if invalid_pmids:
-            complete = _remove_invalid_pmids(complete, invalid_pmids)
-
-    if signals.get("pubmed_abstracts", 0) > 0:
-        yield {
-            "type": "status",
-            "status": "Integrating literature evidence",
-            "detail": "Refining the final answer with any PubMed abstracts gathered during retrieval.",
-        }
-        second_hint = (
-            "Use any PubMed abstracts in the evidence to refine the answer. "
-            "Prefer integrating them naturally instead of listing."
-        )
-        complete = _generate_answer(
-            runtime,
-            system_prompt,
-            session_messages,
-            context_local,
-            question,
-            style_prompt + "\n" + second_hint,
-        ).strip()
-        yield _draft_preview_event(complete, "Literature-enriched draft preview")
-        if workflow.get("final_critic_enable", True):
-            yield {
-                "type": "status",
-                "status": "Reviewing answer",
-                "detail": "Checking the literature-enriched answer against the current evidence before delivery.",
-            }
-            critic2 = _critique_answer(runtime, question, complete, context_local)
-            verdict2 = (critic2.get("verdict") or "").strip().lower()
-            revised2 = critic2.get("revised_answer") or ""
-            if verdict2 == "revise" and revised2:
-                complete = str(revised2).strip()
-        answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
-        if invalid_pmids:
-            correction_hint = (
-                "The answer included PMIDs not present in the evidence: "
-                + ", ".join(invalid_pmids)
-                + ". Remove or correct them while keeping the rest."
-            )
-            complete = _generate_answer(
-                runtime,
-                system_prompt,
-                session_messages,
-                context_local,
-                question,
-                style_prompt + "\n" + correction_hint,
-            ).strip()
-            _, invalid_pmids = _check_answer_pmids(complete, context_local)
-            if invalid_pmids:
-                complete = _remove_invalid_pmids(complete, invalid_pmids)
+        # Citation validation after the critic must be deterministic. Calling
+        # the model again here would discard the reviewed answer, add latency,
+        # and incur a second synthesis charge.
+        complete = _remove_invalid_pmids(complete, invalid_pmids)
 
     answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
+    complete, answer_source_ids, invalid_source_ids = _validate_answer_source_citations(
+        complete,
+        sources_local,
+        require_citation=bool(sources_local),
+    )
     return {
         "answer": complete.strip(),
         "context": context_local,
         "evidence": evidence_local,
+        "sources": sources_local,
         "answer_pmids": answer_pmids,
         "invalid_pmids": invalid_pmids,
+        "answer_source_ids": answer_source_ids,
+        "invalid_source_ids": invalid_source_ids,
     }
 
 
@@ -3858,6 +4516,14 @@ def _pick_row_fields(row, columns: list, max_fields: int, max_len: int):
     priority = [
         "ENSURE_ID",
         "PMID",
+        "PTC_gene",
+        "PTC_codon",
+        "aa_and_anticodon_of_sup-tRNA",
+        "Species_source_of_origin_tRNA",
+        "Reaction_system",
+        "Reading_through_efficiency",
+        "Species_source_of_PTC_gene",
+        "aa_and_anticodon_of_origin_tRNA",
         "Gene",
         "GENE",
         "GENE_NAME",
@@ -5957,8 +6623,8 @@ def admin_llm_settings_update():
         action="update_llm_settings",
         table_name="app_settings",
         record_pk="llm",
-        before=before,
-        after=after,
+        before=redact_llm_settings_for_audit(before),
+        after=redact_llm_settings_for_audit(after),
     )
     return jsonify({"ok": True, "settings": get_llm_settings(include_secrets=True)})
 
@@ -6816,6 +7482,7 @@ def chat_model_options():
             "model_options": settings.get("model_options") or [],
             "ollama_models": settings.get("ollama_models") or [],
             "deepseek_models": settings.get("deepseek_models") or [],
+            "xiaomi_models": settings.get("xiaomi_models") or [],
         }
     )
 
@@ -6878,13 +7545,17 @@ def chat_title():
     use_chinese = cjk_count >= 6 and cjk_count >= latin_count
     if use_chinese:
         system_prompt = (
-            "You are a title generator. Use Chinese only. "
-            "Return only a short title (max 14 Chinese characters). No quotes."
+            "You generate conversation titles for ENSURE, the Encyclopedia of Suppressor tRNA research database. "
+            "Do not answer the user's question or reinterpret ENSURE as a consumer brand. "
+            "Summarize only the conversation topic. Use Chinese only. "
+            "Return only a short title (max 14 Chinese characters). No quotes or explanations."
         )
     else:
         system_prompt = (
-            "You are a title generator. Use English only. "
-            "Return only a short title (max 10 words). No quotes."
+            "You generate conversation titles for ENSURE, the Encyclopedia of Suppressor tRNA research database. "
+            "Do not answer the user's question or reinterpret ENSURE as a consumer brand. "
+            "Summarize only the conversation topic. Use English only. "
+            "Return only a short title (max 10 words). No quotes or explanations."
         )
     messages = [
         {"role": "system", "content": system_prompt},
@@ -7007,7 +7678,7 @@ def chat_message(chat_id):
                         yield _sse({"type": "content", "content": chunk})
                 else:
                     yield _sse({"type": "content", "content": complete})
-                yield _sse({"type": "evidence", "content": evidence_text})
+                yield _sse({"type": "evidence", "content": evidence_text, "sources": []})
                 yield "data: [DONE]\n\n"
                 return
 
@@ -7030,7 +7701,7 @@ def chat_message(chat_id):
                         yield _sse({"type": "content", "content": chunk})
                 else:
                     yield _sse({"type": "content", "content": complete})
-                yield _sse({"type": "evidence", "content": evidence_text})
+                yield _sse({"type": "evidence", "content": evidence_text, "sources": []})
                 yield "data: [DONE]\n\n"
                 return
 
@@ -7061,7 +7732,7 @@ def chat_message(chat_id):
                         yield _sse({"type": "content", "content": chunk})
                 else:
                     yield _sse({"type": "content", "content": complete})
-                yield _sse({"type": "evidence", "content": evidence_text})
+                yield _sse({"type": "evidence", "content": evidence_text, "sources": []})
                 yield "data: [DONE]\n\n"
                 return
 
@@ -7207,7 +7878,7 @@ def chat_message(chat_id):
                 _append_chat_message(chat_id, "assistant", fallback, max_messages)
                 yield _sse({"type": "content", "content": fallback})
                 evidence_text = _format_evidence_block(evidence_local)
-                yield _sse({"type": "evidence", "content": evidence_text})
+                yield _sse({"type": "evidence", "content": evidence_text, "sources": []})
                 yield "data: [DONE]\n\n"
                 return
 
@@ -7239,8 +7910,27 @@ def chat_message(chat_id):
             complete = str(final_result.get("answer") or "").strip()
             context_local = str(final_result.get("context") or context_local).strip()
             evidence_local = str(final_result.get("evidence") or evidence_local).strip()
-            answer_pmids = list(final_result.get("answer_pmids") or [])
-            invalid_pmids = list(final_result.get("invalid_pmids") or [])
+            sources_local = final_result.get("sources") or []
+            if not isinstance(sources_local, list):
+                sources_local = []
+            if not sources_local:
+                sources_local = _build_structured_sources(rag_evidence, tool_cache, tool_trace)
+            if not complete:
+                complete = "No answer could be generated from the available evidence."
+
+            # The reviewed text is the single source of truth from here onward:
+            # validate it, persist it, and stream that exact same string.
+            complete, answer_source_ids, removed_source_ids = _validate_answer_source_citations(
+                complete,
+                sources_local,
+                require_citation=bool(sources_local),
+            )
+            answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
+            removed_pmids = list(invalid_pmids)
+            if invalid_pmids:
+                complete = _remove_invalid_pmids(complete, invalid_pmids)
+                answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
+            _append_chat_message(chat_id, "assistant", complete, max_messages)
 
             yield _sse({
                 "type": "status",
@@ -7248,56 +7938,26 @@ def chat_message(chat_id):
                 "detail": "Streaming the final reviewed answer and packaging the supporting evidence trace.",
             })
             if stream_requested:
-                streamed_complete = ""
-                try:
-                    for chunk, done in _generate_answer_stream(
-                        runtime,
-                        system_prompt,
-                        session.get("messages") or [],
-                        context_local,
-                        message,
-                        style_prompt,
-                    ):
-                        if chunk:
-                            streamed_complete += chunk
-                            yield _sse({"type": "content", "content": chunk})
-                        if done:
-                            break
-                except Exception:
-                    streamed_complete = ""
-                complete = streamed_complete.strip() or complete
-                if not complete:
-                    complete = _generate_answer(
-                        runtime,
-                        system_prompt,
-                        session.get("messages") or [],
-                        context_local,
-                        message,
-                        style_prompt,
-                    ).strip()
-                if not streamed_complete and complete:
-                    for chunk in _stream_text_chunks(complete):
-                        yield _sse({"type": "content", "content": chunk})
+                for chunk in _stream_text_chunks(complete):
+                    yield _sse({"type": "content", "content": chunk})
             else:
-                if not complete:
-                    complete = _generate_answer(
-                        runtime,
-                        system_prompt,
-                        session.get("messages") or [],
-                        context_local,
-                        message,
-                        style_prompt,
-                    ).strip()
                 yield _sse({"type": "content", "content": complete})
-            answer_pmids, invalid_pmids = _check_answer_pmids(complete, context_local)
-            evidence_text = _format_evidence_block(evidence_local)
+            evidence_text = _format_evidence_block(evidence_local, sources_local)
             if answer_pmids:
                 evidence_text += "\n\nAnswer PMIDs: " + ", ".join(answer_pmids)
-            if invalid_pmids:
-                evidence_text += "\nInvalid PMIDs removed: " + ", ".join(invalid_pmids)
-            if complete:
-                _append_chat_message(chat_id, "assistant", complete, max_messages)
-            yield _sse({"type": "evidence", "content": evidence_text})
+            if removed_pmids:
+                evidence_text += "\nInvalid PMIDs removed: " + ", ".join(removed_pmids)
+            if removed_source_ids:
+                evidence_text += "\nInvalid source citations removed: " + ", ".join(removed_source_ids)
+            yield _sse({
+                "type": "evidence",
+                "content": evidence_text,
+                "sources": sources_local,
+                "citation_validation": {
+                    "cited_source_ids": answer_source_ids,
+                    "removed_source_ids": removed_source_ids,
+                },
+            })
         except Exception as exc:
             yield _sse({"type": "error", "content": f"Error: {exc}"})
         yield "data: [DONE]\n\n"
@@ -7310,6 +7970,7 @@ def chat_message(chat_id):
 
 
 @bp.route("/embedding/rebuild", methods=["POST"])
+@admin_write_required
 def embedding_rebuild():
     enable, model, index_path, _, _, _ = _get_embedding_config()
     if not enable:

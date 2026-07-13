@@ -22,28 +22,21 @@
           :data-source="filteredPmidData"
           :pagination="pagination"
           :row-key="record => record.PMID"
-          :expand-row-by-click="true"
+          :custom-row="publicationRowProps"
           :size="tableSize"
+          :fit-min-factor="0.7"
           @change="handleTableChange"
           @pagination-change="handlePaginationChange"
         >
-          <template #expandedRowRender="{ record }">
-            <!-- 触发展开即按 PMID 调后端 /search 拉取，仅该 PMID 相关行 -->
-            <span v-if="triggerFetch(record.PMID)" style="display:none"></span>
-            <tRNAtherapeutics1
-              :selectedPmids="[record.PMID]"
-              :supData="supByPmid[record.PMID] || []"
-              :loadingSup="loadingSupByPmid[record.PMID] ?? true"
-            />
-          </template>
-
-          <template #default="{ text, column }">
+          <template #default="{ text, column, record }">
             <el-tooltip
               :content="cellTooltipContent(text, column)"
               placement="top"
               effect="light"
-              :show-after="150"
+              :show-after="0"
               :hide-after="0"
+              :enterable="false"
+              :persistent="false"
               :disabled="!cellTooltipContent(text, column)"
             >
               <a
@@ -57,12 +50,31 @@
               >
                 <Link />
               </a>
+              <span v-else-if="column.dataIndex === 'Title'" class="pmid-text-cell">{{ text }}</span>
               <span v-else-if="column.dataIndex === 'Source'" class="pmid-text-cell"><em>{{ text }}</em></span>
               <span v-else class="pmid-text-cell">{{ text }}</span>
             </el-tooltip>
           </template>
         </s-table>
       </s-table-provider>
+
+      <el-dialog
+        v-model="detailDialogVisible"
+        class="publication-data-dialog"
+        :title="`Engineered sup-tRNA data · PMID ${selectedPmid}`"
+        width="min(94vw, 1680px)"
+        top="3vh"
+        append-to-body
+        destroy-on-close
+        @closed="closePublication"
+      >
+        <tRNAtherapeutics1
+          v-if="selectedPmid"
+          :selectedPmids="[selectedPmid]"
+          :supData="supByPmid[selectedPmid] || []"
+          :loadingSup="loadingSupByPmid[selectedPmid] ?? true"
+        />
+      </el-dialog>
     </div>
 
     <!-- 3. 聚合小文件加载骨架（用于总体图表） -->
@@ -84,7 +96,7 @@ import { STableProvider } from '@shene/table';
 import tRNAtherapeutics1 from './tRNAtherapeutics-1.vue';
 import en from '@shene/table/dist/locale/en';
 import type { EChartsOption } from 'echarts';
-import { ElSkeleton, ElTooltip } from 'element-plus';
+import { ElDialog, ElSkeleton, ElTooltip } from 'element-plus';
 import { Link } from '@element-plus/icons-vue';
 import TableToolbar from '@/components/TableToolbar.vue';
 import VChart from '@/components/LazyChart.vue';
@@ -98,7 +110,7 @@ const PERPOS_TABLE = 'engineered_sup_trna_perpos_counts';
 
 export default {
   name: 'tRNAtherapeutics',
-  components: { tRNAtherapeutics1, STableProvider, ElSkeleton, ElTooltip, Link, TableToolbar, VChart },
+  components: { tRNAtherapeutics1, STableProvider, ElDialog, ElSkeleton, ElTooltip, Link, TableToolbar, VChart },
   setup() {
     // ===== 加载状态 =====
     const loadingPmid = ref(true);  // PMID 主表格（MySQL）
@@ -108,6 +120,8 @@ export default {
     const supByPmid = ref<Record<string, any[]>>({});
     const loadingSupByPmid = ref<Record<string, boolean>>({});
     const fetchedSet = new Set<string>();
+    const selectedPmid = ref('');
+    const detailDialogVisible = ref(false);
 
     async function fetchSupRowsForPmid(pmid: string) {
       loadingSupByPmid.value[pmid] = true;
@@ -144,6 +158,33 @@ export default {
       return true;
     }
 
+    const selectPublication = (record: any) => {
+      const pmid = String(record?.PMID || '');
+      if (!pmid) return;
+      selectedPmid.value = pmid;
+      triggerFetch(pmid);
+      detailDialogVisible.value = true;
+    };
+
+    const closePublication = () => {
+      selectedPmid.value = '';
+    };
+
+    const publicationRowProps = (record: any) => ({
+      role: 'button',
+      tabindex: 0,
+      'aria-label': `View engineered sup-tRNA data for ${record?.Title || record?.PMID || 'publication'}`,
+      class: selectedPmid.value === String(record?.PMID || '') ? 'publication-row is-selected' : 'publication-row',
+      style: { cursor: 'pointer' },
+      onClick: () => selectPublication(record),
+      onKeydown: (event: KeyboardEvent) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectPublication(record);
+        }
+      }
+    });
+
     // ===== PMID 主表格（MySQL） =====
     const searchText   = ref('');
     const searchColumn = ref('');
@@ -167,16 +208,16 @@ export default {
     ]);
 
     const pmidColumns = computed(() => [
-      { title:'Title', dataIndex:'Title', key:'Title', width:760, ellipsis:true, resizable:true },
-      { title:'Source', dataIndex:'Source', key:'Source', width:180, resizable:true,
+      { title:'Title', dataIndex:'Title', key:'Title', width:560, ellipsis:true, resizable:true },
+      { title:'Source', dataIndex:'Source', key:'Source', width:130, ellipsis:true, resizable:true,
         customRender: ({ text }: any) => <em>{text}</em>
       },
-      { title:'Author', dataIndex:'Author', key:'Author', width:480, ellipsis:true, resizable:true },
+      { title:'Author', dataIndex:'Author', key:'Author', width:350, ellipsis:true, resizable:true },
       {
         title:'PubDate',
         dataIndex:'PubDate',
         key:'PubDate',
-        width:126,
+        width:120,
         resizable:true,
         sorter: true,
         sortOrder: pubDateSortOrder.value === 'desc' ? 'descend' : 'ascend',
@@ -191,7 +232,7 @@ export default {
           }
         }
       },
-      { title:'ID', dataIndex:'PMID', key:'PMID', width:48, align:'center', resizable:true,
+      { title:'ID', dataIndex:'PMID', key:'PMID', width:60, align:'center', resizable:true,
         customRender: ({ text }: any) => (
           <a
             href={`https://pubmed.ncbi.nlm.nih.gov/${text}`}
@@ -449,6 +490,11 @@ export default {
       supByPmid,
       loadingSupByPmid,
       triggerFetch,
+      selectedPmid,
+      detailDialogVisible,
+      selectPublication,
+      closePublication,
+      publicationRowProps,
     };
   }
 };
@@ -458,8 +504,8 @@ export default {
 <style scoped>
 .site--main {
   box-sizing: border-box;
-  width: min(1760px, calc(100vw - 128px));
-  max-width: none;
+  width: min(1480px, calc(100vw - 96px));
+  max-width: 1480px;
   margin: 0 auto;
   padding: 20px;
   color: var(--app-text);
@@ -478,13 +524,13 @@ export default {
   width: 100%;
   box-sizing: border-box;
   margin-bottom: 30px;
-  background: var(--thera-card-bg);
-  border: 1px solid var(--thera-card-border);
-  border-radius: 8px;
-  box-shadow: var(--thera-card-shadow);
-  padding: 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
 }
-:deep(.s-table)          { border-radius: 8px; overflow: hidden; }
+:deep(.s-table)          { border-radius: 0; overflow: hidden; }
 :deep(.s-table-header),
 :deep(.s-table__header)   { background: var(--thera-table-header-bg); }
 :deep(.s-table .s-table__column-sort) {
@@ -496,13 +542,71 @@ export default {
 :deep(.s-table-row:hover){ background: var(--thera-row-hover) !important; }
 h2 { margin-bottom: 16px; color: var(--app-text); }
 h3 { margin-bottom: 12px; color: var(--app-text); }
-.el-skeleton__wrapper { background-color: var(--thera-skeleton-bg); }
+.skeleton-wrapper {
+  padding: 18px;
+  border: 1px solid var(--app-border-light);
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+.skeleton-wrapper :deep(.el-skeleton__item) {
+  background: linear-gradient(
+    90deg,
+    var(--app-surface-2) 25%,
+    color-mix(in srgb, var(--app-surface-2) 72%, var(--app-text-faint)) 37%,
+    var(--app-surface-2) 63%
+  );
+  background-size: 400% 100%;
+}
 :deep(.pmid-text-cell) {
   display: block;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+:global(.publication-row:focus-visible .s-table__cell) {
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface)) !important;
+  outline: 2px solid color-mix(in srgb, var(--app-accent) 42%, transparent);
+  outline-offset: -2px;
+}
+:global(.publication-row.is-selected .s-table__cell) {
+  background: color-mix(in srgb, var(--app-accent) 7%, var(--app-surface)) !important;
+}
+:global(.publication-data-dialog) {
+  max-width: calc(100vw - 24px);
+  margin-bottom: 3vh;
+  background: var(--app-surface);
+}
+:global(.publication-data-dialog .el-dialog__header) {
+  margin-right: 0;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--app-border-light);
+}
+:global(.publication-data-dialog .el-dialog__title) {
+  color: var(--app-text);
+  font-family: var(--font-serif);
+  font-weight: 700;
+}
+:global(.publication-data-dialog .el-dialog__body) {
+  max-height: calc(94vh - 78px);
+  padding: 0 22px 24px;
+  overflow: auto;
+  color: var(--app-text);
+}
+
+@media (max-width: 768px) {
+  :global(.publication-data-dialog) {
+    width: calc(100vw - 16px) !important;
+    max-width: none;
+    margin-top: 8px !important;
+  }
+  :global(.publication-data-dialog .el-dialog__header) {
+    padding: 14px 16px;
+  }
+  :global(.publication-data-dialog .el-dialog__body) {
+    max-height: calc(100dvh - 72px);
+    padding: 0 12px 18px;
+  }
 }
 :deep(.pmid-link-button) {
   display: inline-flex;
@@ -550,6 +654,16 @@ h3 { margin-bottom: 12px; color: var(--app-text); }
 :global(:root[data-theme="dark"]) .site--main {
   --thera-card-bg: var(--app-surface);
   --thera-card-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  --thera-table-header-bg: var(--app-surface-2);
+  --thera-row-hover: var(--app-surface-2);
+  --thera-skeleton-bg: var(--app-surface-2);
+  --thera-input-bg: var(--app-surface);
+  --thera-input-border: var(--app-border);
+}
+
+:global(:root[data-theme="light"]) .site--main {
+  --thera-card-bg: var(--app-surface);
+  --thera-card-shadow: none;
   --thera-table-header-bg: var(--app-surface-2);
   --thera-row-hover: var(--app-surface-2);
   --thera-skeleton-bg: var(--app-surface-2);

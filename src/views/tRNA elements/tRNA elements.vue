@@ -43,10 +43,11 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 400px; /* 设置高度占据整个视口，使其垂直居中 */
+  height: min(620px, 55vw);
+  min-height: 420px;
   width: 100%;
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 @media (max-width: 640px) {

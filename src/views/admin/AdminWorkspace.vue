@@ -581,6 +581,7 @@
               <div class="llm-grid llm-grid--runtime">
                 <el-form-item :label="t('field.provider')">
                   <el-select v-model="llmForm.active_provider">
+                    <el-option label="Xiaomi MiMo" value="xiaomi" />
                     <el-option label="DeepSeek" value="deepseek" />
                     <el-option label="Ollama" value="ollama" />
                   </el-select>
@@ -614,6 +615,22 @@
 
                 <el-form-item class="span-2" :label="t('field.deepseekModels')">
                   <el-input v-model="llmText.deepseek_models_text" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" />
+                </el-form-item>
+
+                <el-form-item :label="t('field.xiaomiBaseUrl')">
+                  <el-input v-model="llmForm.xiaomi_base_url" placeholder="https://api.xiaomimimo.com/v1" />
+                </el-form-item>
+
+                <el-form-item :label="t('field.xiaomiDefaultModel')">
+                  <el-input v-model="llmForm.xiaomi_default_model" placeholder="mimo-v2.5-pro" />
+                </el-form-item>
+
+                <el-form-item class="span-2" :label="t('field.xiaomiApiKey')">
+                  <el-input v-model="llmForm.xiaomi_api_key" type="password" show-password placeholder="sk-..." />
+                </el-form-item>
+
+                <el-form-item class="span-2" :label="t('field.xiaomiModels')">
+                  <el-input v-model="llmText.xiaomi_models_text" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" />
                 </el-form-item>
 
                 <el-form-item :label="t('field.ollamaBaseUrl')">
@@ -1346,11 +1363,16 @@ const llmForm = reactive<AdminLLMSettings>({
   deepseek_api_key: '',
   deepseek_default_model: '',
   deepseek_models: [],
+  xiaomi_base_url: '',
+  xiaomi_api_key: '',
+  xiaomi_default_model: '',
+  xiaomi_models: [],
   model_options: []
 });
 const llmText = reactive({
   ollama_models_text: '',
-  deepseek_models_text: ''
+  deepseek_models_text: '',
+  xiaomi_models_text: ''
 });
 const workflowForm = reactive<AdminAIWorkflowSettings>({
   workflow_enable: true,
@@ -1382,9 +1404,16 @@ const topTableResources = computed(() =>
     .sort((a, b) => (b.row_count || 0) - (a.row_count || 0))
     .slice(0, 6)
 );
-const providerLabel = computed(() => (llmForm.active_provider === 'deepseek' ? 'DeepSeek' : 'Ollama'));
+const providerLabel = computed(() => {
+  const labels: Record<string, string> = {
+    xiaomi: 'Xiaomi MiMo',
+    deepseek: 'DeepSeek',
+    ollama: 'Ollama'
+  };
+  return labels[llmForm.active_provider] || llmForm.active_provider || 'Unknown';
+});
 const llmModelOptions = computed(() => {
-  const raw = `${llmText.ollama_models_text},${llmText.deepseek_models_text}`;
+  const raw = `${llmText.xiaomi_models_text},${llmText.deepseek_models_text},${llmText.ollama_models_text}`;
   return raw
     .replace(/\n/g, ',')
     .split(',')
@@ -1396,6 +1425,9 @@ const activeModelLabel = computed(() => {
   if (active) return active;
   if (llmForm.active_provider === 'deepseek') {
     return String(llmForm.deepseek_default_model || '').trim() || 'deepseek-v4-pro';
+  }
+  if (llmForm.active_provider === 'xiaomi') {
+    return String(llmForm.xiaomi_default_model || '').trim();
   }
   return String(llmForm.ollama_default_model || '').trim() || '';
 });
@@ -2904,8 +2936,12 @@ function applyLLMSettings(settings: AdminLLMSettings | null) {
   llmForm.deepseek_base_url = settings.deepseek_base_url || '';
   llmForm.deepseek_api_key = settings.deepseek_api_key || '';
   llmForm.deepseek_default_model = settings.deepseek_default_model || '';
+  llmForm.xiaomi_base_url = settings.xiaomi_base_url || '';
+  llmForm.xiaomi_api_key = settings.xiaomi_api_key || '';
+  llmForm.xiaomi_default_model = settings.xiaomi_default_model || '';
   llmText.ollama_models_text = Array.isArray(settings.ollama_models) ? settings.ollama_models.join(', ') : '';
   llmText.deepseek_models_text = Array.isArray(settings.deepseek_models) ? settings.deepseek_models.join(', ') : '';
+  llmText.xiaomi_models_text = Array.isArray(settings.xiaomi_models) ? settings.xiaomi_models.join(', ') : '';
 }
 
 function applyWorkflowSettings(settings: AdminAIWorkflowSettings | null) {
@@ -3300,7 +3336,11 @@ async function saveLLMConfig() {
       deepseek_base_url: llmForm.deepseek_base_url,
       deepseek_api_key: llmForm.deepseek_api_key,
       deepseek_default_model: llmForm.deepseek_default_model,
-      deepseek_models: llmText.deepseek_models_text
+      deepseek_models: llmText.deepseek_models_text,
+      xiaomi_base_url: llmForm.xiaomi_base_url,
+      xiaomi_api_key: llmForm.xiaomi_api_key,
+      xiaomi_default_model: llmForm.xiaomi_default_model,
+      xiaomi_models: llmText.xiaomi_models_text
     });
     applyLLMSettings(settings);
     ElMessage.success(t('msg.llmSaved'));

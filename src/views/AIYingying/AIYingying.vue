@@ -97,14 +97,8 @@ export default {
     const noteModalVisible = ref(false);
     const mobileNavOpen = ref(false);
 
-    const apiKey = computed(() => {
-      if (isShared.value) return import.meta.env.VITE_API_KEY;
-      return (
-        import.meta.env.VITE_API_KEY_11 ||
-        import.meta.env.VITE_API_KEY_DEFAULT ||
-        import.meta.env.VITE_API_KEY
-      );
-    });
+    // Provider credentials stay on the same-origin backend.
+    const apiKey = computed(() => '');
 
     const persistSessions = () => {
       localStorage.setItem(sessionsStorageKey, JSON.stringify(sessions.value));
@@ -405,7 +399,7 @@ export default {
     align-items: center;
     gap: 10px;
     padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
-    background: linear-gradient(180deg, rgba(248, 251, 255, 0.96), rgba(248, 251, 255, 0.88));
+    background: var(--ai-panel);
     border-bottom: 1px solid var(--ai-border);
   }
 

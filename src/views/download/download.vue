@@ -11,7 +11,7 @@
           <el-button type="primary" @click="downloadAllFiles" class="download-all-button">Download All</el-button>
         </div>
       </div>
-      <el-progress :percentage="percentage" :stroke-width="15" stroke-width="6px" :text-inside="true" :status="status" />
+      <el-progress :percentage="percentage" :stroke-width="15" :text-inside="true" :status="status" />
       <el-table :data="downloadData" class="animated-table" style="width: 100%; margin-top: 20px;">
         <el-table-column prop="category" label="Category" width="200"></el-table-column>
         <el-table-column label="Files">
@@ -45,10 +45,28 @@
 
 <script>
 import { ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import {
+  ElButton,
+  ElLink,
+  ElMessage,
+  ElOption,
+  ElProgress,
+  ElSelect,
+  ElTable,
+  ElTableColumn
+} from 'element-plus';
 import 'element-plus/dist/index.css';
 
 export default {
+  components: {
+    ElButton,
+    ElLink,
+    ElOption,
+    ElProgress,
+    ElSelect,
+    ElTable,
+    ElTableColumn
+  },
   setup() {
     const downloadData = ref([
       { category: 'Mutation-induced Disease', name: 'Coding Variation in Cancer', table: 'coding_variation_cancer' },

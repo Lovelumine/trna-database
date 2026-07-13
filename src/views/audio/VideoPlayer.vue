@@ -1,23 +1,33 @@
 <template>
   <div class="video-player-wrapper">
-    <videoPlay ref="videoPlayerRef" v-bind="videoOptions" :poster="poster">
-      <!-- 动态加载字幕 -->
+    <video
+      ref="videoPlayerRef"
+      class="native-video"
+      :src="videoOptions.src"
+      :poster="poster"
+      :title="videoOptions.title"
+      :muted="videoOptions.muted"
+      :autoplay="videoOptions.autoPlay"
+      :loop="videoOptions.loop"
+      :controls="videoOptions.control"
+      preload="metadata"
+      playsinline
+    >
       <track
-        v-if="subtitles"
-        :src="subtitles"
+        v-if="nativeTrackSrc"
+        :src="nativeTrackSrc"
         kind="subtitles"
         srclang="zh"
         label="Chinese"
         default
       />
-    </videoPlay>
+      Your browser does not support HTML5 video.
+    </video>
   </div>
 </template>
 
 <script setup lang="ts">
-import { PropType, provide, ref } from 'vue';
-import 'vue3-video-play/dist/style.css'; // 引入样式
-import { videoPlay } from 'vue3-video-play'; // 引入组件
+import { computed, PropType, provide, ref, watch, nextTick } from 'vue';
 
 interface VideoOptions {
   width: string;
@@ -53,7 +63,21 @@ const props = defineProps({
   }
 });
 
-const videoPlayerRef = ref(null);
+const videoPlayerRef = ref<HTMLVideoElement | null>(null);
+const nativeTrackSrc = computed(() =>
+  String(props.subtitles || '').replace(/\.srt(?=($|[?#]))/i, '.vtt')
+);
+
+watch(
+  () => [props.videoOptions.src, props.videoOptions.volume] as const,
+  async () => {
+    await nextTick();
+    if (videoPlayerRef.value) {
+      videoPlayerRef.value.volume = Math.min(1, Math.max(0, props.videoOptions.volume));
+    }
+  },
+  { immediate: true }
+);
 
 // 将播放器引用提供给其他组件
 provide('videoPlayer', videoPlayerRef);
@@ -61,8 +85,28 @@ provide('videoPlayer', videoPlayerRef);
 
 <style scoped>
 .video-player-wrapper {
-  background-color: rgba(240, 240, 240, 0.8); /* 淡淡的背景颜色 */
-  padding: 20px;
-  border-radius: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--app-border-light);
+  border-radius: 8px;
+  background-color: var(--app-surface-2);
+}
+
+.native-video {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #07090d;
+}
+
+@media (max-width: 640px) {
+  .video-player-wrapper {
+    padding: 6px;
+  }
 }
 </style>

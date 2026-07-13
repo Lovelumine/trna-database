@@ -10,7 +10,9 @@ from .models import AppSetting
 
 
 DEFAULT_DEEPSEEK_MODELS = ["deepseek-v4-pro"]
+DEFAULT_XIAOMI_MODELS = ["mimo-v2.5-pro"]
 DEFAULT_OLLAMA_MODELS = []
+SUPPORTED_LLM_PROVIDERS = ("ollama", "deepseek", "xiaomi")
 DEFAULT_AI_MAX_RETRIEVAL_ROUNDS = 2
 DEFAULT_AI_MAX_TOOL_STEPS_PER_ROUND = 4
 DEFAULT_AI_MAX_TOTAL_TOOL_STEPS = 12
@@ -31,6 +33,10 @@ DEFAULT_SETTING_FACTORIES = {
     "llm_deepseek_api_key": lambda: str(current_app.config.get("DEEPSEEK_API_KEY") or ""),
     "llm_deepseek_default_model": lambda: str(current_app.config.get("DEEPSEEK_MODEL") or "deepseek-v4-pro"),
     "llm_deepseek_models_json": lambda: json.dumps(DEFAULT_DEEPSEEK_MODELS, ensure_ascii=False),
+    "llm_xiaomi_base_url": lambda: str(current_app.config.get("XIAOMI_BASE_URL") or "https://api.xiaomimimo.com/v1"),
+    "llm_xiaomi_api_key": lambda: str(current_app.config.get("XIAOMI_API_KEY") or ""),
+    "llm_xiaomi_default_model": lambda: str(current_app.config.get("XIAOMI_MODEL") or "mimo-v2.5-pro"),
+    "llm_xiaomi_models_json": lambda: json.dumps(DEFAULT_XIAOMI_MODELS, ensure_ascii=False),
     "ai_workflow_enable": lambda: "1",
     "ai_conversation_router_enable": lambda: "1",
     "ai_conversation_router_model": lambda: "",
@@ -164,19 +170,24 @@ def get_llm_settings(include_secrets: bool = False) -> dict:
         get_setting("llm_deepseek_models_json", ""),
         DEFAULT_DEEPSEEK_MODELS,
     )
+    xiaomi_models = _json_list(
+        get_setting("llm_xiaomi_models_json", ""),
+        DEFAULT_XIAOMI_MODELS,
+    )
 
-    if active_provider not in ("ollama", "deepseek"):
+    if active_provider not in SUPPORTED_LLM_PROVIDERS:
         active_provider = "deepseek"
 
     if not active_model:
-        active_model = (
-            str(get_setting("llm_deepseek_default_model", "deepseek-v4-pro"))
-            if active_provider == "deepseek"
-            else str(get_setting("llm_ollama_default_model", ""))
-        )
+        provider_default_models = {
+            "deepseek": str(get_setting("llm_deepseek_default_model", "deepseek-v4-pro")),
+            "xiaomi": str(get_setting("llm_xiaomi_default_model", "mimo-v2.5-pro")),
+            "ollama": str(get_setting("llm_ollama_default_model", "")),
+        }
+        active_model = provider_default_models.get(active_provider, "")
 
     model_options = []
-    for name in ollama_models + deepseek_models:
+    for name in ollama_models + deepseek_models + xiaomi_models:
         if name not in model_options:
             model_options.append(name)
     if active_model and active_model not in model_options:
@@ -194,14 +205,28 @@ def get_llm_settings(include_secrets: bool = False) -> dict:
         "deepseek_base_url": str(get_setting("llm_deepseek_base_url", "https://api.deepseek.com") or "").strip(),
         "deepseek_default_model": str(get_setting("llm_deepseek_default_model", "deepseek-v4-pro") or "").strip(),
         "deepseek_models": deepseek_models,
+        "xiaomi_base_url": str(get_setting("llm_xiaomi_base_url", "https://api.xiaomimimo.com/v1") or "").strip(),
+        "xiaomi_default_model": str(get_setting("llm_xiaomi_default_model", "mimo-v2.5-pro") or "").strip(),
+        "xiaomi_models": xiaomi_models,
         "model_options": model_options,
     }
     if include_secrets:
         data["deepseek_api_key"] = str(get_setting("llm_deepseek_api_key", "") or "").strip()
+        data["xiaomi_api_key"] = str(get_setting("llm_xiaomi_api_key", "") or "").strip()
     else:
         value = str(get_setting("llm_deepseek_api_key", "") or "").strip()
         data["deepseek_api_key_masked"] = value[:6] + "..." + value[-4:] if len(value) > 12 else ("***" if value else "")
+        value = str(get_setting("llm_xiaomi_api_key", "") or "").strip()
+        data["xiaomi_api_key_masked"] = value[:6] + "..." + value[-4:] if len(value) > 12 else ("***" if value else "")
     return data
+
+
+def redact_llm_settings_for_audit(settings: dict | None) -> dict:
+    redacted = dict(settings or {})
+    for field in ("deepseek_api_key", "xiaomi_api_key"):
+        if field in redacted:
+            redacted[field] = "[REDACTED]" if redacted.get(field) else ""
+    return redacted
 
 
 def save_llm_settings(payload: dict):
@@ -231,20 +256,27 @@ def save_llm_settings(payload: dict):
         "llm_deepseek_base_url": str(payload.get("deepseek_base_url") or "").strip(),
         "llm_deepseek_default_model": str(payload.get("deepseek_default_model") or "").strip(),
         "llm_deepseek_models_json": _csv_or_list_to_json(payload.get("deepseek_models"), DEFAULT_DEEPSEEK_MODELS),
+        "llm_xiaomi_base_url": str(payload.get("xiaomi_base_url") or "").strip(),
+        "llm_xiaomi_default_model": str(payload.get("xiaomi_default_model") or "").strip(),
+        "llm_xiaomi_models_json": _csv_or_list_to_json(payload.get("xiaomi_models"), DEFAULT_XIAOMI_MODELS),
     }
 
     if "deepseek_api_key" in payload:
         updates["llm_deepseek_api_key"] = str(payload.get("deepseek_api_key") or "").strip()
+    if "xiaomi_api_key" in payload:
+        updates["llm_xiaomi_api_key"] = str(payload.get("xiaomi_api_key") or "").strip()
 
     provider = updates["llm_active_provider"]
-    if provider not in ("ollama", "deepseek"):
+    if provider not in SUPPORTED_LLM_PROVIDERS:
         provider = "deepseek"
         updates["llm_active_provider"] = provider
 
     if not updates["llm_active_model"]:
-        updates["llm_active_model"] = (
-            updates["llm_deepseek_default_model"] if provider == "deepseek" else updates["llm_ollama_default_model"]
-        )
+        updates["llm_active_model"] = {
+            "deepseek": updates["llm_deepseek_default_model"],
+            "xiaomi": updates["llm_xiaomi_default_model"],
+            "ollama": updates["llm_ollama_default_model"],
+        }.get(provider, "")
 
     before = get_llm_settings(include_secrets=True)
     for key, value in updates.items():

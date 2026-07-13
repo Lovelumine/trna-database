@@ -95,7 +95,7 @@
         <ul class="tool-list">
           <li><strong><a href="/download">Data Download:</a></strong> Access downloadable datasets for further research.</li>
           <li><strong><a href="/expanded/ensure-0">Interactive Visualization:</a></strong> Explore tRNA structures and functions interactively.</li>
-          <li><strong><a href="/AIYingying">AI Assistant:</a></strong> Get expert answers to your tRNA therapeutic questions from Yingying, our AI assistant built on the GPT-4o model.</li>
+          <li><strong><a href="/AIYingying">AI Assistant:</a></strong> Get evidence-aware answers to your tRNA therapeutic questions from Yingying, ENSURE's research assistant.</li>
           <li><strong><a href="/blast">BLAST Functionality:</a></strong> Quickly find specific tRNA data using our advanced BLAST tools.</li>
         </ul>
       </section>
@@ -223,7 +223,9 @@ export default {
 
 <style scoped>
 .site--main {
-  padding: 20px;
+  padding: 8px 24px 32px;
+  width: calc(100% - 96px);
+  max-width: 1280px;
   color: var(--home-body);
   box-sizing: border-box;
   width: 100%;
@@ -239,7 +241,7 @@ export default {
 .home-container {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 48px;
   min-width: 0;
 }
 
@@ -248,7 +250,7 @@ export default {
   grid-template-columns: 1fr;
   gap: 18px;
   align-items: start;
-  padding: 12px 0 4px;
+  padding: 2px 0 0;
   min-width: 0;
 }
 
@@ -265,9 +267,10 @@ export default {
 }
 
 .hero-title {
-  font-size: clamp(2.2rem, 2rem + 1vw, 3rem);
-  line-height: 1.2;
-  margin: 12px 0 14px;
+  font-size: clamp(2.15rem, 1.95rem + 0.9vw, 2.75rem);
+  line-height: 1.16;
+  font-weight: 700;
+  margin: 8px 0 16px;
   color: var(--home-heading);
   max-width: 100%;
   overflow-wrap: break-word;
@@ -284,7 +287,7 @@ export default {
   font-size: 1.02rem;
   line-height: 1.7;
   color: var(--home-body);
-  max-width: 38rem;
+  max-width: 46rem;
   overflow-wrap: break-word;
 }
 
@@ -305,6 +308,10 @@ export default {
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
   box-sizing: border-box;
   min-width: 0;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-primary {
@@ -332,6 +339,14 @@ export default {
   margin: 0;
   font-size: 0.92rem;
   color: var(--home-subtle);
+}
+
+.section.plain-section:has(.notice-title) {
+  gap: 4px;
+  padding: 16px 18px;
+  border-left: 3px solid color-mix(in srgb, var(--app-accent) 55%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-accent) 5%, var(--app-surface));
 }
 
 .notice-title {
@@ -388,7 +403,7 @@ export default {
 .cite-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.42);
 }
 
 .cite-modal__panel {
@@ -396,8 +411,8 @@ export default {
   width: min(720px, calc(100% - 32px));
   max-height: calc(100vh - 80px);
   overflow: auto;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--app-surface);
+  color: var(--app-text);
   border: 1px solid var(--app-border);
   border-radius: 10px;
   padding: 18px;
@@ -453,7 +468,7 @@ export default {
 
 .cite-modal__body {
   border: 1px solid var(--app-border);
-  background: #f8fafc;
+  background: var(--app-surface-2);
   padding: 10px;
   border-radius: 8px;
 }
@@ -463,43 +478,13 @@ export default {
   white-space: pre-wrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.88rem;
-  color: #0f172a;
+  color: var(--app-text);
 }
 
 .cite-modal__actions {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
-}
-
-@media (prefers-color-scheme: dark) {
-  .cite-modal__panel {
-    background: #0f172a;
-    color: #e2e8f0;
-    border-color: rgba(148, 163, 184, 0.25);
-  }
-
-  .cite-modal__header h3 {
-    color: #f1f5f9;
-  }
-
-  .cite-modal__close {
-    color: #cbd5f5;
-  }
-
-  .cite-format {
-    border-color: rgba(148, 163, 184, 0.3);
-    color: #e2e8f0;
-  }
-
-  .cite-modal__body {
-    background: #111827;
-    border-color: rgba(148, 163, 184, 0.25);
-  }
-
-  .cite-text {
-    color: #e2e8f0;
-  }
 }
 
 .section {
@@ -530,7 +515,7 @@ export default {
 .figure-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 18px;
+  gap: 24px;
 }
 
 .figure-card {
@@ -541,15 +526,20 @@ export default {
 
 .figure-card figcaption {
   font-size: 0.9rem;
-  color: var(--home-subtle);
+  color: var(--home-body);
+  line-height: 1.5;
 }
 
 .image-card {
   height: 360px;
-  padding: 0;
+  padding: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--app-border-light);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-surface-2) 54%, var(--app-surface));
 }
 
 .centered-image {
@@ -558,6 +548,11 @@ export default {
   max-width: 720px;
   object-fit: contain;
   cursor: pointer;
+  transition: transform 180ms ease;
+}
+
+.centered-image:hover {
+  transform: scale(1.012);
 }
 
 .plain-section h2 {
@@ -604,15 +599,25 @@ export default {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1080px) {
+  .figure-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .image-card {
-    height: 320px;
+    height: auto;
+    aspect-ratio: 16 / 9;
   }
 }
 
 @media (max-width: 640px) {
   .site--main {
-    padding: 14px;
+    width: 100%;
+    padding: 8px 16px 28px;
+  }
+
+  .home-container {
+    gap: 40px;
   }
 
   .hero-title {
@@ -635,6 +640,8 @@ export default {
   }
 
   .btn {
+    flex: 1 1 100%;
+    width: 100%;
     max-width: 100%;
     white-space: normal;
     text-align: center;
@@ -644,12 +651,11 @@ export default {
     gap: 12px;
   }
 
-  .figure-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .image-card {
-    height: 260px;
+    height: auto;
+    min-height: 220px;
+    aspect-ratio: 4 / 3;
+    padding: 12px;
   }
 }
 </style>

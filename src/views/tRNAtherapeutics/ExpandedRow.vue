@@ -575,9 +575,12 @@ export default defineComponent({
     };
 
     onMounted(async () => {
-      const session = await fetchAdminSession();
-      adminEnabled.value = !!session;
-      csrfToken.value = session?.csrf_token || '';
+      const editRequested = new URLSearchParams(window.location.search).get('edit') === '1';
+      if (editRequested) {
+        const session = await fetchAdminSession();
+        adminEnabled.value = !!session;
+        csrfToken.value = session?.csrf_token || '';
+      }
       try {
         await fetchByEnsureId(id);
         await nextTick();
@@ -646,10 +649,12 @@ export default defineComponent({
   background: var(--app-surface);
   padding: 16px;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .section {
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .header-actions {
@@ -664,7 +669,9 @@ export default defineComponent({
 
 table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   background: var(--app-surface);
   color: var(--app-text);
 }
@@ -674,6 +681,13 @@ td {
   padding: 8px;
   vertical-align: top;
   color: var(--app-text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+td:first-child {
+  width: min(240px, 30%);
 }
 
 a {
@@ -738,6 +752,31 @@ a:hover {
   background: transparent;
   border: none;
   padding: 0;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.radial-container :deep(.trna-container),
+.radial-container :deep(svg) {
+  display: block;
+  width: 100%;
+  max-width: 775px;
+  height: auto;
+  min-width: 0;
+}
+
+:deep(.alignment-wrappers) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+[id^="pdb-container-"] {
+  width: 100% !important;
+  max-width: 600px;
 }
 
 /* ===== Citation badge ===== */
@@ -902,6 +941,51 @@ a:hover {
   font-size: 12px;
   color: #a94442; /* 红色提示 */
   font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .site--main {
+    padding: 16px;
+    overflow-x: clip;
+  }
+
+  .site--main > h1 {
+    margin: 8px 0 18px;
+    font-size: clamp(1.5rem, 7vw, 2rem);
+    overflow-wrap: anywhere;
+  }
+
+  .expanded-row {
+    padding: 12px;
+  }
+
+  .section h2 {
+    font-size: 1.25rem;
+  }
+
+  td {
+    padding: 7px;
+    font-size: 0.9rem;
+  }
+
+  td:first-child {
+    width: 34%;
+  }
+
+  .sample-switcher {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .sample-switcher .segmented-control {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .tooltip-text,
+  .cite-badge:hover::after {
+    width: min(240px, calc(100vw - 48px));
+  }
 }
 
 </style>

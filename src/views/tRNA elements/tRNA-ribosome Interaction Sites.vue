@@ -182,12 +182,27 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.ribosome-sites { margin-top: 20px; }
+.ribosome-sites { margin-top: 20px; padding: 20px; }
+
+@media (max-width: 640px) {
+  .ribosome-sites { padding: 0; }
+}
 
 /* 说明块样式 */
 .legend-alert {
   margin: 8px 0 14px;
+  border: 0;
+  border-left: 3px solid color-mix(in srgb, var(--app-accent) 68%, transparent);
+  border-radius: 0;
+  background: var(--app-surface-2);
+  color: var(--app-text-muted);
+  box-shadow: none;
 }
+
+.legend-alert :deep(.el-alert__title) { color: var(--app-text); }
+.legend-alert :deep(.el-alert__description),
+.legend-alert :deep(.el-alert__content),
+.legend-alert :deep(.el-alert__icon) { color: var(--app-text-muted); }
 
 .expanded p { margin: 4px 0; }
 

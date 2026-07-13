@@ -43,18 +43,16 @@ const languageStyle = ref<'default' | 'formal' | 'casual' | 'friendly'>('default
 
 <style scoped>
 .ai-assistant {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f0f4f8;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  background-color: transparent;
+  color: var(--app-text);
   font-size: 0.9em;
   font-family: 'Arial', sans-serif;
 }
 
 h3 {
   font-size: 1.3em;
-  color: #409eff;
+  color: var(--app-accent);
   margin-bottom: 15px;
   text-align: center;
   font-family: 'Arial', sans-serif;
@@ -70,7 +68,7 @@ h3 {
 
 .navbar button {
   padding: 10px 20px;
-  background-color: #409eff;
+  background-color: var(--app-accent);
   color: white;
   border: none;
   border-radius: 20px;
@@ -78,16 +76,15 @@ h3 {
   transition: background-color 0.3s, transform 0.3s;
   font-size: 1em;
   font-weight: bold;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .navbar button.active {
-  background-color: #307fcf;
+  background-color: var(--app-accent-strong);
   transform: scale(1.05);
 }
 
 .navbar button:hover {
-  background-color: #307fcf;
+  background-color: var(--app-accent-strong);
   transform: scale(1.1);
 }
 
@@ -95,13 +92,25 @@ h3 {
 .language-select {
   padding: 8px 12px;
   border-radius: 20px;
-  border: 1px solid #ccc;
-  background-color: #fff;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-surface-2);
+  color: var(--app-text);
   cursor: pointer;
   transition: border-color 0.3s;
 }
 
 .language-select:hover {
-  border-color: #409eff;
+  border-color: var(--app-accent);
+}
+
+@media (max-width: 640px) {
+  .navbar {
+    flex-wrap: wrap;
+  }
+
+  .navbar button,
+  .language-select {
+    min-height: 40px;
+  }
 }
 </style>

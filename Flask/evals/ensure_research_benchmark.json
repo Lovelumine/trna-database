@@ -1,0 +1,592 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "ensure-research-grounded-v1",
+  "title": "ENSURE grounded scientific answer benchmark",
+  "snapshot_date": "2026-07-13",
+  "description": "A fixed, retrieval-independent benchmark for comparing grounded scientific synthesis by the configured Xiaomi MiMo and DeepSeek models. Every case supplies the same frozen ENSURE evidence to both models.",
+  "prompt": {
+    "system": "You are taking a grounded scientific-answer benchmark for ENSURE, the Encyclopedia of Suppressor tRNA. Use only the supplied evidence. Do not add facts that are absent from it. Cite every factual sentence with one or more source labels exactly in the form [S1], [S2], etc. Never cite a label that is not supplied. Answer in the language of the question, concisely but completely.",
+    "evidence_header": "Frozen ENSURE evidence",
+    "temperature": 0.0,
+    "thinking": "disabled"
+  },
+  "models": [
+    {
+      "provider": "xiaomi",
+      "model": "mimo-v2.5-pro",
+      "base_url_setting": "llm_xiaomi_base_url",
+      "api_key_setting": "llm_xiaomi_api_key",
+      "pricing_cny_per_million_tokens": {
+        "input_cache_hit": 0.025,
+        "input_cache_miss": 3.0,
+        "output": 6.0
+      },
+      "pricing_source": "https://mimo.mi.com/docs/zh-CN/price/pay-as-you-go"
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-v4-pro",
+      "base_url_setting": "llm_deepseek_base_url",
+      "api_key_setting": "llm_deepseek_api_key",
+      "pricing_cny_per_million_tokens": {
+        "input_cache_hit": 0.025,
+        "input_cache_miss": 3.0,
+        "output": 6.0
+      },
+      "pricing_source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing"
+    }
+  ],
+  "cases": [
+    {
+      "id": "ensure-publication-metadata",
+      "category": "ENSURE identity",
+      "question": "请给出 ENSURE 关键论文的完整题名、期刊、年份、DOI 和 PMID。",
+      "sources": [
+        {
+          "id": "S1",
+          "title": "ENSURE Overview — publication metadata",
+          "provenance": "public/docs/0-ENSURE-Overview.md",
+          "text": "ENSURE is the Encyclopedia of Suppressor tRNA with an AI assistant. Key publication: ENSURE: the Encyclopedia of Suppressor tRNA with an AI assistant. Nucleic Acids Research (2025), DOI 10.1093/nar/gkaf1062, PMID 41160884."
+        }
+      ],
+      "required_source_ids": ["S1"],
+      "expected_facts": [
+        {
+          "id": "title",
+          "description": "Full ENSURE publication title",
+          "match": {
+            "all_of": ["ENSURE", "Encyclopedia of Suppressor tRNA"],
+            "any_of": ["AI assistant", "人工智能助手"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "journal",
+          "description": "Journal is Nucleic Acids Research",
+          "match": {
+            "all_of": ["Nucleic Acids Research"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "year",
+          "description": "Publication year is 2025",
+          "match": {
+            "all_of": ["2025"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "doi",
+          "description": "Correct DOI",
+          "match": {
+            "all_of": ["10.1093/nar/gkaf1062"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "pmid",
+          "description": "Correct PMID",
+          "match": {
+            "all_of": ["41160884"]
+          },
+          "source_ids": ["S1"]
+        }
+      ]
+    },
+    {
+      "id": "ensure-paper-reported-counts",
+      "category": "ENSURE scope",
+      "question": "按 ENSURE 论文摘要中的 reported summary，分别报告疾病/癌症相关变异、实验验证的 natural sup-tRNA、engineered sup-tRNA strategies 和 tRNA element records 的数量。不要把这些数字说成实时数据库计数。",
+      "sources": [
+        {
+          "id": "S1",
+          "title": "ENSURE Overview — paper abstract summary",
+          "provenance": "public/docs/0-ENSURE-Overview.md",
+          "text": "Reported summary (paper abstract): 2152 disease- and cancer-associated nonsense/missense/frameshift variants; 86 experimentally validated natural sup-tRNAs; 1108 tRNA engineering strategies (engineered sup-tRNA entries); 487 curated tRNA element records. For the most up-to-date counts, query the live database tables."
+        }
+      ],
+      "required_source_ids": ["S1"],
+      "expected_facts": [
+        {
+          "id": "variants-2152",
+          "description": "2152 disease/cancer-associated variants",
+          "match": {
+            "all_of": ["2152"],
+            "any_of": ["variant", "变异"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "natural-86",
+          "description": "86 experimentally validated natural sup-tRNAs",
+          "match": {
+            "groups": [["86"], ["natural", "天然"]]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "engineered-1108",
+          "description": "1108 engineered strategies/entries",
+          "match": {
+            "all_of": ["1108"],
+            "any_of": ["engineered", "engineering", "工程化"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "elements-487",
+          "description": "487 curated tRNA element records",
+          "match": {
+            "groups": [["487"], ["tRNA element", "tRNA 元件"]]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "snapshot-caveat",
+          "description": "Counts are a paper snapshot rather than guaranteed live counts",
+          "match": {
+            "any_of": ["论文摘要", "paper abstract", "reported summary", "非实时", "not live", "live database", "实时数据库"]
+          },
+          "source_ids": ["S1"]
+        }
+      ]
+    },
+    {
+      "id": "pmid-9447966-trp-suppressors",
+      "category": "Engineered sup-tRNA curation",
+      "question": "根据已核验的 PMID 9447966/3221861 证据，列出五个 C. elegans tRNA-Trp amber suppressor 基因，说明它们的序列关系、anticodon 改变，以及 ENSURE 采用的序列长度与 3' CCA 约定。",
+      "sources": [
+        {
+          "id": "S1",
+          "title": "PMID 9447966 curation note",
+          "provenance": "docs/curation/tRNAtherapeutics/notes/9447966.md",
+          "text": "PMID 9447966 establishes that sup-5, sup-7, sup-24, sup-28, and sup-29 are C. elegans tRNA^Trp amber suppressor genes with identical coding sequences. PMID 3221861 Fig. 2b states that the suppressors carry the single anticodon change CCA -> CTA."
+        },
+        {
+          "id": "S2",
+          "title": "PMID 9447966 update review",
+          "provenance": "docs/curation/tRNAtherapeutics/reports/9447966_kondo_trp_update_review.md",
+          "text": "The stored origin and suppressor sequences are 73 nt. The Fig. 2 caption states that the 3' CCA is not encoded, so ENSURE stores the 73-nt mature coding body without an appended terminal CCA. The origin is Trp(CCA); the suppressor is Trp/Sup(CUA), produced only by the documented anticodon first-base change."
+        }
+      ],
+      "required_source_ids": ["S1", "S2"],
+      "expected_facts": [
+        {
+          "id": "sup-5",
+          "description": "Names sup-5",
+          "match": {"all_of": ["sup-5"]},
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "sup-7",
+          "description": "Names sup-7",
+          "match": {"all_of": ["sup-7"]},
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "sup-24",
+          "description": "Names sup-24",
+          "match": {"all_of": ["sup-24"]},
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "sup-28",
+          "description": "Names sup-28",
+          "match": {"all_of": ["sup-28"]},
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "sup-29",
+          "description": "Names sup-29",
+          "match": {"all_of": ["sup-29"]},
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "identical-coding-sequences",
+          "description": "The five genes have identical coding sequences",
+          "match": {
+            "groups": [["coding sequence", "编码序列"], ["identical", "相同", "一致"]]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "anticodon-change",
+          "description": "CCA changes to CTA/CUA",
+          "match": {
+            "all_of": ["CCA"],
+            "any_of": ["CTA", "CUA"]
+          },
+          "source_ids": ["S1", "S2"]
+        },
+        {
+          "id": "length-73",
+          "description": "Stored sequences are 73 nt",
+          "match": {
+            "all_of": ["73"],
+            "any_of": ["nt", "核苷酸"]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "no-terminal-cca",
+          "description": "No appended terminal 3' CCA",
+          "match": {
+            "all_of": ["CCA"],
+            "any_of": ["not encoded", "without", "不编码", "不追加", "未追加", "不附加", "不包含", "不含"]
+          },
+          "source_ids": ["S2"]
+        }
+      ]
+    },
+    {
+      "id": "pmid-31346230-mitochondrial-import",
+      "category": "Engineered sup-tRNA curation",
+      "question": "概括 PMID 31346230 对 T. brucei mitochondrial tRNA import 的关键结论，并说明 ENSURE 核验到的 orthogonal pair 来源、构建体 3' CCA 处理和最终存储序列长度。",
+      "sources": [
+        {
+          "id": "S1",
+          "title": "PMID 31346230 publication metadata",
+          "provenance": "docs/curation/tRNAtherapeutics/notes/31346230.md",
+          "text": "Title: Inducible orthogonal aminoacylation demonstrates that charging is required for mitochondrial tRNA import in Trypanosoma brucei. PMID 31346230, DOI 10.1038/s41598-019-47268-4."
+        },
+        {
+          "id": "S2",
+          "title": "PMID 31346230 linked construct evidence",
+          "provenance": "docs/curation/tRNAtherapeutics/notes/31346230.md",
+          "text": "The study introduced a previously described evolved bacterial YRS/suppressor tRNA^Tyr_CUA pair from E. coli into T. brucei. The construct used pAcBac2.tR4-OMeYRS/GFP* from Addgene and a commercially synthesized E. coli tRNA^Tyr_CUA gene. PMID 31346230 explicitly states that the genetically encoded 3' acceptor CCA was omitted. ENSURE's supported stored sequence after applying that convention is 82 nt."
+        }
+      ],
+      "required_source_ids": ["S1", "S2"],
+      "expected_facts": [
+        {
+          "id": "charging-required",
+          "description": "Charging is required for mitochondrial tRNA import",
+          "match": {
+            "groups": [
+              ["charging", "氨酰化"],
+              ["mitochondrial", "线粒体"],
+              ["import", "导入"],
+              ["required", "需要", "必要", "必需"]
+            ]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "organism",
+          "description": "Organism is Trypanosoma brucei",
+          "match": {
+            "any_of": ["Trypanosoma brucei", "T. brucei"]
+          },
+          "source_ids": ["S1", "S2"]
+        },
+        {
+          "id": "ecoli-pair",
+          "description": "E. coli YRS/tRNA Tyr CUA pair",
+          "match": {
+            "all_of": ["E. coli", "CUA"],
+            "any_of": ["YRS", "Tyr", "酪氨酸"]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "cca-omitted",
+          "description": "Genetically encoded 3' CCA was omitted",
+          "match": {
+            "all_of": ["CCA"],
+            "any_of": ["omitted", "省略", "去除", "不编码", "未包含"]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "length-82",
+          "description": "Stored sequence is 82 nt",
+          "match": {
+            "all_of": ["82"],
+            "any_of": ["nt", "核苷酸"]
+          },
+          "source_ids": ["S2"]
+        }
+      ]
+    },
+    {
+      "id": "pmid-17698637-curation-caution",
+      "category": "Evidence limits",
+      "question": "为什么 2026-06-08 的 ENSURE 整理没有自动更新 PMID 17698637 的 THG73 和 ENAS 序列？请分别说明两条记录的已知身份和仍缺的证据。",
+      "sources": [
+        {
+          "id": "S1",
+          "title": "PMID 17698637 record metadata",
+          "provenance": "docs/curation/tRNAtherapeutics/notes/17698637.md",
+          "text": "PMID 17698637 has two ENSURE database rows. The main paper confirms that THG73 is a Tetrahymena thermophila Gln amber suppressor with a G73 mutation, and that ENAS is an E. coli Asn amber suppressor sourced from Cload et al. 1996 / Kleina et al. 1990."
+        },
+        {
+          "id": "S2",
+          "title": "PMID 17698637 sequence evidence review",
+          "provenance": "docs/curation/tRNAtherapeutics/notes/17698637.md",
+          "text": "No database update was made in the 2026-06-08 pass. THG73 requires manual confirmation of the storage convention: the 74-mer FokI runoff transcript versus the full 76-mer mature/ligated molecule. ENAS still requires the original Cload/Kleina full-text sequence source; automatic attempts did not obtain a valid original PDF."
+        }
+      ],
+      "required_source_ids": ["S1", "S2"],
+      "expected_facts": [
+        {
+          "id": "two-rows",
+          "description": "The paper has two ENSURE rows",
+          "match": {
+            "all_of": ["2"],
+            "any_of": ["row", "记录", "条目"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "thg73-identity",
+          "description": "THG73 is a Tetrahymena Gln amber suppressor with G73",
+          "match": {
+            "groups": [
+              ["THG73"],
+              ["Gln", "谷氨酰胺"],
+              ["amber", "琥珀"],
+              ["G73"],
+              ["Tetrahymena thermophila", "Tetrahymena", "嗜热四膜虫"]
+            ]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "enas-identity",
+          "description": "ENAS is an E. coli Asn amber suppressor",
+          "match": {
+            "groups": [
+              ["ENAS"],
+              ["E. coli", "大肠杆菌"],
+              ["Asn", "天冬酰胺"],
+              ["amber", "琥珀"]
+            ]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "thg73-convention-gap",
+          "description": "THG73 has an unresolved 74-mer versus 76-mer storage convention",
+          "match": {
+            "all_of": ["THG73", "74", "76"],
+            "any_of": ["storage", "存储", "约定", "convention"]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "enas-source-gap",
+          "description": "ENAS still needs the original Cload/Kleina full-text sequence source",
+          "match": {
+            "groups": [["ENAS"], ["full-text", "全文"], ["Cload", "Kleina"]]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "no-update",
+          "description": "No automatic database update was made",
+          "match": {
+            "any_of": ["No database update", "没有更新", "没有自动更新", "未更新", "未自动更新", "不应自动更新"]
+          },
+          "source_ids": ["S2"]
+        }
+      ]
+    },
+    {
+      "id": "engineered-stable-record-pair-1206-1211",
+      "category": "Engineered sup-tRNA records",
+      "question": "比较 Engineered_sup_tRNA 中 ENSURE_ID 1206 与 1211：分别给出 reporter、PTC codon、sup-tRNA、tRNA 物种来源和 PMID，并指出两者实验体系的关键区别。",
+      "sources": [
+        {
+          "id": "S1",
+          "title": "Engineered_sup_tRNA stable row 1206",
+          "provenance": "live Engineered_sup_tRNA snapshot verified 2026-07-13",
+          "text": "ENSURE_ID 1206: PTC_gene mCherry-STOP-GFP; PTC_codon UAG; aa_and_anticodon_of_sup-tRNA Leu(CUA); Species_source_of_origin_tRNA Homo sapiens; PMID 41261131. Reaction_system: HEK293T mCherry-STOP-GFP lentiviral mature-tRNA screen; reporter-screen evidence only, not a disease model. Measuring_of_efficiency: GFP+ fold enrichment."
+        },
+        {
+          "id": "S2",
+          "title": "Engineered_sup_tRNA stable row 1211",
+          "provenance": "live Engineered_sup_tRNA snapshot verified 2026-07-13",
+          "text": "ENSURE_ID 1211: PTC_gene eGFP; PTC_codon UGA; aa_and_anticodon_of_sup-tRNA Leu(UCA); Species_source_of_origin_tRNA Mus musculus; PMID 41261131. Reaction_system: C57BL/6 neonatal brain eGFP TGA reporter with AAV9 intracerebroventricular injection. Measuring_of_efficiency: relative GFP yield."
+        }
+      ],
+      "required_source_ids": ["S1", "S2"],
+      "expected_facts": [
+        {
+          "id": "1206-id-reporter",
+          "description": "1206 uses mCherry-STOP-GFP",
+          "match": {
+            "all_of": ["1206", "mCherry-STOP-GFP"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "1206-codon",
+          "description": "1206 targets UAG",
+          "match": {
+            "all_of": ["1206", "UAG"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "1206-suptrna",
+          "description": "1206 uses Leu(CUA)",
+          "match": {
+            "groups": [["1206"], ["Leu", "亮氨酸"], ["CUA"]]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "1206-species",
+          "description": "1206 tRNA source is Homo sapiens",
+          "match": {
+            "all_of": ["1206", "Homo sapiens"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "1206-system",
+          "description": "1206 is an HEK293T lentiviral reporter screen, not a disease model",
+          "match": {
+            "all_of": ["1206", "HEK293T"],
+            "any_of": ["lentiviral", "慢病毒"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "1211-id-reporter",
+          "description": "1211 uses eGFP",
+          "match": {
+            "all_of": ["1211", "eGFP"]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "1211-codon",
+          "description": "1211 targets UGA",
+          "match": {
+            "all_of": ["1211", "UGA"]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "1211-suptrna",
+          "description": "1211 uses Leu(UCA)",
+          "match": {
+            "groups": [["1211"], ["Leu", "亮氨酸"], ["UCA"]]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "1211-species",
+          "description": "1211 tRNA source is Mus musculus",
+          "match": {
+            "all_of": ["1211", "Mus musculus"]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "1211-system",
+          "description": "1211 is an in vivo neonatal-brain AAV9 reporter experiment",
+          "match": {
+            "all_of": ["1211", "AAV9"],
+            "any_of": ["neonatal brain", "新生鼠脑", "新生脑", "新生小鼠"]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "shared-pmid",
+          "description": "Both records cite PMID 41261131",
+          "match": {
+            "all_of": ["41261131"]
+          },
+          "source_ids": ["S1", "S2"]
+        }
+      ]
+    },
+    {
+      "id": "natural-vs-engineered-modules",
+      "category": "ENSURE modules",
+      "question": "对比 ENSURE 的 Natural sup-tRNA 与 Engineered sup-tRNA 模块：Natural 模块如何按 suppression type 划分，Engineered 模块提供哪些规模和实验/结构信息？",
+      "sources": [
+        {
+          "id": "S1",
+          "title": "Natural Sup-tRNA module documentation",
+          "provenance": "public/docs/3-Natural Sup-tRNA.md",
+          "text": "The Natural Sup-tRNA page is divided by suppression type into Nonsense Sup-tRNA, which decodes nonsense codons, and Frameshift Sup-tRNA, which decodes quadruple codons. The page catalogs naturally occurring suppressors across species."
+        },
+        {
+          "id": "S2",
+          "title": "Engineered Sup-tRNA module documentation",
+          "provenance": "public/docs/4-Engineered Sup-tRNA.md",
+          "text": "The Engineered Sup-tRNA module contains sequence and structure information, experimental reaction systems, and readthrough efficiency for 1108 suppressor tRNAs targeting termination codons, including 49 models of six related diseases in six species. It visualizes original and modified sequences plus secondary and tertiary structures."
+        }
+      ],
+      "required_source_ids": ["S1", "S2"],
+      "expected_facts": [
+        {
+          "id": "natural-two-modules",
+          "description": "Natural module has nonsense and frameshift divisions",
+          "match": {
+            "all_of": ["Nonsense", "Frameshift"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "nonsense-codons",
+          "description": "Nonsense suppressors decode nonsense/stop codons",
+          "match": {
+            "all_of": ["Nonsense"],
+            "any_of": ["nonsense codon", "stop codon", "终止密码子", "无义密码子"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "quadruple-codons",
+          "description": "Frameshift suppressors decode quadruple codons",
+          "match": {
+            "all_of": ["Frameshift"],
+            "any_of": ["quadruple codon", "四联密码子", "四碱基密码子"]
+          },
+          "source_ids": ["S1"]
+        },
+        {
+          "id": "engineered-1108",
+          "description": "Engineered module has 1108 sup-tRNAs",
+          "match": {
+            "all_of": ["1108"]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "models-and-scope",
+          "description": "49 models across six diseases and six species",
+          "match": {
+            "groups": [["49"], ["6", "六"], ["disease", "疾病"], ["species", "物种"]]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "experimental-info",
+          "description": "Includes reaction systems and readthrough efficiency",
+          "match": {
+            "groups": [["readthrough", "通读"], ["reaction system", "反应体系", "反应系统"]]
+          },
+          "source_ids": ["S2"]
+        },
+        {
+          "id": "structure-info",
+          "description": "Includes original/modified sequence and secondary/tertiary structure",
+          "match": {
+            "groups": [
+              ["sequence", "序列"],
+              ["secondary", "二级"],
+              ["tertiary", "三级"]
+            ]
+          },
+          "source_ids": ["S2"]
+        }
+      ]
+    }
+  ]
+}

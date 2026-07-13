@@ -24,7 +24,7 @@ export     const allColumns: STableColumnsType<DataType> = [
       { title: 'MUTATION AA', dataIndex: 'MUTATION_AA', width: 150, ellipsis: true, key: 'MUTATION_AA', resizable: true },
       { title: 'Genomic Ref Allele', dataIndex: 'GENOMIC_REF_ALLELE', width: 150, ellipsis: true, key: 'GENOMIC_REF_ALLELE', resizable: true },
       { title: 'Genomic Mut Allele', dataIndex: 'GENOMIC_MUT_ALLELE', width: 150, ellipsis: true, key: 'GENOMIC_MUT_ALLELE', resizable: true },
-      { title: 'Disease', dataIndex: 'DISEASE', width: 1200, ellipsis: true, key: 'DISEASE', resizable: true }
+      { title: 'Disease', dataIndex: 'DISEASE', width: 600, ellipsis: true, key: 'DISEASE', resizable: true }
     ];
 
 export     const selectedColumns = ref<string[]>([

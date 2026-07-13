@@ -99,21 +99,22 @@ const language = props.language;
 
 <style scoped>
 .video-list {
-  width: 300px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  background-color: #fff;
+  width: 100%;
+  border: 1px solid var(--app-border-light);
+  border-radius: 8px;
+  background-color: var(--app-surface);
   overflow: hidden;
+  color: var(--app-text);
 }
 
 .toggle-button {
   padding: 10px;
   margin-bottom: 0;
-  background-color: #409eff;
+  background-color: var(--app-accent);
   color: white;
   border: none;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
   cursor: pointer;
   width: 100%;
   text-align: center;
@@ -121,15 +122,15 @@ const language = props.language;
   transition: background-color 0.3s;
 }
 
-.toggle-button:hover { background-color: #307fcf; }
+.toggle-button:hover { background-color: var(--app-accent-strong); }
 
-.video-list-content { padding: 15px; border-top: 1px solid #ddd; }
+.video-list-content { padding: 15px; border-top: 1px solid var(--app-border-light); }
 
 .video-list h3 {
   margin-bottom: 15px;
-  color: #333;
+  color: var(--app-text);
   font-size: 1.2em;
-  border-bottom: 2px solid #409eff;
+  border-bottom: 2px solid var(--app-accent);
   padding-bottom: 5px;
 }
 
@@ -138,7 +139,7 @@ const language = props.language;
 .video-list li {
   cursor: pointer;
   padding: 10px;
-  background-color: #f9f9f9;
+  background-color: var(--app-surface-2);
   margin-bottom: 8px;
   border-radius: 8px;
   transition: background-color 0.3s, transform 0.3s;
@@ -146,13 +147,21 @@ const language = props.language;
   align-items: center;
 }
 
-.video-list li:hover { background-color: #e0f0ff; transform: translateX(5px); }
-.video-list li.selected { background-color: #d0e9ff; font-weight: bold; }
+.video-list li:hover {
+  background-color: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface-2));
+  transform: translateX(3px);
+}
+
+.video-list li.selected {
+  background-color: color-mix(in srgb, var(--app-accent) 16%, var(--app-surface-2));
+  color: var(--app-text);
+  font-weight: bold;
+}
 
 .video-list li::before {
   content: "▶";
   margin-right: 10px;
-  color: #409eff;
+  color: var(--app-accent);
   font-size: 1.2em;
 }
 </style>

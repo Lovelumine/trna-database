@@ -1,9 +1,9 @@
 #bot-container {
   position: fixed;
-  width: 80px;
-  height: 80px;
-  bottom: 10px;
-  right: 10px;
+  width: 64px;
+  height: 64px;
+  bottom: 16px;
+  right: 16px;
   z-index: 1000;
   user-select: none; /* 禁止用户选择文本，避免拖动时选中文本 */
 }
@@ -13,17 +13,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
+  overflow: hidden;
+  clip-path: circle(50% at 50% 50%);
+  border: 2px solid var(--app-surface);
+  background: var(--app-surface);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
 }
 
 #bot-icon img {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-  object-fit: contain; /* 保持图像比例，避免变形 */
+  border-radius: 0;
+  box-shadow: none;
+  object-fit: cover;
+  object-position: 50% 38%;
+  transform: scale(1.03);
 }
 
 #chat-box {
@@ -241,7 +248,7 @@ html.dark .header-menu-item[data-active="true"] {
   margin-left: 10px;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 860px) {
   #bot-container {
     width: 44px;
     height: 44px;
@@ -252,6 +259,18 @@ html.dark .header-menu-item[data-active="true"] {
   #bot-icon {
     width: 44px;
     height: 44px;
+  }
+
+  /* Keep the final controls above the fixed assistant trigger. */
+  html:has(#bot-container) .site--main {
+    padding-bottom: max(60px, calc(48px + env(safe-area-inset-bottom)));
+    scroll-padding-bottom: max(60px, calc(48px + env(safe-area-inset-bottom)));
+  }
+}
+
+@media (max-width: 600px) {
+  #bot-container {
+    display: none !important;
   }
 
   #chat-box {

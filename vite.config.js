@@ -232,5 +232,8 @@ export default defineConfig({
       'chunk-G3PMV62Z.js'
     ]
   },
-  base: './', // 设置基础路径为相对路径
+  // The public site uses history-mode routes (for example
+  // /expanded/ensure-0 and /admin/login). Root-relative assets keep direct
+  // visits to nested routes from incorrectly requesting /expanded/assets/*.
+  base: '/',
 })

@@ -1,4 +1,4 @@
-import { createApp, defineAsyncComponent } from 'vue';
+import { createApp, defineAsyncComponent, defineComponent } from 'vue';
 import App from './App.vue';
 import { initTheme } from './utils/theme';
 import { createRouter, createWebHistory, RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
@@ -37,6 +37,10 @@ const AIYingying = () => import('./views/AIYingying/AIYingying.vue');
 const BlastSearch = () => import('./views/blast/BlastSearch.vue'); // 新添加的 BLAST 搜索组件
 const audio = () => import('./views/audio/audio.vue');
 const EnsureSTable = defineAsyncComponent(() => import('./components/EnsureSTable.vue'));
+const ExternalRedirect = defineComponent({
+  name: 'ExternalRedirect',
+  setup: () => () => null,
+});
 import VueMatomo from 'vue-matomo';
 
 import { APP_PATHS, MAIN_PREFETCH_ROUTE_PATHS } from './config/navigation';
@@ -94,15 +98,15 @@ const routes: RouteRecordRaw[] = [
   { path: APP_PATHS.expanded, name: 'ExpandedRow', component: ExpandedRow },
   { path: APP_PATHS.about, name: 'about', component: About },
   { path: '/display/:tRNAName', name: 'Display', component: Display },
-  { path: APP_PATHS.help, beforeEnter: redirectStandaloneHelpRoute },
+  { path: APP_PATHS.help, component: ExternalRedirect, beforeEnter: redirectStandaloneHelpRoute },
   { path: APP_PATHS.download, name: 'download', component: Download },
   { path: APP_PATHS.ai, name: 'AIYingying', component: AIYingying },
   { path: APP_PATHS.audio, name: 'audio', component: audio },
   { path: APP_PATHS.blast, name: 'blast', component: BlastSearch },
-  { path: APP_PATHS.admin, beforeEnter: redirectLegacyAdminRoute },
-  { path: APP_PATHS.adminLogin, beforeEnter: redirectLegacyAdminRoute },
-  { path: APP_PATHS.adminWorkspace, beforeEnter: redirectLegacyAdminRoute },
-  { path: APP_PATHS.adminEngineered, beforeEnter: redirectLegacyAdminRoute },
+  { path: APP_PATHS.admin, component: ExternalRedirect, beforeEnter: redirectLegacyAdminRoute },
+  { path: APP_PATHS.adminLogin, component: ExternalRedirect, beforeEnter: redirectLegacyAdminRoute },
+  { path: APP_PATHS.adminWorkspace, component: ExternalRedirect, beforeEnter: redirectLegacyAdminRoute },
+  { path: APP_PATHS.adminEngineered, component: ExternalRedirect, beforeEnter: redirectLegacyAdminRoute },
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: PageNotFound } // 404路由
 ];
 
@@ -112,9 +116,9 @@ const router = createRouter({
   routes,
   scrollBehavior(to) {
     if (to.hash) {
-      return { el: to.hash, behavior: 'smooth' };
+      return { el: to.hash, left: 0, behavior: 'smooth' };
     }
-    return { top: 0 };
+    return { left: 0, top: 0 };
   }
 });
 

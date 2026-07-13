@@ -42,6 +42,230 @@ def app_ctx():
         yield app
 
 
+def test_xiaomi_llm_settings_roundtrip(app_ctx: Flask, monkeypatch: pytest.MonkeyPatch):
+    store = {
+        "llm_active_provider": "xiaomi",
+        "llm_active_model": "",
+        "llm_timeout": "120",
+        "llm_max_messages": "20",
+        "llm_system_prompt": "You are Yingying.",
+        "llm_ollama_base_url": "http://127.0.0.1:11434",
+        "llm_ollama_default_model": "",
+        "llm_ollama_models_json": "[]",
+        "llm_deepseek_base_url": "https://api.deepseek.com",
+        "llm_deepseek_api_key": "test-deepseek-key",
+        "llm_deepseek_default_model": "deepseek-v4-pro",
+        "llm_deepseek_models_json": '["deepseek-v4-pro"]',
+        "llm_xiaomi_base_url": "https://api.xiaomimimo.com/v1",
+        "llm_xiaomi_api_key": "test-xiaomi-key",
+        "llm_xiaomi_default_model": "mimo-v2.5-pro",
+        "llm_xiaomi_models_json": '["mimo-v2.5-pro"]',
+    }
+
+    monkeypatch.setattr(settings_store, "ensure_default_app_settings", lambda: None)
+    monkeypatch.setattr(settings_store, "get_setting", lambda key, default="": store.get(key, default))
+    monkeypatch.setattr(settings_store, "set_setting", lambda key, value: store.__setitem__(key, "" if value is None else str(value)))
+    monkeypatch.setattr(settings_store, "db", SimpleNamespace(session=SimpleNamespace(commit=lambda: None)))
+
+    initial = settings_store.get_llm_settings(include_secrets=True)
+    assert initial["active_provider"] == "xiaomi"
+    assert initial["active_model"] == "mimo-v2.5-pro"
+    assert initial["xiaomi_models"] == ["mimo-v2.5-pro"]
+    assert initial["xiaomi_api_key"] == "test-xiaomi-key"
+
+    _, updated = settings_store.save_llm_settings(
+        {
+            "active_provider": "xiaomi",
+            "active_model": "mimo-v2.5-pro",
+            "timeout": 90,
+            "max_messages": 16,
+            "system_prompt": "You are Yingying.",
+            "ollama_base_url": "http://127.0.0.1:11434",
+            "ollama_default_model": "",
+            "ollama_models": [],
+            "deepseek_base_url": "https://api.deepseek.com",
+            "deepseek_default_model": "deepseek-v4-pro",
+            "deepseek_models": ["deepseek-v4-pro"],
+            "xiaomi_base_url": "https://api.xiaomimimo.com/v1",
+            "xiaomi_api_key": "replacement-test-key",
+            "xiaomi_default_model": "mimo-v2.5-pro",
+            "xiaomi_models": ["mimo-v2.5-pro"],
+        }
+    )
+
+    assert updated["active_provider"] == "xiaomi"
+    assert updated["active_model"] == "mimo-v2.5-pro"
+    assert updated["xiaomi_api_key"] == "replacement-test-key"
+    assert store["llm_xiaomi_base_url"] == "https://api.xiaomimimo.com/v1"
+
+
+def test_llm_audit_redaction_removes_provider_keys():
+    original = {
+        "active_provider": "xiaomi",
+        "deepseek_api_key": "test-deepseek-secret",
+        "xiaomi_api_key": "test-xiaomi-secret",
+    }
+
+    redacted = settings_store.redact_llm_settings_for_audit(original)
+    serialized = json.dumps(redacted)
+
+    assert original["xiaomi_api_key"] == "test-xiaomi-secret"
+    assert redacted["deepseek_api_key"] == "[REDACTED]"
+    assert redacted["xiaomi_api_key"] == "[REDACTED]"
+    assert "test-deepseek-secret" not in serialized
+    assert "test-xiaomi-secret" not in serialized
+
+
+def test_embedding_rebuild_requires_admin_session():
+    app = build_test_app(register_routes=True)
+
+    with app.test_client() as client:
+        response = client.post("/embedding/rebuild")
+
+    assert response.status_code == 401
+    assert response.get_json() == {"error": "Unauthorized"}
+
+
+def test_chat_title_keeps_ensure_database_context(monkeypatch: pytest.MonkeyPatch):
+    app = build_test_app(register_routes=True)
+    captured = {}
+    runtime = {"provider": "xiaomi", "model": "mimo-v2.5-pro"}
+
+    monkeypatch.setattr(routes, "_get_llm_runtime", lambda requested_model="": runtime)
+    monkeypatch.setattr(routes, "_select_chat_model", lambda requested_model, default_model: default_model)
+
+    def fake_stream(actual_runtime, messages, model=""):
+        captured["messages"] = messages
+        captured["model"] = model
+        return iter([("ENSURE Database Purpose", True)])
+
+    monkeypatch.setattr(routes, "_llm_stream", fake_stream)
+
+    with app.test_client() as client:
+        response = client.post(
+            "/chat/api/title",
+            json={"messages": [{"role": "user", "content": "What is ENSURE used for?"}]},
+        )
+
+    assert response.status_code == 200
+    assert response.get_json() == {"title": "ENSURE Database Purpose"}
+    system_prompt = captured["messages"][0]["content"]
+    assert "Encyclopedia of Suppressor tRNA" in system_prompt
+    assert "Do not answer" in system_prompt
+    assert captured["model"] == "mimo-v2.5-pro"
+
+
+def test_xiaomi_runtime_is_selected_by_model(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        routes,
+        "get_llm_settings",
+        lambda include_secrets=True: {
+            "active_provider": "deepseek",
+            "active_model": "deepseek-v4-pro",
+            "timeout": 120,
+            "max_messages": 20,
+            "system_prompt": "You are Yingying.",
+            "ollama_base_url": "http://127.0.0.1:11434",
+            "ollama_models": [],
+            "deepseek_base_url": "https://api.deepseek.com",
+            "deepseek_api_key": "test-deepseek-key",
+            "deepseek_default_model": "deepseek-v4-pro",
+            "deepseek_models": ["deepseek-v4-pro"],
+            "xiaomi_base_url": "https://api.xiaomimimo.com/v1",
+            "xiaomi_api_key": "test-xiaomi-key",
+            "xiaomi_default_model": "mimo-v2.5-pro",
+            "xiaomi_models": ["mimo-v2.5-pro"],
+            "model_options": ["deepseek-v4-pro", "mimo-v2.5-pro"],
+        },
+    )
+
+    runtime = routes._get_llm_runtime("mimo-v2.5-pro")
+
+    assert runtime["provider"] == "xiaomi"
+    assert runtime["model"] == "mimo-v2.5-pro"
+    assert runtime["xiaomi_base_url"] == "https://api.xiaomimimo.com/v1"
+
+
+def test_xiaomi_once_uses_openai_compatible_request(monkeypatch: pytest.MonkeyPatch):
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"choices": [{"message": {"content": "MiMo response"}}]}
+
+    def fake_post(url, **kwargs):
+        captured["url"] = url
+        captured.update(kwargs)
+        return FakeResponse()
+
+    monkeypatch.setattr(routes.requests, "post", fake_post)
+
+    answer = routes._xiaomi_once(
+        "https://api.xiaomimimo.com/v1/",
+        "test-xiaomi-key",
+        "mimo-v2.5-pro",
+        [{"role": "user", "content": "Hello"}],
+        30,
+        {"thinking_enabled": False, "reasoning_effort": "max"},
+    )
+
+    assert answer == "MiMo response"
+    assert captured["url"] == "https://api.xiaomimimo.com/v1/chat/completions"
+    assert captured["headers"]["Authorization"] == "Bearer test-xiaomi-key"
+    assert captured["json"]["model"] == "mimo-v2.5-pro"
+    assert captured["json"]["stream"] is False
+    assert captured["json"]["thinking"] == {"type": "disabled"}
+    assert "reasoning_effort" not in captured["json"]
+
+
+def test_xiaomi_stream_parses_openai_compatible_sse(monkeypatch: pytest.MonkeyPatch):
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def iter_lines(self, decode_unicode=False):
+            assert decode_unicode is True
+            return iter(
+                [
+                    'data: {"choices":[{"delta":{"content":"Mi"},"finish_reason":null}]}',
+                    'data: {"choices":[{"delta":{"content":"Mo"},"finish_reason":"stop"}]}',
+                    "data: [DONE]",
+                ]
+            )
+
+    response = FakeResponse()
+
+    def fake_post(url, **kwargs):
+        captured["url"] = url
+        captured.update(kwargs)
+        return response
+
+    monkeypatch.setattr(routes.requests, "post", fake_post)
+
+    chunks = list(
+        routes._xiaomi_stream(
+            "https://api.xiaomimimo.com/v1",
+            "test-xiaomi-key",
+            "mimo-v2.5-pro",
+            [{"role": "user", "content": "Hello"}],
+            30,
+            {"thinking_enabled": True, "reasoning_effort": "max"},
+        )
+    )
+
+    assert chunks[:2] == [("Mi", False), ("Mo", True)]
+    assert captured["stream"] is True
+    assert captured["json"]["stream"] is True
+    assert captured["json"]["thinking"] == {"type": "enabled"}
+    assert "reasoning_effort" not in captured["json"]
+    assert response.encoding == "utf-8"
+
+
 def test_ai_workflow_settings_roundtrip(app_ctx: Flask, monkeypatch: pytest.MonkeyPatch):
     store = {
         "ai_workflow_enable": "1",
@@ -326,6 +550,7 @@ def test_orchestrate_retrieval_falls_back_after_invalid_judge_table_plan(app_ctx
 
 def test_chat_message_streams_final_answer_only(monkeypatch: pytest.MonkeyPatch):
     app = build_test_app(register_routes=True)
+    generated_contexts = []
     judge_results = iter(
         [
             {
@@ -403,23 +628,16 @@ def test_chat_message_streams_final_answer_only(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(routes, "_augment_plan_with_heuristics", lambda plan, question, max_steps: list(plan))
     monkeypatch.setattr(routes, "_judge_retrieval", lambda *args, **kwargs: next(judge_results))
     monkeypatch.setattr(routes, "_evidence_gate", lambda *args, **kwargs: ("", ""))
-    monkeypatch.setattr(routes, "_generate_answer", lambda *args, **kwargs: "Draft answer from reviewed evidence.")
+    def fake_generate_answer(runtime, system_prompt, session_messages, evidence_context, question, style_prompt=""):
+        generated_contexts.append(evidence_context)
+        return "Final answer from reviewed evidence [S2]."
+
+    monkeypatch.setattr(routes, "_generate_answer", fake_generate_answer)
     monkeypatch.setattr(routes, "_critique_answer", lambda *args, **kwargs: {"verdict": "ok", "tool_calls": [], "revised_answer": ""})
     monkeypatch.setattr(
         routes,
         "_llm_stream",
-        lambda runtime, messages, model="": iter(
-            [
-                ("Final ", False),
-                ("answer ", False),
-                ("from reviewed evidence.", True),
-            ]
-        ),
-    )
-    monkeypatch.setattr(
-        routes,
-        "_stream_text_chunks",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("retrieval branch should not use fake chunking")),
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("reviewed final answer must not be regenerated")),
     )
 
     def fake_execute_tool(name: str, params: dict):
@@ -454,7 +672,8 @@ def test_chat_message_streams_final_answer_only(monkeypatch: pytest.MonkeyPatch)
     content_events = [event for event in events if event.get("type") == "content"]
     judge_events = [event for event in events if event.get("type") == "judge"]
     draft_events = [event for event in events if event.get("type") == "draft_preview"]
-    assert "".join(event.get("content", "") for event in content_events) == "Final answer from reviewed evidence."
+    evidence_events = [event for event in events if event.get("type") == "evidence"]
+    assert "".join(event.get("content", "") for event in content_events) == "Final answer from reviewed evidence [S2]."
 
     deliver_index = next(i for i, event in enumerate(events) if event.get("status") == "Delivering final answer")
     first_content_index = next(i for i, event in enumerate(events) if event.get("type") == "content")
@@ -465,8 +684,290 @@ def test_chat_message_streams_final_answer_only(monkeypatch: pytest.MonkeyPatch)
     assert any(event.get("type") == "tool" for event in events)
     assert judge_events
     assert draft_events
-    assert draft_events[0].get("content") == "Draft answer from reviewed evidence."
+    assert draft_events[0].get("content") == "Final answer from reviewed evidence [S2]."
     assert judge_events[0].get("verdict") == "continue"
+    assert len(generated_contexts) == 1
+    assert "Structured source ledger" in generated_contexts[0]
+    assert "[S1]" in generated_contexts[0]
+    assert evidence_events and evidence_events[-1].get("sources")
+    assert all(source.get("source_id", "").startswith("S") for source in evidence_events[-1]["sources"])
+    assert any(source.get("source_type") == "table_row" for source in evidence_events[-1]["sources"])
+
+
+def test_finalizer_does_not_regenerate_after_critic_for_pubmed_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    app = build_test_app(register_routes=True)
+    calls = []
+
+    def fake_generate_answer(*args, **kwargs):
+        calls.append((args, kwargs))
+        return "The reviewed answer cites the collected literature."
+
+    monkeypatch.setattr(routes, "_generate_answer", fake_generate_answer)
+    monkeypatch.setattr(
+        routes,
+        "_critique_answer",
+        lambda *args, **kwargs: {
+            "verdict": "ok",
+            "tool_calls": [],
+            "revised_answer": "",
+        },
+    )
+
+    workflow = {
+        "final_critic_enable": True,
+        "max_total_tool_steps": 12,
+        "max_tool_steps_per_round": 4,
+        "allow_pubmed_deepen": True,
+        "allow_table_deepen": True,
+        "allow_doc_deepen": True,
+    }
+    with app.app_context():
+        finalizer = routes._finalize_answer(
+            {"provider": "xiaomi", "model": "mimo-v2.5-pro"},
+            "system",
+            [],
+            "question",
+            "style",
+            "context",
+            "",
+            {},
+            {"pubmed_abstracts": 1},
+            [],
+            workflow,
+        )
+        events = []
+        while True:
+            try:
+                events.append(next(finalizer))
+            except StopIteration as stop:
+                result = stop.value
+                break
+
+    assert len(calls) == 1
+    assert result["answer"] == "The reviewed answer cites the collected literature."
+    assert not any(event.get("status") == "Integrating literature evidence" for event in events)
+
+
+def test_ensure_id_extraction_and_plan_prioritize_every_exact_record(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    question = "比较 ENSURE_ID 1206 与 1211，并列出 ENSURE-0042 的证据。"
+
+    assert routes._extract_ensure_ids(question) == [
+        "ENSURE-1206",
+        "ENSURE-1211",
+        "ENSURE-42",
+    ]
+
+    plan = routes._augment_plan_with_heuristics(
+        [{"tool": "docs_search", "params": {"keyword": "unrelated"}}],
+        question,
+        4,
+    )
+    assert [item["tool"] for item in plan[:3]] == [
+        "ensure_lookup",
+        "ensure_lookup",
+        "ensure_lookup",
+    ]
+    assert [item["params"]["ensure_id"] for item in plan[:3]] == [
+        "ENSURE-1206",
+        "ENSURE-1211",
+        "ENSURE-42",
+    ]
+    assert {"1206", "ENSURE1206", "ENSURE-1206", "ENSURE_1206"} <= set(
+        routes._expand_ensure_ids(["ENSURE_ID 1206"])
+    )
+
+    monkeypatch.setattr(
+        routes,
+        "_get_tool_router_config",
+        lambda: (True, 4, "", 15, 5000),
+    )
+    monkeypatch.setattr(
+        routes,
+        "_llm_once",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("exact ENSURE IDs must bypass the model planner")
+        ),
+    )
+    assert routes._plan_tools(question, "", 4)[:3] == plan[:3]
+
+    routed = routes._route_conversation_request(
+        {"model": "mimo-v2.5-pro"},
+        "mimo-v2.5-pro",
+        [],
+        question,
+        {"conversation_router_enable": True},
+        "retrieval",
+        True,
+    )
+    assert routed["route"] == "knowledge_retrieval"
+    assert routed["reason"] == "exact_ensure_id_retrieval"
+    assert not routes._looks_like_repo_question("Compare the reporter fields")
+    assert routes._looks_like_repo_question("Inspect the repo implementation")
+
+
+def test_critic_disables_provider_thinking(monkeypatch: pytest.MonkeyPatch):
+    captured = {}
+
+    def fake_llm_once(runtime, messages, model="", timeout=None):
+        captured.update(runtime)
+        return '{"verdict":"ok","tool_calls":[],"revised_answer":""}'
+
+    monkeypatch.setattr(routes, "_llm_once", fake_llm_once)
+
+    result = routes._critique_answer(
+        {"provider": "xiaomi", "thinking_enabled": True},
+        "question",
+        "answer",
+        "evidence",
+    )
+
+    assert result["verdict"] == "ok"
+    assert captured["thinking_enabled"] is False
+
+
+def test_structured_sources_prioritize_exact_records_and_split_multi_pmids():
+    tool_cache = {
+        "docs_search:first": {
+            "hits": [{"filename": "0-ENSURE-Overview.md", "snippet": "Database overview"}],
+        },
+        "table_rows:second": {
+            "table": "Engineered_sup_tRNA",
+            "rows": [{
+                "ENSURE_ID": "ENSURE 0042",
+                "PMID": "12345678; 23456789 / invalid",
+                "DOI": "https://doi.org/10.1000/example",
+                "PTC gene": "CFTR",
+            }],
+        },
+    }
+
+    sources = routes._build_structured_sources(
+        "1. A generic RAG summary without a resolvable record.",
+        tool_cache,
+        [],
+    )
+
+    assert [source["source_type"] for source in sources[:2]] == ["table_row", "table_row"]
+    assert [source["PMID"] for source in sources[:2]] == ["12345678", "23456789"]
+    assert all(source["url"] == "/expanded/ENSURE%200042" for source in sources[:2])
+    assert all(";" not in source["PMID"] for source in sources)
+    assert [source["source_id"] for source in sources] == [f"S{index}" for index in range(1, len(sources) + 1)]
+    document = next(source for source in sources if source["source_type"] == "document")
+    assert document["url"] == "/help.html?file=0-ENSURE-Overview.md"
+
+
+def test_engineered_source_excerpt_prioritizes_answer_fields():
+    row = {
+        "Index": 1,
+        "Related_disease": "Reporter assay",
+        "PTC_gene": "mCherry-STOP-GFP",
+        "PTC_codon": "UAG",
+        "aa_and_anticodon_of_sup-tRNA": "Leu(CUA)",
+        "Species_source_of_origin_tRNA": "Homo sapiens",
+        "Reaction_system": "HEK293T screen",
+        "Reading_through_efficiency": "56%",
+        "ENSURE_ID": "1206",
+        "PMID": "41261131",
+    }
+
+    source = routes._table_row_sources("Engineered_sup_tRNA", row)[0]
+
+    for expected in (
+        "ENSURE_ID: 1206",
+        "PMID: 41261131",
+        "PTC_gene: mCherry-STOP-GFP",
+        "PTC_codon: UAG",
+        "aa_and_anticodon_of_sup-tRNA: Leu(CUA)",
+        "Species_source_of_origin_tRNA: Homo sapiens",
+    ):
+        assert expected in source["excerpt"]
+
+
+def test_table_sources_have_internal_query_links_and_safe_external_urls():
+    table_sources = routes._table_row_sources(
+        "coding_variation_cancer",
+        {"ID": 42, "PMID": "12345678,23456789", "Gene Name": "CFTR"},
+    )
+
+    assert [source["PMID"] for source in table_sources] == ["12345678", "23456789"]
+    assert all(source["url"].startswith("/CodingVariationDisease?") for source in table_sources)
+    assert all("table=coding_variation_cancer" in source["url"] for source in table_sources)
+    assert all("search_column=ID" in source["url"] for source in table_sources)
+    assert all("search_text=42" in source["url"] for source in table_sources)
+
+    doi_source = routes._new_structured_source(
+        "pubmed_article",
+        doi="https://doi.org/10.1000/a value",
+    )
+    assert doi_source["url"] == "https://doi.org/10.1000/a%20value"
+
+
+def test_structured_source_model_context_has_strict_budget():
+    sources = [
+        {
+            "source_id": f"S{index}",
+            "source_type": "table_row",
+            "table": "Engineered_sup_tRNA",
+            "record_pk": str(index),
+            "ENSURE_ID": "",
+            "PMID": str(10000000 + index),
+            "DOI": "",
+            "url": f"https://pubmed.ncbi.nlm.nih.gov/{10000000 + index}/",
+            "excerpt": "x" * 900,
+        }
+        for index in range(1, 31)
+    ]
+
+    ledger = routes._structured_sources_context(sources)
+
+    assert len(sources) == 30
+    assert len(ledger) <= routes._STRUCTURED_SOURCE_CONTEXT_MAX_CHARS
+    ledger_source_count = ledger.count("\n[S")
+    assert 12 <= ledger_source_count <= routes._STRUCTURED_SOURCE_CONTEXT_MAX_SOURCES
+    assert f"[S{ledger_source_count}]" in ledger
+    assert f"[S{ledger_source_count + 1}]" not in ledger
+
+
+def test_structured_source_builder_caps_default_sse_payload():
+    tool_cache = {
+        "docs_search:many": {
+            "hits": [
+                {"filename": f"source-{index}.md", "snippet": f"Evidence {index}"}
+                for index in range(40)
+            ]
+        }
+    }
+
+    sources = routes._build_structured_sources("", tool_cache, [])
+
+    assert len(sources) == routes._STRUCTURED_SOURCE_CONTEXT_MAX_SOURCES
+    assert sources[-1]["source_id"] == f"S{routes._STRUCTURED_SOURCE_CONTEXT_MAX_SOURCES}"
+
+
+def test_source_citation_validation_removes_unknown_ids_and_enforces_one_real_source():
+    sources = [{"source_id": "S1"}, {"source_id": "S2"}]
+
+    cleaned, cited, removed = routes._validate_answer_source_citations(
+        "Supported [S2], invented [S99].",
+        sources,
+        require_citation=True,
+    )
+    assert cleaned == "Supported [S2], invented."
+    assert cited == ["S2"]
+    assert removed == ["S99"]
+
+    enforced, cited, removed = routes._validate_answer_source_citations(
+        "A factual answer without an inline source.",
+        sources,
+        require_citation=True,
+    )
+    assert enforced.endswith("[S1]")
+    assert cited == ["S1"]
+    assert removed == []
 
 
 def test_chat_message_deep_review_false_skips_judge_and_final_critic(monkeypatch: pytest.MonkeyPatch):
@@ -540,17 +1041,14 @@ def test_chat_message_deep_review_false_skips_judge_and_final_critic(monkeypatch
     monkeypatch.setattr(
         routes,
         "_llm_stream",
-        lambda runtime, messages, model="": iter(
-            [
-                ("Fast ", False),
-                ("answer.", True),
-            ]
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("the finalized answer must be replayed, not generated as a second stream")
         ),
     )
     monkeypatch.setattr(
         routes,
         "_generate_answer",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("fast deep-review-off path should stream directly")),
+        lambda *args, **kwargs: "Fast answer [S1].",
     )
 
     def fake_execute_tool(name: str, params: dict):
@@ -581,10 +1079,10 @@ def test_chat_message_deep_review_false_skips_judge_and_final_critic(monkeypatch
     judge_events = [event for event in events if event.get("type") == "judge"]
 
     assert "Fast response mode" in statuses
-    assert "Preparing final answer stream" in statuses
+    assert "Generating final answer" in statuses
     assert "Reviewing answer" not in statuses
     assert not judge_events
-    assert content == "Fast answer."
+    assert content == "Fast answer [S1]."
 
 
 def test_route_conversation_request_uses_ai_router_for_history_transform(monkeypatch: pytest.MonkeyPatch):
@@ -1090,7 +1588,7 @@ def test_expand_followup_with_new_evidence_uses_retrieval_route(monkeypatch: pyt
     assert calls["judge"] >= 0
     assert statuses[:3] == ["Analyzing question", "Routing request", "Searching ENSURE data"]
     assert any(event.get("type") == "tool" for event in events)
-    assert content == "我补充了一条新的例子，并给出对应的 PMID 作为支持。"
+    assert content == "我补充了一条新的例子，并给出对应的 PMID 作为支持。 [S1]"
     assert evidence
 
 

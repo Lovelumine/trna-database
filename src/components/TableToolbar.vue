@@ -12,10 +12,12 @@
     </div>
 
     <div v-if="showSizeControl" class="table-toolbar__size">
+      <span class="table-toolbar__control-label">Row height</span>
       <el-segmented v-model="sizeValue" :options="sizeOptions" :disabled="disabled" />
     </div>
 
     <div v-if="showColumnsControl" class="table-toolbar__columns">
+      <span class="table-toolbar__control-label">Visible columns</span>
       <el-select
         v-model="selectedColumnsValue"
         multiple
@@ -173,10 +175,10 @@ const sizeOptions = computed(() => {
 <style scoped>
 .table-toolbar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .table-toolbar__search {
@@ -188,11 +190,56 @@ const sizeOptions = computed(() => {
 .table-toolbar__columns,
 .table-toolbar__actions {
   display: flex;
-  align-items: center;
+  align-items: stretch;
+}
+
+.table-toolbar__size,
+.table-toolbar__columns {
+  flex-direction: column;
+  gap: 5px;
+}
+
+.table-toolbar__control-label {
+  padding-left: 2px;
+  color: var(--app-text-faint);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .table-toolbar__column-select {
   min-width: 200px;
+}
+
+.table-toolbar__size :deep(.el-segmented) {
+  --el-segmented-bg-color: var(--app-surface-2);
+  --el-segmented-item-color: var(--app-text-muted);
+  --el-segmented-item-hover-color: var(--app-text);
+  --el-segmented-item-hover-bg-color: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface-2));
+  --el-segmented-item-selected-color: #ffffff;
+  --el-segmented-item-selected-bg-color: var(--app-accent);
+  min-height: 40px;
+  padding: 3px;
+  border: 1px solid var(--app-border-light);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.table-toolbar__size :deep(.el-segmented__item) {
+  border-radius: 7px;
+}
+
+.table-toolbar__columns :deep(.el-select__wrapper) {
+  min-height: 40px;
+  border-radius: 10px;
+  background: var(--app-surface-2);
+  box-shadow: 0 0 0 1px var(--app-border-light) inset;
+}
+
+.table-toolbar__columns :deep(.el-select__wrapper:hover) {
+  box-shadow: 0 0 0 1px var(--app-border) inset;
 }
 
 @media (max-width: 840px) {

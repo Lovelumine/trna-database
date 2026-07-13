@@ -48,7 +48,8 @@
                 <ElTag
                   v-for="items in (Array.isArray(record['Stop codon for readthrough']) ? record['Stop codon for readthrough'] : record['Stop codon for readthrough'].split(';').map(str => str.trim()))"
                   :key="items"
-                  :type="getTagType(items)"
+                  class="categorical-tag"
+                  :style="getTagStyle(items)"
                 >{{ items }}</ElTag>
               </ElSpace>
             </template>
@@ -58,7 +59,8 @@
                 <ElTag
                   v-for="items in (Array.isArray(record['Noncanonical charged amino acids']) ? record['Noncanonical charged amino acids'] : record['Noncanonical charged amino acids'].split(';').map(str => str.trim()))"
                   :key="items"
-                  :type="getTagType(items)"
+                  class="categorical-tag"
+                  :style="getTagStyle(items)"
                 >{{ items }}</ElTag>
               </ElSpace>
             </template>
@@ -68,7 +70,8 @@
                 <ElTag
                   v-for="items in (Array.isArray(record['Readthrough mechanism']) ? record['Readthrough mechanism'] : record['Readthrough mechanism'].split(';').map(str => str.trim()))"
                   :key="items"
-                  :type="getTagType(items)"
+                  class="categorical-tag"
+                  :style="getTagStyle(items)"
                 >{{ items }}</ElTag>
               </ElSpace>
             </template>
@@ -100,7 +103,8 @@
                   <ElTag
                     v-for="items in (Array.isArray(record['Stop codon for readthrough']) ? record['Stop codon for readthrough'] : record['Stop codon for readthrough'].split(';').map(str => str.trim()))"
                     :key="items"
-                    :type="getTagType(items)"
+                    class="categorical-tag"
+                    :style="getTagStyle(items)"
                   >{{ items }}</ElTag>
                 </ElSpace>
               </p>
@@ -110,7 +114,8 @@
                   <ElTag
                     v-for="items in (Array.isArray(record['Noncanonical charged amino acids']) ? record['Noncanonical charged amino acids'] : record['Noncanonical charged amino acids'].split(';').map(str => str.trim()))"
                     :key="items"
-                    :type="getTagType(items)"
+                    class="categorical-tag"
+                    :style="getTagStyle(items)"
                   >{{ items }}</ElTag>
                 </ElSpace>
               </p>
@@ -134,7 +139,8 @@
                   <ElTag
                     v-for="items in (Array.isArray(record['Readthrough mechanism']) ? record['Readthrough mechanism'] : record['Readthrough mechanism'].split(';').map(str => str.trim()))"
                     :key="items"
-                    :type="getTagType(items)"
+                    class="categorical-tag"
+                    :style="getTagStyle(items)"
                   >{{ items }}</ElTag>
                 </ElSpace>
               </p>
@@ -199,7 +205,7 @@ import { STableProvider } from '@shene/table';
 import { useTableData } from '../../utils/useTableData';
 import VueEasyLightbox from 'vue-easy-lightbox';
 import { highlightMutation } from '../../utils/highlightMutation.js';
-import { getTagType } from '../../utils/tag.js';
+import { getTagStyle } from '../../utils/tag.js';
 import type { EChartsOption } from 'echarts';
 import { allColumns as baseColumns, selectedColumns } from './naturalSupTRNAColumns';
 import TableToolbar from '@/components/TableToolbar.vue';
@@ -618,7 +624,7 @@ export default defineComponent({
       searchColumn,
       locale,
       selectedColumns,
-      getTagType,
+      getTagStyle,
 
       // 预览（Lightbox）
       visible,

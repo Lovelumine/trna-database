@@ -1,24 +1,42 @@
-import axios from 'axios';
+export async function fetchOpenAIResponse(prompt: string) {
+  const openResponse = await fetch('/chat/api/open', {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'same-origin',
+  });
+  if (!openResponse.ok) throw new Error(`Unable to open AI session (${openResponse.status})`);
 
-export async function fetchOpenAIResponse(apiKey: string, prompt: string) {
+  const openPayload = await openResponse.json();
+  const chatId = String(openPayload?.data || '');
+  if (!chatId) throw new Error('AI session ID is missing');
+
+  const response = await fetch(`/chat/api/chat_message/${encodeURIComponent(chatId)}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: prompt,
+      stream: false,
+      request_deep_review: false,
+    }),
+  });
+  if (!response.ok) throw new Error(`AI analysis failed (${response.status})`);
+
+  const eventStream = await response.text();
+  let content = '';
+  for (const line of eventStream.split(/\r?\n/)) {
+    if (!line.startsWith('data:')) continue;
+    const raw = line.slice(5).trim();
+    if (!raw || raw === '[DONE]') continue;
     try {
-      const response = await axios.post(`https://api.lqqq.ltd/v1/chat/completions`, {
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 500,
-        temperature: 0.7,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
-  
-      // 获取返回的内容
-      return response.data.choices[0].message.content;
-    } catch (error) {
-      console.error('OpenAI API 请求失败:', error);
-      return null;
+      const event = JSON.parse(raw);
+      if (event?.type === 'content' && typeof event.content === 'string') {
+        content += event.content;
+      }
+    } catch {
+      // Ignore non-JSON SSE status lines; content events are parsed above.
     }
   }
-  
+  if (!content.trim()) throw new Error('AI analysis returned no content');
+  return content.trim();
+}

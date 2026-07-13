@@ -10,8 +10,8 @@ const props = defineProps<{
   subtitles: string;            // 例如 https://minio.../xxx.srt
 }>();
 
-// 你的鉴权 key（建议走后端代理，不要把 secret 暴露到前端）
-const apiKey = 'application-6b1aebe62c3145bceee53c40817d2594';
+// The same-origin chat proxy owns provider credentials; the browser does not.
+const apiKey = '';
 const { messages, sendMessage: sendChatMessage } = useChat(apiKey);
 
 const botAvatar = 'https://minio.lumoxuan.cn/ensure/bot/bot-image.png';
@@ -171,9 +171,9 @@ watch(messages, scrollToBottom, { deep: true, immediate: true });
   display: flex;
   flex-direction: column;
   padding: 20px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   border-radius: 0px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--app-border-light);
   max-height: calc(100vh - 96px - 40px);
   overflow-y: auto;
   scroll-behavior: smooth;
@@ -212,14 +212,14 @@ watch(messages, scrollToBottom, { deep: true, immediate: true });
 }
 
 .content {
-  background-color: #e6f7ff;
+  background-color: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface-2));
   padding: 10px 15px;
   border-radius: 8px;
   max-width: 120%;
 }
 
 .message-right .content {
-  background-color: #bae7ff;
+  background-color: color-mix(in srgb, var(--app-accent) 18%, var(--app-surface-2));
 }
 
 .name {
@@ -228,14 +228,14 @@ watch(messages, scrollToBottom, { deep: true, immediate: true });
 }
 
 .text {
-  color: #333;
+  color: var(--app-text);
 }
 
 .input-area {
   display: flex;
   align-items: center;
   padding: 10px;
-  background-color: #fff;
+  background-color: var(--app-surface);
   z-index: 1;
   width: 100%;
   transition: all 0.3s ease-in-out;
@@ -244,7 +244,9 @@ watch(messages, scrollToBottom, { deep: true, immediate: true });
 .input-area textarea {
   flex: 1;
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-2);
+  color: var(--app-text);
   border-radius: 4px;
   resize: none;
   height: 40px;
@@ -291,7 +293,7 @@ watch(messages, scrollToBottom, { deep: true, immediate: true });
 }
 
 .chat-box::-webkit-scrollbar-track {
-  background-color: #f0f0f5;
+  background-color: var(--app-surface-2);
   border-radius: 5px;
 }
 

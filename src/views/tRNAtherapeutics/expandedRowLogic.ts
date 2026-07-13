@@ -132,7 +132,17 @@ export function getSymbolClass(symbol: string): string {
 
 interface StageMap { [containerId: string]: NGL.Stage; }
 const stageMap: StageMap = {};
+const stageThemeObservers = new Map<string, MutationObserver>();
 const cifCache = new Map<string, Promise<Blob | null>>();
+
+const getViewerBackground = () => {
+  const root = document.documentElement;
+  const explicitTheme = root.getAttribute('data-theme');
+  const isDark = explicitTheme === 'dark'
+    || (!explicitTheme && root.classList.contains('dark'))
+    || (!explicitTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  return isDark ? '#171a21' : '#ffffff';
+};
 
 const buildCifUrl = (fileId: string, sampleIndex: number) => {
   const lowerId = fileId.toLowerCase();
@@ -188,11 +198,20 @@ export async function loadCIFFile(
   // 如果已经有 Stage，就复用；否则新建一个
   let stage = stageMap[containerId];
   if (!stage) {
-    stage = new NGL.Stage(element, { backgroundColor: 'white' });
+    stage = new NGL.Stage(element, { backgroundColor: getViewerBackground() });
     stageMap[containerId] = stage;
     window.addEventListener('resize', () => stage.handleResize());
+    const themeObserver = new MutationObserver(() => {
+      stage.setParameters({ backgroundColor: getViewerBackground() });
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'data-theme']
+    });
+    stageThemeObservers.set(containerId, themeObserver);
   } else {
     stage.removeAllComponents();
+    stage.setParameters({ backgroundColor: getViewerBackground() });
   }
 
   try {

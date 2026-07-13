@@ -118,7 +118,7 @@ import { APP_PATHS, PRIMARY_NAV_ITEMS, SECONDARY_NAV_ITEMS, type SiteNavItem, ty
 export default {
   name: 'NavBar',
   setup() {
-    const MOBILE_NAV_BREAKPOINT = 760;
+    const MOBILE_NAV_BREAKPOINT = 1080;
     const route = useRoute();
     const themeMode = ref(getThemeMode());
     const headerRef = ref<HTMLElement | null>(null);
@@ -257,6 +257,7 @@ export default {
       const value = locked ? 'hidden' : '';
       document.documentElement.style.overflow = value;
       document.body.style.overflow = value;
+      document.documentElement.classList.toggle('mobile-nav-open', locked);
     };
 
     const handleKeydown = (event: KeyboardEvent) => {
@@ -393,8 +394,7 @@ export default {
   width: max-content;
   max-width: min(var(--nav-center-max-width), calc(100% - 32px));
   box-shadow: 0 0 0 1px var(--farallon-border-color-light),
-    0 12px 18px -6px rgba(39, 39, 42, 0.1),
-    0 5px 8px -5px rgba(39, 39, 42, 0.08);
+    0 10px 18px -10px rgba(39, 39, 42, 0.16);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   background-color: rgba(255, 255, 255, 0.76);
@@ -469,6 +469,7 @@ export default {
   font-size: clamp(1rem, 0.94rem + 0.2vw, 1.1rem);
   line-height: 1.2;
   padding: 10px 0;
+  font-family: var(--font-sans);
 }
 
 .topNav-items li a:hover {
@@ -501,8 +502,8 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   border: 1px solid var(--farallon-border-color);
   background-color: var(--farallon-background-white);
@@ -583,6 +584,9 @@ export default {
   backdrop-filter: blur(18px);
   box-shadow: 0 20px 30px -20px rgba(39, 39, 42, 0.34),
     0 10px 16px -12px rgba(39, 39, 42, 0.22);
+  max-height: calc(100dvh - 100px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .mobile-nav-sheet.is-open {
@@ -684,7 +688,7 @@ export default {
   background: linear-gradient(90deg, rgba(76, 110, 175, 0.72), rgba(108, 141, 204, 0.92));
 }
 
-@media (max-width: 1500px) and (min-width: 761px) {
+@media (max-width: 1500px) and (min-width: 1081px) {
   .site--header {
     padding: 18px 56px;
     min-height: 98px;
@@ -714,7 +718,7 @@ export default {
   }
 }
 
-@media (max-width: 1320px) and (min-width: 761px) {
+@media (max-width: 1320px) and (min-width: 1081px) {
   .site--header {
     padding: 16px 36px;
     min-height: 90px;
@@ -762,12 +766,52 @@ export default {
     box-shadow: 0 0 0 1px var(--farallon-border-color-light),
       0 10px 20px -8px rgba(0, 0, 0, 0.6);
   }
+
+  .mobile-menu-toggle {
+    border-color: rgba(122, 168, 255, 0.28);
+    background: linear-gradient(135deg, #252c3a, #1d2637);
+    color: #f4f7ff;
+    box-shadow: 0 10px 18px -14px rgba(0, 0, 0, 0.72);
+  }
+
+  .mobile-nav-backdrop {
+    background: rgba(4, 8, 16, 0.58);
+  }
+
+  .mobile-nav-sheet {
+    background: rgba(23, 26, 33, 0.97);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .mobile-nav-links a,
+  .mobile-nav-tools a,
+  .mobile-nav-theme {
+    color: #e8edf7;
+    background: rgba(34, 38, 48, 0.9);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .mobile-nav-links a:hover,
+  .mobile-nav-links a.active-link,
+  .mobile-nav-tools a:hover,
+  .mobile-nav-tools a.active-link,
+  .mobile-nav-theme:hover {
+    color: #9bbcff;
+    background: rgba(44, 50, 64, 0.98);
+  }
 }
 
 :root[data-theme="dark"] .site--header__center {
   background-color: rgba(23, 26, 33, 0.85);
   box-shadow: 0 0 0 1px var(--farallon-border-color-light),
     0 10px 20px -8px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="light"] .site--header__center {
+  color: var(--app-text);
+  background-color: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 0 0 1px var(--farallon-border-color-light),
+    0 10px 18px -10px rgba(39, 39, 42, 0.16);
 }
 
 :root[data-theme="dark"] .mobile-nav-backdrop {
@@ -777,6 +821,7 @@ export default {
 :root[data-theme="dark"] .mobile-menu-toggle {
   border-color: rgba(122, 168, 255, 0.24);
   background: linear-gradient(135deg, rgba(34, 38, 48, 0.96), rgba(28, 36, 54, 0.94));
+  color: #eef3ff;
   box-shadow: 0 12px 18px -16px rgba(0, 0, 0, 0.48);
 }
 
@@ -800,7 +845,7 @@ export default {
   background: rgba(44, 50, 64, 0.96);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1080px) {
   .site--header {
     padding: 12px 14px 8px;
     display: grid;
@@ -869,6 +914,7 @@ export default {
   .site--header__brand .avatar {
     height: 48px;
     width: 48px;
+    min-width: 48px;
     margin-right: 0;
   }
 
@@ -893,9 +939,9 @@ export default {
   }
 
   .mobile-menu-toggle {
-    min-width: 96px;
+    min-width: 88px;
     height: 40px;
-    padding: 0 14px;
+    padding: 0 13px;
   }
 
   .mobile-nav-tools {

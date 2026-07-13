@@ -32,27 +32,28 @@ export default {
 
 @media (max-width: 640px) {
   .site--main {
-    padding-top: 12px;
+    padding: 8px 16px 28px;
   }
 
   .site--main > h2 {
-    margin: 0 0 18px;
-    font-size: clamp(1.45rem, 6.8vw, 1.7rem);
-    line-height: 1.25;
+    margin: 8px 0 20px;
+    font-size: clamp(1.65rem, 7vw, 2rem);
+    line-height: 1.16;
   }
 
   .table-section {
     margin-bottom: 36px;
+    min-width: 0;
   }
 
   .table-section :deep(.site--main) {
-    padding-top: 0;
+    padding: 0;
   }
 
   .table-section :deep(.site--main > h2) {
-    margin-bottom: 16px;
-    font-size: clamp(1.45rem, 7vw, 1.75rem);
-    line-height: 1.25;
+    margin: 0 0 22px;
+    font-size: clamp(1.5rem, 6.5vw, 1.8rem);
+    line-height: 1.15;
   }
 }
 </style>

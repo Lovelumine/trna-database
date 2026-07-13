@@ -57,27 +57,27 @@
     <div class="chart-row">
       <div class="chart-col">
         <h3>① Inheritance Mode & Zygosity</h3>
-        <VChart :option="stackedBarOption" autoresize style="height:350px;" />
+        <VChart class="chart-frame" :option="stackedBarOption" autoresize style="height:350px;" />
       </div>
 
       <div class="chart-col">
         <h3>② Gene Frequency Treemap</h3>
-        <VChart :option="treemapOption" autoresize style="height:400px; border:2px solid #ccc; padding:8px; border-radius:4px;" />
+        <VChart class="chart-frame" :option="treemapOption" autoresize style="height:400px;" />
       </div>
 
       <div class="chart-col">
         <h3>③ Stop Codon Change Heatmap（Nonsense）</h3>
-        <VChart :option="heatmapOption" autoresize style="height:450px;" />
+        <VChart class="chart-frame" :option="heatmapOption" autoresize style="height:450px;" />
       </div>
 
       <div class="chart-col">
         <h3>④ Stop Codon Change Heatmap（Missense）</h3>
-        <VChart :option="heatmapOptionMissense" autoresize style="height:450px;" />
+        <VChart class="chart-frame" :option="heatmapOptionMissense" autoresize style="height:450px;" />
       </div>
 
       <div class="chart-col">
         <h3>⑤ Stop Codon Change Heatmap（Frameshift）</h3>
-        <VChart :option="heatmapOptionFrameshift" autoresize style="height:450px;" />
+        <VChart class="chart-frame" :option="heatmapOptionFrameshift" autoresize style="height:450px;" />
       </div>
     </div>
   </section>
@@ -351,15 +351,23 @@ export default defineComponent({
       const maxCount = heatData.length ? Math.max(...heatData.map((d) => d[2])) : 0;
       const textColor = chartTextColor.value;
       const mutedColor = chartMutedColor.value;
+      const isDark = chartIsDark.value;
+      const compactChart = typeof window !== 'undefined' && window.innerWidth <= 640;
+      const labelStep = Math.max(Math.ceil(xList.length / (compactChart ? 10 : 24)), 1);
+      const heatColors = isDark
+        ? ['#172033', '#1d3b60', '#246aa2', '#2fa1ae', '#75d5c5']
+        : ['#f4f7fb', '#dbeaf6', '#a8d0e7', '#5da9c5', '#176b87'];
 
       return {
+        backgroundColor: 'transparent',
         title: {
-          text: 'Stop Codon Changes Frequency Heatmap',
-          left: 'center',
-          textStyle: { color: textColor }
+          show: false
         },
         tooltip: {
           trigger: 'item',
+          backgroundColor: isDark ? '#202938' : '#ffffff',
+          borderColor: isDark ? '#43506a' : '#d8dee8',
+          textStyle: { color: isDark ? '#f8fafc' : '#172033' },
           formatter: (params: any) => {
             const [xIdx, yIdx, v] = params.value as number[];
             return [
@@ -373,7 +381,14 @@ export default defineComponent({
           type: 'category',
           data: xList,
           name: 'Mutated Codon',
-          axisLabel: { rotate: 45, interval: 0, color: textColor },
+          nameLocation: 'middle',
+          nameGap: compactChart ? 52 : 42,
+          axisLabel: {
+            rotate: compactChart ? 35 : 45,
+            interval: (index: number) => index % labelStep === 0,
+            fontSize: compactChart ? 10 : 12,
+            color: textColor
+          },
           nameTextStyle: { color: textColor },
           axisLine: { lineStyle: { color: mutedColor } },
           axisTick: { lineStyle: { color: mutedColor } }
@@ -394,9 +409,23 @@ export default defineComponent({
           orient: 'horizontal',
           left: 'center',
           bottom: '-1%',
-          textStyle: { color: textColor }
+          textStyle: { color: textColor },
+          inRange: { color: heatColors }
         },
-        series: [{ type: 'heatmap', data: heatData, label: { show: false } }]
+        grid: {
+          top: compactChart ? 24 : 30,
+          right: compactChart ? 14 : 32,
+          bottom: compactChart ? 94 : 76,
+          left: compactChart ? 54 : 72,
+          containLabel: true
+        },
+        series: [{
+          type: 'heatmap',
+          data: heatData,
+          label: { show: false },
+          itemStyle: { borderColor: isDark ? '#111827' : '#ffffff', borderWidth: 1 },
+          emphasis: { itemStyle: { borderColor: textColor, borderWidth: 1 } }
+        }]
       };
     };
 
@@ -427,11 +456,18 @@ export default defineComponent({
       const textColor = chartTextColor.value;
       const treemapBorderColor = chartBorderColor.value;
       const treemapColors = chartIsDark.value
-        ? ['#6aa7ff', '#7fe3a2', '#f8d07a']
+        ? ['#3979c5', '#3fa56e', '#c89435']
         : ['#3a6ee8', '#4dbb6b', '#e8b44a'];
 
       return {
-        tooltip: { trigger: 'item', formatter: (info: any) => `${info.name}: ${info.value}` },
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'item',
+          formatter: (info: any) => `${info.name}: ${info.value}`,
+          backgroundColor: chartIsDark.value ? '#202938' : '#ffffff',
+          borderColor: chartIsDark.value ? '#43506a' : '#d8dee8',
+          textStyle: { color: chartIsDark.value ? '#f8fafc' : '#172033' }
+        },
         color: treemapColors,
         series: [
           {
@@ -450,7 +486,7 @@ export default defineComponent({
               position: 'inside',
               color: textColor
             },
-            breadcrumb: { show: true, left: 'center', top: '5px', textStyle: { color: textColor } },
+            breadcrumb: { show: false },
             levels: [
               {
                 itemStyle: {
@@ -504,7 +540,14 @@ export default defineComponent({
       const mutedColor = chartMutedColor.value;
 
       return {
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          backgroundColor: chartIsDark.value ? '#202938' : '#ffffff',
+          borderColor: chartIsDark.value ? '#43506a' : '#d8dee8',
+          textStyle: { color: chartIsDark.value ? '#f8fafc' : '#172033' }
+        },
         legend: { data: zygoList, top: 30, textStyle: { color: textColor } },
         grid: { top: 60, bottom: 40, left: 80, right: 20, containLabel: true },
         xAxis: {
@@ -598,6 +641,12 @@ export default defineComponent({
   /* 横向滚动的外层不用改 */
   overflow-x: auto;
   padding: 10px 0;
+  width: calc(100% - 96px);
+  margin-inline: auto;
+}
+
+@media (max-width: 768px) {
+  .chart-section-wrapper { width: 100%; }
 }
 
 .chart-section-wrapper h3 {
@@ -618,6 +667,13 @@ export default defineComponent({
      flex: 0 0 auto;
      width: 1000px;
   */
+}
+
+.chart-frame {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 /* 在你的全局或组件 <style> 中添加 */
 .help-icon {

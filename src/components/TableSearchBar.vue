@@ -120,14 +120,20 @@ const clearInput = () => {
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 38px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--app-border);
-  background: var(--app-surface);
+  min-height: 40px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--app-border-light);
+  background: var(--app-surface-2);
   color: var(--app-text);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
   gap: 6px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.table-search:focus-within {
+  border-color: color-mix(in srgb, var(--app-accent) 55%, var(--app-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 12%, transparent);
 }
 
 .table-search__icon {

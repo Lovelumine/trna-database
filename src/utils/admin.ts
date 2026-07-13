@@ -38,6 +38,10 @@ export type AdminLLMSettings = {
   deepseek_api_key: string;
   deepseek_default_model: string;
   deepseek_models: string[];
+  xiaomi_base_url: string;
+  xiaomi_api_key: string;
+  xiaomi_default_model: string;
+  xiaomi_models: string[];
   model_options: string[];
 };
 

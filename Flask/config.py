@@ -63,6 +63,9 @@ class Config:
     DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
     DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
     DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "").strip()
+    XIAOMI_BASE_URL = os.getenv("XIAOMI_BASE_URL", "https://api.xiaomimimo.com/v1")
+    XIAOMI_MODEL = os.getenv("XIAOMI_MODEL", "mimo-v2.5-pro")
+    XIAOMI_API_KEY = (os.getenv("XIAOMI_API_KEY") or os.getenv("MIMO_API_KEY", "")).strip()
     OLLAMA_SYSTEM_PROMPT = os.getenv(
         "OLLAMA_SYSTEM_PROMPT",
         (

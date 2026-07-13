@@ -14,7 +14,7 @@
           <div class="message-body">
             <div class="content">
               <!-- 改：使用渲染后的 textHtml -->
-              <div class="text" v-html="message.textHtml"></div>
+              <div class="text" v-html="message.textHtml" @click="handleEvidenceClick"></div>
             </div>
             <div class="chat-message-actions">
               <button
@@ -52,12 +52,12 @@
 
           <!-- 新增：证据块，紧跟 bot 消息，默认折叠 -->
           <div
-            v-if="message.sender !== 'user' && message.evidenceHtml"
+            v-if="message.sender !== 'user' && (message.evidenceHtml || message.evidenceSources?.length)"
             class="evidence-card"
           >
             <details>
               <summary>
-                <span>Search results (RAG)</span>
+                <span>Evidence &amp; sources</span>
                 <span class="rag-actions">
                   <button
                     class="chat-copy-button rag-copy-button"
@@ -90,7 +90,36 @@
                   </span>
                 </span>
               </summary>
-              <div class="evidence-body" v-html="message.evidenceHtml"></div>
+              <div v-if="message.evidenceHtml" class="evidence-body" v-html="message.evidenceHtml"></div>
+              <div v-if="message.evidenceSources?.length" class="evidence-source-list">
+                <article
+                  v-for="source in message.evidenceSources"
+                  :id="sourceTargetId(message, source)"
+                  :key="source.ref"
+                  class="evidence-source"
+                >
+                  <div class="evidence-source-heading">
+                    <span class="evidence-source-ref">[{{ source.ref }}]</span>
+                    <strong>{{ source.title }}</strong>
+                  </div>
+                  <div v-if="source.table || source.ensureId || source.pmid || source.doi" class="evidence-source-meta">
+                    <span v-if="source.table">Table: {{ source.table }}</span>
+                    <span v-if="source.ensureId">ENSURE_ID: {{ source.ensureId }}</span>
+                    <span v-if="source.pmid">PMID: {{ source.pmid }}</span>
+                    <span v-if="source.doi">DOI: {{ source.doi }}</span>
+                  </div>
+                  <p v-if="source.snippet">{{ source.snippet }}</p>
+                  <div v-if="source.links?.length" class="evidence-source-links">
+                    <a
+                      v-for="link in source.links"
+                      :key="link.href"
+                      :href="link.href"
+                      :target="link.external ? '_blank' : undefined"
+                      :rel="link.external ? 'noopener noreferrer' : undefined"
+                    >{{ link.label }}</a>
+                  </div>
+                </article>
+              </div>
             </details>
           </div>
         </div>
@@ -182,42 +211,6 @@
       </div>
     </transition>
 
-    <transition name="sheet-fade">
-      <div
-        v-if="mobileModelPickerOpen"
-        class="model-sheet-overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mobile-model-picker-title"
-      >
-        <button
-          class="model-sheet-backdrop"
-          type="button"
-          aria-label="Close effort picker"
-          @click="closeMobileModelPicker"
-        ></button>
-        <div class="model-sheet">
-          <div class="model-sheet-header">
-            <div class="model-sheet-kicker">Thinking effort</div>
-            <h3 id="mobile-model-picker-title">Choose effort</h3>
-          </div>
-          <div class="model-sheet-options">
-            <button
-              v-for="effort in reasoningEffortOptions"
-              :key="effort"
-              class="model-sheet-option"
-              :class="{ active: effort === reasoningEffort }"
-              type="button"
-              @click="chooseMobileModel(effort)"
-            >
-              <span>{{ effort }}</span>
-              <span v-if="effort === reasoningEffort" class="model-sheet-check">Selected</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
-
     <div class="input-area" :class="{ blocked: !noteAcknowledged }">
       <button
         v-if="!noteAcknowledged"
@@ -236,46 +229,17 @@
           ref="inputRef"
         ></textarea>
         <div class="input-icons">
-          <label class="composer-toggle" :class="{ disabled: !noteAcknowledged || loading }">
-            <input
-              v-model="thinkingEnabled"
-              type="checkbox"
+          <div class="answer-mode-switch" role="group" aria-label="Answer mode">
+            <button
+              v-for="mode in answerModes"
+              :key="mode.value"
+              class="answer-mode-option"
+              :class="{ active: chatMode === mode.value }"
+              type="button"
               :disabled="!noteAcknowledged || loading"
-            />
-            <span>Thinking</span>
-          </label>
-          <div v-if="!isMobileViewport" class="composer-model-shell">
-            <select
-              v-model="reasoningEffort"
-              class="composer-model-select"
-              :disabled="!noteAcknowledged || loading || !thinkingEnabled"
-              aria-label="Reasoning effort"
-            >
-              <option v-for="effort in reasoningEffortOptions" :key="effort" :value="effort">
-                {{ effort }}
-              </option>
-            </select>
-            <span class="composer-model-caret" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M7 10.5 12 15l5-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-              </svg>
-            </span>
+              @click="chatMode = mode.value"
+            >{{ mode.label }}</button>
           </div>
-          <button
-            v-else
-            class="mobile-model-button"
-            type="button"
-            :disabled="!noteAcknowledged || loading || !thinkingEnabled"
-            @click="openMobileModelPicker"
-          >
-            <span class="mobile-model-button-label">Effort</span>
-            <span class="mobile-model-button-value">{{ mobileModelLabel }}</span>
-            <span class="mobile-model-button-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M7 10.5 12 15l5-4.5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"></path>
-              </svg>
-            </span>
-          </button>
           <button
             @click="handlePrimaryAction"
             class="icon-button send-button"
@@ -303,19 +267,23 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, nextTick, onMounted, computed, onBeforeUnmount } from 'vue';
+import { defineComponent, ref, watch, nextTick, onMounted, computed } from 'vue';
 import { useChat } from '../../../utils/useChat';
 import { useMarkdown } from '../../../utils/useMarkdown';
 import { ElDialog } from 'element-plus';
-import { fetchChatModelConfig } from '@/utils/chatConfig';
+import { fetchChatModelConfig, resolveChatModelSelection } from '@/utils/chatConfig';
+import { chatModeRequestOptions, persistChatMode, readChatMode, type ChatMode } from '@/utils/chatMode';
+import {
+  evidenceLinks,
+  evidenceTargetId,
+  handleEvidenceReferenceClick,
+  linkEvidenceCitations,
+  normalizeEvidenceSources
+} from '@/utils/chatEvidence';
 import 'element-plus/dist/index.css';
 
 const COMPOSER_MIN_HEIGHT = 44;
 const COMPOSER_MAX_HEIGHT = 180;
-const MOBILE_BREAKPOINT = 860;
-const CHAT_MODEL = 'deepseek-v4-pro';
-const THINKING_STORAGE_KEY = 'ai_thinking_enabled';
-const REASONING_EFFORT_STORAGE_KEY = 'ai_reasoning_effort';
 
 export default defineComponent({
   name: 'ChatBox',
@@ -330,10 +298,13 @@ export default defineComponent({
   },
   setup(props, { emit }) {
     const apiBaseURL = import.meta.env.VITE_CHAT_API_BASE || '/chat/api';
-    const modelOptions = ref<string[]>([CHAT_MODEL]);
-    const reasoningEffortOptions = ref<('high' | 'max')[]>(['high', 'max']);
-    const selectedModel = ref(CHAT_MODEL);
-    localStorage.setItem('ai_chat_model', CHAT_MODEL);
+    const modelOptions = ref<string[]>([]);
+    const answerModes: Array<{ value: ChatMode; label: string }> = [
+      { value: 'fast', label: 'Fast answer' },
+      { value: 'deep', label: 'Deep research' }
+    ];
+    const chatMode = ref<ChatMode>(readChatMode());
+    const selectedModel = ref('');
     const {
       messages,
       newMessage,
@@ -357,17 +328,7 @@ export default defineComponent({
     const editingMessageId = ref<number | null>(null);
     const isHydrating = ref(true);
     const titleRequested = ref(false);
-    const isMobileViewport = ref(false);
-    const mobileModelPickerOpen = ref(false);
-    const thinkingEnabled = ref(localStorage.getItem(THINKING_STORAGE_KEY) === '1');
-    const storedEffort = localStorage.getItem(REASONING_EFFORT_STORAGE_KEY);
-    const reasoningEffort = ref<'high' | 'max'>(storedEffort === 'max' ? 'max' : 'high');
-    watch(thinkingEnabled, (next) => {
-      localStorage.setItem(THINKING_STORAGE_KEY, next ? '1' : '0');
-    });
-    watch(reasoningEffort, (next) => {
-      localStorage.setItem(REASONING_EFFORT_STORAGE_KEY, next);
-    });
+    watch(chatMode, persistChatMode, { immediate: true });
 
     const botAvatar = 'https://framerusercontent.com/images/p0mVMX1aJictMR1RM9fE1PrTrRQ.png';
     const userAvatar = 'https://framerusercontent.com/images/JnbQ2qAMPu3VRXkbzDhwoMnHpk.png';
@@ -380,14 +341,6 @@ export default defineComponent({
       if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight;
     };
 
-    const syncViewport = () => {
-      const next = window.innerWidth <= MOBILE_BREAKPOINT;
-      isMobileViewport.value = next;
-      if (!next) {
-        mobileModelPickerOpen.value = false;
-      }
-    };
-
     const resizeComposer = () => {
       const composer = inputRef.value;
       if (!composer) return;
@@ -398,19 +351,16 @@ export default defineComponent({
     };
 
     onMounted(async () => {
-      syncViewport();
-      window.addEventListener('resize', syncViewport);
       const config = await fetchChatModelConfig();
-      if (config && Array.isArray(config.model_options) && config.model_options.length) {
-        modelOptions.value = config.model_options.filter(model => model === CHAT_MODEL);
+      const selection = resolveChatModelSelection(config);
+      modelOptions.value = selection.modelOptions;
+      selectedModel.value = selection.activeModel;
+      if (selection.activeModel) {
+        localStorage.setItem('ai_chat_model', selection.activeModel);
+      } else {
+        localStorage.removeItem('ai_chat_model');
       }
-      selectedModel.value = CHAT_MODEL;
-      localStorage.setItem('ai_chat_model', CHAT_MODEL);
       nextTick(resizeComposer);
-    });
-
-    onBeforeUnmount(() => {
-      window.removeEventListener('resize', syncViewport);
     });
 
     watch(
@@ -484,9 +434,11 @@ export default defineComponent({
       messages,
       async (newVal) => {
         const rendered = await Promise.all(
-          newVal.map(async (m: any) => {
+          newVal.map(async (m: any, index: number) => {
             const msg = { ...m };
             msg.sender = msg.sender || msg.role || 'bot';
+            const messageId = msg.id ?? index;
+            const sources = normalizeEvidenceSources(msg.sources);
 
             const raw =
               typeof msg.text === 'string'
@@ -495,7 +447,7 @@ export default defineComponent({
 
             if (raw) {
               const { main, evidence } = splitSearchResult(raw);
-              msg.textHtml = await renderMarkdown(main || '');
+              msg.textHtml = await renderMarkdown(linkEvidenceCitations(main || '', messageId, sources));
               msg.evidenceHtml = evidence ? await renderMarkdown(evidence) : '';
               msg.textPlain = main || '';
               msg.evidencePlain = evidence || '';
@@ -505,6 +457,10 @@ export default defineComponent({
               msg.textPlain = '';
               msg.evidencePlain = '';
             }
+            msg.evidenceSources = sources.map(source => ({
+              ...source,
+              links: evidenceLinks(source)
+            }));
             return msg;
           })
         );
@@ -536,8 +492,7 @@ export default defineComponent({
         overrideText: text,
         model: getSelectedModel(),
         history: buildHistoryPayload(historySource),
-        thinkingEnabled: thinkingEnabled.value,
-        reasoningEffort: reasoningEffort.value
+        ...chatModeRequestOptions(chatMode.value)
       });
       if (!result?.aborted) {
         editingMessageId.value = null;
@@ -568,21 +523,9 @@ export default defineComponent({
 
     const storageKey = () => `ai_chat_session_${props.conversationId}`;
     const getSelectedModel = () => selectedModel.value;
-    const mobileModelLabel = computed(() => {
-      const text = reasoningEffort.value || 'high';
-      return text.length > 20 ? `${text.slice(0, 20)}...` : text;
-    });
-    const openMobileModelPicker = () => {
-      if (!isMobileViewport.value || !props.noteAcknowledged || loading.value) return;
-      mobileModelPickerOpen.value = true;
-    };
-    const closeMobileModelPicker = () => {
-      mobileModelPickerOpen.value = false;
-    };
-    const chooseMobileModel = (effort: 'high' | 'max') => {
-      reasoningEffort.value = effort;
-      closeMobileModelPicker();
-    };
+    const handleEvidenceClick = (event: MouseEvent) => handleEvidenceReferenceClick(event);
+    const sourceTargetId = (message: any, source: any) =>
+      evidenceTargetId(message?.id ?? 'message', source?.ref ?? '1');
     const visibleProgressTools = computed(() => progressToolTrace.value.slice(-6));
     const visibleProgressJudges = computed(() => {
       const raw = Array.isArray(progressJudgeTrace.value) ? progressJudgeTrace.value : [];
@@ -651,8 +594,7 @@ export default defineComponent({
         const resp = await fetch(`${apiBaseURL}/title`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${props.apiKey}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({ messages: payloadMessages, model: getSelectedModel() })
         });
@@ -814,8 +756,7 @@ export default defineComponent({
         overrideText: userMsg.text,
         model: getSelectedModel(),
         history: buildHistoryPayload(historySource),
-        thinkingEnabled: thinkingEnabled.value,
-        reasoningEffort: reasoningEffort.value
+        ...chatModeRequestOptions(chatMode.value)
       });
     };
 
@@ -826,20 +767,15 @@ export default defineComponent({
       handlePrimaryAction,
       selectedModel,
       modelOptions,
-      reasoningEffortOptions,
-      thinkingEnabled,
-      reasoningEffort,
-      isMobileViewport,
-      mobileModelPickerOpen,
-      mobileModelLabel,
+      answerModes,
+      chatMode,
       progressStatus,
       progressDetail,
       progressDraftPreview,
       visibleProgressJudges,
       visibleProgressTools,
-      openMobileModelPicker,
-      closeMobileModelPicker,
-      chooseMobileModel,
+      handleEvidenceClick,
+      sourceTargetId,
       chatBox,
       dialogVisible,
       botAvatar,
@@ -1110,6 +1046,63 @@ img { max-width: 100% !important; }
   color: var(--ai-text);
 }
 
+.evidence-source-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.evidence-source {
+  padding: 13px 15px;
+  border: 1px solid var(--ai-border);
+  border-radius: 14px;
+  background: var(--ai-card-muted);
+  color: var(--ai-text);
+  scroll-margin: 24px;
+}
+
+.evidence-source:target {
+  border-color: var(--ai-accent);
+  box-shadow: 0 0 0 3px var(--ai-accent-soft);
+}
+
+.evidence-source-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.evidence-source-ref {
+  color: var(--ai-accent);
+  font-weight: 800;
+}
+
+.evidence-source-meta,
+.evidence-source-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 8px;
+  color: var(--ai-muted);
+  font-size: 12px;
+}
+
+.evidence-source p {
+  margin: 8px 0 0;
+  color: var(--ai-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.evidence-source-links a {
+  color: var(--ai-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.evidence-source-links a:hover { text-decoration: underline; }
+
 .input-area {
   display: flex;
   flex-direction: column;
@@ -1154,81 +1147,41 @@ img { max-width: 100% !important; }
   box-shadow: 0 0 0 3px var(--ai-accent-soft);
 }
 
-.composer-model-shell {
-  position: relative;
-  display: flex;
+.answer-mode-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, max-content);
   align-items: center;
-  height: 54px;
-  min-width: 168px;
+  gap: 3px;
+  min-height: 46px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid var(--ai-border);
+  background: var(--ai-card-muted);
   flex-shrink: 0;
 }
 
-.composer-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 54px;
-  padding: 0 12px;
-  border-radius: 16px;
-  border: 1px solid var(--ai-border);
-  background: linear-gradient(180deg, var(--ai-card), var(--ai-card-muted));
+.answer-mode-option {
+  min-height: 36px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   color: var(--ai-muted);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
-}
-
-.composer-toggle input {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--ai-accent);
-}
-
-.composer-toggle.disabled {
-  opacity: 0.6;
-}
-
-.composer-model-select {
-  display: block;
-  width: 100%;
-  height: 54px;
-  min-width: 0;
-  padding: 0 42px 0 16px;
-  border-radius: 16px;
-  border: 1px solid var(--ai-border);
-  background: linear-gradient(180deg, var(--ai-card), var(--ai-card-muted));
-  color: var(--ai-text);
-  font-size: 13px;
-  font-weight: 600;
-  appearance: none;
-  box-shadow: none;
-  line-height: 1;
   cursor: pointer;
 }
 
-.composer-model-select:focus {
-  outline: none;
-  border-color: var(--ai-border-strong);
+.answer-mode-option.active {
+  color: #fff;
+  background: var(--ai-accent);
+  box-shadow: 0 4px 12px rgba(34, 78, 191, 0.2);
 }
 
-.composer-model-select:disabled {
+.answer-mode-option:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.composer-model-caret {
-  position: absolute;
-  right: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ai-muted);
-  pointer-events: none;
-}
-
-.composer-model-caret svg {
-  width: 16px;
-  height: 16px;
 }
 
 .input-area textarea {
@@ -1266,9 +1219,6 @@ img { max-width: 100% !important; }
   flex-shrink: 0;
 }
 
-.mobile-model-button {
-  display: none;
-}
 
 .icon-button {
   width: 54px;
@@ -1636,57 +1586,14 @@ img { max-width: 100% !important; }
     justify-content: flex-end;
     gap: 10px;
   }
-  .composer-toggle {
-    min-height: 44px;
-    padding: 0 10px;
-    border-radius: 14px;
-    font-size: 11px;
+  .answer-mode-switch {
     flex: 1 1 auto;
-  }
-  .mobile-model-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     min-width: 0;
-    max-width: calc(100% - 62px);
-    height: 44px;
-    padding: 0 14px;
-    border-radius: 14px;
-    border: 1px solid var(--ai-border);
-    background: linear-gradient(180deg, var(--ai-card), var(--ai-card-muted));
-    color: var(--ai-text);
-    flex: 0 1 auto;
-    box-shadow: var(--ai-card-shadow);
   }
-  .mobile-model-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  .mobile-model-button-label {
+  .answer-mode-option {
+    padding: 0 7px;
     font-size: 11px;
-    font-weight: 700;
-    color: var(--ai-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
-  }
-  .mobile-model-button-value {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 14px;
-    font-weight: 700;
-  }
-  .mobile-model-button-icon {
-    width: 16px;
-    height: 16px;
-    color: var(--ai-muted);
-    flex-shrink: 0;
-  }
-  .mobile-model-button-icon svg {
-    width: 16px;
-    height: 16px;
   }
   .icon-button,
   .send-button {
@@ -1702,80 +1609,6 @@ img { max-width: 100% !important; }
   .send-button.is-generating svg {
     width: 30px;
     height: 30px;
-  }
-  .model-sheet-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 9;
-    display: flex;
-    align-items: flex-end;
-  }
-  .model-sheet-backdrop {
-    position: absolute;
-    inset: 0;
-    border: none;
-    background: rgba(15, 23, 42, 0.28);
-    backdrop-filter: blur(5px);
-  }
-  .model-sheet {
-    position: relative;
-    width: 100%;
-    padding: 14px 14px calc(18px + env(safe-area-inset-bottom));
-    border-radius: 22px 22px 0 0;
-    background: linear-gradient(180deg, var(--ai-card), var(--ai-card-muted));
-    border-top: 1px solid var(--ai-border);
-    box-shadow: 0 -20px 40px rgba(15, 23, 42, 0.16);
-  }
-  .model-sheet-header {
-    padding: 4px 2px 12px;
-  }
-  .model-sheet-kicker {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ai-accent);
-  }
-  .model-sheet-header h3 {
-    margin: 6px 0 4px;
-    font-size: 18px;
-    color: var(--ai-text);
-  }
-  .model-sheet-header p {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--ai-muted);
-  }
-  .model-sheet-options {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .model-sheet-option {
-    min-height: 50px;
-    padding: 0 14px;
-    border-radius: 16px;
-    border: 1px solid var(--ai-border);
-    background: var(--ai-card);
-    color: var(--ai-text);
-    font-size: 14px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  .model-sheet-option.active {
-    border-color: var(--ai-border-strong);
-    background: var(--ai-card-strong);
-    color: var(--ai-accent-strong);
-  }
-  .model-sheet-check {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--ai-accent);
-    white-space: nowrap;
   }
   .evidence-card summary {
     width: 100%;

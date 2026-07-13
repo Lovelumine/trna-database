@@ -1,7 +1,7 @@
 <template>
   <div id="bot-container" ref="element" v-if="!isAiPage">
     <div id="bot-icon" @click="toggleChat" @mousedown="startDrag">
-      <img src="https://minio.lumoxuan.cn/ensure/bot/bot-image.png" alt="Bot Icon" @dragstart.prevent />
+      <img src="/bot-image.png" alt="Bot Icon" @dragstart.prevent />
     </div>
 
     <div id="chat-box" v-if="chat.isChatOpen">
@@ -113,7 +113,7 @@
             <!-- 头像 -->
             <img
               v-if="(msg.sender || 'bot') === 'bot'"
-              src="https://minio.lumoxuan.cn/ensure/bot/bot-image.png"
+              src="/bot-image.png"
               class="avatar"
               alt=""
             />
@@ -125,7 +125,7 @@
             />
             <!-- 气泡 -->
             <div class="message">
-              <span v-html="msg.textHtml || msg.text || ''"></span>
+              <span v-html="msg.textHtml || msg.text || ''" @click="handleEvidenceClick"></span>
               <img v-if="msg.image" :src="msg.image" class="message-image" />
               <div class="message-actions">
                 <button
@@ -157,12 +157,12 @@
 
           <!-- 证据块：仅 bot 且存在 evidenceHtml 时渲染；默认折叠，紧跟消息 -->
           <div
-            v-if="(msg.sender || 'bot') === 'bot' && msg.evidenceHtml"
+            v-if="(msg.sender || 'bot') === 'bot' && (msg.evidenceHtml || msg.evidenceSources?.length)"
             class="evidence-card"
           >
             <details>
               <summary>
-                <span>Search results (RAG)</span>
+                <span>Evidence &amp; sources</span>
                 <span class="rag-actions">
                   <button
                     class="message-action rag-action"
@@ -190,14 +190,43 @@
                   <span v-if="copiedId === (msg.id ?? i)" class="rag-copied-badge">Copied</span>
                 </span>
               </summary>
-              <div class="evidence-body" v-html="msg.evidenceHtml"></div>
+              <div v-if="msg.evidenceHtml" class="evidence-body" v-html="msg.evidenceHtml"></div>
+              <div v-if="msg.evidenceSources?.length" class="evidence-source-list">
+                <article
+                  v-for="source in msg.evidenceSources"
+                  :id="sourceTargetId(msg, source)"
+                  :key="source.ref"
+                  class="evidence-source"
+                >
+                  <div class="evidence-source-heading">
+                    <span class="evidence-source-ref">[{{ source.ref }}]</span>
+                    <strong>{{ source.title }}</strong>
+                  </div>
+                  <div v-if="source.table || source.ensureId || source.pmid || source.doi" class="evidence-source-meta">
+                    <span v-if="source.table">Table: {{ source.table }}</span>
+                    <span v-if="source.ensureId">ENSURE_ID: {{ source.ensureId }}</span>
+                    <span v-if="source.pmid">PMID: {{ source.pmid }}</span>
+                    <span v-if="source.doi">DOI: {{ source.doi }}</span>
+                  </div>
+                  <p v-if="source.snippet">{{ source.snippet }}</p>
+                  <div v-if="source.links?.length" class="evidence-source-links">
+                    <a
+                      v-for="link in source.links"
+                      :key="link.href"
+                      :href="link.href"
+                      :target="link.external ? '_blank' : undefined"
+                      :rel="link.external ? 'noopener noreferrer' : undefined"
+                    >{{ link.label }}</a>
+                  </div>
+                </article>
+              </div>
             </details>
           </div>
         </template>
 
         <!-- Loading -->
         <div v-if="showLoading" class="message-container bot">
-          <img src="https://minio.lumoxuan.cn/ensure/bot/bot-image.png" class="avatar" alt="" />
+          <img src="/bot-image.png" class="avatar" alt="" />
           <div class="message message--loading">
             <div class="loading-card">
               <div class="loading-badge">Processing</div>
@@ -254,20 +283,17 @@
 
         <!-- 输入 -->
         <div id="input-area">
-          <label id="deep-review-toggle" :class="{ disabled: loading }">
-            <input v-model="thinkingEnabled" type="checkbox" :disabled="loading" />
-            <span>Thinking</span>
-          </label>
-          <select
-            id="thinking-effort-select"
-            v-model="reasoningEffort"
-            :disabled="loading || !thinkingEnabled"
-            aria-label="Reasoning effort"
-          >
-            <option v-for="effort in reasoningEffortOptions" :key="effort" :value="effort">
-              {{ effort }}
-            </option>
-          </select>
+          <div class="answer-mode-switch" role="group" aria-label="Answer mode">
+            <button
+              v-for="mode in answerModes"
+              :key="mode.value"
+              class="answer-mode-option"
+              :class="{ active: chatMode === mode.value }"
+              type="button"
+              :disabled="loading"
+              @click="chatMode = mode.value"
+            >{{ mode.label }}</button>
+          </div>
           <input
             id="chat-input"
             v-model="inputText"
@@ -318,18 +344,22 @@ import { useRouter } from 'vue-router';
 import { useDraggable } from './Draggable';
 import { useChat } from '../utils/useChat';
 import { useMarkdown } from '../utils/useMarkdown';
-import { fetchChatModelConfig } from '@/utils/chatConfig';
+import { fetchChatModelConfig, resolveChatModelSelection } from '@/utils/chatConfig';
+import { chatModeRequestOptions, persistChatMode, readChatMode, type ChatMode } from '@/utils/chatMode';
+import {
+  evidenceLinks,
+  evidenceTargetId,
+  handleEvidenceReferenceClick,
+  linkEvidenceCitations,
+  normalizeEvidenceSources
+} from '@/utils/chatEvidence';
 import { Close } from '@element-plus/icons-vue';
-
-const CHAT_MODEL = 'deepseek-v4-pro';
-const THINKING_STORAGE_KEY = 'ai_thinking_enabled';
-const REASONING_EFFORT_STORAGE_KEY = 'ai_reasoning_effort';
 
 export default defineComponent({
   name: 'BotComponent',
   components: { Close },
   setup() {
-    const apiKey = import.meta.env.VITE_API_KEY;
+    const apiKey = '';
 
     const { element, startDrag } = useDraggable();
     const activeSessionId = ref(
@@ -337,13 +367,13 @@ export default defineComponent({
     );
     const chat = ref(useChat(apiKey, { key: activeSessionId.value }));
     const sessionOptions = ref<Array<{ id: string; title: string }>>([]);
-    const modelOptions = ref<string[]>([CHAT_MODEL]);
-    const reasoningEffortOptions = ref<('high' | 'max')[]>(['high', 'max']);
-    const thinkingEnabled = ref(localStorage.getItem(THINKING_STORAGE_KEY) === '1');
-    const storedEffort = localStorage.getItem(REASONING_EFFORT_STORAGE_KEY);
-    const reasoningEffort = ref<'high' | 'max'>(storedEffort === 'max' ? 'max' : 'high');
-    const selectedModel = ref(CHAT_MODEL);
-    localStorage.setItem('ai_chat_model', CHAT_MODEL);
+    const modelOptions = ref<string[]>([]);
+    const answerModes: Array<{ value: ChatMode; label: string }> = [
+      { value: 'fast', label: 'Fast answer' },
+      { value: 'deep', label: 'Deep research' }
+    ];
+    const chatMode = ref<ChatMode>(readChatMode());
+    const selectedModel = ref('');
     const showSessionSelect = ref(false);
     const showModelSelect = ref(false);
     const headerRef = ref<HTMLDivElement | null>(null);
@@ -431,10 +461,7 @@ export default defineComponent({
       localStorage.setItem(chatMetaKey(), JSON.stringify(chatMeta.value));
     };
 
-    const authHeaders = () => ({
-      Authorization: `Bearer ${apiKey}`,
-      accept: 'application/json'
-    });
+    const authHeaders = () => ({ accept: 'application/json' });
     const fetchApplicationProfile = async () => {
       const url = `${apiBaseURL}/application/profile`;
       const response = await fetch(url, { method: 'GET', headers: authHeaders() });
@@ -652,11 +679,14 @@ export default defineComponent({
       const hasSentMessage = localStorage.getItem('hasSentMessage');
       if (hasSentMessage === 'true') showExampleQuestions.value = false;
       const chatConfig = await fetchChatModelConfig();
-      if (chatConfig?.model_options?.length) {
-        modelOptions.value = chatConfig.model_options.filter(model => model === CHAT_MODEL);
+      const selection = resolveChatModelSelection(chatConfig);
+      modelOptions.value = selection.modelOptions;
+      selectedModel.value = selection.activeModel;
+      if (selection.activeModel) {
+        localStorage.setItem('ai_chat_model', selection.activeModel);
+      } else {
+        localStorage.removeItem('ai_chat_model');
       }
-      selectedModel.value = CHAT_MODEL;
-      localStorage.setItem('ai_chat_model', CHAT_MODEL);
       await rebindSlider();
       window.addEventListener('storage', loadSessions);
       window.addEventListener('click', handleDocClick);
@@ -711,12 +741,7 @@ export default defineComponent({
     watch(selectedModel, (next) => {
       localStorage.setItem('ai_chat_model', next);
     }, { immediate: true });
-    watch(thinkingEnabled, (next) => {
-      localStorage.setItem(THINKING_STORAGE_KEY, next ? '1' : '0');
-    }, { immediate: true });
-    watch(reasoningEffort, (next) => {
-      localStorage.setItem(REASONING_EFFORT_STORAGE_KEY, next);
-    }, { immediate: true });
+    watch(chatMode, persistChatMode, { immediate: true });
     watch(
       () => getChatOpen(),
       () => { rebindSlider(); }
@@ -808,9 +833,11 @@ export default defineComponent({
         const token = ++renderToken.value;
         if (!Array.isArray(newVal)) { renderedMessages.value = []; return; }
         const rendered = await Promise.all(
-          newVal.map(async (m: any) => {
+          newVal.map(async (m: any, index: number) => {
             const msg: any = { ...m };
             msg.sender ??= msg.role ?? 'bot';
+            const messageId = msg.id ?? index;
+            const sources = normalizeEvidenceSources(msg.sources);
 
             // text 或 content 里做切分
             const rawText =
@@ -825,7 +852,7 @@ export default defineComponent({
             }
 
             if (msg.text) {
-              msg.textHtml = await renderMarkdown(String(msg.text));
+              msg.textHtml = await renderMarkdown(linkEvidenceCitations(String(msg.text), messageId, sources));
             } else {
               msg.textHtml = msg.textHtml || '';
             }
@@ -834,6 +861,10 @@ export default defineComponent({
             } else {
               msg.evidenceHtml = msg.evidenceHtml || '';
             }
+            msg.evidenceSources = sources.map(source => ({
+              ...source,
+              links: evidenceLinks(source)
+            }));
             return msg;
           })
         );
@@ -899,8 +930,7 @@ export default defineComponent({
         overrideText: text,
         model: selectedModel.value,
         history: buildHistoryPayload(historySource, { excludeMessageId: editingMessageId.value }),
-        thinkingEnabled: thinkingEnabled.value,
-        reasoningEffort: reasoningEffort.value
+        ...chatModeRequestOptions(chatMode.value)
       });
       showExampleQuestions.value = false;
       localStorage.setItem('hasSentMessage', 'true');
@@ -925,6 +955,9 @@ export default defineComponent({
     };
 
     const fillExample = (example: string) => { inputText.value = example; };
+    const handleEvidenceClick = (event: MouseEvent) => handleEvidenceReferenceClick(event);
+    const sourceTargetId = (message: any, source: any) =>
+      evidenceTargetId(message?.id ?? 'message', source?.ref ?? '1');
 
     const openFullscreen = async () => {
       setChatOpen(false);
@@ -1013,8 +1046,7 @@ export default defineComponent({
         overrideText: userMsg.text,
         model: selectedModel.value,
         history: buildHistoryPayload(historySource),
-        thinkingEnabled: thinkingEnabled.value,
-        reasoningEffort: reasoningEffort.value
+        ...chatModeRequestOptions(chatMode.value)
       });
       if (!result?.aborted) {
         editingMessageId.value = null;
@@ -1023,8 +1055,8 @@ export default defineComponent({
 
     return {
       element, startDrag, chat,
-      activeSessionId, sessionOptions, selectedModel, modelOptions, thinkingEnabled,
-      reasoningEffortOptions, reasoningEffort,
+      activeSessionId, sessionOptions, selectedModel, modelOptions,
+      answerModes, chatMode,
       toggleChat, sendMessage, previewImage,
       renderedMessages, safeMessages, chatContent,
       loading, fillExample, showExampleQuestions, exampleWrap,
@@ -1035,6 +1067,7 @@ export default defineComponent({
       createNewSession,
       editMessage, chatInput, isLatestUserMessage,
       isLatestBotMessage, regenerateFromMessage,
+      handleEvidenceClick, sourceTargetId,
       handlePrimaryAction, stopGenerating,
       isAiPage,
       showLoading,
@@ -1312,6 +1345,51 @@ export default defineComponent({
   overflow: auto;
 }
 #chat-box .evidence-body :where(img){ max-width:100%; border-radius:6px;height: 150px; }
+#chat-box .evidence-source-list{
+  display:grid;
+  gap:7px;
+  margin-top:7px;
+}
+#chat-box .evidence-source{
+  padding:9px 10px;
+  border:1px solid var(--app-border);
+  border-radius:10px;
+  background:var(--app-surface-2);
+  color:var(--app-text);
+  scroll-margin:12px;
+}
+#chat-box .evidence-source:target{
+  border-color:var(--app-accent);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--app-accent) 22%, transparent);
+}
+#chat-box .evidence-source-heading{
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  font-size:12px;
+  line-height:1.35;
+}
+#chat-box .evidence-source-ref{ color:var(--app-accent); font-weight:800; }
+#chat-box .evidence-source-meta,
+#chat-box .evidence-source-links{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px 8px;
+  margin-top:5px;
+  color:var(--app-text-muted);
+  font-size:10px;
+}
+#chat-box .evidence-source p{
+  margin:5px 0 0;
+  color:var(--app-text-muted);
+  font-size:11px;
+  line-height:1.4;
+}
+#chat-box .evidence-source-links a{
+  color:var(--app-accent);
+  font-weight:700;
+  text-decoration:none;
+}
 
 /* ——示例问题（父容器横向滚动）—— */
 #chat-input-container{
@@ -1360,40 +1438,36 @@ export default defineComponent({
 
 /* ——输入区—— */
 #input-area{ display:flex; gap:6px; align-items:center; width:100%; flex-wrap:wrap; }
-#deep-review-toggle{
-  display:inline-flex;
+#input-area .answer-mode-switch{
+  display:inline-grid;
+  grid-template-columns:repeat(2,max-content);
   align-items:center;
-  gap:6px;
+  gap:2px;
   min-height:34px;
-  padding:0 10px;
+  padding:3px;
   border-radius:10px;
   border:1px solid rgba(148, 163, 184, 0.22);
   background:rgba(148, 163, 184, 0.08);
+}
+#input-area .answer-mode-option{
+  min-height:28px;
+  padding:0 8px;
+  border:0;
+  border-radius:7px;
+  background:transparent;
   color:var(--app-text-muted);
-  font-size:11px;
-  font-weight:600;
+  font-size:10px;
+  font-weight:700;
   white-space:nowrap;
+  cursor:pointer;
 }
-#deep-review-toggle input{
-  width:13px;
-  height:13px;
-  accent-color:var(--app-accent);
+#input-area .answer-mode-option.active{
+  color:#fff;
+  background:var(--app-accent);
 }
-#deep-review-toggle.disabled{
+#input-area .answer-mode-option:disabled{
   opacity:0.6;
-}
-#thinking-effort-select{
-  min-height:34px;
-  padding:0 28px 0 10px;
-  border-radius:10px;
-  border:1px solid rgba(148, 163, 184, 0.22);
-  background:rgba(148, 163, 184, 0.08);
-  color:var(--app-text);
-  font-size:11px;
-  font-weight:600;
-}
-#thinking-effort-select:disabled{
-  opacity:0.55;
+  cursor:not-allowed;
 }
 #chat-input{
   flex-grow:1;

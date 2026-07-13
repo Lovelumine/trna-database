@@ -91,8 +91,11 @@
     </div>
   </template>
   <script>
+  import { ElCard, ElImage, ElLink } from 'element-plus';
+
   export default {
-    name: 'ContactPage'
+    name: 'ContactPage',
+    components: { ElCard, ElImage, ElLink }
   }
   </script>
   
@@ -102,25 +105,26 @@
   }
   
   .container-fluid {
-    background-color: #e1f5fe;
-    padding: 30px;
+    padding: 12px 0 32px;
     text-align: justify;
-    color: #0d47a1;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: var(--app-text);
   }
   
   .box-card {
-    margin-bottom: 20px;
-    border-radius: 10px;
+    margin-bottom: 28px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none !important;
   }
-  
-  .contact-card {
-    background-color: #ffffff;
+
+  .box-card :deep(.el-card__body) {
+    padding: 8px 0;
   }
-  
+
   .tools-card {
-    background-color: #ffffff;
+    padding-top: 28px;
+    border-top: 1px solid var(--app-border-light);
   }
   
   .tools-grid {
@@ -136,14 +140,21 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    background-color: #e3f2fd;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s;
+    background-color: var(--app-surface-2);
+    border: 1px solid var(--app-border-light);
+    border-radius: 8px;
+    box-shadow: none !important;
+    transition: border-color 0.2s, background-color 0.2s;
   }
   
   .tool-card:hover {
-    transform: scale(1.05);
+    border-color: color-mix(in srgb, var(--app-accent) 42%, var(--app-border));
+    background-color: color-mix(in srgb, var(--app-accent) 5%, var(--app-surface-2));
+  }
+
+  .tool-card :deep(.el-card__body) {
+    width: 100%;
+    padding: 22px;
   }
   
   .tool-card h4 {
@@ -153,12 +164,31 @@
   
   .info-text {
     font-size: 14px;
+    color: var(--app-text-muted);
+    line-height: 1.65;
   }
   
+  .mail :deep(.el-link),
   .mail a {
     text-decoration: none;
-    color: #0d47a1;
+    color: var(--app-accent);
     font-weight: bold;
+  }
+
+  .mail {
+    color: var(--app-text-muted);
+    line-height: 1.65;
+  }
+
+  .mail strong,
+  h2,
+  h4 {
+    color: var(--app-text);
+  }
+
+  .tool-card :deep(.el-image) {
+    width: min(100%, 240px);
+    height: 88px;
   }
   
   @media (max-width: 768px) {
@@ -168,21 +198,16 @@
 
     .container-fluid {
       padding: 0;
-      background: transparent;
-      color: var(--app-text);
       text-align: left;
-      border-radius: 0;
-      box-shadow: none;
     }
 
     .box-card {
       margin-bottom: 16px;
-      border-radius: 8px;
     }
 
     .contact-card :deep(.el-card__body),
     .tools-card :deep(.el-card__body) {
-      padding: 18px;
+      padding: 8px 0;
     }
 
     .mail {
@@ -205,6 +230,10 @@
     .tool-card {
       width: 100%;
       border-radius: 8px;
+    }
+
+    .tool-card :deep(.el-card__body) {
+      padding: 18px;
     }
   }
   </style>

@@ -25,17 +25,23 @@ ENSURE（The Encyclopedia of Suppressor tRNA with an AI Assistant）是一个面
 - `Blast / Search`: 按序列进行比对检索
 - `Download`: 导出单表或整站数据集
 - `AI Yingying`: 结合数据库、帮助文档与可选 PubMed 检索的对话助手
-- `Admin`: 后台可管理 `Engineered_sup_tRNA` 数据，并在 MySQL 中维护 LLM provider/model 配置（DeepSeek / Ollama）
+- `Admin`: 后台可管理 `Engineered_sup_tRNA` 数据，并在 MySQL 中维护 LLM provider/model 配置（DeepSeek / Xiaomi MiMo / Ollama）
 - `Help / Docs / Audio`: 面向用户的帮助文档、API 说明与教学资源页面
 
 站点路由概览见 `public/docs/99-Site-Map.md`，API 快速说明见 `public/docs/98-API-Reference.md`。
+
+AI 回答提供 **Fast answer** 与 **Deep research** 两种链路。前者执行单轮
+检索并跳过最终 Critic，后者允许多轮 RAG 与证据审查；最终正文使用可点击
+的 `[S1]` 引用连接到结构化表格记录、ENSURE ID、PMID 或 DOI。MiMo 与
+DeepSeek 的固定科研问题评测集、运行方法和指标定义见
+`Flask/evals/README.md`。
 
 ## 技术栈
 
 - 前端: Vue 3, Vite, TypeScript, Element Plus, Vue Router
 - 可视化: ECharts, D3, NGL, vue-echarts, vxe-table
 - 后端: Flask, SQLAlchemy, MySQL, Biopython, Pandas
-- AI 相关: Ollama-compatible chat backend、文档检索、可选 PubMed 工具
+- AI 相关: DeepSeek、Xiaomi MiMo、Ollama-compatible chat backend，文档检索与可选 PubMed 工具
 - 部署相关: Gunicorn、可选 MinIO 导出缓存
 
 ## 仓库结构
@@ -94,6 +100,8 @@ pnpm preview
 
 - `MINIO_ENDPOINT`、`MINIO_ACCESS_KEY`、`MINIO_SECRET_KEY`、`MINIO_BUCKET`、`MINIO_PUBLIC_BASE`
 - `OLLAMA_BASE_URL`、`OLLAMA_MODEL`、`OLLAMA_TIMEOUT`
+- `DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`、`DEEPSEEK_API_KEY`
+- `XIAOMI_BASE_URL`、`XIAOMI_MODEL`、`XIAOMI_API_KEY`（也兼容官方常用的 `MIMO_API_KEY`）
 - `PUBMED_ENABLE`、`PUBMED_API_KEY`、`PUBMED_EMAIL`
 - `EMBEDDING_ENABLE`、`EMBEDDING_INDEX_PATH`、`EMBEDDING_DOCS_DIR`
 - `EXPORT_WARM_ON_START`、`EXPORT_WARM_FORMATS`

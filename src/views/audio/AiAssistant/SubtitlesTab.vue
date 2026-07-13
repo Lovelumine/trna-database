@@ -120,9 +120,10 @@ watch(currentTime, (newTime) => {
 .subtitle-container {
   margin-top: 15px;
   padding: 12px;
-  background-color: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border-light);
+  border-radius: 8px;
+  color: var(--app-text);
 }
 
 .subtitle-header {
@@ -134,7 +135,7 @@ watch(currentTime, (newTime) => {
 
 .subtitle-header button {
   padding: 8px 12px;
-  background-color: #50c878;
+  background-color: var(--app-accent);
   color: white;
   border: none;
   border-radius: 20px;
@@ -142,11 +143,10 @@ watch(currentTime, (newTime) => {
   transition: background-color 0.3s, transform 0.3s;
   font-size: 0.9em;
   font-weight: bold;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .subtitle-header button:hover {
-  background-color: #409eff;
+  background-color: var(--app-accent-strong);
   transform: scale(1.05);
 }
 
@@ -159,15 +159,15 @@ watch(currentTime, (newTime) => {
 
 .subtitle-item {
   padding: 8px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--app-border-light);
   cursor: pointer;
   transition: background-color 0.3s, transform 0.3s;
 }
 
 .subtitle-item:hover,
 .subtitle-item.current {
-  background-color: #e0f0ff;
-  color: #409eff;
+  background-color: color-mix(in srgb, var(--app-accent) 12%, var(--app-surface));
+  color: var(--app-accent);
   transform: scale(1.02);
 }
 
@@ -185,7 +185,7 @@ watch(currentTime, (newTime) => {
 
 .subtitle-sentence:hover,
 .subtitle-sentence.current {
-  color: #409eff;
+  color: var(--app-accent);
 }
 
 .subtitle-expanded {

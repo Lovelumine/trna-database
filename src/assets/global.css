@@ -2,10 +2,18 @@
 * {
     box-sizing: border-box; /* 应用到所有元素，确保宽度计算包含了padding和border */
   }
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--app-bg);
+}
   
 
 :root {
     color-scheme: light;
+    --font-sans: Inter, "Segoe UI", Arial, "Noto Sans", "Microsoft YaHei", sans-serif;
+    --font-serif: Georgia, "Times New Roman", "Noto Serif", serif;
     --app-bg: #f7f8fb;
     --app-surface: #ffffff;
     --app-surface-2: #f3f4f7;
@@ -181,7 +189,8 @@
 
 body {
     margin: 0;
-    font-family: "Play","MArima Madurai",Microsoft JhengHei,Georgia,Times,serif,Microsoft Yahei,Open Sans,sans-serif;
+    min-height: 100vh;
+    font-family: var(--font-sans);
     font-size: 16px;
     line-height: 1.8;
     color: var(--farallon-text-color);
@@ -189,6 +198,45 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+}
+
+#app,
+#app > div,
+#app > div > div {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-serif);
+    text-wrap: balance;
+}
+
+button,
+input,
+textarea,
+select {
+    font-family: var(--font-sans);
+}
+
+:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--app-accent) 32%, transparent);
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 .main {
@@ -581,20 +629,248 @@ html.dark .site--main .table-section h3 {
   border-color: rgba(148, 163, 184, 0.24);
 }
 
+/* Shared table treatment: keep third-party table controls visually consistent
+   with the site theme without changing table behavior or structure. */
+.site--main .s-table__header-cell {
+  background: color-mix(in srgb, var(--app-surface-2) 76%, var(--app-surface)) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border-light) !important;
+  font-weight: 700;
+}
+
+.site--main .s-table__row .s-table__cell {
+  background: var(--app-surface) !important;
+  color: var(--app-text-muted) !important;
+  border-color: var(--app-border-light) !important;
+}
+
+.site--main .s-table__row-odd .s-table__cell {
+  background: color-mix(in srgb, var(--app-surface-2) 46%, var(--app-surface)) !important;
+}
+
+.site--main .s-table__row:hover .s-table__cell,
+.site--main .s-table__row-hover .s-table__cell {
+  background: color-mix(in srgb, var(--app-accent) 7%, var(--app-surface)) !important;
+}
+
+.site--main .s-table__row-expand-icon {
+  color: var(--app-text-muted) !important;
+  border-color: var(--app-border) !important;
+  background: var(--app-surface-2) !important;
+}
+
+.site--main .s-table__pagination {
+  padding-top: 16px;
+  color: var(--app-text-muted);
+}
+
+.site--main .s-pagination__item-link,
+.site--main .s-pagination__prev,
+.site--main .s-pagination__next,
+.site--main .s-pagination__options-selector,
+.site--main .s-pagination__options-quick-jumper input {
+  color: var(--app-text-muted) !important;
+  border-color: var(--app-border-light) !important;
+  background: var(--app-surface-2) !important;
+  border-radius: 7px;
+}
+
+.site--main .s-pagination__item--active .s-pagination__item-link {
+  color: #ffffff !important;
+  border-color: var(--app-accent) !important;
+  background: var(--app-accent) !important;
+}
+
+:root[data-theme="dark"] .el-tag,
+html.dark .el-tag {
+  --el-tag-bg-color: color-mix(in srgb, currentColor 12%, var(--app-surface-2));
+  --el-tag-border-color: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+:root[data-theme="dark"] .el-select-dropdown,
+:root[data-theme="dark"] .el-popper.is-light,
+html.dark .el-select-dropdown,
+html.dark .el-popper.is-light {
+  background: var(--app-surface) !important;
+  border-color: var(--app-border) !important;
+}
+
+:root[data-theme="dark"] .el-select-dropdown__item,
+html.dark .el-select-dropdown__item {
+  color: var(--app-text-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  .el-select-dropdown__item.is-selected,
+  .el-select-dropdown__item.is-hovering,
+  .el-select-dropdown__item:hover {
+    color: var(--app-text) !important;
+    background: var(--app-surface-2) !important;
+  }
+}
+
+:root[data-theme="dark"] .el-select-dropdown__item.is-selected,
+:root[data-theme="dark"] .el-select-dropdown__item.is-hovering,
+:root[data-theme="dark"] .el-select-dropdown__item:hover,
+html.dark .el-select-dropdown__item.is-selected,
+html.dark .el-select-dropdown__item.is-hovering,
+html.dark .el-select-dropdown__item:hover {
+  color: var(--app-text) !important;
+  background: var(--app-surface-2) !important;
+}
+
 .site--main {
-    max-width: 1200px; 
+    width: calc(100% - 96px);
+    max-width: 1600px;
     margin: 0 auto; 
     /* padding: 50px 80px;  */
   }
+
+/* Embedded data sections already live inside the page container. Avoid a
+   second width calculation, which made section headings, toolbars and tables
+   use different horizontal boundaries. */
+.site--main > .table-section .site--main {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
   
   /* 媒体查询针对移动设备 */
 @media (max-width: 768px) {
     .site--main {
+      width: 100%;
       padding: 20px; /* 在小屏幕上减少填充 */
       max-width: 100%; /* 允许容器宽度占满屏幕 */
       margin: 0 auto; /* 保持居中，但可以调整为更小的上下边距 */
     }
   }
+
+@media (min-width: 769px) and (max-width: 1280px) {
+  .site--main {
+    width: calc(100% - 48px);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .el-tag.el-tag--danger {
+    --el-tag-text-color: #ff9b9b;
+    --el-tag-bg-color: rgba(239, 68, 68, 0.16);
+    --el-tag-border-color: rgba(248, 113, 113, 0.28);
+    color: var(--el-tag-text-color) !important;
+    background-color: var(--el-tag-bg-color) !important;
+    border-color: var(--el-tag-border-color) !important;
+  }
+
+  .el-tag.el-tag--warning {
+    --el-tag-text-color: #f7c66b;
+    --el-tag-bg-color: rgba(245, 158, 11, 0.15);
+    --el-tag-border-color: rgba(251, 191, 36, 0.26);
+    color: var(--el-tag-text-color) !important;
+    background-color: var(--el-tag-bg-color) !important;
+    border-color: var(--el-tag-border-color) !important;
+  }
+
+  .el-tag.el-tag--success {
+    --el-tag-text-color: #82d98c;
+    --el-tag-bg-color: rgba(34, 197, 94, 0.15);
+    --el-tag-border-color: rgba(74, 222, 128, 0.25);
+    color: var(--el-tag-text-color) !important;
+    background-color: var(--el-tag-bg-color) !important;
+    border-color: var(--el-tag-border-color) !important;
+  }
+
+  .el-tag.el-tag--primary {
+    --el-tag-text-color: #7db7ff;
+    --el-tag-bg-color: rgba(59, 130, 246, 0.16);
+    --el-tag-border-color: rgba(96, 165, 250, 0.27);
+    color: var(--el-tag-text-color) !important;
+    background-color: var(--el-tag-bg-color) !important;
+    border-color: var(--el-tag-border-color) !important;
+  }
+
+  .el-tag.el-tag--info {
+    --el-tag-text-color: #d0d6e2;
+    --el-tag-bg-color: rgba(148, 163, 184, 0.15);
+    --el-tag-border-color: rgba(203, 213, 225, 0.22);
+    color: var(--el-tag-text-color) !important;
+    background-color: var(--el-tag-bg-color) !important;
+    border-color: var(--el-tag-border-color) !important;
+  }
+}
+
+:root[data-theme="dark"] .el-tag.el-tag--danger { --el-tag-text-color: #ff9b9b; --el-tag-bg-color: rgba(239, 68, 68, 0.16); --el-tag-border-color: rgba(248, 113, 113, 0.28); }
+:root[data-theme="dark"] .el-tag.el-tag--warning { --el-tag-text-color: #f7c66b; --el-tag-bg-color: rgba(245, 158, 11, 0.15); --el-tag-border-color: rgba(251, 191, 36, 0.26); }
+:root[data-theme="dark"] .el-tag.el-tag--success { --el-tag-text-color: #82d98c; --el-tag-bg-color: rgba(34, 197, 94, 0.15); --el-tag-border-color: rgba(74, 222, 128, 0.25); }
+:root[data-theme="dark"] .el-tag.el-tag--primary { --el-tag-text-color: #7db7ff; --el-tag-bg-color: rgba(59, 130, 246, 0.16); --el-tag-border-color: rgba(96, 165, 250, 0.27); }
+:root[data-theme="dark"] .el-tag.el-tag--info { --el-tag-text-color: #d0d6e2; --el-tag-bg-color: rgba(148, 163, 184, 0.15); --el-tag-border-color: rgba(203, 213, 225, 0.22); }
+
+:root[data-theme="dark"] .el-tag[class*="el-tag--"] {
+  color: var(--el-tag-text-color) !important;
+  background-color: var(--el-tag-bg-color) !important;
+  border-color: var(--el-tag-border-color) !important;
+}
+
+.el-tag.categorical-tag {
+  --tag-color: hsl(
+    var(--disease-tag-hue)
+    var(--disease-tag-saturation)
+    var(--disease-tag-lightness)
+  );
+  color: color-mix(in srgb, var(--tag-color) 78%, #172033) !important;
+  border-color: color-mix(in srgb, var(--tag-color) 34%, transparent) !important;
+  background: color-mix(in srgb, var(--tag-color) 13%, var(--app-surface-2)) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .el-tag.categorical-tag {
+    color: color-mix(in srgb, var(--tag-color) 78%, #ffffff) !important;
+    border-color: color-mix(in srgb, var(--tag-color) 26%, transparent) !important;
+    background: color-mix(in srgb, var(--tag-color) 12%, var(--app-surface-2)) !important;
+  }
+}
+
+:root[data-theme="dark"] .el-tag.categorical-tag,
+html.dark .el-tag.categorical-tag {
+  color: color-mix(in srgb, var(--tag-color) 78%, #ffffff) !important;
+  border-color: color-mix(in srgb, var(--tag-color) 26%, transparent) !important;
+  background: color-mix(in srgb, var(--tag-color) 12%, var(--app-surface-2)) !important;
+}
+
+:root[data-theme="light"] .el-tag.categorical-tag {
+  color: color-mix(in srgb, var(--tag-color) 72%, #172033) !important;
+  border-color: color-mix(in srgb, var(--tag-color) 30%, transparent) !important;
+  background: color-mix(in srgb, var(--tag-color) 11%, #ffffff) !important;
+}
+
+:root[data-theme="light"] .site--main .table-section {
+  background-color: var(--app-surface);
+  border-color: var(--app-border-light);
+  box-shadow: 0 8px 24px rgba(30, 41, 59, 0.07);
+}
+
+:root[data-theme="light"] .s-table,
+:root[data-theme="light"] .s-table__table,
+:root[data-theme="light"] .s-table__body,
+:root[data-theme="light"] .s-table__row,
+:root[data-theme="light"] .s-table__cell {
+  color: var(--app-text);
+}
+
+/* Public data sections use a flat document layout. Section hierarchy comes
+   from spacing and dividers, not elevated cards. */
+.site--main > .table-section {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.site--main > .table-section + .table-section {
+  margin-top: 56px;
+  padding-top: 48px !important;
+  border-top: 1px solid var(--app-border-light) !important;
+}
 
   .forna-visualizer {
     width: 300px;  

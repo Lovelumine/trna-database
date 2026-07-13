@@ -23,6 +23,7 @@
     <!-- 表格 -->
     <s-table-provider :hover="true" :locale="locale">
       <s-table
+        key="cancer-table-balanced-v2"
         :columns="displayedColumns"
         :data-source="filteredDataSource"
         :row-key="rowKey"
@@ -42,7 +43,8 @@
               <ElTag
                 v-for="items in (Array.isArray(record.DISEASE) ? record.DISEASE : record.DISEASE.split(';').map(str => str.trim()))"
                 :key="items"
-                :type="getTagType(items)"
+                class="disease-tag categorical-tag"
+                :style="getTagStyle(items)"
               >
                 {{ items }}
               </ElTag>
@@ -68,7 +70,8 @@
                 <ElTag
                   v-for="items in (Array.isArray(record.DISEASE) ? record.DISEASE : record.DISEASE.split(';').map(str => str.trim()))"
                   :key="items"
-                  :type="getTagType(items)"
+                  class="disease-tag categorical-tag"
+                  :style="getTagStyle(items)"
                 >
                   {{ items }}
                 </ElTag>
@@ -102,7 +105,7 @@ import { ElTooltip, ElTag, ElSpace, ElSelect, ElOption, ElButton, ElMessage } fr
 import axios from 'axios';
 import { STableProvider } from '@shene/table';
 import { useTableData } from '../../utils/useTableData';
-import { getTagType } from '../../utils/tag.js';
+import { getTagStyle } from '../../utils/tag.js';
 import type { EChartsOption } from 'echarts';
 import { allColumns as baseColumns, selectedColumns } from './CodingVariationCancerColumns';
 import TableToolbar from '@/components/TableToolbar.vue';
@@ -538,7 +541,7 @@ export default defineComponent({
       searchColumn,
       selectedColumns,
       allColumns,
-      getTagType,
+      getTagStyle,
       rebuildLoading,
       rebuildFulltext,
       isAdmin,
@@ -558,7 +561,13 @@ export default defineComponent({
 
 <style scoped>
 .site--main { padding: 20px; }
-.chart-section-wrapper { overflow-x: auto; padding: 10px 0; }
+.chart-section-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  padding: 10px 0;
+}
 .chart-row { display: flex; flex-direction: column; gap: 20px; }
 .chart-col { width: 100%; }
+
+
 </style>

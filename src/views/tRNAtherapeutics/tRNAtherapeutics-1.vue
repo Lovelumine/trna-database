@@ -292,9 +292,12 @@ export default defineComponent({
     };
 
     onMounted(async () => {
-      const session = await fetchAdminSession();
-      adminEnabled.value = !!session;
-      csrfToken.value = session?.csrf_token || '';
+      const editRequested = new URLSearchParams(window.location.search).get('edit') === '1';
+      if (editRequested) {
+        const session = await fetchAdminSession();
+        adminEnabled.value = !!session;
+        csrfToken.value = session?.csrf_token || '';
+      }
       allColumns.value = await getRuntimeColumnsWithLabels(TABLE_NAME, baseColumns);
       selectedColumns.value = await getRuntimeVisibleColumnKeys(TABLE_NAME, selectedColumns.value);
     });
@@ -324,7 +327,9 @@ export default defineComponent({
 
 <style scoped>
 .site--main {
-  padding: 20px;
+  width: 100%;
+  max-width: none;
+  padding: 20px 0;
 }
 .content-wrapper {
   display: flex;

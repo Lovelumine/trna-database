@@ -79,7 +79,9 @@ const currentTab = ref<'概览' | '要点' | '问题'>('概览');
 const tabs = ['概览', '要点', '问题'] as const;
 
 // -------- 简易缓存 --------
-const CACHE_NS = 'videoSummaryCache.v1';
+// Bump the namespace whenever the response contract changes so a transient
+// malformed model response cannot leave a stale failure cached for a week.
+const CACHE_NS = 'videoSummaryCache.v3';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7天
 const cacheKey = () => `${CACHE_NS}:${props.subtitles}|${props.title}|${props.language ?? '中文'}`;
 
@@ -145,52 +147,19 @@ async function generateSummary(forceRefresh = false) {
 
   const subtitlesContent = await loadSrtContent();
 
-  const summaryPrompt = `
-You are a helpful assistant that summarize video subtitle.
-Summarize in language '${props.language ?? '中文'}'.
-Answer in markdown json format.
-example:
+  const analysisPrompt = `
+Analyze the following video subtitles in language '${props.language ?? '中文'}'.
+Return JSON only, using this exact structure:
 {
- "内容概述": "简要的内容概述。",
- "summary": "简要的总结。"
-}
-End of response.
-The video's title: '''${props.title}'''.
-The video's subtitles:
-'''
-${subtitlesContent}
-'''
-`.trim();
-
-  const keyPointsPrompt = `
-You are a helpful assistant that summarize key points of video subtitle.
-Summarize 3 to 8 brief key points in language '${props.language ?? '中文'}'.
-Answer in markdown json format. The emoji should be related to the key point and 1 char length.
-example:
-[
-  { "time": "03:00", "emoji": "👍", "key": "key point 1" },
-  { "time": "10:05", "emoji": "😊", "key": "key point 2" }
-]
-The video's title: '''${props.title}'''.
-The video's subtitles:
-'''
-${subtitlesContent}
-'''
-`.trim();
-
-  const questionsPrompt = `
-You are a helpful assistant that skilled at extracting questions from video subtitle.
-Accurately extract key questions and their corresponding answers from the video subtitles based on the actual content provided.
-Answer in language '${props.language ?? '中文'}'.
-Format the output in markdown json format.
-example:
-{
+  "summary": "A concise overview",
+  "keyPoints": [
+    { "time": "03:00", "emoji": "•", "key": "A concise key point" }
+  ],
   "questions": [
-    { "question": "问题1？", "answer": "答案1。" },
-    { "question": "问题2？", "answer": "答案2。" }
+    { "question": "A useful question?", "answer": "An answer grounded in the subtitles." }
   ]
 }
-End of response.
+Include 3 to 8 key points and no more than 5 questions. Do not add markdown fences.
 The video's title: '''${props.title}'''.
 The video's subtitles:
 '''
@@ -199,43 +168,57 @@ ${subtitlesContent}
 `.trim();
 
   try {
-    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-    // 并行请求
-    const [summaryResp, keyPointsResp, questionsResp] = await Promise.all([
-      fetchOpenAIResponse(apiKey, summaryPrompt),
-      fetchOpenAIResponse(apiKey, keyPointsPrompt),
-      fetchOpenAIResponse(apiKey, questionsPrompt),
-    ]);
+    const analysisResp = await fetchOpenAIResponse(analysisPrompt);
 
     // 若期间 props 已变更，丢弃本次结果
     if (myRun !== runId) return;
 
-    const summaryJson = parseOpenAIResponse(summaryResp);
-    summary.value = summaryJson?.摘要 || summaryJson?.summary || summaryJson?.总结 || '未能生成摘要';
+    const analysisJson = parseOpenAIResponse(analysisResp);
+    const parsedSummary = analysisJson?.摘要 || analysisJson?.summary || analysisJson?.总结;
+    if (typeof parsedSummary !== 'string' || !parsedSummary.trim()) {
+      throw new Error('AI analysis returned an invalid summary');
+    }
 
-    const kpJson = parseOpenAIResponse(keyPointsResp);
-    keyPoints.value = Array.isArray(kpJson) ? kpJson : [];
-
-    const qJson = parseOpenAIResponse(questionsResp);
-    questions.value = Array.isArray(qJson?.questions) ? qJson.questions : [];
+    summary.value = parsedSummary.trim();
+    keyPoints.value = Array.isArray(analysisJson?.keyPoints) ? analysisJson.keyPoints : [];
+    questions.value = Array.isArray(analysisJson?.questions) ? analysisJson.questions : [];
 
     saveCache();
-  } catch (e) {
-    console.error('生成总结时发生错误:', e);
+  } catch {
+    summary.value = 'AI analysis is temporarily unavailable.';
+    keyPoints.value = [];
+    questions.value = [];
   } finally {
     if (myRun === runId) loading.value = false;
   }
 }
 
 function parseOpenAIResponse(response: any) {
-  try {
-    if (typeof response !== 'string') return null;
-    const clean = response.replace(/```json/g, '').replace(/```/g, '').trim();
-    return JSON.parse(clean);
-  } catch {
-    return null;
+  if (response && typeof response === 'object') return response;
+  if (typeof response !== 'string') return null;
+
+  const clean = response
+    .replace(/^\uFEFF/, '')
+    .replace(/```(?:json)?\s*/gi, '')
+    .replace(/```/g, '')
+    .trim();
+
+  const candidates = [clean];
+  const firstBrace = clean.indexOf('{');
+  const lastBrace = clean.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    candidates.push(clean.slice(firstBrace, lastBrace + 1));
   }
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch {
+      // Try the next candidate; models occasionally wrap JSON in a sentence.
+    }
+  }
+  return null;
 }
 
 // 监听字幕/标题/语言变化，300ms 防抖后生成（先读缓存）
@@ -261,20 +244,20 @@ function seekTo(time: string) {
 </script>
 
 <style scoped>
-.video-summary { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,.1); }
-.refresh-btn { padding: 6px 10px; border: none; border-radius: 6px; background: #409eff; color: #fff; cursor: pointer; }
-.refresh-btn:hover { background: #307fcf; }
+.video-summary { margin-top: 20px; padding: 15px; background: var(--app-surface); border: 1px solid var(--app-border-light); border-radius: 8px; color: var(--app-text); }
+.refresh-btn { padding: 6px 10px; border: none; border-radius: 6px; background: var(--app-accent); color: #fff; cursor: pointer; }
+.refresh-btn:hover { background: var(--app-accent-strong); }
 .loading-container { display: flex; flex-direction: column; align-items: center; }
 .loading-spinner { border: 4px solid rgba(0,0,0,.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #409eff; animation: spin 1s linear infinite; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .content { max-height: 300px; overflow-y: auto; padding-right: 10px; }
 .pagination { display: flex; justify-content: center; margin: 12px 0 20px; gap: 8px; }
-.pagination button { padding: 10px 20px; background: #409eff; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
-.pagination button.active { background: #307fcf; }
-.pagination button:hover { background: #307fcf; }
-h3 { color: #409eff; }
-h4 { margin-top: 10px; color: #333; }
+.pagination button { padding: 10px 20px; background: var(--app-accent); color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+.pagination button.active { background: var(--app-accent-strong); }
+.pagination button:hover { background: var(--app-accent-strong); }
+h3 { color: var(--app-accent); }
+h4 { margin-top: 10px; color: var(--app-text); }
 ul { list-style: none; padding: 0; }
 ul li { margin-bottom: 8px; }
-strong { display: block; color: #333; }
+strong { display: block; color: var(--app-text); }
 </style>
