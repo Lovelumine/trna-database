@@ -1,6 +1,6 @@
 # Deployment Notes
 
-Verified and deployed on 2026-07-13.
+Verified and deployed on 2026-07-14 from commit `acfef3b`.
 
 ## Frontend
 
@@ -25,11 +25,11 @@ Secondary frontend host:
 
 The entry files matched during verification:
 
-- `index.html`: `183b2e650ae1a338a0d48607f84252b23d0d0f58b92ad2f2f87f7b95088ed803`
+- `index.html`: `ae70769a4f6cd626b85e457a650cd5dd7a0868c75e931c96a76de7cfa6a79f88`
 - `admin.html`: `498bb392a156220fb427d26c8b9d46517d08d07cb02fccccea8b4e23e04c09cf`
-- `help.html`: `1b417266073e709944b83b7dbdc4b37fb56288120430b731bfc4e19492b19733`
+- `help.html`: `40981c72041a1086dc85685171eae2d11be54c146835de1c14cd4093d49447cb`
 
-The 2026-07-13 MiMo deployment used stamp `20260713T161734Z`. Each frontend host
+The 2026-07-14 frontend deployment used stamp `20260714T054505Z`. Each frontend host
 keeps both an immediately restorable previous directory and a compressed backup
 under `/www/wwwroot/.ensure-backups/`.
 
