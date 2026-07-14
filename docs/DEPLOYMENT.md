@@ -1,8 +1,6 @@
 # Deployment Notes
 
-Verified and deployed on 2026-07-14 from commit `707d170`. The frontend
-artifact was produced after `dba5bf1`; `707d170` changes only the backend, so
-the artifact is also the frontend build for the current repository head.
+Verified and deployed on 2026-07-14 from commit `6ebe405`.
 
 ## Frontend
 
@@ -27,14 +25,14 @@ Secondary frontend host:
 
 The local build and both frontend origins matched during verification:
 
-- `index.html`: `da090b292967f247086ab30c722458833585c697a8a4f96b5de77603d5d92de4`
+- `index.html`: `d88e986a9078d7c09b570412a685c8ca2a1f93aede2c9a670fd59d5898b25816`
 - `admin.html`: `dd9b6a467599699de2f21a2f2cab5800cf24e98b162957be5d9be68260d77bf6`
-- `help.html`: `628fe998e9c14439d950379f1e8027c8cb4ecc369970a77e658b1bfb2bdcb822`
+- `help.html`: `d09e691720d2a3d19afc4e8a16ab6b76e8a3ed666a4299b248257110617f771b`
 
 The current deployments retain immediately restorable previous directories:
 
-- Primary: `/www/wwwroot/trna.lumoxuan.cn.backup-20260714-165204`
-- Secondary: `/www/wwwroot/trna.lumoxuan.cn.backup-20260714-165808`
+- Primary: `/www/wwwroot/trna.lumoxuan.cn.backup-20260714-182239`
+- Secondary: `/www/wwwroot/trna.lumoxuan.cn.backup-20260714-182320`
 
 ## Backend
 
@@ -67,14 +65,20 @@ Flask/Gunicorn process during verification.
 - Internal model tool markup and raw SQL are rejected before rendering or
   browser persistence. Audio and text clients only persist final content
   events, not draft or tool events.
-- MiMo credential and full RAG-path checks passed against the official Xiaomi
-  endpoint. The RAG response contained six structured, linked sources, inline
-  `[S1]` citations, and no internal tool or SQL leakage.
-- Backend tests: `67 passed`.
+- MiMo credential and full public RAG-path checks passed against the official
+  Xiaomi endpoint without invoking the fallback. The deployed RAG response
+  contained four structured, linked sources, inline `[S1]` citations, and no
+  internal tool or SQL leakage.
+- Backend tests: `86 passed`.
 - Frontend production build completed successfully (`2925` modules).
 - Public health, identity, chat-open, home, and six primary application routes
   returned HTTP 200. All nine entry-page JS/CSS assets returned HTTP 200 and
   matched on both frontend origins.
+- Independent Chrome profiles received different anonymous cookies and storage
+  namespaces. Their scoped localStorage keys did not overlap; cross-visitor
+  access to a signed chat ID returned HTTP 404. Desktop (1440 px) and mobile
+  (390 x 844 px) AI pages mounted in both light and dark themes without
+  horizontal overflow or console errors.
 
 ## Secrets
 
