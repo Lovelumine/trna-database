@@ -182,11 +182,22 @@ export function useChat(apiKey: string) {
           if (jsonStr === '[DONE]') continue;
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed?.content ?? '';
+            const eventType = String(parsed?.type || 'content');
+            if (eventType === 'error') {
+              const errorText = String(parsed?.content || parsed?.error || 'AI request failed.');
+              const m = messages.value.find(v => v.id === botMessageId);
+              if (m) m.text = errorText;
+              continue;
+            }
+            // Only the final content channel belongs in the answer. Status,
+            // tool, judge, draft_preview and evidence events are metadata and
+            // must never be concatenated into user-visible text.
+            if (eventType !== 'content') continue;
+            const content = String(parsed?.content || '');
             if (content) {
               complete += content;
-              const m = messages.value.find(v => v.id === botMessageId);
-              if (m) m.text = blockedAssistantMessage(complete.trim());
+              const message = messages.value.find(v => v.id === botMessageId);
+              if (message) message.text = blockedAssistantMessage(complete.trim());
             }
           } catch (err) {
             console.error('chunk parse error:', err, line);
