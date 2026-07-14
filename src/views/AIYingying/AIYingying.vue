@@ -295,6 +295,7 @@ export default {
     };
 
     return {
+      chatStorageReady,
       sessions,
       activeConversationId,
       draftId,

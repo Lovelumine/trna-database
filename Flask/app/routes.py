@@ -126,6 +126,10 @@ _CHAT_LOCK = threading.Lock()
 _CHAT_SESSIONS = {}
 _CHAT_VISITOR_COOKIE = "ensure_chat_visitor"
 _CHAT_VISITOR_MAX_AGE = 365 * 24 * 60 * 60
+_CHAT_MESSAGE_MAX_CHARS = 20_000
+_CHAT_HISTORY_MAX_CHARS = 120_000
+_CHAT_SESSION_TTL_SECONDS = 24 * 60 * 60
+_CHAT_SESSION_MAX_ENTRIES = 1_000
 _EMBED_LOCK = threading.Lock()
 _EMBED_INDEX = []
 _EMBED_INDEX_MTIME = 0.0
@@ -154,11 +158,19 @@ _PUBMED_DEEPEN_TOOLS = {"pubmed_search", "pubmed_fetch"}
 _DOC_DEEPEN_TOOLS = {"docs_list", "docs_search", "doc_get", "site_map", "api_reference", "repo_search", "repo_file"}
 
 _INTERNAL_TOOL_MARKUP_RE = re.compile(
-    r"<\s*/?\s*(?:function|parameter|tool_call|tool)(?:\s*=|\s*>|\s+)|"
+    r"<\s*/?\s*(?:function|function_call|parameter|tool_call|tool)(?:\s*=|\s*>|\s+)|"
     r"<\|\s*(?:tool_call|function_call)[^>]*\|>|"
+    r"[\"']tool_calls[\"']\s*:\s*\[|"
+    r"[\"']function[\"']\s*:\s*\{(?=[^{}]{0,800}[\"'](?:name|arguments)[\"']\s*:)|"
+    r"[\"']type[\"']\s*:\s*[\"']function[\"'](?=[^{}]{0,800}[\"'](?:function|arguments)[\"']\s*:)|"
+    r"[\"'](?:function|name)[\"']\s*:\s*[\"'](?:query_db|database_query|current_time|tables_list|table_info|table_rows|table_stats|search_alignment|ensure_lookup|pubmed_search|pubmed_fetch|docs_list|docs_search|doc_get|site_map|api_reference|repo_search|repo_file)[\"'](?=[^{}\n]{0,800}[\"']arguments[\"']\s*:)|"
+    r"\[\s*SQL\s*:\s*(?:SELECT|WITH|INSERT|UPDATE|DELETE|PRAGMA|EXPLAIN)\b|"
     r"(?:query_db|database_query)\s*\(|"
     r"(?:^|[\n;])\s*(?:SELECT\s+(?=[^\n;]{0,400}(?:COUNT\s*\(|\bAS\b|,|\*))"
     r"(?=[^\n;]{1,400}\bFROM\b)[^\n;]{1,400}?\s+FROM\s+[`\"'\w.]|"
+    r"WITH\s+[A-Za-z_]\w*\s+AS\s*\((?=[^\n;]{0,800}\bSELECT\b)|"
+    r"PRAGMA\s+[A-Za-z_]\w*\s*(?:=|\()|"
+    r"EXPLAIN(?:\s+QUERY\s+PLAN)?\s+(?:SELECT|WITH|INSERT|UPDATE|DELETE)\b|"
     r"INSERT\s+INTO\s+[`\"'\w.]|UPDATE\s+[`\"'\w.]+\s+SET\s+|"
     r"DELETE\s+FROM\s+[`\"'\w.])",
     flags=re.IGNORECASE,
@@ -476,30 +488,81 @@ def _sanitize_visible_answer(value: str, question: str = "") -> str:
     return _visible_answer_fallback(question)
 
 
+def _sanitize_outbound_tool_text(value: str, *, is_error: bool = False) -> str:
+    """Return a bounded, user-safe tool status without internal instructions."""
+    if is_error:
+        return "Tool request failed."
+    text_value = str(value or "").strip()
+    if not text_value:
+        return ""
+    if _contains_internal_tool_markup(text_value):
+        return "Tool output was safely withheld."
+    return text_value[:500]
+
+
+def _prune_chat_sessions_locked(now: float | None = None, preserve_chat_id: str = "") -> None:
+    """Lazily bound anonymous in-memory sessions; caller must hold _CHAT_LOCK."""
+    current_time = float(now if now is not None else time.time())
+    ttl = max(60, int(_CHAT_SESSION_TTL_SECONDS))
+    expired = [
+        key
+        for key, value in _CHAT_SESSIONS.items()
+        if key != preserve_chat_id
+        and current_time - float((value or {}).get("updated_at") or 0) > ttl
+    ]
+    for key in expired:
+        _CHAT_SESSIONS.pop(key, None)
+
+    max_entries = max(1, int(_CHAT_SESSION_MAX_ENTRIES))
+    excess = len(_CHAT_SESSIONS) - max_entries
+    if excess <= 0:
+        return
+    oldest = sorted(
+        (
+            (float((value or {}).get("updated_at") or 0), key)
+            for key, value in _CHAT_SESSIONS.items()
+            if key != preserve_chat_id
+        ),
+        key=lambda item: (item[0], item[1]),
+    )
+    for _, key in oldest[:excess]:
+        _CHAT_SESSIONS.pop(key, None)
+
+
 def _get_chat_session(chat_id: str):
     with _CHAT_LOCK:
-        session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": time.time()})
-        session["updated_at"] = time.time()
+        now = time.time()
+        _prune_chat_sessions_locked(now, preserve_chat_id=chat_id)
+        session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": now})
+        session["updated_at"] = now
+        _prune_chat_sessions_locked(now, preserve_chat_id=chat_id)
         return session
 
 def _append_chat_message(chat_id: str, role: str, content: str, max_messages: int):
-    if not content:
+    bounded_content = str(content or "").strip()[:_CHAT_MESSAGE_MAX_CHARS]
+    if not bounded_content:
         return
     with _CHAT_LOCK:
-        session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": time.time()})
-        session["messages"].append({"role": role, "content": content})
+        now = time.time()
+        _prune_chat_sessions_locked(now, preserve_chat_id=chat_id)
+        session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": now})
+        session["messages"].append({"role": role, "content": bounded_content})
         if max_messages and len(session["messages"]) > max_messages:
             session["messages"] = session["messages"][-max_messages:]
-        session["updated_at"] = time.time()
+        session["updated_at"] = now
+        _prune_chat_sessions_locked(now, preserve_chat_id=chat_id)
 
 def _replace_chat_history(chat_id: str, history: list, max_messages: int):
     if not isinstance(history, list):
         return
     trimmed = history[-max_messages:] if max_messages else list(history)
     with _CHAT_LOCK:
-        session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": time.time()})
+        now = time.time()
+        _prune_chat_sessions_locked(now, preserve_chat_id=chat_id)
+        session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": now})
         session["messages"] = trimmed
-        session["updated_at"] = time.time()
+        session["updated_at"] = now
+        _prune_chat_sessions_locked(now, preserve_chat_id=chat_id)
 
 def _normalize_client_history(items, max_messages: int) -> list:
     if not isinstance(items, list):
@@ -515,18 +578,30 @@ def _normalize_client_history(items, max_messages: int) -> list:
             role = "user"
         else:
             continue
-        content = str(item.get("content") or "").strip()
-        if not content:
+        raw_content = str(item.get("content") or "").strip()
+        if not raw_content:
             continue
         # Never feed leaked provider/tool syntax back into the model. A single
         # malformed assistant turn can otherwise contaminate every later turn
         # because the browser sends its local history with each request.
-        if role == "assistant" and _contains_internal_tool_markup(content):
+        if role == "assistant" and _contains_internal_tool_markup(raw_content):
             continue
+        content = raw_content[:_CHAT_MESSAGE_MAX_CHARS]
         normalized.append({"role": role, "content": content})
     if max_messages and len(normalized) > max_messages:
         normalized = normalized[-max_messages:]
-    return normalized
+    total_chars = 0
+    bounded_reversed = []
+    for item in reversed(normalized):
+        content = str(item.get("content") or "")
+        remaining = _CHAT_HISTORY_MAX_CHARS - total_chars
+        if remaining <= 0:
+            break
+        if len(content) > remaining:
+            content = content[-remaining:]
+        bounded_reversed.append({"role": item.get("role"), "content": content})
+        total_chars += len(content)
+    return list(reversed(bounded_reversed))
 
 def _build_ollama_messages(session_messages, system_prompt: str, extra_system: str = ""):
     messages = []
@@ -1183,9 +1258,7 @@ def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | N
             response = getattr(exc, "response", None)
             status_code = getattr(response, "status_code", None)
             retryable = isinstance(exc, (requests.Timeout, requests.ConnectionError)) or status_code in {
-                401,
                 402,
-                403,
                 408,
                 409,
                 425,
@@ -1199,6 +1272,19 @@ def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | N
             if not fallback_key:
                 raise
             fallback_runtime["thinking_enabled"] = bool(runtime.get("thinking_enabled", False))
+            if isinstance(exc, requests.Timeout):
+                fallback_reason = "timeout"
+            elif isinstance(exc, requests.ConnectionError):
+                fallback_reason = "connection_error"
+            elif isinstance(status_code, int):
+                fallback_reason = f"http_{status_code}"
+            else:
+                fallback_reason = "provider_error"
+            runtime["_provider_fallback"] = {
+                "from_provider": "xiaomi",
+                "to_provider": "deepseek",
+                "reason": fallback_reason,
+            }
             current_app.logger.warning(
                 "MiMo request failed with status %s; falling back to configured DeepSeek provider",
                 status_code or exc.__class__.__name__,
@@ -1217,6 +1303,25 @@ def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | N
         messages,
         timeout_value,
     )
+
+
+def _provider_fallback_metadata(runtime: dict) -> dict | None:
+    value = (runtime or {}).get("_provider_fallback")
+    if not isinstance(value, dict):
+        return None
+    allowed_providers = {"xiaomi", "deepseek", "ollama"}
+    from_provider = str(value.get("from_provider") or "").strip().lower()
+    to_provider = str(value.get("to_provider") or "").strip().lower()
+    reason = str(value.get("reason") or "provider_error").strip().lower()
+    if from_provider not in allowed_providers or to_provider not in allowed_providers:
+        return None
+    if not re.fullmatch(r"(?:http_\d{3}|timeout|connection_error|provider_error)", reason):
+        reason = "provider_error"
+    return {
+        "from_provider": from_provider,
+        "to_provider": to_provider,
+        "reason": reason,
+    }
 
 
 def _llm_visible_once(
@@ -2151,7 +2256,7 @@ def _build_structured_sources(
         if not isinstance(trace, dict):
             continue
         name = str(trace.get("tool") or "").strip()
-        summary = str(trace.get("summary") or "").strip()
+        summary = _sanitize_outbound_tool_text(trace.get("summary") or "")
         if not name or not summary or name in cached_tool_names:
             continue
         candidates.append(_new_structured_source(
@@ -3760,6 +3865,8 @@ def _critique_answer(runtime: dict, question: str, answer: str, evidence: str) -
         # synthesis, so reserve Thinking for the answer-generation call.
         critic_runtime["thinking_enabled"] = False
         reply = _llm_once(critic_runtime, messages)
+        if critic_runtime.get("_provider_fallback"):
+            runtime["_provider_fallback"] = critic_runtime["_provider_fallback"]
     except Exception:
         return {}
     return _parse_critic_output(reply)
@@ -3839,8 +3946,8 @@ def _finalize_answer(
                 for trace in tool_trace[trace_before:]:
                     yield {
                         "type": "tool",
-                        "tool": str(trace.get("tool") or "tool"),
-                        "summary": str(trace.get("summary") or ""),
+                        "tool": _sanitize_outbound_tool_text(trace.get("tool") or "tool") or "tool",
+                        "summary": _sanitize_outbound_tool_text(trace.get("summary") or ""),
                     }
                 context_local, evidence_local, _, _ = _compose_cached_context_and_evidence(
                     rag_context,
@@ -3934,7 +4041,7 @@ def _tool_summary(name: str, result: dict) -> str:
     if not isinstance(result, dict):
         return "no result"
     if result.get("error"):
-        return f"error: {result.get('error')}"
+        return _sanitize_outbound_tool_text("", is_error=True)
     if name == "current_time":
         return f"timezone={result.get('timezone')}, datetime={result.get('datetime')}"
     if name == "table_rows":
@@ -3974,7 +4081,7 @@ def _tool_summary(name: str, result: dict) -> str:
 
 def _format_tool_context(name: str, result: dict, max_chars: int) -> str:
     if isinstance(result, dict) and result.get("error"):
-        return f"Tool `{name}` error: {result.get('error')}"
+        return f"Tool `{name}` error: {_sanitize_outbound_tool_text('', is_error=True)}"
     if name == "current_time":
         payload = (
             f"Current date/time in `{result.get('timezone')}`: "
@@ -4501,8 +4608,8 @@ def _orchestrate_retrieval(question: str, rag_context: str, rag_evidence: str, w
                 emit(
                     {
                         "type": "tool",
-                        "tool": str(trace.get("tool") or "tool"),
-                        "summary": str(trace.get("summary") or ""),
+                        "tool": _sanitize_outbound_tool_text(trace.get("tool") or "tool") or "tool",
+                        "summary": _sanitize_outbound_tool_text(trace.get("summary") or ""),
                     }
                 )
 
@@ -7749,7 +7856,7 @@ def chat_title():
     for item in items:
         if not isinstance(item, dict):
             continue
-        content = (item.get("content") or item.get("text") or "").strip()
+        content = str(item.get("content") or item.get("text") or "").strip()[:_CHAT_MESSAGE_MAX_CHARS]
         if not content:
             continue
         role = item.get("role") or item.get("sender") or "user"
@@ -7819,9 +7926,11 @@ def chat_message(chat_id):
         # visitor's opaque chat identifier exists.
         return jsonify({"error": "chat session not found"}), 404
     payload = request.get_json(silent=True) or {}
-    message = (payload.get("message") or "").strip()
+    message = str(payload.get("message") or "").strip()
     if not message:
         return jsonify({"error": "missing message"}), 400
+    if len(message) > _CHAT_MESSAGE_MAX_CHARS:
+        return jsonify({"error": "message is too long"}), 413
     stream_requested = bool(payload.get("stream", True))
 
     runtime = _apply_deepseek_thinking(_get_llm_runtime(payload.get("model")), payload)
@@ -7916,7 +8025,12 @@ def chat_message(chat_id):
                         yield _sse({"type": "content", "content": chunk})
                 else:
                     yield _sse({"type": "content", "content": complete})
-                yield _sse({"type": "evidence", "content": evidence_text, "sources": []})
+                yield _sse({
+                    "type": "evidence",
+                    "content": evidence_text,
+                    "sources": [],
+                    "provider_fallback": _provider_fallback_metadata(runtime),
+                })
                 yield "data: [DONE]\n\n"
                 return
 
@@ -7939,7 +8053,12 @@ def chat_message(chat_id):
                         yield _sse({"type": "content", "content": chunk})
                 else:
                     yield _sse({"type": "content", "content": complete})
-                yield _sse({"type": "evidence", "content": evidence_text, "sources": []})
+                yield _sse({
+                    "type": "evidence",
+                    "content": evidence_text,
+                    "sources": [],
+                    "provider_fallback": _provider_fallback_metadata(runtime),
+                })
                 yield "data: [DONE]\n\n"
                 return
 
@@ -7970,7 +8089,12 @@ def chat_message(chat_id):
                         yield _sse({"type": "content", "content": chunk})
                 else:
                     yield _sse({"type": "content", "content": complete})
-                yield _sse({"type": "evidence", "content": evidence_text, "sources": []})
+                yield _sse({
+                    "type": "evidence",
+                    "content": evidence_text,
+                    "sources": [],
+                    "provider_fallback": _provider_fallback_metadata(runtime),
+                })
                 yield "data: [DONE]\n\n"
                 return
 
@@ -8032,8 +8156,8 @@ def chat_message(chat_id):
                 for trace in tool_trace[round_trace_before:]:
                     yield _sse({
                         "type": "tool",
-                        "tool": str(trace.get("tool") or "tool"),
-                        "summary": str(trace.get("summary") or ""),
+                        "tool": _sanitize_outbound_tool_text(trace.get("tool") or "tool") or "tool",
+                        "summary": _sanitize_outbound_tool_text(trace.get("summary") or ""),
                     })
 
                 current_context, current_evidence, _, _ = _compose_cached_context_and_evidence(
@@ -8116,7 +8240,12 @@ def chat_message(chat_id):
                 _append_chat_message(chat_id, "assistant", fallback, max_messages)
                 yield _sse({"type": "content", "content": fallback})
                 evidence_text = _format_evidence_block(evidence_local)
-                yield _sse({"type": "evidence", "content": evidence_text, "sources": []})
+                yield _sse({
+                    "type": "evidence",
+                    "content": evidence_text,
+                    "sources": [],
+                    "provider_fallback": _provider_fallback_metadata(runtime),
+                })
                 yield "data: [DONE]\n\n"
                 return
 
@@ -8191,13 +8320,18 @@ def chat_message(chat_id):
                 "type": "evidence",
                 "content": evidence_text,
                 "sources": sources_local,
+                "provider_fallback": _provider_fallback_metadata(runtime),
                 "citation_validation": {
                     "cited_source_ids": answer_source_ids,
                     "removed_source_ids": removed_source_ids,
                 },
             })
-        except Exception as exc:
-            yield _sse({"type": "error", "content": f"Error: {exc}"})
+        except Exception:
+            current_app.logger.exception("Unhandled assistant chat stream failure")
+            yield _sse({
+                "type": "error",
+                "content": "Unable to complete this request safely. Please try again later. 暂时无法安全完成此请求，请稍后重试。",
+            })
         yield "data: [DONE]\n\n"
 
     headers = {

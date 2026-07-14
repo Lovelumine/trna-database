@@ -1,7 +1,11 @@
 import { ref, type Ref } from 'vue';
 import { CHAT_GREETING } from './chatGreeting';
 import { initializeChatIdentity } from './chatIdentity';
-import { blockedAssistantMessage, sanitizeAssistantResponse } from './chatContentSafety';
+import {
+  sanitizeAssistantResponse,
+  sanitizeAssistantSources,
+  sanitizeAssistantText
+} from './chatContentSafety';
 
 type ChatMessage = {
   id: number;
@@ -86,6 +90,8 @@ const composeBotMessageText = (main: string, evidence: string) => {
   const evidenceText = String(evidence || '').trim();
   return evidenceText ? `${mainText}\n\nSearch results:\n${evidenceText}`.trim() : mainText;
 };
+
+const GENERIC_STREAM_ERROR = 'Sorry, I could not process your request. Please try again.';
 
 const getSession = (key: string, apiKey: string): ChatSession => {
   const existing = sessions.get(key);
@@ -315,6 +321,7 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
       botMessageId = Date.now();
 
       let buffer = '';
+      let streamFailed = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -330,61 +337,103 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
           try {
             const parsed = JSON.parse(jsonStr);
             const eventType = String(parsed?.type || 'content');
+            if (eventType === 'error') {
+              // Error payloads can contain provider exceptions, SQLAlchemy
+              // statements, or other internal details. Never append them to an
+              // answer; end this stream with one fixed user-facing message.
+              complete = GENERIC_STREAM_ERROR;
+              evidence = '';
+              session.progressStatus.value = 'Unable to complete the request';
+              session.progressDetail.value = 'Please try again in a moment.';
+              session.progressDraftPreview.value = null;
+              const effectiveId = botMessageId ?? Date.now();
+              if (botMessageId === null) botMessageId = effectiveId;
+              let message = session.messages.value.find(v => v.id === botMessageId);
+              if (!message) {
+                message = { id: effectiveId, text: '', sender: 'bot' };
+                session.messages.value.push(message);
+              }
+              message.text = GENERIC_STREAM_ERROR;
+              delete message.sources;
+              streamFailed = true;
+              await reader.cancel();
+              break;
+            }
             if (eventType === 'status') {
-              session.progressStatus.value = String(parsed?.status || 'Working on your answer');
-              session.progressDetail.value = String(parsed?.detail || '');
+              session.progressStatus.value = sanitizeAssistantText(
+                parsed?.status,
+                'Working on your answer'
+              ).trim() || 'Working on your answer';
+              session.progressDetail.value = sanitizeAssistantText(parsed?.detail).trim();
               continue;
             }
             if (eventType === 'tool') {
-              const tool = String(parsed?.tool || 'tool');
-              const summary = String(parsed?.summary || '');
-              session.progressToolTrace.value = [
-                ...session.progressToolTrace.value,
-                { id: Date.now() + session.progressToolTrace.value.length, tool, summary }
-              ];
+              const tool = sanitizeAssistantText(parsed?.tool).trim();
+              const summary = sanitizeAssistantText(parsed?.summary).trim();
+              if (tool || summary) {
+                session.progressToolTrace.value = [
+                  ...session.progressToolTrace.value,
+                  {
+                    id: Date.now() + session.progressToolTrace.value.length,
+                    tool: tool || 'ENSURE search',
+                    summary
+                  }
+                ];
+              }
               continue;
             }
             if (eventType === 'judge') {
-              const summary = String(parsed?.summary || '').trim();
-              const verdict = String(parsed?.verdict || '').trim();
+              const summary = sanitizeAssistantText(parsed?.summary).trim();
+              const verdict = sanitizeAssistantText(parsed?.verdict).trim();
               const coverageRaw = parsed?.coverage_score;
               const coverageScore = typeof coverageRaw === 'number' ? coverageRaw : Number.isFinite(Number(coverageRaw)) ? Number(coverageRaw) : null;
               const missingAspects = Array.isArray(parsed?.missing_aspects)
-                ? parsed.missing_aspects.map((item: unknown) => String(item || '').trim()).filter(Boolean)
+                ? parsed.missing_aspects.map((item: unknown) => sanitizeAssistantText(item).trim()).filter(Boolean)
                 : [];
               const nextTools = Array.isArray(parsed?.next_tools)
-                ? parsed.next_tools.map((item: unknown) => String(item || '').trim()).filter(Boolean)
+                ? parsed.next_tools.map((item: unknown) => sanitizeAssistantText(item).trim()).filter(Boolean)
                 : [];
-              session.progressJudgeTrace.value = [
-                ...session.progressJudgeTrace.value,
-                {
-                  id: Date.now() + session.progressJudgeTrace.value.length,
-                  verdict,
-                  summary,
-                  coverageScore,
-                  missingAspects,
-                  nextTools
-                }
-              ];
+              if (verdict || summary || missingAspects.length || nextTools.length || coverageScore !== null) {
+                session.progressJudgeTrace.value = [
+                  ...session.progressJudgeTrace.value,
+                  {
+                    id: Date.now() + session.progressJudgeTrace.value.length,
+                    verdict,
+                    summary,
+                    coverageScore,
+                    missingAspects,
+                    nextTools
+                  }
+                ];
+              }
               if (summary) {
                 session.progressDetail.value = summary;
               }
               continue;
             }
             if (eventType === 'draft_preview') {
-              const label = String(parsed?.label || 'Draft answer preview').trim();
-              const content = blockedAssistantMessage(String(parsed?.content || '').trim());
+              const label = sanitizeAssistantText(parsed?.label, 'Draft answer preview').trim() || 'Draft answer preview';
+              const content = sanitizeAssistantText(parsed?.content).trim();
               session.progressDraftPreview.value = content ? { label, content } : null;
               continue;
             }
             if (eventType === 'evidence') {
               const evidencePayload = parsed?.content;
-              evidence = typeof evidencePayload === 'string'
+              const rawEvidence = typeof evidencePayload === 'string'
                 ? evidencePayload.trim()
                 : String(evidencePayload?.text || evidencePayload?.content || '').trim();
+              const fallback = parsed?.provider_fallback;
+              const fallbackNotice = fallback?.from_provider === 'xiaomi'
+                && fallback?.to_provider === 'deepseek'
+                ? 'Model notice: MiMo was unavailable, so this answer was generated by the configured DeepSeek fallback.'
+                : '';
+              const candidateEvidence = [fallbackNotice, rawEvidence].filter(Boolean).join('\n\n');
               const rawSources = Array.isArray(parsed?.sources)
                 ? parsed.sources
                 : (Array.isArray(evidencePayload?.sources) ? evidencePayload.sources : []);
+              const safeResponse = sanitizeAssistantResponse(complete, candidateEvidence);
+              evidence = safeResponse.evidence;
+              const safeSources = sanitizeAssistantSources(rawSources);
               const effectiveId = botMessageId ?? Date.now();
               if (botMessageId === null) botMessageId = effectiveId;
               const hasBotMessage = session.messages.value.some(v => v.id === botMessageId);
@@ -393,12 +442,15 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
               }
               const m = session.messages.value.find(v => v.id === botMessageId);
               if (m) {
-                const safe = sanitizeAssistantResponse(complete, evidence);
-                m.text = composeBotMessageText(safe.main, safe.evidence);
-                if (rawSources.length) m.sources = rawSources;
+                m.text = composeBotMessageText(safeResponse.main, safeResponse.evidence);
+                if (safeSources.length) m.sources = safeSources;
+                else delete m.sources;
               }
               continue;
             }
+            // Only answer/clarification events may contribute visible answer
+            // text. Unknown event types are metadata and are ignored.
+            if (eventType !== 'content' && eventType !== 'clarification') continue;
             const content = parsed?.content ?? '';
             if (content) {
               complete += content;
@@ -415,9 +467,12 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
               }
             }
           } catch (err) {
-            console.error('chunk parse error:', err, line);
+            // Do not echo a malformed server chunk into the browser console;
+            // provider errors can contain internal tool payloads or SQL.
+            console.error('Unable to parse an assistant stream event.', err);
           }
         }
+        if (streamFailed) break;
       }
       debugChatLog('[useChat] stream ended');
       return { aborted: false };

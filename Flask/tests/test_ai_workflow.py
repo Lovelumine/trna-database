@@ -317,20 +317,45 @@ def test_mimo_payment_error_falls_back_to_configured_deepseek(monkeypatch: pytes
         return "fallback answer"
 
     monkeypatch.setattr(routes, "_deepseek_once", fake_deepseek)
+    runtime = {
+        "provider": "xiaomi",
+        "model": "mimo-v2.5-pro",
+        "xiaomi_api_key": "configured",
+        "thinking_enabled": True,
+    }
     app = build_test_app()
     with app.app_context():
         answer = routes._llm_once(
-            {
-                "provider": "xiaomi",
-                "model": "mimo-v2.5-pro",
-                "xiaomi_api_key": "configured",
-                "thinking_enabled": True,
-            },
+            runtime,
             [{"role": "user", "content": "hello"}],
         )
 
     assert answer == "fallback answer"
     assert captured == {"model": "deepseek-v4-pro", "thinking": True}
+    assert routes._provider_fallback_metadata(runtime) == {
+        "from_provider": "xiaomi",
+        "to_provider": "deepseek",
+        "reason": "http_402",
+    }
+
+
+@pytest.mark.parametrize("status_code", [401, 403])
+def test_mimo_auth_errors_do_not_fall_back(status_code: int, monkeypatch: pytest.MonkeyPatch):
+    response = requests.Response()
+    response.status_code = status_code
+    auth_error = requests.HTTPError("provider rejected credentials", response=response)
+    monkeypatch.setattr(routes, "_xiaomi_once", lambda *args, **kwargs: (_ for _ in ()).throw(auth_error))
+    monkeypatch.setattr(
+        routes,
+        "_get_llm_runtime",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("auth failures must not silently fall back")),
+    )
+    app = build_test_app()
+    runtime = {"provider": "xiaomi", "model": "mimo-v2.5-pro", "xiaomi_api_key": "configured"}
+    with app.app_context(), pytest.raises(requests.HTTPError):
+        routes._llm_once(runtime, [{"role": "user", "content": "hello"}])
+
+    assert routes._provider_fallback_metadata(runtime) is None
 
 
 def test_generic_database_introduction_gets_deterministic_sample_plan():
@@ -382,6 +407,96 @@ def test_client_history_drops_leaked_assistant_tool_markup():
         {"role": "user", "content": "介绍数据库"},
         {"role": "assistant", "content": "A safe previous answer."},
     ]
+
+
+@pytest.mark.parametrize(
+    "leaked_text",
+    [
+        '<function_call>{"name":"query_db","arguments":{"sql":"SELECT * FROM secret"}}</function_call>',
+        '{"tool_calls":[{"type":"function","function":{"name":"query_db","arguments":"{}"}}]}',
+        '{"name":"repo_file","arguments":{"path":"Flask/.env"}}',
+        '[SQL: SELECT private_value FROM internal_table WHERE id=?]',
+        'WITH hidden AS (SELECT * FROM internal_table) SELECT * FROM hidden',
+        'PRAGMA table_info(internal_table)',
+        'EXPLAIN QUERY PLAN SELECT * FROM internal_table',
+    ],
+)
+def test_internal_tool_detector_covers_provider_json_and_database_diagnostics(leaked_text: str):
+    assert routes._contains_internal_tool_markup(leaked_text)
+
+
+@pytest.mark.parametrize(
+    "scientific_text",
+    [
+        "The function of suppressor tRNA was evaluated with matched controls.",
+        "Arguments supporting this interpretation are summarized in Figure 2.",
+        '{"function":"amino-acid recognition","arguments":["structure","sequence"]}',
+        "We selected records from the evidence table and explained the result.",
+        "WITH treatment, the readthrough efficiency increased significantly.",
+    ],
+)
+def test_internal_tool_detector_does_not_block_ordinary_scientific_prose(scientific_text: str):
+    assert not routes._contains_internal_tool_markup(scientific_text)
+
+
+def test_tool_errors_are_sanitized_before_outbound_summary_or_context():
+    leaked_error = {
+        "error": "sqlalchemy.exc.OperationalError [SQL: SELECT password FROM private_users] api-key=secret"
+    }
+
+    summary = routes._tool_summary("table_rows", leaked_error)
+    context = routes._format_tool_context("table_rows", leaked_error, 2000)
+    direct = routes._sanitize_outbound_tool_text(
+        '{"tool_calls":[{"function":{"name":"query_db","arguments":"secret"}}]}'
+    )
+
+    assert summary == "Tool request failed."
+    assert "Tool request failed." in context
+    assert direct == "Tool output was safely withheld."
+    combined = " ".join([summary, context, direct])
+    assert "SELECT" not in combined
+    assert "private_users" not in combined
+    assert "api-key" not in combined
+
+
+def test_client_history_has_per_message_and_total_character_bounds(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(routes, "_CHAT_MESSAGE_MAX_CHARS", 10)
+    monkeypatch.setattr(routes, "_CHAT_HISTORY_MAX_CHARS", 15)
+
+    history = routes._normalize_client_history(
+        [
+            {"role": "user", "content": "a" * 30},
+            {"role": "assistant", "content": "b" * 30},
+            {"role": "user", "content": "c" * 30},
+        ],
+        20,
+    )
+
+    assert history == [
+        {"role": "assistant", "content": "b" * 5},
+        {"role": "user", "content": "c" * 10},
+    ]
+    assert sum(len(item["content"]) for item in history) == 15
+
+
+def test_chat_session_pruning_expires_stale_sessions_and_caps_entries(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(routes, "_CHAT_SESSION_TTL_SECONDS", 100)
+    monkeypatch.setattr(routes, "_CHAT_SESSION_MAX_ENTRIES", 2)
+    with routes._CHAT_LOCK:
+        routes._CHAT_SESSIONS.clear()
+        routes._CHAT_SESSIONS.update(
+            {
+                "expired": {"messages": [], "updated_at": 100.0},
+                "oldest": {"messages": [], "updated_at": 920.0},
+                "old": {"messages": [], "updated_at": 950.0},
+                "new": {"messages": [], "updated_at": 990.0},
+            }
+        )
+        routes._prune_chat_sessions_locked(now=1000.0, preserve_chat_id="new")
+        snapshot = dict(routes._CHAT_SESSIONS)
+        routes._CHAT_SESSIONS.clear()
+
+    assert set(snapshot) == {"old", "new"}
 
 
 def test_database_question_bypasses_ai_router_for_required_retrieval(monkeypatch: pytest.MonkeyPatch):
@@ -441,6 +556,63 @@ def test_anonymous_chat_cookie_separates_visitors_and_binds_chat_ids():
         json={"message": "hello"},
     )
     assert tampered_response.status_code == 404
+
+
+def test_chat_message_rejects_oversized_input_before_model_work(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(routes, "_CHAT_MESSAGE_MAX_CHARS", 8)
+    app = build_test_app(register_routes=True)
+    with app.test_client() as client:
+        chat_id = client.get("/chat/api/open").get_json()["data"]
+        response = client.post(
+            f"/chat/api/chat_message/{chat_id}",
+            json={"message": "123456789"},
+        )
+
+    assert response.status_code == 413
+    assert response.get_json() == {"error": "message is too long"}
+
+
+def test_chat_stream_logs_exception_but_returns_only_fixed_safe_error(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    app = build_test_app(register_routes=True)
+    monkeypatch.setattr(
+        routes,
+        "_get_llm_runtime",
+        lambda requested_model="": {
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "timeout": 10,
+            "system_prompt": "test",
+            "max_messages": 5,
+        },
+    )
+    monkeypatch.setattr(
+        routes,
+        "_get_ai_workflow_config",
+        lambda: {"workflow_enable": False, "request_deep_review": False},
+    )
+    leaked_exception = "private api key and [SQL: SELECT password FROM internal_users]"
+    monkeypatch.setattr(
+        routes,
+        "_route_conversation_request",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError(leaked_exception)),
+    )
+
+    with app.test_client() as client, caplog.at_level("ERROR"):
+        chat_id = client.get("/chat/api/open").get_json()["data"]
+        response = client.post(
+            f"/chat/api/chat_message/{chat_id}",
+            json={"message": "hello", "stream": True},
+        )
+        payload = response.data.decode("utf-8")
+
+    assert "Unable to complete this request safely." in payload
+    assert "暂时无法安全完成此请求" in payload
+    assert leaked_exception not in payload
+    assert "SELECT password" not in payload
+    assert "Unhandled assistant chat stream failure" in caplog.text
 
 
 def test_ai_workflow_settings_roundtrip(app_ctx: Flask, monkeypatch: pytest.MonkeyPatch):
