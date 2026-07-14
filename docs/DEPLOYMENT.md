@@ -1,6 +1,6 @@
 # Deployment Notes
 
-Verified and deployed on 2026-07-14 from commit `6ebe405`.
+Verified and deployed on 2026-07-14 from commit `ce3f1ba`.
 
 ## Frontend
 
@@ -25,14 +25,14 @@ Secondary frontend host:
 
 The local build and both frontend origins matched during verification:
 
-- `index.html`: `d88e986a9078d7c09b570412a685c8ca2a1f93aede2c9a670fd59d5898b25816`
+- `index.html`: `1d51cdfc10c6637c2bc89dfaf601953f0b5a9442d556dbc5cd1abcd8c2e0d482`
 - `admin.html`: `dd9b6a467599699de2f21a2f2cab5800cf24e98b162957be5d9be68260d77bf6`
-- `help.html`: `d09e691720d2a3d19afc4e8a16ab6b76e8a3ed666a4299b248257110617f771b`
+- `help.html`: `edf69130a4be54d76c5fbe7c4ab70d92ab1776f33b2f665db13c1d62d03f4401`
 
 The current deployments retain immediately restorable previous directories:
 
-- Primary: `/www/wwwroot/trna.lumoxuan.cn.backup-20260714-182239`
-- Secondary: `/www/wwwroot/trna.lumoxuan.cn.backup-20260714-182320`
+- Primary: `/www/wwwroot/trna.lumoxuan.cn.backup-20260714-225016`
+- Secondary: `/www/wwwroot/trna.lumoxuan.cn.backup-20260714-230114`
 
 ## Backend
 
@@ -46,8 +46,10 @@ The ENSURE Flask backend runs only on the primary host.
 - Health check: `http://127.0.0.1:8010/health`
 - Start command: `Flask/start_backend.sh --no-install --server gunicorn --host 0.0.0.0 --port 8010`
 - Active AI provider: Xiaomi MiMo (`mimo-v2.5-pro`)
-- Automatic provider fallback: DeepSeek (`deepseek-v4-pro`) when MiMo returns a
-  retryable provider or network error
+- Automatic provider chain: official Xiaomi MiMo, then a configured
+  MiMo-compatible relay, then DeepSeek (`deepseek-v4-pro`). Fallback is limited
+  to retryable provider, transport, or protocol failures; configuration and
+  non-retryable request errors stop instead of being silently masked.
 
 The user unit is active and enabled with `Restart=always`. Host-level user
 linger is enabled for `yingying` (`loginctl show-user yingying -p Linger`
@@ -65,11 +67,18 @@ Flask/Gunicorn process during verification.
 - Internal model tool markup and raw SQL are rejected before rendering or
   browser persistence. Audio and text clients only persist final content
   events, not draft or tool events.
-- MiMo credential and full public RAG-path checks passed against the official
-  Xiaomi endpoint without invoking the fallback. The deployed RAG response
-  contained four structured, linked sources, inline `[S1]` citations, and no
-  internal tool or SQL leakage.
-- Backend tests: `86 passed`.
+- The full public RAG path returns structured, linked sources with inline
+  `[S1]` citations and does not expose internal tool markup or raw SQL.
+- The relay reports `mimo-v2.5` and `mimo-v2.5-pro` through an
+  OpenAI-compatible API. Non-streaming, streaming, and MiMo Thinking requests
+  passed. A production smoke request observed the official endpoint return
+  HTTP 402, then completed through the relay with sanitized execution metadata
+  (`xiaomi` / `xiaomi_relay`) and no endpoint, credential, or error detail in
+  the browser payload.
+- Streaming fallback is allowed only before the first visible token. Shared
+  stage deadlines cover raw SSE events, and critic provenance is used only
+  when the critic's revision actually becomes the final answer.
+- Backend tests: `119 passed`.
 - Frontend production build completed successfully (`2925` modules).
 - Public health, identity, chat-open, home, and six primary application routes
   returned HTTP 200. All nine entry-page JS/CSS assets returned HTTP 200 and
@@ -84,4 +93,8 @@ Flask/Gunicorn process during verification.
 
 Operational secrets are kept in ignored environment files or the backend
 `app_settings` database table. LLM API keys are redacted from admin audit
-before/after JSON. Never commit or expose them to frontend code.
+before/after JSON. The MiMo relay endpoint and key use hidden settings that are
+not returned by the administrator settings API. Never commit or expose them to
+frontend code. Because the relay is a third-party compatible service, it only
+receives prompts, conversation context, and retrieved evidence when the
+official MiMo endpoint has first failed with a retryable error.
