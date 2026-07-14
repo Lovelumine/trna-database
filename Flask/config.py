@@ -75,6 +75,15 @@ class Config:
     XIAOMI_BASE_URL = os.getenv("XIAOMI_BASE_URL", "https://api.xiaomimimo.com/v1")
     XIAOMI_MODEL = os.getenv("XIAOMI_MODEL", "mimo-v2.5-pro")
     XIAOMI_API_KEY = (os.getenv("XIAOMI_API_KEY") or os.getenv("MIMO_API_KEY", "")).strip()
+    # Optional MiMo-compatible relay. These values are intentionally kept out
+    # of the administrator settings API; production may override them through
+    # hidden AppSetting rows at runtime.
+    XIAOMI_RELAY_BASE_URL = os.getenv("XIAOMI_RELAY_BASE_URL", "").strip()
+    XIAOMI_RELAY_API_KEY = os.getenv("XIAOMI_RELAY_API_KEY", "").strip()
+    XIAOMI_RELAY_ALLOWED_HOSTS = os.getenv(
+        "XIAOMI_RELAY_ALLOWED_HOSTS",
+        "api.klapi.dpdns.org",
+    ).strip()
     OLLAMA_SYSTEM_PROMPT = os.getenv(
         "OLLAMA_SYSTEM_PROMPT",
         (

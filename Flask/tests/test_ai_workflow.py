@@ -220,6 +220,7 @@ def test_xiaomi_once_uses_openai_compatible_request(monkeypatch: pytest.MonkeyPa
     assert captured["json"]["stream"] is False
     assert captured["json"]["thinking"] == {"type": "disabled"}
     assert "reasoning_effort" not in captured["json"]
+    assert captured["allow_redirects"] is False
 
 
 def test_xiaomi_stream_parses_openai_compatible_sse(monkeypatch: pytest.MonkeyPatch):
@@ -264,7 +265,48 @@ def test_xiaomi_stream_parses_openai_compatible_sse(monkeypatch: pytest.MonkeyPa
     assert captured["json"]["stream"] is True
     assert captured["json"]["thinking"] == {"type": "enabled"}
     assert "reasoning_effort" not in captured["json"]
+    assert captured["allow_redirects"] is False
     assert response.encoding == "utf-8"
+
+
+def test_xiaomi_stream_deadline_counts_filtered_heartbeat_events(monkeypatch: pytest.MonkeyPatch):
+    clock = {"now": 0.0}
+    monkeypatch.setattr(routes.time, "monotonic", lambda: clock["now"])
+
+    class FakeResponse:
+        closed = False
+
+        def raise_for_status(self):
+            return None
+
+        def iter_lines(self, decode_unicode=False):
+            clock["now"] = 1.0
+            yield ": keepalive"
+            clock["now"] = 4.0
+            yield 'data: {"usage":{"total_tokens":1}}'
+            clock["now"] = 6.0
+            yield ": keepalive"
+
+        def close(self):
+            self.closed = True
+
+    response = FakeResponse()
+    monkeypatch.setattr(routes.requests, "post", lambda *args, **kwargs: response)
+
+    with pytest.raises(requests.Timeout, match="stage deadline"):
+        list(
+            routes._xiaomi_stream(
+                "https://official.example.test/v1",
+                "test-secret",
+                "mimo-test-model",
+                [{"role": "user", "content": "hello"}],
+                30,
+                {"thinking_enabled": False},
+                deadline=5.0,
+            )
+        )
+
+    assert response.closed is True
 
 
 def test_visible_answer_recovers_from_mimo_tool_markup(monkeypatch: pytest.MonkeyPatch):
@@ -337,6 +379,483 @@ def test_mimo_payment_error_falls_back_to_configured_deepseek(monkeypatch: pytes
         "to_provider": "deepseek",
         "reason": "http_402",
     }
+
+
+def _relay_runtime() -> dict:
+    return {
+        "provider": "xiaomi",
+        "model": "mimo-test-model",
+        "timeout": 30,
+        "xiaomi_base_url": "https://official.example.test/v1",
+        "xiaomi_api_key": "official-test-secret",
+        "xiaomi_relay_base_url": "https://relay.example.test/v1",
+        "xiaomi_relay_api_key": "relay-test-secret",
+        "xiaomi_relay_allowed_hosts": "relay.example.test",
+        "thinking_enabled": True,
+    }
+
+
+def _http_error(status_code: int) -> requests.HTTPError:
+    response = requests.Response()
+    response.status_code = status_code
+    return requests.HTTPError("provider request failed", response=response)
+
+
+def test_xiaomi_relay_runtime_prefers_hidden_settings(app_ctx: Flask, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        routes,
+        "get_llm_settings",
+        lambda include_secrets=True: {
+            "active_provider": "xiaomi",
+            "active_model": "mimo-test-model",
+            "timeout": 30,
+            "max_messages": 20,
+            "xiaomi_base_url": "https://official.example.test/v1",
+            "xiaomi_api_key": "official-test-secret",
+            "xiaomi_default_model": "mimo-test-model",
+            "xiaomi_models": ["mimo-test-model"],
+            "deepseek_models": [],
+            "ollama_models": [],
+        },
+    )
+    hidden = {
+        "llm_xiaomi_relay_base_url": "https://hidden-relay.example.test/v1",
+        "llm_xiaomi_relay_api_key": "hidden-test-secret",
+    }
+    monkeypatch.setattr(routes, "get_setting", lambda key, default=None: hidden.get(key, default))
+    app_ctx.config.update(
+        XIAOMI_RELAY_BASE_URL="https://environment-relay.example.test/v1",
+        XIAOMI_RELAY_API_KEY="environment-test-secret",
+        XIAOMI_RELAY_ALLOWED_HOSTS="hidden-relay.example.test",
+    )
+
+    runtime = routes._get_llm_runtime(requested_provider="xiaomi")
+
+    assert runtime["xiaomi_relay_base_url"] == "https://hidden-relay.example.test/v1"
+    assert runtime["xiaomi_relay_api_key"] == "hidden-test-secret"
+    assert runtime["xiaomi_relay_allowed_hosts"] == "hidden-relay.example.test"
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "http://relay.example.test/v1",
+        "https://user@relay.example.test/v1",
+        "https://relay.example.test/v1?target=other",
+        "https://relay.example.test/v1#fragment",
+        "https://other.example.test/v1",
+        "https://relay.example.test:8443/v1",
+        "https://relay.example.test/v1/../admin",
+    ],
+)
+def test_xiaomi_relay_base_url_validation_rejects_unsafe_values(base_url: str):
+    with pytest.raises(ValueError, match="relay base URL is invalid"):
+        routes._validate_xiaomi_relay_base_url(base_url, "relay.example.test")
+
+
+def test_xiaomi_official_success_does_not_touch_relay(monkeypatch: pytest.MonkeyPatch):
+    runtime = _relay_runtime()
+    calls = []
+
+    def fake_xiaomi(base, api_key, model, messages, timeout, actual_runtime=None):
+        calls.append((base, api_key, model, messages, timeout, actual_runtime))
+        return "official answer"
+
+    monkeypatch.setattr(routes, "_xiaomi_once", fake_xiaomi)
+    monkeypatch.setattr(
+        routes,
+        "_get_llm_runtime",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("fallback must not be loaded")),
+    )
+    messages = [{"role": "user", "content": "hello"}]
+    app = build_test_app()
+    with app.app_context():
+        answer = routes._llm_once(runtime, messages)
+
+    assert answer == "official answer"
+    assert len(calls) == 1
+    assert calls[0][0] == runtime["xiaomi_base_url"]
+    assert calls[0][2:4] == ("mimo-test-model", messages)
+    assert routes._provider_execution_metadata(runtime) == {
+        "logical_provider": "xiaomi",
+        "final_endpoint": "xiaomi_official",
+        "fallback_used": False,
+    }
+
+
+def test_xiaomi_official_failure_uses_compatible_relay(monkeypatch: pytest.MonkeyPatch):
+    runtime = _relay_runtime()
+    calls = []
+    messages = [{"role": "user", "content": "hello"}]
+
+    def fake_xiaomi(base, api_key, model, actual_messages, timeout, actual_runtime=None):
+        calls.append((base, api_key, model, actual_messages, actual_runtime.get("thinking_enabled")))
+        if base == runtime["xiaomi_base_url"]:
+            raise _http_error(503)
+        return "relay answer"
+
+    monkeypatch.setattr(routes, "_xiaomi_once", fake_xiaomi)
+    monkeypatch.setattr(
+        routes,
+        "_get_llm_runtime",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("DeepSeek must not be loaded")),
+    )
+    app = build_test_app()
+    with app.app_context():
+        answer = routes._llm_once(runtime, messages)
+
+    assert answer == "relay answer"
+    assert [call[0] for call in calls] == [runtime["xiaomi_base_url"], runtime["xiaomi_relay_base_url"]]
+    assert calls[1][1:] == ("relay-test-secret", "mimo-test-model", messages, True)
+    assert routes._provider_execution_metadata(runtime)["final_endpoint"] == "xiaomi_relay"
+    assert routes._provider_fallback_metadata(runtime) is None
+
+
+def test_xiaomi_official_and_relay_fail_then_deepseek(monkeypatch: pytest.MonkeyPatch):
+    runtime = _relay_runtime()
+    deepseek_calls = []
+
+    def fake_xiaomi(base, *args, **kwargs):
+        raise _http_error(503 if base == runtime["xiaomi_base_url"] else 401)
+
+    monkeypatch.setattr(routes, "_xiaomi_once", fake_xiaomi)
+    monkeypatch.setattr(
+        routes,
+        "_get_llm_runtime",
+        lambda requested_model="", requested_provider="": {
+            "provider": "deepseek",
+            "model": "deepseek-test-model",
+            "deepseek_base_url": "https://deepseek.example.test/v1",
+            "deepseek_api_key": "deepseek-test-secret",
+        },
+    )
+
+    def fake_deepseek(base, api_key, model, messages, timeout, actual_runtime=None):
+        deepseek_calls.append((base, api_key, model, messages, actual_runtime.get("thinking_enabled")))
+        return "DeepSeek answer"
+
+    monkeypatch.setattr(routes, "_deepseek_once", fake_deepseek)
+    messages = [{"role": "user", "content": "hello"}]
+    app = build_test_app()
+    with app.app_context():
+        answer = routes._llm_once(runtime, messages)
+
+    assert answer == "DeepSeek answer"
+    assert deepseek_calls[0][2:] == ("deepseek-test-model", messages, True)
+    assert routes._provider_execution_metadata(runtime)["final_endpoint"] == "deepseek"
+    assert routes._provider_fallback_metadata(runtime) == {
+        "from_provider": "xiaomi",
+        "to_provider": "deepseek",
+        "reason": "http_401",
+    }
+
+
+def test_xiaomi_relay_empty_content_is_protocol_error_then_deepseek(monkeypatch: pytest.MonkeyPatch):
+    runtime = _relay_runtime()
+
+    def fake_xiaomi(base, *args, **kwargs):
+        if base == runtime["xiaomi_base_url"]:
+            raise _http_error(503)
+        return ""
+
+    monkeypatch.setattr(routes, "_xiaomi_once", fake_xiaomi)
+    monkeypatch.setattr(
+        routes,
+        "_get_llm_runtime",
+        lambda requested_model="", requested_provider="": {
+            "provider": "deepseek",
+            "model": "deepseek-test-model",
+            "deepseek_base_url": "https://deepseek.example.test/v1",
+            "deepseek_api_key": "deepseek-test-secret",
+        },
+    )
+    monkeypatch.setattr(routes, "_deepseek_once", lambda *args, **kwargs: "safe fallback")
+    app = build_test_app()
+    with app.app_context():
+        answer = routes._llm_once(runtime, [{"role": "user", "content": "hello"}])
+
+    assert answer == "safe fallback"
+    assert routes._provider_fallback_metadata(runtime)["reason"] == "protocol_error"
+
+
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404, 422])
+def test_xiaomi_official_configuration_and_auth_errors_stop_chain(
+    status_code: int,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    runtime = _relay_runtime()
+    calls = []
+
+    def fake_xiaomi(*args, **kwargs):
+        calls.append(args[0])
+        raise _http_error(status_code)
+
+    monkeypatch.setattr(routes, "_xiaomi_once", fake_xiaomi)
+    monkeypatch.setattr(
+        routes,
+        "_get_llm_runtime",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("fallback must not be loaded")),
+    )
+    app = build_test_app()
+    with app.app_context(), pytest.raises(requests.HTTPError):
+        routes._llm_once(runtime, [{"role": "user", "content": "hello"}])
+
+    assert calls == [runtime["xiaomi_base_url"]]
+
+
+@pytest.mark.parametrize("status_code", [400, 404, 422])
+def test_xiaomi_relay_configuration_errors_stop_before_deepseek(
+    status_code: int,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    runtime = _relay_runtime()
+
+    def fake_xiaomi(base, *args, **kwargs):
+        raise _http_error(503 if base == runtime["xiaomi_base_url"] else status_code)
+
+    monkeypatch.setattr(routes, "_xiaomi_once", fake_xiaomi)
+    monkeypatch.setattr(
+        routes,
+        "_get_llm_runtime",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("DeepSeek must not be loaded")),
+    )
+    app = build_test_app()
+    with app.app_context(), pytest.raises(requests.HTTPError) as caught:
+        routes._llm_once(runtime, [{"role": "user", "content": "hello"}])
+
+    assert caught.value.response.status_code == status_code
+
+
+def test_xiaomi_stream_falls_back_only_before_first_token(monkeypatch: pytest.MonkeyPatch):
+    runtime = _relay_runtime()
+    calls = []
+
+    def fake_stream(base, *args, **kwargs):
+        calls.append(base)
+        if base == runtime["xiaomi_base_url"]:
+            return iter(())
+        return iter([("relay ", False), ("answer", True)])
+
+    monkeypatch.setattr(routes, "_xiaomi_stream", fake_stream)
+    app = build_test_app()
+    with app.app_context():
+        chunks = list(routes._llm_stream(runtime, [{"role": "user", "content": "hello"}]))
+
+    assert chunks == [("relay ", False), ("answer", True)]
+    assert calls == [runtime["xiaomi_base_url"], runtime["xiaomi_relay_base_url"]]
+    assert routes._provider_execution_metadata(runtime)["final_endpoint"] == "xiaomi_relay"
+
+
+@pytest.mark.parametrize(
+    "error_type",
+    [
+        requests.exceptions.ChunkedEncodingError,
+        requests.exceptions.ContentDecodingError,
+    ],
+)
+def test_xiaomi_stream_transport_error_before_output_uses_relay(
+    error_type,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    runtime = _relay_runtime()
+    calls = []
+
+    def broken_stream():
+        raise error_type("stream transport failed")
+        yield  # pragma: no cover
+
+    def fake_stream(base, *args, **kwargs):
+        calls.append(base)
+        if base == runtime["xiaomi_base_url"]:
+            return broken_stream()
+        return iter([("relay answer", True)])
+
+    monkeypatch.setattr(routes, "_xiaomi_stream", fake_stream)
+    app = build_test_app()
+    with app.app_context():
+        chunks = list(routes._llm_stream(runtime, [{"role": "user", "content": "hello"}]))
+
+    assert chunks == [("relay answer", True)]
+    assert calls == [runtime["xiaomi_base_url"], runtime["xiaomi_relay_base_url"]]
+
+
+@pytest.mark.parametrize(
+    "error_type",
+    [
+        requests.ConnectionError,
+        requests.exceptions.ChunkedEncodingError,
+        requests.exceptions.ContentDecodingError,
+    ],
+)
+def test_xiaomi_stream_partial_output_never_splices_relay(
+    error_type,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    runtime = _relay_runtime()
+    calls = []
+
+    def official_then_error():
+        yield "partial", False
+        raise error_type("stream interrupted")
+
+    def fake_stream(base, *args, **kwargs):
+        calls.append(base)
+        if base == runtime["xiaomi_base_url"]:
+            return official_then_error()
+        return iter([("must not appear", True)])
+
+    monkeypatch.setattr(routes, "_xiaomi_stream", fake_stream)
+    app = build_test_app()
+    with app.app_context():
+        stream = routes._llm_stream(runtime, [{"role": "user", "content": "hello"}])
+        assert next(stream) == ("partial", False)
+        with pytest.raises(error_type):
+            next(stream)
+
+    assert calls == [runtime["xiaomi_base_url"]]
+
+
+def test_xiaomi_stream_enforces_absolute_stage_deadline(monkeypatch: pytest.MonkeyPatch):
+    runtime = _relay_runtime()
+    runtime["timeout"] = 10
+    calls = []
+    clock = {"now": 0.0}
+    monkeypatch.setattr(routes.time, "monotonic", lambda: clock["now"])
+
+    def slow_stream():
+        clock["now"] = 1.0
+        yield "first", False
+        clock["now"] = 6.0  # official stage deadline is 5.5 seconds
+        yield "late", False
+
+    def fake_stream(base, *args, **kwargs):
+        calls.append(base)
+        if base == runtime["xiaomi_base_url"]:
+            return slow_stream()
+        return iter([("must not appear", True)])
+
+    monkeypatch.setattr(routes, "_xiaomi_stream", fake_stream)
+    app = build_test_app()
+    with app.app_context():
+        stream = routes._llm_stream(runtime, [{"role": "user", "content": "hello"}])
+        assert next(stream) == ("first", False)
+        with pytest.raises(requests.Timeout, match="stage deadline"):
+            next(stream)
+
+    # A token had already been emitted, so deadline expiry must stop instead
+    # of splicing the relay onto the partial official answer.
+    assert calls == [runtime["xiaomi_base_url"]]
+
+
+def test_provider_execution_metadata_never_exposes_endpoint_or_keys():
+    runtime = _relay_runtime()
+    runtime["_provider_execution"] = {
+        "logical_provider": "xiaomi",
+        "final_endpoint": "xiaomi_relay",
+        "fallback_used": True,
+        "base_url": runtime["xiaomi_relay_base_url"],
+        "api_key": runtime["xiaomi_relay_api_key"],
+    }
+
+    serialized = json.dumps(routes._provider_execution_metadata(runtime))
+
+    assert runtime["xiaomi_relay_base_url"] not in serialized
+    assert runtime["xiaomi_relay_api_key"] not in serialized
+
+
+def test_critic_execution_does_not_overwrite_answer_execution(monkeypatch: pytest.MonkeyPatch):
+    answer_runtime = {
+        "provider": "xiaomi",
+        "_provider_execution": {
+            "logical_provider": "xiaomi",
+            "final_endpoint": "xiaomi_relay",
+            "fallback_used": True,
+        },
+    }
+
+    def fake_llm_once(critic_runtime, *args, **kwargs):
+        critic_runtime["_provider_execution"] = {
+            "logical_provider": "xiaomi",
+            "final_endpoint": "deepseek",
+            "fallback_used": True,
+        }
+        return '{"verdict":"ok","tool_calls":[],"revised_answer":""}'
+
+    monkeypatch.setattr(routes, "_llm_once", fake_llm_once)
+
+    result = routes._critique_answer(answer_runtime, "question", "answer", "evidence")
+
+    assert result["verdict"] == "ok"
+    assert result["provider_execution"]["final_endpoint"] == "deepseek"
+    assert routes._provider_execution_metadata(answer_runtime)["final_endpoint"] == "xiaomi_relay"
+
+
+@pytest.mark.parametrize(
+    ("verdict", "expected_answer", "expected_endpoint"),
+    [
+        ("ok", "draft answer", "xiaomi_official"),
+        ("need_more_evidence", "draft answer", "xiaomi_official"),
+        ("revise", "critic revision", "xiaomi_relay"),
+    ],
+)
+def test_finalizer_provenance_changes_only_when_critic_revision_is_adopted(
+    verdict: str,
+    expected_answer: str,
+    expected_endpoint: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    app = build_test_app()
+
+    def fake_generate(runtime, *args, **kwargs):
+        routes._record_provider_execution(runtime, "xiaomi", "xiaomi_official")
+        return "draft answer"
+
+    monkeypatch.setattr(routes, "_generate_answer", fake_generate)
+    monkeypatch.setattr(
+        routes,
+        "_critique_answer",
+        lambda *args, **kwargs: {
+            "verdict": verdict,
+            "tool_calls": [],
+            "revised_answer": "critic revision" if verdict == "revise" else "",
+            "provider_execution": {
+                "logical_provider": "xiaomi",
+                "final_endpoint": "xiaomi_relay",
+                "fallback_used": True,
+            },
+            "provider_fallback": None,
+        },
+    )
+    with app.app_context():
+        finalizer = routes._finalize_answer(
+            {"provider": "xiaomi", "model": "mimo-test-model"},
+            "system",
+            [],
+            "question",
+            "style",
+            "context",
+            "",
+            {},
+            {},
+            [],
+            {
+                "final_critic_enable": True,
+                "max_total_tool_steps": 4,
+                "max_tool_steps_per_round": 2,
+                "allow_pubmed_deepen": True,
+                "allow_table_deepen": True,
+                "allow_doc_deepen": True,
+            },
+        )
+        while True:
+            try:
+                next(finalizer)
+            except StopIteration as stop:
+                result = stop.value
+                break
+
+    assert result["answer"] == expected_answer
+    assert result["provider_execution"]["final_endpoint"] == expected_endpoint
 
 
 @pytest.mark.parametrize("status_code", [401, 403])

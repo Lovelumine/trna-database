@@ -25,7 +25,7 @@ import math
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 from zoneinfo import ZoneInfo
 from sqlalchemy import text, bindparam, Integer, or_
 import re
@@ -277,6 +277,30 @@ def _get_llm_runtime(requested_model: str = "", requested_provider: str = "") ->
             "ollama": str(cfg.get("ollama_default_model") or ""),
         }.get(provider, "")
 
+    # Relay credentials are deliberately not part of get_llm_settings(), the
+    # admin API, or its audit payload. A hidden AppSetting takes precedence;
+    # when the row is absent, deployment-only environment configuration is
+    # used. Catching lookup errors keeps model-selection helpers usable in
+    # migrations/tests before the AppSetting table is available.
+    try:
+        relay_config_base = str(current_app.config.get("XIAOMI_RELAY_BASE_URL") or "").strip()
+        relay_config_key = str(current_app.config.get("XIAOMI_RELAY_API_KEY") or "").strip()
+        relay_allowed_hosts = str(
+            current_app.config.get("XIAOMI_RELAY_ALLOWED_HOSTS") or "api.klapi.dpdns.org"
+        ).strip()
+    except RuntimeError:
+        relay_config_base = str(os.getenv("XIAOMI_RELAY_BASE_URL") or "").strip()
+        relay_config_key = str(os.getenv("XIAOMI_RELAY_API_KEY") or "").strip()
+        relay_allowed_hosts = str(
+            os.getenv("XIAOMI_RELAY_ALLOWED_HOSTS") or "api.klapi.dpdns.org"
+        ).strip()
+    try:
+        hidden_relay_base = get_setting("llm_xiaomi_relay_base_url", None)
+        hidden_relay_key = get_setting("llm_xiaomi_relay_api_key", None)
+    except Exception:
+        hidden_relay_base = None
+        hidden_relay_key = None
+
     runtime = {
         "provider": provider,
         "model": model,
@@ -288,6 +312,13 @@ def _get_llm_runtime(requested_model: str = "", requested_provider: str = "") ->
         "deepseek_api_key": str(cfg.get("deepseek_api_key") or ""),
         "xiaomi_base_url": str(cfg.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
         "xiaomi_api_key": str(cfg.get("xiaomi_api_key") or ""),
+        "xiaomi_relay_base_url": str(
+            relay_config_base if hidden_relay_base is None else hidden_relay_base
+        ).strip(),
+        "xiaomi_relay_api_key": str(
+            relay_config_key if hidden_relay_key is None else hidden_relay_key
+        ).strip(),
+        "xiaomi_relay_allowed_hosts": relay_allowed_hosts,
         "model_options": list(cfg.get("model_options") or []),
         "ollama_models": list(ollama_models),
         "deepseek_models": list(deepseek_models),
@@ -1087,58 +1118,159 @@ def _apply_deepseek_thinking(runtime: dict, payload: dict) -> dict:
     return next_runtime
 
 
-def _deepseek_stream(base: str, api_key: str, model: str, messages: list, timeout: float, runtime: dict | None = None):
-    if not api_key:
-        raise RuntimeError("DeepSeek API key is not configured")
+class LLMProtocolError(RuntimeError):
+    """A provider returned HTTP success without a usable chat response."""
+
+
+def _close_provider_response(response) -> None:
+    close = getattr(response, "close", None)
+    if callable(close):
+        close()
+
+
+def _reject_redirect_response(response) -> None:
+    status_code = getattr(response, "status_code", None)
+    if isinstance(status_code, int) and 300 <= status_code < 400:
+        raise requests.HTTPError("provider redirects are not allowed", response=response)
+
+
+def _openai_compatible_once(
+    base: str,
+    api_key: str,
+    payload: dict,
+    timeout: float,
+) -> str:
     url = base.rstrip("/") + "/chat/completions"
-    payload = {"model": model, "messages": messages, "stream": True}
-    payload.update(_normalize_deepseek_thinking_options(runtime or {}))
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    resp = requests.post(url, json=payload, headers=headers, stream=True, timeout=timeout)
-    resp.raise_for_status()
-    # Some compatible SSE APIs omit a charset. Force UTF-8 so non-ASCII token
-    # chunks are not decoded as ISO-8859-1 by requests.
-    resp.encoding = "utf-8"
-    for line in resp.iter_lines(decode_unicode=True):
-        if not line:
-            continue
-        if not line.startswith("data:"):
-            continue
-        raw = line[5:].strip()
-        if raw == "[DONE]":
-            yield "", True
-            return
-        data = json.loads(raw)
-        choices = data.get("choices") or []
-        if not choices:
-            continue
-        delta = choices[0].get("delta") or {}
-        content = delta.get("content") or ""
-        done = choices[0].get("finish_reason") is not None
-        yield content, done
+    response = requests.post(
+        url,
+        json=payload,
+        headers=headers,
+        timeout=timeout,
+        allow_redirects=False,
+    )
+    try:
+        _reject_redirect_response(response)
+        response.raise_for_status()
+        try:
+            data = response.json()
+        except Exception as exc:
+            raise LLMProtocolError("provider returned malformed JSON") from exc
+        if not isinstance(data, dict) or data.get("error"):
+            raise LLMProtocolError("provider returned a malformed completion")
+        choices = data.get("choices")
+        if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+            raise LLMProtocolError("provider returned no completion choice")
+        message = choices[0].get("message")
+        if not isinstance(message, dict):
+            raise LLMProtocolError("provider returned no completion message")
+        content = message.get("content")
+        if not isinstance(content, str) or not content.strip():
+            raise LLMProtocolError("provider returned empty completion content")
+        return content
+    finally:
+        _close_provider_response(response)
+
+
+def _openai_compatible_stream(
+    base: str,
+    api_key: str,
+    payload: dict,
+    timeout: float,
+    deadline: float | None = None,
+):
+    url = base.rstrip("/") + "/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    response = requests.post(
+        url,
+        json=payload,
+        headers=headers,
+        stream=True,
+        timeout=timeout,
+        allow_redirects=False,
+    )
+    saw_content = False
+    absolute_deadline = float(deadline) if deadline is not None else time.monotonic() + max(0.1, timeout)
+    try:
+        _reject_redirect_response(response)
+        response.raise_for_status()
+        # OpenAI-compatible relays do not always include a charset on SSE.
+        response.encoding = "utf-8"
+        for line in response.iter_lines(decode_unicode=True):
+            # Check every raw SSE line, including heartbeat/usage events that
+            # are filtered before the higher-level provider wrapper sees them.
+            if time.monotonic() >= absolute_deadline:
+                raise requests.Timeout("provider stream stage deadline exhausted")
+            if not line or not line.startswith("data:"):
+                continue
+            raw = line[5:].strip()
+            if raw == "[DONE]":
+                if not saw_content:
+                    raise LLMProtocolError("provider stream ended without content")
+                yield "", True
+                return
+            try:
+                data = json.loads(raw)
+            except Exception as exc:
+                raise LLMProtocolError("provider stream returned malformed JSON") from exc
+            if not isinstance(data, dict) or data.get("error"):
+                raise LLMProtocolError("provider stream returned a malformed event")
+            choices = data.get("choices")
+            # Usage-only events are valid, but they cannot make an otherwise
+            # empty stream successful.
+            if not isinstance(choices, list) or not choices:
+                continue
+            choice = choices[0]
+            if not isinstance(choice, dict):
+                raise LLMProtocolError("provider stream returned a malformed choice")
+            delta = choice.get("delta") or {}
+            if not isinstance(delta, dict):
+                raise LLMProtocolError("provider stream returned a malformed delta")
+            content = delta.get("content") or ""
+            if not isinstance(content, str):
+                raise LLMProtocolError("provider stream returned non-text content")
+            if content:
+                saw_content = True
+            done = choice.get("finish_reason") is not None
+            if done and not saw_content:
+                raise LLMProtocolError("provider stream finished without content")
+            if content or done:
+                yield content, done
+            if done:
+                return
+        raise LLMProtocolError("provider stream closed before completion")
+    finally:
+        _close_provider_response(response)
+
+
+def _deepseek_stream(
+    base: str,
+    api_key: str,
+    model: str,
+    messages: list,
+    timeout: float,
+    runtime: dict | None = None,
+    deadline: float | None = None,
+):
+    if not api_key:
+        raise RuntimeError("DeepSeek API key is not configured")
+    payload = {"model": model, "messages": messages, "stream": True}
+    payload.update(_normalize_deepseek_thinking_options(runtime or {}))
+    yield from _openai_compatible_stream(base, api_key, payload, timeout, deadline=deadline)
 
 
 def _deepseek_once(base: str, api_key: str, model: str, messages: list, timeout: float, runtime: dict | None = None) -> str:
     if not api_key:
         raise RuntimeError("DeepSeek API key is not configured")
-    url = base.rstrip("/") + "/chat/completions"
     payload = {"model": model, "messages": messages, "stream": False}
     payload.update(_normalize_deepseek_thinking_options(runtime or {}))
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
-    resp.raise_for_status()
-    data = resp.json() or {}
-    choices = data.get("choices") or []
-    if not choices:
-        return ""
-    message = choices[0].get("message") or {}
-    return message.get("content") or ""
+    return _openai_compatible_once(base, api_key, payload, timeout)
 
 
 def _normalize_xiaomi_thinking_options(runtime: dict) -> dict:
@@ -1149,64 +1281,382 @@ def _normalize_xiaomi_thinking_options(runtime: dict) -> dict:
     }
 
 
-def _xiaomi_stream(base: str, api_key: str, model: str, messages: list, timeout: float, runtime: dict | None = None):
+def _xiaomi_stream(
+    base: str,
+    api_key: str,
+    model: str,
+    messages: list,
+    timeout: float,
+    runtime: dict | None = None,
+    deadline: float | None = None,
+):
     if not api_key:
         raise RuntimeError("Xiaomi MiMo API key is not configured")
-    url = base.rstrip("/") + "/chat/completions"
     payload = {"model": model, "messages": messages, "stream": True}
     payload.update(_normalize_xiaomi_thinking_options(runtime or {}))
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    resp = requests.post(url, json=payload, headers=headers, stream=True, timeout=timeout)
-    resp.raise_for_status()
-    # MiMo currently omits a charset on some streaming responses. Its JSON/SSE
-    # payload is UTF-8, so make that explicit before iter_lines decodes it.
-    resp.encoding = "utf-8"
-    for line in resp.iter_lines(decode_unicode=True):
-        if not line or not line.startswith("data:"):
-            continue
-        raw = line[5:].strip()
-        if raw == "[DONE]":
-            yield "", True
-            return
-        data = json.loads(raw)
-        choices = data.get("choices") or []
-        if not choices:
-            continue
-        delta = choices[0].get("delta") or {}
-        content = delta.get("content") or ""
-        done = choices[0].get("finish_reason") is not None
-        yield content, done
+    yield from _openai_compatible_stream(base, api_key, payload, timeout, deadline=deadline)
 
 
 def _xiaomi_once(base: str, api_key: str, model: str, messages: list, timeout: float, runtime: dict | None = None) -> str:
     if not api_key:
         raise RuntimeError("Xiaomi MiMo API key is not configured")
-    url = base.rstrip("/") + "/chat/completions"
     payload = {"model": model, "messages": messages, "stream": False}
     payload.update(_normalize_xiaomi_thinking_options(runtime or {}))
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
+    return _openai_compatible_once(base, api_key, payload, timeout)
+
+
+def _reset_provider_execution(runtime: dict) -> None:
+    runtime.pop("_provider_execution", None)
+    runtime.pop("_provider_fallback", None)
+
+
+def _record_provider_execution(runtime: dict, logical_provider: str, final_endpoint: str) -> None:
+    runtime["_provider_execution"] = {
+        "logical_provider": logical_provider,
+        "final_endpoint": final_endpoint,
+        "fallback_used": final_endpoint not in {"xiaomi_official", logical_provider},
     }
-    resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
-    resp.raise_for_status()
-    data = resp.json() or {}
-    choices = data.get("choices") or []
-    if not choices:
-        return ""
-    message = choices[0].get("message") or {}
-    return message.get("content") or ""
+
+
+def _provider_error_status(exc: Exception) -> int | None:
+    response = getattr(exc, "response", None)
+    status_code = getattr(response, "status_code", None)
+    return status_code if isinstance(status_code, int) else None
+
+
+def _provider_error_reason(exc: Exception) -> str:
+    status_code = _provider_error_status(exc)
+    if isinstance(exc, requests.Timeout):
+        return "timeout"
+    if isinstance(exc, requests.ConnectionError):
+        return "connection_error"
+    if isinstance(
+        exc,
+        (requests.exceptions.ChunkedEncodingError, requests.exceptions.ContentDecodingError),
+    ):
+        return "connection_error"
+    if isinstance(exc, LLMProtocolError):
+        return "protocol_error"
+    if status_code is not None:
+        return f"http_{status_code}"
+    return "provider_error"
+
+
+def _is_transient_transport_error(exc: Exception) -> bool:
+    return isinstance(
+        exc,
+        (
+            requests.Timeout,
+            requests.ConnectionError,
+            requests.exceptions.ChunkedEncodingError,
+            requests.exceptions.ContentDecodingError,
+        ),
+    )
+
+
+def _official_xiaomi_can_fallback(exc: Exception) -> bool:
+    status_code = _provider_error_status(exc)
+    return (
+        _is_transient_transport_error(exc)
+        or isinstance(exc, LLMProtocolError)
+        or status_code in {402, 408, 409, 425, 429}
+        or (status_code is not None and status_code >= 500)
+    )
+
+
+def _relay_xiaomi_can_fallback(exc: Exception) -> bool:
+    status_code = _provider_error_status(exc)
+    if status_code in {400, 404, 422}:
+        return False
+    return status_code in {401, 402, 403, 408, 409, 425, 429} or (
+        status_code is not None and status_code >= 500
+    ) or _is_transient_transport_error(exc) or isinstance(exc, LLMProtocolError)
+
+
+def _validate_xiaomi_relay_base_url(base_url: str, allowed_hosts) -> str:
+    raw = str(base_url or "").strip()
+    if not raw or any(char.isspace() for char in raw):
+        raise ValueError("MiMo relay base URL is invalid")
+    try:
+        parsed = urlsplit(raw)
+        port = parsed.port
+    except Exception as exc:
+        raise ValueError("MiMo relay base URL is invalid") from exc
+    hosts = {
+        item.strip().lower().rstrip(".")
+        for item in re.split(r"[,\s]+", str(allowed_hosts or ""))
+        if item.strip()
+    }
+    hostname = str(parsed.hostname or "").lower().rstrip(".")
+    path_lower = str(parsed.path or "").lower()
+    if (
+        parsed.scheme.lower() != "https"
+        or not hostname
+        or hostname not in hosts
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or port not in (None, 443)
+        or ".." in (parsed.path or "").split("/")
+        or "%2e" in path_lower
+    ):
+        raise ValueError("MiMo relay base URL is invalid")
+    return raw.rstrip("/")
+
+
+def _xiaomi_relay_config(runtime: dict) -> tuple[str, str] | None:
+    raw_base = str(runtime.get("xiaomi_relay_base_url") or "").strip()
+    api_key = str(runtime.get("xiaomi_relay_api_key") or "").strip()
+    if not raw_base and not api_key:
+        return None
+    if not raw_base or not api_key:
+        raise RuntimeError("MiMo relay configuration is incomplete")
+    base = _validate_xiaomi_relay_base_url(
+        raw_base,
+        runtime.get("xiaomi_relay_allowed_hosts") or "api.klapi.dpdns.org",
+    )
+    return base, api_key
+
+
+def _deepseek_fallback_runtime(runtime: dict) -> dict:
+    fallback_runtime = _get_llm_runtime(requested_provider="deepseek")
+    fallback_runtime["thinking_enabled"] = bool(runtime.get("thinking_enabled", False))
+    fallback_runtime["reasoning_effort"] = str(runtime.get("reasoning_effort") or "high")
+    return fallback_runtime
+
+
+def _stage_timeout(deadline: float, stage_deadline: float) -> float:
+    remaining = min(deadline, stage_deadline) - time.monotonic()
+    if remaining <= 0:
+        raise requests.Timeout("provider fallback deadline exhausted")
+    return max(0.05, remaining)
+
+
+def _xiaomi_deadlines(timeout: float, relay_configured: bool) -> tuple[float, float, float]:
+    started = time.monotonic()
+    total = max(0.1, float(timeout))
+    deadline = started + total
+    official_fraction = 0.55 if relay_configured else 0.70
+    relay_fraction = 0.82 if relay_configured else official_fraction
+    return started + (total * official_fraction), started + (total * relay_fraction), deadline
+
+
+def _xiaomi_once_with_fallback(
+    runtime: dict,
+    messages: list,
+    chosen_model: str,
+    timeout: float,
+) -> str:
+    relay_configured = bool(
+        str(runtime.get("xiaomi_relay_base_url") or "").strip()
+        or str(runtime.get("xiaomi_relay_api_key") or "").strip()
+    )
+    official_deadline, relay_deadline, deadline = _xiaomi_deadlines(timeout, relay_configured)
+    try:
+        answer = _xiaomi_once(
+            str(runtime.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
+            str(runtime.get("xiaomi_api_key") or ""),
+            chosen_model,
+            messages,
+            _stage_timeout(deadline, official_deadline),
+            runtime,
+        )
+        if not isinstance(answer, str) or not answer.strip():
+            raise LLMProtocolError("official MiMo returned empty completion content")
+        _record_provider_execution(runtime, "xiaomi", "xiaomi_official")
+        return answer
+    except Exception as official_error:
+        if not _official_xiaomi_can_fallback(official_error):
+            raise
+        last_error = official_error
+
+    relay = _xiaomi_relay_config(runtime)
+    if relay is not None:
+        current_app.logger.warning(
+            "Official MiMo request failed (%s); trying configured MiMo relay",
+            _provider_error_reason(last_error),
+        )
+        relay_base, relay_key = relay
+        try:
+            answer = _xiaomi_once(
+                relay_base,
+                relay_key,
+                chosen_model,
+                messages,
+                _stage_timeout(deadline, relay_deadline),
+                runtime,
+            )
+            if not isinstance(answer, str) or not answer.strip():
+                raise LLMProtocolError("MiMo relay returned empty completion content")
+            _record_provider_execution(runtime, "xiaomi", "xiaomi_relay")
+            return answer
+        except Exception as relay_error:
+            if not _relay_xiaomi_can_fallback(relay_error):
+                raise
+            last_error = relay_error
+
+    fallback_runtime = _deepseek_fallback_runtime(runtime)
+    fallback_key = str(fallback_runtime.get("deepseek_api_key") or "").strip()
+    if not fallback_key:
+        raise last_error
+    fallback_reason = _provider_error_reason(last_error)
+    current_app.logger.warning(
+        "MiMo request chain failed (%s); trying configured DeepSeek fallback",
+        fallback_reason,
+    )
+    answer = _deepseek_once(
+        str(fallback_runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
+        fallback_key,
+        str(fallback_runtime.get("model") or "deepseek-v4-pro"),
+        messages,
+        _stage_timeout(deadline, deadline),
+        fallback_runtime,
+    )
+    if not isinstance(answer, str) or not answer.strip():
+        raise LLMProtocolError("DeepSeek fallback returned empty completion content")
+    runtime["_provider_fallback"] = {
+        "from_provider": "xiaomi",
+        "to_provider": "deepseek",
+        "reason": fallback_reason,
+    }
+    _record_provider_execution(runtime, "xiaomi", "deepseek")
+    return answer
+
+
+def _xiaomi_stream_with_fallback(runtime: dict, messages: list, chosen_model: str, timeout: float):
+    relay_configured = bool(
+        str(runtime.get("xiaomi_relay_base_url") or "").strip()
+        or str(runtime.get("xiaomi_relay_api_key") or "").strip()
+    )
+    official_deadline, relay_deadline, deadline = _xiaomi_deadlines(timeout, relay_configured)
+    stage = "official"
+    relay = None
+    fallback_runtime = None
+    fallback_reason = "provider_error"
+    last_error = None
+
+    while True:
+        emitted = False
+        stream = None
+        try:
+            if stage == "official":
+                attempt_deadline = min(deadline, official_deadline)
+                stream = _xiaomi_stream(
+                    str(runtime.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
+                    str(runtime.get("xiaomi_api_key") or ""),
+                    chosen_model,
+                    messages,
+                    _stage_timeout(deadline, official_deadline),
+                    runtime,
+                    deadline=attempt_deadline,
+                )
+                endpoint = "xiaomi_official"
+            elif stage == "relay":
+                attempt_deadline = min(deadline, relay_deadline)
+                relay_base, relay_key = relay
+                stream = _xiaomi_stream(
+                    relay_base,
+                    relay_key,
+                    chosen_model,
+                    messages,
+                    _stage_timeout(deadline, relay_deadline),
+                    runtime,
+                    deadline=attempt_deadline,
+                )
+                endpoint = "xiaomi_relay"
+            else:
+                attempt_deadline = deadline
+                stream = _deepseek_stream(
+                    str(fallback_runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
+                    str(fallback_runtime.get("deepseek_api_key") or ""),
+                    str(fallback_runtime.get("model") or "deepseek-v4-pro"),
+                    messages,
+                    _stage_timeout(deadline, deadline),
+                    fallback_runtime,
+                    deadline=attempt_deadline,
+                )
+                endpoint = "deepseek"
+            for content, done in stream:
+                # requests' read timeout is per socket read. A provider could
+                # otherwise keep an SSE call alive forever by sending periodic
+                # heartbeat/events. Enforce the shared absolute stage/global
+                # deadline before releasing every chunk.
+                if time.monotonic() >= attempt_deadline:
+                    raise requests.Timeout("provider stream stage deadline exhausted")
+                if content:
+                    emitted = True
+                    _record_provider_execution(runtime, "xiaomi", endpoint)
+                    if endpoint == "deepseek":
+                        runtime["_provider_fallback"] = {
+                            "from_provider": "xiaomi",
+                            "to_provider": "deepseek",
+                            "reason": fallback_reason,
+                        }
+                if done and not emitted:
+                    raise LLMProtocolError("provider stream finished without content")
+                yield content, done
+                if done:
+                    return
+            raise LLMProtocolError("provider stream closed before completion")
+        except Exception as exc:
+            if emitted:
+                # Never splice a second provider onto a response after even one
+                # user-visible token has escaped from the first provider.
+                raise
+            last_error = exc
+        finally:
+            close = getattr(stream, "close", None)
+            if callable(close):
+                close()
+
+        if stage == "official":
+            if not _official_xiaomi_can_fallback(last_error):
+                raise last_error
+            relay = _xiaomi_relay_config(runtime)
+            if relay is not None:
+                current_app.logger.warning(
+                    "Official MiMo stream failed (%s) before output; trying configured MiMo relay",
+                    _provider_error_reason(last_error),
+                )
+                stage = "relay"
+                continue
+        elif stage == "relay":
+            if not _relay_xiaomi_can_fallback(last_error):
+                raise last_error
+        else:
+            raise last_error
+
+        fallback_runtime = _deepseek_fallback_runtime(runtime)
+        if not str(fallback_runtime.get("deepseek_api_key") or "").strip():
+            raise last_error
+        fallback_reason = _provider_error_reason(last_error)
+        current_app.logger.warning(
+            "MiMo stream chain failed (%s) before output; trying configured DeepSeek fallback",
+            fallback_reason,
+        )
+        stage = "deepseek"
+
+
+def _direct_stream_with_metadata(runtime: dict, logical_provider: str, endpoint: str, stream):
+    try:
+        for content, done in stream:
+            if content or done:
+                _record_provider_execution(runtime, logical_provider, endpoint)
+            yield content, done
+    finally:
+        close = getattr(stream, "close", None)
+        if callable(close):
+            close()
 
 
 def _llm_stream(runtime: dict, messages: list, model: str = ""):
     provider = str(runtime.get("provider") or "deepseek")
     chosen_model = str(model or runtime.get("model") or "").strip()
     timeout = float(runtime.get("timeout") or 120)
+    _reset_provider_execution(runtime)
     if provider == "deepseek":
-        return _deepseek_stream(
+        stream = _deepseek_stream(
             str(runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
             str(runtime.get("deepseek_api_key") or ""),
             chosen_model,
@@ -1214,29 +1664,25 @@ def _llm_stream(runtime: dict, messages: list, model: str = ""):
             timeout,
             runtime,
         )
+        return _direct_stream_with_metadata(runtime, "deepseek", "deepseek", stream)
     if provider == "xiaomi":
-        return _xiaomi_stream(
-            str(runtime.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
-            str(runtime.get("xiaomi_api_key") or ""),
-            chosen_model,
-            messages,
-            timeout,
-            runtime,
-        )
-    return _ollama_stream(
+        return _xiaomi_stream_with_fallback(runtime, messages, chosen_model, timeout)
+    stream = _ollama_stream(
         str(runtime.get("ollama_base_url") or ""),
         chosen_model,
         messages,
         timeout,
     )
+    return _direct_stream_with_metadata(runtime, "ollama", "ollama", stream)
 
 
 def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | None = None) -> str:
     provider = str(runtime.get("provider") or "deepseek")
     chosen_model = str(model or runtime.get("model") or "").strip()
     timeout_value = float(timeout if timeout is not None else (runtime.get("timeout") or 120))
+    _reset_provider_execution(runtime)
     if provider == "deepseek":
-        return _deepseek_once(
+        answer = _deepseek_once(
             str(runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
             str(runtime.get("deepseek_api_key") or ""),
             chosen_model,
@@ -1244,65 +1690,18 @@ def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | N
             timeout_value,
             runtime,
         )
+        _record_provider_execution(runtime, "deepseek", "deepseek")
+        return answer
     if provider == "xiaomi":
-        try:
-            return _xiaomi_once(
-                str(runtime.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
-                str(runtime.get("xiaomi_api_key") or ""),
-                chosen_model,
-                messages,
-                timeout_value,
-                runtime,
-            )
-        except Exception as exc:
-            response = getattr(exc, "response", None)
-            status_code = getattr(response, "status_code", None)
-            retryable = isinstance(exc, (requests.Timeout, requests.ConnectionError)) or status_code in {
-                402,
-                408,
-                409,
-                425,
-                429,
-            } or (isinstance(status_code, int) and status_code >= 500)
-            if not retryable:
-                raise
-
-            fallback_runtime = _get_llm_runtime(requested_provider="deepseek")
-            fallback_key = str(fallback_runtime.get("deepseek_api_key") or "").strip()
-            if not fallback_key:
-                raise
-            fallback_runtime["thinking_enabled"] = bool(runtime.get("thinking_enabled", False))
-            if isinstance(exc, requests.Timeout):
-                fallback_reason = "timeout"
-            elif isinstance(exc, requests.ConnectionError):
-                fallback_reason = "connection_error"
-            elif isinstance(status_code, int):
-                fallback_reason = f"http_{status_code}"
-            else:
-                fallback_reason = "provider_error"
-            runtime["_provider_fallback"] = {
-                "from_provider": "xiaomi",
-                "to_provider": "deepseek",
-                "reason": fallback_reason,
-            }
-            current_app.logger.warning(
-                "MiMo request failed with status %s; falling back to configured DeepSeek provider",
-                status_code or exc.__class__.__name__,
-            )
-            return _deepseek_once(
-                str(fallback_runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
-                fallback_key,
-                str(fallback_runtime.get("model") or "deepseek-v4-pro"),
-                messages,
-                timeout_value,
-                fallback_runtime,
-            )
-    return _ollama_once(
+        return _xiaomi_once_with_fallback(runtime, messages, chosen_model, timeout_value)
+    answer = _ollama_once(
         str(runtime.get("ollama_base_url") or ""),
         chosen_model,
         messages,
         timeout_value,
     )
+    _record_provider_execution(runtime, "ollama", "ollama")
+    return answer
 
 
 def _provider_fallback_metadata(runtime: dict) -> dict | None:
@@ -1315,12 +1714,34 @@ def _provider_fallback_metadata(runtime: dict) -> dict | None:
     reason = str(value.get("reason") or "provider_error").strip().lower()
     if from_provider not in allowed_providers or to_provider not in allowed_providers:
         return None
-    if not re.fullmatch(r"(?:http_\d{3}|timeout|connection_error|provider_error)", reason):
+    if not re.fullmatch(r"(?:http_\d{3}|timeout|connection_error|protocol_error|provider_error)", reason):
         reason = "provider_error"
     return {
         "from_provider": from_provider,
         "to_provider": to_provider,
         "reason": reason,
+    }
+
+
+def _provider_execution_metadata(runtime: dict) -> dict | None:
+    value = (runtime or {}).get("_provider_execution")
+    if not isinstance(value, dict):
+        return None
+    logical_provider = str(value.get("logical_provider") or "").strip().lower()
+    final_endpoint = str(value.get("final_endpoint") or "").strip().lower()
+    if logical_provider not in {"xiaomi", "deepseek", "ollama"}:
+        return None
+    allowed_endpoints = {
+        "xiaomi": {"xiaomi_official", "xiaomi_relay", "deepseek"},
+        "deepseek": {"deepseek"},
+        "ollama": {"ollama"},
+    }
+    if final_endpoint not in allowed_endpoints[logical_provider]:
+        return None
+    return {
+        "logical_provider": logical_provider,
+        "final_endpoint": final_endpoint,
+        "fallback_used": bool(value.get("fallback_used", False)),
     }
 
 
@@ -3865,11 +4286,16 @@ def _critique_answer(runtime: dict, question: str, answer: str, evidence: str) -
         # synthesis, so reserve Thinking for the answer-generation call.
         critic_runtime["thinking_enabled"] = False
         reply = _llm_once(critic_runtime, messages)
-        if critic_runtime.get("_provider_fallback"):
-            runtime["_provider_fallback"] = critic_runtime["_provider_fallback"]
     except Exception:
         return {}
-    return _parse_critic_output(reply)
+    result = _parse_critic_output(reply)
+    if not result:
+        return {}
+    # Keep critic provenance attached to its own result. It only becomes final
+    # answer provenance if the caller actually adopts revised_answer.
+    result["provider_execution"] = _provider_execution_metadata(critic_runtime)
+    result["provider_fallback"] = _provider_fallback_metadata(critic_runtime)
+    return result
 
 
 def _finalize_answer(
@@ -3915,6 +4341,11 @@ def _finalize_answer(
         question,
         style_prompt,
     ).strip()
+    # Snapshot answer generation immediately. The critic uses an isolated
+    # runtime copy and must never overwrite which endpoint produced the answer
+    # that the user ultimately receives.
+    answer_provider_execution = _provider_execution_metadata(runtime)
+    answer_provider_fallback = _provider_fallback_metadata(runtime)
     if review_enabled:
         yield _draft_preview_event(complete, "Draft answer preview")
     answer_pmids = []
@@ -3970,6 +4401,8 @@ def _finalize_answer(
                     question,
                     style_prompt,
                 ).strip()
+                answer_provider_execution = _provider_execution_metadata(runtime)
+                answer_provider_fallback = _provider_fallback_metadata(runtime)
                 yield _draft_preview_event(complete, "Updated draft after final evidence")
                 yield {
                     "type": "status",
@@ -3982,6 +4415,8 @@ def _finalize_answer(
 
         if verdict == "revise" and revised and not _contains_internal_tool_markup(revised):
             complete = str(revised).strip()
+            answer_provider_execution = critic.get("provider_execution")
+            answer_provider_fallback = critic.get("provider_fallback")
 
     complete = _sanitize_visible_answer(complete, question)
 
@@ -4012,6 +4447,8 @@ def _finalize_answer(
         "invalid_pmids": invalid_pmids,
         "answer_source_ids": answer_source_ids,
         "invalid_source_ids": invalid_source_ids,
+        "provider_execution": answer_provider_execution,
+        "provider_fallback": answer_provider_fallback,
     }
 
 
@@ -8029,6 +8466,7 @@ def chat_message(chat_id):
                     "type": "evidence",
                     "content": evidence_text,
                     "sources": [],
+                    "provider_execution": _provider_execution_metadata(runtime),
                     "provider_fallback": _provider_fallback_metadata(runtime),
                 })
                 yield "data: [DONE]\n\n"
@@ -8057,7 +8495,8 @@ def chat_message(chat_id):
                     "type": "evidence",
                     "content": evidence_text,
                     "sources": [],
-                    "provider_fallback": _provider_fallback_metadata(runtime),
+                    "provider_execution": None,
+                    "provider_fallback": None,
                 })
                 yield "data: [DONE]\n\n"
                 return
@@ -8093,6 +8532,7 @@ def chat_message(chat_id):
                     "type": "evidence",
                     "content": evidence_text,
                     "sources": [],
+                    "provider_execution": _provider_execution_metadata(runtime),
                     "provider_fallback": _provider_fallback_metadata(runtime),
                 })
                 yield "data: [DONE]\n\n"
@@ -8244,7 +8684,8 @@ def chat_message(chat_id):
                     "type": "evidence",
                     "content": evidence_text,
                     "sources": [],
-                    "provider_fallback": _provider_fallback_metadata(runtime),
+                    "provider_execution": None,
+                    "provider_fallback": None,
                 })
                 yield "data: [DONE]\n\n"
                 return
@@ -8282,6 +8723,8 @@ def chat_message(chat_id):
                 sources_local = []
             if not sources_local:
                 sources_local = _build_structured_sources(rag_evidence, tool_cache, tool_trace)
+            answer_provider_execution = final_result.get("provider_execution")
+            answer_provider_fallback = final_result.get("provider_fallback")
             if not complete:
                 complete = "No answer could be generated from the available evidence."
 
@@ -8320,7 +8763,8 @@ def chat_message(chat_id):
                 "type": "evidence",
                 "content": evidence_text,
                 "sources": sources_local,
-                "provider_fallback": _provider_fallback_metadata(runtime),
+                "provider_execution": answer_provider_execution,
+                "provider_fallback": answer_provider_fallback,
                 "citation_validation": {
                     "cited_source_ids": answer_source_ids,
                     "removed_source_ids": removed_source_ids,
