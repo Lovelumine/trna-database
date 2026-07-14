@@ -1170,14 +1170,47 @@ def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | N
             runtime,
         )
     if provider == "xiaomi":
-        return _xiaomi_once(
-            str(runtime.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
-            str(runtime.get("xiaomi_api_key") or ""),
-            chosen_model,
-            messages,
-            timeout_value,
-            runtime,
-        )
+        try:
+            return _xiaomi_once(
+                str(runtime.get("xiaomi_base_url") or "https://api.xiaomimimo.com/v1"),
+                str(runtime.get("xiaomi_api_key") or ""),
+                chosen_model,
+                messages,
+                timeout_value,
+                runtime,
+            )
+        except Exception as exc:
+            response = getattr(exc, "response", None)
+            status_code = getattr(response, "status_code", None)
+            retryable = isinstance(exc, (requests.Timeout, requests.ConnectionError)) or status_code in {
+                401,
+                402,
+                403,
+                408,
+                409,
+                425,
+                429,
+            } or (isinstance(status_code, int) and status_code >= 500)
+            if not retryable:
+                raise
+
+            fallback_runtime = _get_llm_runtime(requested_provider="deepseek")
+            fallback_key = str(fallback_runtime.get("deepseek_api_key") or "").strip()
+            if not fallback_key:
+                raise
+            fallback_runtime["thinking_enabled"] = bool(runtime.get("thinking_enabled", False))
+            current_app.logger.warning(
+                "MiMo request failed with status %s; falling back to configured DeepSeek provider",
+                status_code or exc.__class__.__name__,
+            )
+            return _deepseek_once(
+                str(fallback_runtime.get("deepseek_base_url") or "https://api.deepseek.com"),
+                fallback_key,
+                str(fallback_runtime.get("model") or "deepseek-v4-pro"),
+                messages,
+                timeout_value,
+                fallback_runtime,
+            )
     return _ollama_once(
         str(runtime.get("ollama_base_url") or ""),
         chosen_model,
@@ -3412,6 +3445,25 @@ def _build_pubmed_query(question: str) -> str:
 def _augment_plan_with_heuristics(plan: list, question: str, max_steps: int) -> list:
     plan = plan or []
     tools_in_plan = {p.get("tool") for p in plan if isinstance(p, dict)}
+    q = str(question or "")
+    generic_database_sample = bool(
+        re.search(r"ENSURE|这个数据库|数据库|database", q, flags=re.IGNORECASE)
+        and re.search(
+            r"找(?:点|一条|几条)|介绍(?:一条|一些|点)?|随便|具体(?:记录|数据)|"
+            r"show\s+(?:me\s+)?(?:a|some)|sample\s+(?:record|data)|introduce\s+(?:a|some)",
+            q,
+            flags=re.IGNORECASE,
+        )
+    )
+    if generic_database_sample and not (tools_in_plan & {"table_rows", "ensure_lookup", "search_alignment"}):
+        # A vague "show me something from the database" request must still
+        # retrieve a real record. Put a small engineered sup-tRNA sample ahead
+        # of a planner-produced tables_list call when the fast-mode budget is 1.
+        plan.insert(0, {
+            "tool": "table_rows",
+            "params": {"table": "Engineered_sup_tRNA", "page": 1, "page_size": 3},
+        })
+        tools_in_plan.add("table_rows")
     if _needs_current_time(question) and "current_time" not in tools_in_plan:
         timezone_name = _extract_time_timezone(question or "")
         params = {"timezone": timezone_name} if timezone_name else {}

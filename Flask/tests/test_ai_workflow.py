@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import requests
 from flask import Flask
 
 
@@ -292,6 +293,59 @@ def test_visible_answer_recovers_from_mimo_tool_markup(monkeypatch: pytest.Monke
     assert "previous draft was rejected" in captured_messages[1][-1]["content"]
     assert "SELECT" not in answer
     assert "<function" not in answer
+
+
+def test_mimo_payment_error_falls_back_to_configured_deepseek(monkeypatch: pytest.MonkeyPatch):
+    response = requests.Response()
+    response.status_code = 402
+    payment_error = requests.HTTPError("payment required", response=response)
+    monkeypatch.setattr(routes, "_xiaomi_once", lambda *args, **kwargs: (_ for _ in ()).throw(payment_error))
+    monkeypatch.setattr(
+        routes,
+        "_get_llm_runtime",
+        lambda requested_model="", requested_provider="": {
+            "provider": "deepseek",
+            "model": "deepseek-v4-pro",
+            "deepseek_base_url": "https://api.deepseek.com",
+            "deepseek_api_key": "configured",
+        },
+    )
+    captured = {}
+
+    def fake_deepseek(base, api_key, model, messages, timeout, runtime=None):
+        captured.update({"model": model, "thinking": runtime.get("thinking_enabled")})
+        return "fallback answer"
+
+    monkeypatch.setattr(routes, "_deepseek_once", fake_deepseek)
+    app = build_test_app()
+    with app.app_context():
+        answer = routes._llm_once(
+            {
+                "provider": "xiaomi",
+                "model": "mimo-v2.5-pro",
+                "xiaomi_api_key": "configured",
+                "thinking_enabled": True,
+            },
+            [{"role": "user", "content": "hello"}],
+        )
+
+    assert answer == "fallback answer"
+    assert captured == {"model": "deepseek-v4-pro", "thinking": True}
+
+
+def test_generic_database_introduction_gets_deterministic_sample_plan():
+    plan = routes._augment_plan_with_heuristics(
+        [],
+        "从这个数据库找点东西给我介绍",
+        1,
+    )
+
+    assert plan == [
+        {
+            "tool": "table_rows",
+            "params": {"table": "Engineered_sup_tRNA", "page": 1, "page_size": 3},
+        }
+    ]
 
 
 def test_visible_answer_blocks_repeated_mimo_tool_markup(monkeypatch: pytest.MonkeyPatch):
