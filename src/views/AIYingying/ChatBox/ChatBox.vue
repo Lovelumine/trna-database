@@ -273,6 +273,7 @@ import { useMarkdown } from '../../../utils/useMarkdown';
 import { ElDialog } from 'element-plus';
 import { fetchChatModelConfig, resolveChatModelSelection } from '@/utils/chatConfig';
 import { chatModeRequestOptions, persistChatMode, readChatMode, type ChatMode } from '@/utils/chatMode';
+import { isChatGreeting } from '@/utils/chatGreeting';
 import {
   evidenceLinks,
   evidenceTargetId,
@@ -549,11 +550,7 @@ export default defineComponent({
       return words.length > 6 ? `${short}...` : short;
     };
 
-    const isGreeting = (text: string) => {
-      const normalized = String(text || '').trim().toLowerCase();
-      return normalized.startsWith('hello, i am your virtual assistant') ||
-        normalized.includes('how can i assist you today');
-    };
+    const isGreeting = (text: string) => isChatGreeting(text);
 
     const buildTitle = (list: any[]) => {
       const firstBot = list.find(m =>

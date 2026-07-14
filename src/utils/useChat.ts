@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { CHAT_GREETING } from './chatGreeting';
 
 type ChatMessage = {
   id: number;
@@ -62,7 +63,6 @@ type SendOptions = {
   thinkingEnabled?: boolean;
 };
 
-const defaultGreeting = 'Hello, I am your virtual assistant YingYing. How can I assist you today?';
 const sessions = new Map<string, ChatSession>();
 const apiBaseURL = import.meta.env.VITE_CHAT_API_BASE || '/chat/api';
 
@@ -91,7 +91,7 @@ const getSession = (key: string, apiKey: string): ChatSession => {
   const session: ChatSession = {
     apiKey,
     isChatOpen: ref(false),
-    messages: ref<ChatMessage[]>([{ id: 1, text: defaultGreeting, sender: 'bot' }]),
+    messages: ref<ChatMessage[]>([{ id: 1, text: CHAT_GREETING, sender: 'bot' }]),
     newMessage: ref(''),
     newImage: ref<File | null>(null),
     imagePreview: ref(''),
@@ -444,7 +444,7 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
     session.messages.value = [];
     debugChatLog('[useChat] resetChat');
     await initializeChatSession(session);
-    session.messages.value.push({ id: 1, text: defaultGreeting, sender: 'bot' });
+    session.messages.value.push({ id: 1, text: CHAT_GREETING, sender: 'bot' });
   };
 
   void initializeChatSession(session);
