@@ -76,9 +76,9 @@ Flask/Gunicorn process during verification.
   matched on both frontend origins.
 - Independent Chrome profiles received different anonymous cookies and storage
   namespaces. Their scoped localStorage keys did not overlap; cross-visitor
-  access to a signed chat ID returned HTTP 404. Desktop (1440 px) and mobile
-  (390 x 844 px) AI pages mounted in both light and dark themes without
-  horizontal overflow or console errors.
+  access to a signed chat ID returned HTTP 404. Desktop (1440 px), iPad
+  (820 x 1180 px), and mobile (390 x 844 px) AI pages mounted in both light
+  and dark themes without horizontal overflow or console errors.
 
 ## Secrets
 
