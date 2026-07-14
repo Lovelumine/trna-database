@@ -1,5 +1,7 @@
 import { ref, type Ref } from 'vue';
 import { CHAT_GREETING } from './chatGreeting';
+import { initializeChatIdentity } from './chatIdentity';
+import { blockedAssistantMessage, sanitizeAssistantResponse } from './chatContentSafety';
 
 type ChatMessage = {
   id: number;
@@ -116,7 +118,12 @@ const fetchApplicationProfile = async (session: ChatSession, signal?: AbortSigna
     const url = `${apiBaseURL}/application/profile`;
     logAuth(session, 'profile', url, 'GET');
 
-    const response = await fetch(url, { method: 'GET', headers: authHeaders(session), signal });
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: authHeaders(session),
+      credentials: 'same-origin',
+      signal
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     session.applicationId = data?.data?.id || '';
@@ -134,6 +141,7 @@ const openChatSession = async (session: ChatSession, signal?: AbortSignal) => {
     let response = await fetch(url, {
       method: 'GET',
       headers: authHeaders(session),
+      credentials: 'same-origin',
       cache: 'no-store',
       signal
     });
@@ -143,6 +151,7 @@ const openChatSession = async (session: ChatSession, signal?: AbortSignal) => {
       response = await fetch(fallbackUrl, {
         method: 'GET',
         headers: authHeaders(session),
+        credentials: 'same-origin',
         cache: 'no-store',
         signal
       });
@@ -168,6 +177,10 @@ const initializeChatSession = async (session: ChatSession, signal?: AbortSignal)
   debugChatLog('[useChat] apiBaseURL:', apiBaseURL);
   session.initializing = (async () => {
     try {
+      // Ensure the anonymous visitor cookie is established before profile/open.
+      // All callers share the same initialization promise, preventing races that
+      // could otherwise bind a chat id to a different freshly-issued identity.
+      await initializeChatIdentity();
       if (!session.applicationId) {
         await fetchApplicationProfile(session, signal);
       }
@@ -255,9 +268,6 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
         return { aborted: false };
       }
 
-      const url = `${apiBaseURL}/chat_message/${encodeURIComponent(session.chatId)}`;
-      logAuth(session, 'sendMessage', url, 'POST');
-
       const payload: Record<string, any> = {
         message: textContent,
         re_chat: false,
@@ -273,12 +283,30 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
       if (typeof options.thinkingEnabled === 'boolean') {
         payload.thinking_enabled = options.thinkingEnabled;
       }
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { ...authHeaders(session), 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
+
+      const postMessage = async () => {
+        const url = `${apiBaseURL}/chat_message/${encodeURIComponent(session.chatId)}`;
+        logAuth(session, 'sendMessage', url, 'POST');
+        return fetch(url, {
+          method: 'POST',
+          headers: { ...authHeaders(session), 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+      };
+
+      let response = await postMessage();
+      if (response.status === 404) {
+        // A deploy, cookie expiry, or explicit cookie reset can invalidate an
+        // old signed chat id. Re-open exactly once before surfacing an error.
+        session.chatId = '';
+        session.initialized = false;
+        await initializeChatSession(session, controller.signal);
+        if (!session.chatId) throw new Error('Chat session could not be reopened.');
+        response = await postMessage();
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       if (!response.body) throw new Error('ReadableStream not supported.');
 
@@ -345,7 +373,7 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
             }
             if (eventType === 'draft_preview') {
               const label = String(parsed?.label || 'Draft answer preview').trim();
-              const content = String(parsed?.content || '').trim();
+              const content = blockedAssistantMessage(String(parsed?.content || '').trim());
               session.progressDraftPreview.value = content ? { label, content } : null;
               continue;
             }
@@ -365,7 +393,8 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
               }
               const m = session.messages.value.find(v => v.id === botMessageId);
               if (m) {
-                m.text = composeBotMessageText(complete, evidence);
+                const safe = sanitizeAssistantResponse(complete, evidence);
+                m.text = composeBotMessageText(safe.main, safe.evidence);
                 if (rawSources.length) m.sources = rawSources;
               }
               continue;
@@ -380,7 +409,10 @@ export function useChat(apiKey: string, options: UseChatOptions = {}) {
                 session.messages.value.push({ id: effectiveId, text: '', sender: 'bot' });
               }
               const m = session.messages.value.find(v => v.id === botMessageId);
-              if (m) m.text = composeBotMessageText(complete, evidence);
+              if (m) {
+                const safe = sanitizeAssistantResponse(complete, evidence);
+                m.text = composeBotMessageText(safe.main, safe.evidence);
+              }
             }
           } catch (err) {
             console.error('chunk parse error:', err, line);

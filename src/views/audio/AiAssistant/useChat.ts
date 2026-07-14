@@ -1,5 +1,7 @@
 import { ref } from 'vue';
 import { marked } from 'marked';
+import { initializeChatIdentity } from '@/utils/chatIdentity';
+import { blockedAssistantMessage } from '@/utils/chatContentSafety';
 
 export function useChat(apiKey: string) {
   apiKey = (apiKey || '').trim();
@@ -28,9 +30,14 @@ export function useChat(apiKey: string) {
   // 1) 获取应用信息：GET /chat/api/application/profile
   const fetchApplicationProfile = async () => {
     try {
+      await initializeChatIdentity();
       const url = `${apiBaseURL}/application/profile`;
       log('GET', url);
-      const resp = await fetch(url, { method: 'GET', headers: authHeaders() });
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: authHeaders(),
+        credentials: 'same-origin'
+      });
       const txt = await resp.text();
       if (!resp.ok) {
         console.error('Profile failed:', resp.status, txt);
@@ -50,15 +57,26 @@ export function useChat(apiKey: string) {
   const openChatSession = async () => {
     if (!applicationId) throw new Error('applicationId is empty');
     try {
+      await initializeChatIdentity();
       let url = `${apiBaseURL}/open?application_id=${encodeURIComponent(applicationId)}&ts=${Date.now()}`;
       log('GET', url);
-      let resp = await fetch(url, { method: 'GET', headers: authHeaders(), cache: 'no-store' });
+      let resp = await fetch(url, {
+        method: 'GET',
+        headers: authHeaders(),
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
 
       if (!resp.ok && (resp.status === 400 || resp.status === 404)) {
         // 兜底：不带 application_id
         url = `${apiBaseURL}/open?ts=${Date.now()}`;
         log('GET (fallback)', url);
-        resp = await fetch(url, { method: 'GET', headers: authHeaders(), cache: 'no-store' });
+        resp = await fetch(url, {
+          method: 'GET',
+          headers: authHeaders(),
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
       }
 
       const txt = await resp.text();
@@ -85,6 +103,13 @@ export function useChat(apiKey: string) {
     if (!chatId)        await openChatSession();
 
     const imageBase64 = newImage.value ? await toBase64(newImage.value) : null;
+    const history = messages.value
+      .filter(message => message.id !== 1 && String(message.text || '').trim())
+      .map(message => ({
+        role: message.sender === 'user' ? 'user' : 'assistant',
+        content: String(message.text || '').slice(0, 2400)
+      }))
+      .slice(-12);
 
     // 先显示用户消息
     messages.value.push({
@@ -99,28 +124,43 @@ export function useChat(apiKey: string) {
     imagePreview.value = '';
 
     try {
-      const url = `${apiBaseURL}/chat_message/${encodeURIComponent(chatId)}`;
-      log('POST', url);
+      const postMessage = async () => {
+        const url = `${apiBaseURL}/chat_message/${encodeURIComponent(chatId)}`;
+        log('POST', url);
+        return fetch(url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: messageWithContext,
+            history,
+            re_chat: false,
+            stream: true
+          })
+        });
+      };
 
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: messageWithContext, // 仍然发送你拼好的上下文
-          re_chat: false,
-          stream: true
-        })
-      });
+      let resp = await postMessage();
+      if (resp.status === 404) {
+        chatId = '';
+        await openChatSession();
+        resp = await postMessage();
+      }
 
-      // 非 2xx 且没有流，先把错误体打出来
-      if (!resp.ok && !resp.body) {
+      // Never interpret an error response as an SSE stream. In particular, a
+      // visitor-bound 404 may still have a response body.
+      if (!resp.ok) {
         const errTxt = await resp.text();
         console.error('Send failed:', resp.status, errTxt);
         messages.value.push({ id: Date.now(), text: `请求失败：${resp.status} ${errTxt}`, sender: 'bot' });
         return;
       }
 
-      const reader = resp.body!.getReader();
+      if (!resp.body) {
+        throw new Error('Chat response stream is unavailable');
+      }
+
+      const reader = resp.body.getReader();
       const decoder = new TextDecoder('utf-8');
       const botMessageId = Date.now();
       messages.value.push({ id: botMessageId, text: '', sender: 'bot' });
@@ -146,7 +186,7 @@ export function useChat(apiKey: string) {
             if (content) {
               complete += content;
               const m = messages.value.find(v => v.id === botMessageId);
-              if (m) m.text = complete.trim();
+              if (m) m.text = blockedAssistantMessage(complete.trim());
             }
           } catch (err) {
             console.error('chunk parse error:', err, line);
@@ -188,6 +228,7 @@ export function useChat(apiKey: string) {
   const initializeChat = async () => {
     log('apiBaseURL:', apiBaseURL);
     try {
+      await initializeChatIdentity();
       await fetchApplicationProfile();
       await openChatSession();
     } catch (e) {

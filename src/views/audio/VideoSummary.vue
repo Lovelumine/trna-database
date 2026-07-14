@@ -63,6 +63,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { fetchOpenAIResponse } from './useOpenAI';
+import { initializeChatIdentity } from '@/utils/chatIdentity';
 
 const props = defineProps<{
   subtitles: string;
@@ -168,6 +169,7 @@ ${subtitlesContent}
 `.trim();
 
   try {
+    await initializeChatIdentity();
     const analysisResp = await fetchOpenAIResponse(analysisPrompt);
 
     // 若期间 props 已变更，丢弃本次结果

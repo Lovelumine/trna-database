@@ -274,6 +274,8 @@ import { ElDialog } from 'element-plus';
 import { fetchChatModelConfig, resolveChatModelSelection } from '@/utils/chatConfig';
 import { chatModeRequestOptions, persistChatMode, readChatMode, type ChatMode } from '@/utils/chatMode';
 import { isChatGreeting } from '@/utils/chatGreeting';
+import { sanitizeStoredChatMessages } from '@/utils/chatContentSafety';
+import { initializeChatIdentity, scopedChatStorageKey } from '@/utils/chatIdentity';
 import {
   evidenceLinks,
   evidenceTargetId,
@@ -522,7 +524,7 @@ export default defineComponent({
       }
     );
 
-    const storageKey = () => `ai_chat_session_${props.conversationId}`;
+    const storageKey = () => scopedChatStorageKey(`ai_chat_session_${props.conversationId}`);
     const getSelectedModel = () => selectedModel.value;
     const handleEvidenceClick = (event: MouseEvent) => handleEvidenceReferenceClick(event);
     const sourceTargetId = (message: any, source: any) =>
@@ -619,6 +621,7 @@ export default defineComponent({
 
     const hydrateMessages = async () => {
       try {
+        await initializeChatIdentity();
         const hasUser = messages.value.some(
           m => m?.sender === 'user' && typeof m?.text === 'string' && m.text.trim()
         );
@@ -627,7 +630,7 @@ export default defineComponent({
         if (!raw) return;
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed?.messages) && parsed.messages.length) {
-          messages.value = parsed.messages;
+          messages.value = sanitizeStoredChatMessages(parsed.messages);
         }
       } catch {
         // ignore malformed cache

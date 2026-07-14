@@ -266,6 +266,129 @@ def test_xiaomi_stream_parses_openai_compatible_sse(monkeypatch: pytest.MonkeyPa
     assert response.encoding == "utf-8"
 
 
+def test_visible_answer_recovers_from_mimo_tool_markup(monkeypatch: pytest.MonkeyPatch):
+    replies = iter(
+        [
+            "好的。<function=query_db><parameter=sql>SELECT * FROM secret_table",
+            "ENSURE contains curated suppressor tRNA records [S1].",
+        ]
+    )
+    captured_messages = []
+
+    def fake_once(runtime, messages, model="", timeout=None):
+        captured_messages.append(messages)
+        return next(replies)
+
+    monkeypatch.setattr(routes, "_llm_once", fake_once)
+
+    answer = routes._llm_visible_once(
+        {"provider": "xiaomi", "model": "mimo-v2.5-pro"},
+        [{"role": "user", "content": "介绍数据库"}],
+        "介绍数据库",
+    )
+
+    assert answer == "ENSURE contains curated suppressor tRNA records [S1]."
+    assert len(captured_messages) == 2
+    assert "previous draft was rejected" in captured_messages[1][-1]["content"]
+    assert "SELECT" not in answer
+    assert "<function" not in answer
+
+
+def test_visible_answer_blocks_repeated_mimo_tool_markup(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        routes,
+        "_llm_once",
+        lambda *args, **kwargs: "<function=query_db><parameter=sql>SELECT COUNT(*) FROM users",
+    )
+
+    answer = routes._llm_visible_once(
+        {"provider": "xiaomi", "model": "mimo-v2.5-pro"},
+        [{"role": "user", "content": "从数据库里找点内容"}],
+        "从数据库里找点内容",
+    )
+
+    assert answer == "本次回答包含了不应展示的内部调用信息，已被安全拦截。请您重试一次。"
+    assert "SELECT" not in answer
+    assert not routes._contains_internal_tool_markup("The result was significant (p < 0.05).")
+    assert routes._contains_internal_tool_markup("\nSELECT COUNT(*) AS cnt FROM private_table")
+    assert not routes._contains_internal_tool_markup("Select records from the evidence table below.")
+
+
+def test_client_history_drops_leaked_assistant_tool_markup():
+    history = routes._normalize_client_history(
+        [
+            {"role": "user", "content": "介绍数据库"},
+            {"role": "assistant", "content": "<function=query_db><parameter=sql>SELECT * FROM private"},
+            {"role": "assistant", "content": "A safe previous answer."},
+        ],
+        20,
+    )
+
+    assert history == [
+        {"role": "user", "content": "介绍数据库"},
+        {"role": "assistant", "content": "A safe previous answer."},
+    ]
+
+
+def test_database_question_bypasses_ai_router_for_required_retrieval(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        routes,
+        "_llm_once",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("router should be bypassed")),
+    )
+
+    decision = routes._route_conversation_request(
+        {"provider": "xiaomi", "model": "mimo-v2.5-pro", "timeout": 120},
+        "mimo-v2.5-pro",
+        [{"role": "user", "content": "从这个数据库找点东西给我介绍"}],
+        "从这个数据库找点东西给我介绍",
+        {"conversation_router_enable": True, "router_confidence_threshold": 0.7},
+        "explain",
+        True,
+    )
+
+    assert decision["route"] == "knowledge_retrieval"
+    assert decision["reason"] == "evidence_required_retrieval"
+
+
+def test_anonymous_chat_cookie_separates_visitors_and_binds_chat_ids():
+    app = build_test_app(register_routes=True)
+    visitor_a = app.test_client()
+    visitor_b = app.test_client()
+
+    identity_a = visitor_a.get("/chat/api/identity", base_url="https://trna.example")
+    namespace_a = identity_a.get_json()["data"]["storage_namespace"]
+    cookie_header = identity_a.headers.get("Set-Cookie", "")
+    assert "ensure_chat_visitor=" in cookie_header
+    assert "HttpOnly" in cookie_header
+    assert "Secure" in cookie_header
+    assert "SameSite=Lax" in cookie_header
+
+    open_a = visitor_a.get("/chat/api/open", base_url="https://trna.example")
+    chat_id_a = open_a.get_json()["data"]
+    assert chat_id_a.startswith("v1.")
+
+    identity_b = visitor_b.get("/chat/api/identity", base_url="https://trna.example")
+    namespace_b = identity_b.get_json()["data"]["storage_namespace"]
+    assert namespace_b != namespace_a
+
+    cross_visitor = visitor_b.post(
+        f"/chat/api/chat_message/{chat_id_a}",
+        base_url="https://trna.example",
+        json={"message": "hello"},
+    )
+    assert cross_visitor.status_code == 404
+    assert cross_visitor.get_json() == {"error": "chat session not found"}
+
+    tampered = chat_id_a[:-1] + ("0" if chat_id_a[-1] != "0" else "1")
+    tampered_response = visitor_a.post(
+        f"/chat/api/chat_message/{tampered}",
+        base_url="https://trna.example",
+        json={"message": "hello"},
+    )
+    assert tampered_response.status_code == 404
+
+
 def test_ai_workflow_settings_roundtrip(app_ctx: Flask, monkeypatch: pytest.MonkeyPatch):
     store = {
         "ai_workflow_enable": "1",
@@ -654,8 +777,10 @@ def test_chat_message_streams_final_answer_only(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(routes, "_execute_tool", fake_execute_tool)
 
     with app.test_client() as client:
+        open_response = client.get("/chat/api/open")
+        chat_id = open_response.get_json()["data"]
         response = client.post(
-            "/chat/api/chat_message/test-chat",
+            f"/chat/api/chat_message/{chat_id}",
             json={"message": "Need final-only streaming", "stream": True},
         )
         payload = response.data.decode("utf-8")
@@ -748,6 +873,51 @@ def test_finalizer_does_not_regenerate_after_critic_for_pubmed_evidence(
     assert len(calls) == 1
     assert result["answer"] == "The reviewed answer cites the collected literature."
     assert not any(event.get("status") == "Integrating literature evidence" for event in events)
+
+
+def test_finalizer_rejects_tool_markup_from_critic_revision(monkeypatch: pytest.MonkeyPatch):
+    app = build_test_app()
+    monkeypatch.setattr(routes, "_generate_answer", lambda *args, **kwargs: "Safe evidence-based answer.")
+    monkeypatch.setattr(
+        routes,
+        "_critique_answer",
+        lambda *args, **kwargs: {
+            "verdict": "revise",
+            "tool_calls": [],
+            "revised_answer": "<function=query_db><parameter=sql>SELECT * FROM hidden",
+        },
+    )
+
+    with app.app_context():
+        finalizer = routes._finalize_answer(
+            {"provider": "xiaomi", "model": "mimo-v2.5-pro"},
+            "system",
+            [],
+            "question",
+            "style",
+            "context",
+            "",
+            {},
+            {},
+            [],
+            {
+                "final_critic_enable": True,
+                "max_total_tool_steps": 4,
+                "max_tool_steps_per_round": 2,
+                "allow_pubmed_deepen": True,
+                "allow_table_deepen": True,
+                "allow_doc_deepen": True,
+            },
+        )
+        while True:
+            try:
+                next(finalizer)
+            except StopIteration as stop:
+                result = stop.value
+                break
+
+    assert result["answer"] == "Safe evidence-based answer."
+    assert "<function" not in result["answer"]
 
 
 def test_ensure_id_extraction_and_plan_prioritize_every_exact_record(
@@ -1059,8 +1229,10 @@ def test_chat_message_deep_review_false_skips_judge_and_final_critic(monkeypatch
     monkeypatch.setattr(routes, "_execute_tool", fake_execute_tool)
 
     with app.test_client() as client:
+        open_response = client.get("/chat/api/open")
+        chat_id = open_response.get_json()["data"]
         response = client.post(
-            "/chat/api/chat_message/test-fast",
+            f"/chat/api/chat_message/{chat_id}",
             json={"message": "Need a faster answer", "stream": True, "deep_review": False},
         )
         payload = response.data.decode("utf-8")

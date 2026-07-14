@@ -1,7 +1,7 @@
 //src/views/AIYingying/AIYingying.vue
 <template>
   <div id="ai-app">
-    <div class="assistant-shell">
+    <div v-if="chatStorageReady" class="assistant-shell">
       <button
         v-if="mobileNavOpen"
         class="mobile-nav-backdrop"
@@ -64,19 +64,19 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Sidebar from './AISidebar.vue';
 import ChatBox from './ChatBox/ChatBox.vue';
 import { warmChatSession } from '@/utils/useChat';
+import {
+  createChatSessionId,
+  initializeChatIdentity,
+  scopedChatStorageKey
+} from '@/utils/chatIdentity';
 
-const sessionsStorageKey = 'ai_chat_sessions';
-const noteAckStorageKey = 'ai_note_ack_global';
 const noteTextValue = 'Note: AI-generated responses may be inaccurate. Please verify important information.';
 const mobileBreakpoint = 860;
-
-const createSessionId = () =>
-  `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 export default {
   name: 'App',
@@ -96,18 +96,24 @@ export default {
     const noteText = ref(noteTextValue);
     const noteModalVisible = ref(false);
     const mobileNavOpen = ref(false);
+    const chatStorageReady = ref(false);
+
+    const sessionsStorageKey = () => scopedChatStorageKey('ai_chat_sessions');
+    const activeSessionStorageKey = () => scopedChatStorageKey('ai_chat_active_session');
+    const noteAckStorageKey = () => scopedChatStorageKey('ai_note_ack_global');
 
     // Provider credentials stay on the same-origin backend.
     const apiKey = computed(() => '');
 
     const persistSessions = () => {
-      localStorage.setItem(sessionsStorageKey, JSON.stringify(sessions.value));
+      localStorage.setItem(sessionsStorageKey(), JSON.stringify(sessions.value));
     };
 
     const loadSessions = () => {
       try {
-        const raw = localStorage.getItem(sessionsStorageKey);
-        sessions.value = raw ? JSON.parse(raw) : [];
+        const raw = localStorage.getItem(sessionsStorageKey());
+        const parsed = raw ? JSON.parse(raw) : [];
+        sessions.value = Array.isArray(parsed) ? parsed : [];
       } catch {
         sessions.value = [];
       }
@@ -154,7 +160,7 @@ export default {
         mobileNavOpen.value = false;
         return;
       }
-      const id = createSessionId();
+      const id = createChatSessionId();
       draftId.value = id;
       void warmChatSession(apiKey.value, id);
       activeConversationId.value = id;
@@ -207,7 +213,8 @@ export default {
 
     const deleteSession = (id) => {
       sessions.value = sessions.value.filter(s => s.id !== id);
-      localStorage.removeItem(`ai_chat_session_${id}`);
+      localStorage.removeItem(scopedChatStorageKey(`ai_chat_session_${id}`));
+      localStorage.removeItem(scopedChatStorageKey(`ai_chat_meta_${id}`));
       if (activeConversationId.value === id) {
         activeConversationId.value = sessions.value[0]?.id || '';
         if (!activeConversationId.value) {
@@ -231,10 +238,23 @@ export default {
       }
     };
 
-    onMounted(() => {
+    watch(activeConversationId, (nextId) => {
+      if (!chatStorageReady.value) return;
+      if (nextId) {
+        localStorage.setItem(activeSessionStorageKey(), nextId);
+      } else {
+        localStorage.removeItem(activeSessionStorageKey());
+      }
+    });
+
+    onMounted(async () => {
+      await initializeChatIdentity();
       loadSessions();
-      noteAcknowledged.value = localStorage.getItem(noteAckStorageKey) === '1';
+      noteAcknowledged.value = localStorage.getItem(noteAckStorageKey()) === '1';
       noteModalVisible.value = !noteAcknowledged.value;
+      chatStorageReady.value = true;
+      window.addEventListener('resize', handleViewportResize);
+
       const requestedId = typeof route.query.session === 'string' ? route.query.session : '';
       if (requestedId) {
         ensureSessionById(requestedId);
@@ -247,10 +267,12 @@ export default {
       if (!sessions.value.length) {
         createNewConversation();
       } else if (!activeConversationId.value) {
-        activeConversationId.value = sessions.value[0].id;
+        const storedActiveId = localStorage.getItem(activeSessionStorageKey());
+        activeConversationId.value = sessions.value.some(session => session?.id === storedActiveId)
+          ? storedActiveId
+          : sessions.value[0].id;
         void warmChatSession(apiKey.value, activeConversationId.value);
       }
-      window.addEventListener('resize', handleViewportResize);
     });
 
     onBeforeUnmount(() => {
@@ -259,7 +281,7 @@ export default {
 
     const acknowledgeNote = () => {
       noteAcknowledged.value = true;
-      localStorage.setItem(noteAckStorageKey, '1');
+      localStorage.setItem(noteAckStorageKey(), '1');
       noteModalVisible.value = false;
     };
 

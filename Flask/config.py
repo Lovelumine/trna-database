@@ -33,6 +33,15 @@ class Config:
     }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.getenv("SECRET_KEY") or os.getenv("FLASK_SECRET_KEY") or "ensure-dev-secret-change-me"
+    # Keep anonymous chat ownership signatures independent from Flask's admin
+    # session key. Production should provide a stable, high-entropy value.
+    CHAT_VISITOR_SIGNING_SECRET = os.getenv("CHAT_VISITOR_SIGNING_SECRET", "").strip()
+    _chat_cookie_secure = os.getenv("CHAT_VISITOR_COOKIE_SECURE")
+    CHAT_VISITOR_COOKIE_SECURE = (
+        None
+        if _chat_cookie_secure is None
+        else _chat_cookie_secure.strip().lower() in ("1", "true", "yes")
+    )
     SESSION_COOKIE_NAME = os.getenv("SESSION_COOKIE_NAME", "ensure_admin_session")
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")

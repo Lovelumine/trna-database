@@ -1,4 +1,11 @@
+import { initializeChatIdentity } from '@/utils/chatIdentity';
+
 export async function fetchOpenAIResponse(prompt: string) {
+  // Establish the anonymous visitor cookie before requesting a visitor-bound
+  // chat id. This helper is also called outside VideoSummary, so the guard
+  // belongs here rather than only in the component.
+  await initializeChatIdentity();
+
   const openResponse = await fetch('/chat/api/open', {
     method: 'GET',
     cache: 'no-store',

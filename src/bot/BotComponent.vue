@@ -370,6 +370,12 @@ import { useMarkdown } from '../utils/useMarkdown';
 import { fetchChatModelConfig, resolveChatModelSelection } from '@/utils/chatConfig';
 import { chatModeRequestOptions, persistChatMode, readChatMode, type ChatMode } from '@/utils/chatMode';
 import { CHAT_GREETING, isChatGreeting } from '@/utils/chatGreeting';
+import { sanitizeStoredChatMessages } from '@/utils/chatContentSafety';
+import {
+  createChatSessionId,
+  initializeChatIdentity,
+  scopedChatStorageKey
+} from '@/utils/chatIdentity';
 import {
   evidenceLinks,
   evidenceTargetId,
@@ -384,10 +390,9 @@ export default defineComponent({
     const apiKey = '';
 
     const { element, startDrag } = useDraggable();
-    const activeSessionId = ref(
-      localStorage.getItem('ai_chat_active_session') || 'floating-assistant'
-    );
+    const activeSessionId = ref('floating-assistant');
     const chat = ref(useChat(apiKey, { key: activeSessionId.value }));
+    const chatStorageReady = ref(false);
     const sessionOptions = ref<Array<{ id: string; title: string }>>([]);
     const modelOptions = ref<string[]>([]);
     const answerModes: Array<{ value: ChatMode; label: string }> = [
@@ -408,8 +413,9 @@ export default defineComponent({
       showModelSelect.value = !showModelSelect.value;
       if (showModelSelect.value) showSessionSelect.value = false;
     };
-    const selectSession = (id: string) => {
+    const selectSession = async (id: string) => {
       if (loading.value) return;
+      await initializeChatStorage();
       activeSessionId.value = id;
       showSessionSelect.value = false;
     };
@@ -434,8 +440,8 @@ export default defineComponent({
     const chatContent = ref<HTMLDivElement | null>(null);
 
     const showExampleQuestions = ref(true);
-    const sessionsStorageKey = 'ai_chat_sessions';
-    const activeSessionStorageKey = 'ai_chat_active_session';
+    const sessionsStorageKey = () => scopedChatStorageKey('ai_chat_sessions');
+    const activeSessionStorageKey = () => scopedChatStorageKey('ai_chat_active_session');
     const chatMeta = ref<{ applicationId: string; chatId: string }>({
       applicationId: '',
       chatId: ''
@@ -444,7 +450,7 @@ export default defineComponent({
     const loadSessions = () => {
       let items: Array<{ id?: string; title?: string }> = [];
       try {
-        const raw = localStorage.getItem(sessionsStorageKey);
+        const raw = localStorage.getItem(sessionsStorageKey());
         items = raw ? JSON.parse(raw) : [];
       } catch {
         items = [];
@@ -470,7 +476,7 @@ export default defineComponent({
       }
     };
 
-    const chatMetaKey = () => `ai_chat_meta_${activeSessionId.value}`;
+    const chatMetaKey = () => scopedChatStorageKey(`ai_chat_meta_${activeSessionId.value}`);
     const loadChatMeta = () => {
       try {
         const raw = localStorage.getItem(chatMetaKey());
@@ -493,19 +499,35 @@ export default defineComponent({
 
     const authHeaders = () => ({ accept: 'application/json' });
     const fetchApplicationProfile = async () => {
+      await initializeChatIdentity();
       const url = `${apiBaseURL}/application/profile`;
-      const response = await fetch(url, { method: 'GET', headers: authHeaders() });
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: authHeaders(),
+        credentials: 'same-origin'
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       chatMeta.value.applicationId = data?.data?.id || '';
       saveChatMeta();
     };
     const openChatSession = async () => {
+      await initializeChatIdentity();
       const url = `${apiBaseURL}/open?application_id=${encodeURIComponent(chatMeta.value.applicationId)}&ts=${Date.now()}`;
-      let response = await fetch(url, { method: 'GET', headers: authHeaders(), cache: 'no-store' });
+      let response = await fetch(url, {
+        method: 'GET',
+        headers: authHeaders(),
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
       if (!response.ok && (response.status === 400 || response.status === 404)) {
         const url2 = `${apiBaseURL}/open?ts=${Date.now()}`;
-        response = await fetch(url2, { method: 'GET', headers: authHeaders(), cache: 'no-store' });
+        response = await fetch(url2, {
+          method: 'GET',
+          headers: authHeaders(),
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
       }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
@@ -536,11 +558,12 @@ export default defineComponent({
     };
 
     const saveSessions = (items: Array<{ id: string; title?: string; updatedAt?: number; customTitle?: boolean }>) => {
-      localStorage.setItem(sessionsStorageKey, JSON.stringify(items));
+      localStorage.setItem(sessionsStorageKey(), JSON.stringify(items));
     };
 
-    const createNewSession = () => {
+    const createNewSession = async () => {
       if (loading.value) return;
+      await initializeChatStorage();
       showSessionSelect.value = false;
       showModelSelect.value = false;
       showExampleQuestions.value = true;
@@ -548,7 +571,7 @@ export default defineComponent({
         activeSessionId.value = draftSessionId.value;
         return;
       }
-      const id = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const id = createChatSessionId();
       const next = {
         id,
         title: 'New chat',
@@ -561,11 +584,13 @@ export default defineComponent({
     };
 
     const hydrateMessages = () => {
-      const key = `ai_chat_session_${activeSessionId.value}`;
+      const key = scopedChatStorageKey(`ai_chat_session_${activeSessionId.value}`);
       try {
         const raw = localStorage.getItem(key);
         const parsed = raw ? JSON.parse(raw) : null;
-        if (Array.isArray(parsed?.messages)) setMessagesValue(parsed.messages);
+        if (Array.isArray(parsed?.messages)) {
+          setMessagesValue(sanitizeStoredChatMessages(parsed.messages));
+        }
       } catch {
         // ignore malformed cache
       }
@@ -580,12 +605,16 @@ export default defineComponent({
     };
 
     const persistMessages = () => {
+      if (!chatStorageReady.value) return;
       const list = getMessagesValue();
       if (!Array.isArray(list)) return;
       const hasUser = list.some(m => m?.sender === 'user' && String(m?.text || '').trim());
       if (!hasUser) return;
       const payload = { messages: list, updatedAt: Date.now() };
-      localStorage.setItem(`ai_chat_session_${activeSessionId.value}`, JSON.stringify(payload));
+      localStorage.setItem(
+        scopedChatStorageKey(`ai_chat_session_${activeSessionId.value}`),
+        JSON.stringify(payload)
+      );
     };
 
     const aiTip = ref(
@@ -648,10 +677,31 @@ export default defineComponent({
       }
     };
 
+    let chatStorageInitialization: Promise<void> | null = null;
+    const initializeChatStorage = async () => {
+      if (chatStorageReady.value) return;
+      if (chatStorageInitialization) return chatStorageInitialization;
+      chatStorageInitialization = (async () => {
+        await initializeChatIdentity();
+        const storedActiveSession = localStorage.getItem(activeSessionStorageKey());
+        if (storedActiveSession) activeSessionId.value = storedActiveSession;
+        // The watcher is deliberately disabled until storage is ready, so the
+        // restored id must be bound to its own useChat session explicitly.
+        chat.value = useChat(apiKey, { key: activeSessionId.value });
+        chatStorageReady.value = true;
+        loadSessions();
+        hydrateMessages();
+        loadChatMeta();
+      })();
+      try {
+        await chatStorageInitialization;
+      } finally {
+        chatStorageInitialization = null;
+      }
+    };
+
     onMounted(async () => {
-      loadSessions();
-      hydrateMessages();
-      loadChatMeta();
+      await initializeChatStorage();
       const chatConfig = await fetchChatModelConfig();
       const selection = resolveChatModelSelection(chatConfig);
       modelOptions.value = selection.modelOptions;
@@ -700,7 +750,8 @@ export default defineComponent({
     });
 
     watch(activeSessionId, (nextId) => {
-      localStorage.setItem(activeSessionStorageKey, nextId);
+      if (!chatStorageReady.value) return;
+      localStorage.setItem(activeSessionStorageKey(), nextId);
       setMessagesValue([]);
       inputText.value = '';
       editingMessageId.value = null;
@@ -844,6 +895,7 @@ export default defineComponent({
     /* -------- 发送 -------- */
     const sendMessage = async () => {
       if (loading.value) return;
+      await initializeChatStorage();
       const text = inputText.value.trim();
       if (!text) return;
       const sourceMessages = [...getMessagesValue()];
@@ -856,7 +908,7 @@ export default defineComponent({
         if (!hasUser) {
           let items: any[] = [];
           try {
-            const raw = localStorage.getItem(sessionsStorageKey);
+            const raw = localStorage.getItem(sessionsStorageKey());
             items = raw ? JSON.parse(raw) : [];
           } catch {
             items = [];

@@ -11,14 +11,15 @@ from flask import (
     redirect,
 )
 import csv
+import hmac
 import json
 import hashlib
 import io
 import mimetypes
 import os
+import secrets
 import threading
 import time
-import uuid
 import zipfile
 import math
 import subprocess
@@ -123,6 +124,8 @@ _EXPORT_TASKS = {}
 
 _CHAT_LOCK = threading.Lock()
 _CHAT_SESSIONS = {}
+_CHAT_VISITOR_COOKIE = "ensure_chat_visitor"
+_CHAT_VISITOR_MAX_AGE = 365 * 24 * 60 * 60
 _EMBED_LOCK = threading.Lock()
 _EMBED_INDEX = []
 _EMBED_INDEX_MTIME = 0.0
@@ -149,6 +152,17 @@ _TOOL_NAMES = {
 _TABLE_DEEPEN_TOOLS = {"tables_list", "table_info", "table_rows", "table_stats", "ensure_lookup", "search_alignment"}
 _PUBMED_DEEPEN_TOOLS = {"pubmed_search", "pubmed_fetch"}
 _DOC_DEEPEN_TOOLS = {"docs_list", "docs_search", "doc_get", "site_map", "api_reference", "repo_search", "repo_file"}
+
+_INTERNAL_TOOL_MARKUP_RE = re.compile(
+    r"<\s*/?\s*(?:function|parameter|tool_call|tool)(?:\s*=|\s*>|\s+)|"
+    r"<\|\s*(?:tool_call|function_call)[^>]*\|>|"
+    r"(?:query_db|database_query)\s*\(|"
+    r"(?:^|[\n;])\s*(?:SELECT\s+(?=[^\n;]{0,400}(?:COUNT\s*\(|\bAS\b|,|\*))"
+    r"(?=[^\n;]{1,400}\bFROM\b)[^\n;]{1,400}?\s+FROM\s+[`\"'\w.]|"
+    r"INSERT\s+INTO\s+[`\"'\w.]|UPDATE\s+[`\"'\w.]+\s+SET\s+|"
+    r"DELETE\s+FROM\s+[`\"'\w.])",
+    flags=re.IGNORECASE,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _REPO_ALLOWED_TEXT_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".vue", ".css", ".scss", ".md", ".json", ".yml", ".yaml"}
@@ -369,6 +383,99 @@ def _select_chat_model(requested: str, fallback: str) -> str:
         return candidate
     return fallback
 
+
+def _chat_signing_secret() -> bytes:
+    secret = str(
+        current_app.config.get("CHAT_VISITOR_SIGNING_SECRET")
+        or current_app.config.get("SECRET_KEY")
+        or "ensure-chat"
+    ).encode("utf-8")
+    return hashlib.sha256(secret + b":anonymous-chat").digest()
+
+
+def _chat_visitor_id(create: bool = False) -> tuple[str, bool]:
+    visitor_id = str(request.cookies.get(_CHAT_VISITOR_COOKIE) or "").strip().lower()
+    if re.fullmatch(r"[a-f0-9]{32,128}", visitor_id):
+        return visitor_id, False
+    if not create:
+        return "", False
+    return secrets.token_hex(24), True
+
+
+def _chat_storage_namespace(visitor_id: str) -> str:
+    digest = hmac.new(
+        _chat_signing_secret(),
+        f"storage:{visitor_id}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return digest[:24]
+
+
+def _chat_cookie_secure() -> bool:
+    configured = current_app.config.get("CHAT_VISITOR_COOKIE_SECURE")
+    if configured is not None:
+        return bool(configured)
+    hostname = str(request.host or "").split(":", 1)[0].strip().lower()
+    return hostname not in {"", "localhost", "127.0.0.1", "::1"}
+
+
+def _set_chat_visitor_cookie(response: Response, visitor_id: str) -> None:
+    response.set_cookie(
+        _CHAT_VISITOR_COOKIE,
+        visitor_id,
+        max_age=_CHAT_VISITOR_MAX_AGE,
+        secure=_chat_cookie_secure(),
+        httponly=True,
+        samesite="Lax",
+        path="/",
+    )
+
+
+def _disable_identity_caching(response: Response) -> None:
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
+
+
+def _create_chat_id(visitor_id: str) -> str:
+    nonce = secrets.token_hex(16)
+    signature = hmac.new(
+        _chat_signing_secret(),
+        f"chat:{visitor_id}:{nonce}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()[:32]
+    return f"v1.{nonce}.{signature}"
+
+
+def _chat_id_belongs_to_visitor(chat_id: str, visitor_id: str) -> bool:
+    match = re.fullmatch(r"v1\.([a-f0-9]{32})\.([a-f0-9]{32})", str(chat_id or "").strip().lower())
+    if not match or not visitor_id:
+        return False
+    nonce, supplied_signature = match.groups()
+    expected_signature = hmac.new(
+        _chat_signing_secret(),
+        f"chat:{visitor_id}:{nonce}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()[:32]
+    return hmac.compare_digest(supplied_signature, expected_signature)
+
+
+def _contains_internal_tool_markup(value: str) -> bool:
+    return bool(_INTERNAL_TOOL_MARKUP_RE.search(str(value or "")))
+
+
+def _visible_answer_fallback(question: str) -> str:
+    if _detect_language(question) == "zh":
+        return "本次回答包含了不应展示的内部调用信息，已被安全拦截。请您重试一次。"
+    return "This response contained an internal tool instruction and was safely blocked. Please try again."
+
+
+def _sanitize_visible_answer(value: str, question: str = "") -> str:
+    text_value = str(value or "").strip()
+    if not _contains_internal_tool_markup(text_value):
+        return text_value
+    return _visible_answer_fallback(question)
+
+
 def _get_chat_session(chat_id: str):
     with _CHAT_LOCK:
         session = _CHAT_SESSIONS.setdefault(chat_id, {"messages": [], "updated_at": time.time()})
@@ -410,6 +517,11 @@ def _normalize_client_history(items, max_messages: int) -> list:
             continue
         content = str(item.get("content") or "").strip()
         if not content:
+            continue
+        # Never feed leaked provider/tool syntax back into the model. A single
+        # malformed assistant turn can otherwise contaminate every later turn
+        # because the browser sends its local history with each request.
+        if role == "assistant" and _contains_internal_tool_markup(content):
             continue
         normalized.append({"role": role, "content": content})
     if max_messages and len(normalized) > max_messages:
@@ -569,7 +681,7 @@ def _run_history_transform(runtime: dict, model: str, system_prompt: str, transf
         {"role": "system", "content": instruction},
         {"role": "user", "content": f"User request:\n{request_text}\n\nSource answer:\n{source_text}"},
     ]
-    return _llm_once(runtime, messages, model=model).strip()
+    return _llm_visible_once(runtime, messages, question, model=model)
 
 
 def _build_router_history_snippet(session_messages: list, current_message: str, max_items: int = 8, max_chars: int = 2400) -> str:
@@ -744,6 +856,10 @@ def _route_conversation_request(
         fallback["confidence"] = 1.0
         fallback["reason"] = "exact_ensure_id_retrieval"
         return fallback
+    if force_evidence and fallback.get("route") == "knowledge_retrieval":
+        fallback["confidence"] = 1.0
+        fallback["reason"] = "evidence_required_retrieval"
+        return fallback
     if not workflow.get("conversation_router_enable", True):
         return fallback
 
@@ -799,10 +915,12 @@ def _direct_answer_prompt(lang: str) -> str:
         return (
             "请直接根据当前对话回答用户。"
             "不要检索数据库、文档、PubMed 或仓库代码，也不要提及检索过程。"
+            "绝对不要输出 function、parameter、tool-call 标记、SQL 或内部调用格式。"
         )
     return (
         "Answer directly from the current conversation only."
         " Do not retrieve database, document, PubMed, or repository evidence, and do not mention retrieval."
+        " Never output function, parameter, tool-call tags, SQL, or any internal invocation syntax."
     )
 
 
@@ -811,7 +929,7 @@ def _run_direct_answer(runtime: dict, system_prompt: str, session_messages: list
     if style_prompt:
         extra_system += "\n\nStyle:\n" + style_prompt
     messages = _build_ollama_messages(session_messages, system_prompt, extra_system)
-    return _llm_once(runtime, messages, model=model).strip()
+    return _llm_visible_once(runtime, messages, question, model=model)
 
 
 def _default_clarification_question(question: str) -> str:
@@ -1066,6 +1184,32 @@ def _llm_once(runtime: dict, messages: list, model: str = "", timeout: float | N
         messages,
         timeout_value,
     )
+
+
+def _llm_visible_once(
+    runtime: dict,
+    messages: list,
+    question: str,
+    model: str = "",
+    timeout: float | None = None,
+) -> str:
+    """Generate user-visible text and recover once from provider tool-markup leakage."""
+    answer = _llm_once(runtime, messages, model=model, timeout=timeout).strip()
+    if not _contains_internal_tool_markup(answer):
+        return answer
+
+    retry_messages = list(messages or []) + [
+        {
+            "role": "system",
+            "content": (
+                "The previous draft was rejected because it exposed an internal tool instruction. "
+                "Return only the final user-facing answer. Never output function/parameter/tool-call tags, "
+                "raw SQL, JSON tool requests, or narration about calling a tool. Use only the evidence already provided."
+            ),
+        }
+    ]
+    retry = _llm_once(runtime, retry_messages, model=model, timeout=timeout).strip()
+    return _sanitize_visible_answer(retry, question)
 
 def _get_embedding_config():
     enable = current_app.config.get("EMBEDDING_ENABLE", True)
@@ -3463,6 +3607,8 @@ def _requires_strict_evidence(question: str) -> bool:
 def _answer_prompt() -> str:
     return (
         "You are an expert assistant. Answer the user's question using ONLY the evidence provided. "
+        "Retrieval is already complete and no tools are callable during this synthesis step. "
+        "Do not request or simulate another tool call; answer from the Evidence or state that it is insufficient. "
         "Do not invent PMIDs, methods, counts, or claims. "
         "The evidence may include a structured source ledger with identifiers such as [S1]. "
         "For every factual claim supported by retrieved evidence, cite one or more exact ledger identifiers inline, for example [S1] or [S1][S2]. "
@@ -3475,7 +3621,8 @@ def _answer_prompt() -> str:
         "If evidence is insufficient, say exactly what is missing and suggest the smallest next lookup needed. "
         "Prefer natural, human conversational narration; avoid rigid templates or numbered lists unless the user asks. "
         "Be polite and respectful; if responding in Chinese, address the user as '您'. "
-        "Do not mention tool names or JSON. Use clear, concise language."
+        "Do not mention tool names or JSON. Never output function, parameter, tool-call tags, raw SQL, "
+        "or any internal invocation syntax. Use clear, concise language."
     )
 
 def _build_answer_messages(system_prompt: str, session_messages: list, evidence_context: str, question: str, style_prompt: str = "") -> list:
@@ -3509,7 +3656,7 @@ def _critic_prompt() -> str:
 
 def _generate_answer(runtime: dict, system_prompt: str, session_messages: list, evidence_context: str, question: str, style_prompt: str = "") -> str:
     messages = _build_answer_messages(system_prompt, session_messages, evidence_context, question, style_prompt)
-    return _llm_once(runtime, messages)
+    return _llm_visible_once(runtime, messages, question)
 
 
 def _generate_answer_stream(runtime: dict, system_prompt: str, session_messages: list, evidence_context: str, question: str, style_prompt: str = ""):
@@ -3674,8 +3821,10 @@ def _finalize_answer(
                 verdict = (critic.get("verdict") or "").strip().lower()
                 revised = critic.get("revised_answer") or ""
 
-        if verdict == "revise" and revised:
+        if verdict == "revise" and revised and not _contains_internal_tool_markup(revised):
             complete = str(revised).strip()
+
+    complete = _sanitize_visible_answer(complete, question)
 
     yield {
         "type": "status",
@@ -7490,23 +7639,50 @@ def chat_model_options():
 @bp.route("/chat/api/application/profile", methods=["GET"])
 def chat_application_profile():
     settings = get_llm_settings(include_secrets=False)
-    return jsonify(
+    visitor_id, created = _chat_visitor_id(create=True)
+    response = jsonify(
         {
             "data": {
                 "id": "ensure-chat",
+                "storage_namespace": _chat_storage_namespace(visitor_id),
                 "active_provider": settings.get("active_provider"),
                 "active_model": settings.get("active_model"),
                 "model_options": settings.get("model_options") or [],
             }
         }
-    ), 200
+    )
+    if created:
+        _set_chat_visitor_cookie(response, visitor_id)
+    _disable_identity_caching(response)
+    return response, 200
+
+
+@bp.route("/chat/api/identity", methods=["GET"])
+def chat_identity():
+    visitor_id, created = _chat_visitor_id(create=True)
+    response = jsonify(
+        {
+            "data": {
+                "storage_namespace": _chat_storage_namespace(visitor_id),
+            }
+        }
+    )
+    if created:
+        _set_chat_visitor_cookie(response, visitor_id)
+    _disable_identity_caching(response)
+    return response, 200
 
 
 @bp.route("/chat/api/open", methods=["GET"])
 def chat_open():
-    chat_id = uuid.uuid4().hex
+    visitor_id, created = _chat_visitor_id(create=True)
+    chat_id = _create_chat_id(visitor_id)
     _get_chat_session(chat_id)
-    return jsonify({"data": chat_id}), 200
+    response = jsonify({"data": chat_id})
+    if created:
+        _set_chat_visitor_cookie(response, visitor_id)
+    _disable_identity_caching(response)
+    return response, 200
 
 
 @bp.route("/chat/api/title", methods=["POST"])
@@ -7526,6 +7702,8 @@ def chat_title():
             continue
         role = item.get("role") or item.get("sender") or "user"
         role = "User" if role == "user" else "Assistant"
+        if role == "Assistant" and _contains_internal_tool_markup(content):
+            continue
         if role == "User":
             user_parts.append(content)
         parts.append(f"{role}: {content}")
@@ -7572,6 +7750,8 @@ def chat_title():
         title = ""
 
     title = title.replace("\n", " ").strip().strip('"').strip()
+    if _contains_internal_tool_markup(title):
+        title = ""
     if len(title) > 60:
         title = title[:60].rstrip() + "..."
     if not title:
@@ -7581,6 +7761,11 @@ def chat_title():
 
 @bp.route("/chat/api/chat_message/<chat_id>", methods=["POST"])
 def chat_message(chat_id):
+    visitor_id, _ = _chat_visitor_id(create=False)
+    if not _chat_id_belongs_to_visitor(chat_id, visitor_id):
+        # Use 404 rather than 403 so a visitor cannot probe whether another
+        # visitor's opaque chat identifier exists.
+        return jsonify({"error": "chat session not found"}), 404
     payload = request.get_json(silent=True) or {}
     message = (payload.get("message") or "").strip()
     if not message:
@@ -7609,6 +7794,7 @@ def chat_message(chat_id):
 
     strict_evidence = bool(current_app.config.get("STRICT_EVIDENCE_MODE", False))
     force_evidence = _requires_strict_evidence(message)
+    route_requires_retrieval = force_evidence or _evidence_required(message)
     session = _get_chat_session(chat_id)
     workflow = _apply_request_workflow_overrides(_get_ai_workflow_config(), payload)
 
@@ -7644,7 +7830,7 @@ def chat_message(chat_id):
                 message,
                 workflow,
                 intent,
-                force_evidence,
+                route_requires_retrieval,
             )
             route_name = str(route_decision.get("route") or "knowledge_retrieval").strip().lower()
 
