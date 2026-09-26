@@ -12,7 +12,7 @@
             </p>
             <p class="mail">
               <strong>Zhuo Ouyang:</strong>
-              <el-link href="mailto:shendekoudai@lovelumine.com">shendekoudai@lovelumine.com</el-link>
+              <el-link href="mailto:ouyzh25@mail2.sysu.edu.cn">ouyzh25@mail2.sysu.edu.cn</el-link>
               <br>RNA Information Center, State Key Laboratory for Biocontrol, Sun Yat-sen University, Guangzhou 510275, P. R. China
             </p>
           </div>
