@@ -63,7 +63,7 @@ export function sortBySprinzlChain<T>(rows: readonly T[], positionOf: (row: T) =
  * canonical position.  One column per slot makes the axis unreadable and lets a
  * few long sequences dominate the picture.  The merged column sums the series and
  * sits where the first member of that family fell in chain order, which is also
- * how Figure 7 of the SprinzlMap paper counts them.
+ * how the SprinzlMap re-numbering of this cohort counts them.
  */
 export function mergeInsertionColumns<T extends { position: string }>(
   rows: readonly T[], seriesKeys: readonly string[]
