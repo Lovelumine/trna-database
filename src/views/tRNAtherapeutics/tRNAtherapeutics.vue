@@ -100,6 +100,7 @@ import { ElDialog, ElSkeleton, ElTooltip } from 'element-plus';
 import { Link } from '@element-plus/icons-vue';
 import TableToolbar from '@/components/TableToolbar.vue';
 import VChart from '@/components/LazyChart.vue';
+import { sortBySprinzlChain } from './sprinzlOrder';
 
 const locale = ref(en);
 
@@ -340,12 +341,9 @@ export default {
         };
       }
 
-      // 先把能转成数字的按数字升序，其余（如 V1、7a1）保持原文件顺序排在后面
-      const rows = [...perposRows.value];
-      const numRows  = rows.filter(r => !Number.isNaN(Number(r.position)))
-                           .sort((a, b) => Number(a.position) - Number(b.position));
-      const restRows = rows.filter(r =>  Number.isNaN(Number(r.position))); // 保留原顺序
-      const ordered  = numRows.concat(restRows);
+      // 按 Sprinzl 链序排列：1->76 是骨架，插入列紧跟它的锚点列，
+      // 可变臂 V 列插在 45 与 46 之间（规则见 ./sprinzlOrder.ts）。
+      const ordered = sortBySprinzlChain(perposRows.value, r => r.position);
 
       const positions = ordered.map(r => r.position);
       const match     = ordered.map(r => r.match);
