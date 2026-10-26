@@ -53,3 +53,44 @@ export function sortBySprinzlChain<T>(rows: readonly T[], positionOf: (row: T) =
       || String(positionOf(left)).localeCompare(String(positionOf(right)));
   });
 }
+
+
+/**
+ * Merge every insertion column of one anchor into a single `<anchor>i` column.
+ *
+ * `37i1 ... 37i33` are not 33 different positions: they are the residues of a
+ * handful of engineered tRNAs that the coordinate frame cannot place on a
+ * canonical position.  One column per slot makes the axis unreadable and lets a
+ * few long sequences dominate the picture.  The merged column sums the series and
+ * sits where the first member of that family fell in chain order, which is also
+ * how Figure 7 of the SprinzlMap paper counts them.
+ */
+export function mergeInsertionColumns<T extends { position: string }>(
+  rows: readonly T[], seriesKeys: readonly string[]
+): T[] {
+  const ordered = sortBySprinzlChain(rows, (row) => row.position);
+  const merged: T[] = [];
+  const emitted = new Set<string>();
+  for (const row of ordered) {
+    const match = INSERTION_RE.exec(String(row.position));
+    if (!match) {
+      merged.push(row);
+      continue;
+    }
+    const anchor = match[1];
+    const label = anchor + "i";
+    if (emitted.has(label)) continue;
+    emitted.add(label);
+    const totals: Record<string, number> = {};
+    for (const key of seriesKeys) {
+      totals[key] = ordered.reduce((sum, other) => {
+        const g = INSERTION_RE.exec(String(other.position));
+        return g && g[1] === anchor
+          ? sum + Number((other as Record<string, unknown>)[key] ?? 0)
+          : sum;
+      }, 0);
+    }
+    merged.push({ ...row, position: label, ...totals } as T);
+  }
+  return merged;
+}

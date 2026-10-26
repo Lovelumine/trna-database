@@ -100,7 +100,7 @@ import { ElDialog, ElSkeleton, ElTooltip } from 'element-plus';
 import { Link } from '@element-plus/icons-vue';
 import TableToolbar from '@/components/TableToolbar.vue';
 import VChart from '@/components/LazyChart.vue';
-import { sortBySprinzlChain } from './sprinzlOrder';
+import { mergeInsertionColumns, sortBySprinzlChain } from './sprinzlOrder';
 
 const locale = ref(en);
 
@@ -328,6 +328,7 @@ export default {
 
     // ===== 图表：读取聚合后的 MySQL 表 =====
     type PerRow = { position: string; match: number; mismatch: number; insertion: number; deletion: number };
+    const PERPOS_SERIES = ['match', 'mismatch', 'insertion', 'deletion'] as const;
     const perposRows = ref<PerRow[]>([]);
 
     const perPositionOption = computed<EChartsOption>(() => {
@@ -343,7 +344,7 @@ export default {
 
       // 按 Sprinzl 链序排列：1->76 是骨架，插入列紧跟它的锚点列，
       // 可变臂 V 列插在 45 与 46 之间（规则见 ./sprinzlOrder.ts）。
-      const ordered = sortBySprinzlChain(perposRows.value, r => r.position);
+      const ordered = mergeInsertionColumns(perposRows.value, PERPOS_SERIES);
 
       const positions = ordered.map(r => r.position);
       const match     = ordered.map(r => r.match);
