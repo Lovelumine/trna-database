@@ -10,8 +10,37 @@ file_path = 'src/assets/data/tRNAtherapeutics.csv'
 df = pd.read_csv(file_path)
 print(f"Loaded CSV file with {len(df)} rows.")
 
+# tRNAscan-SE comes from the single pinned build on this host (docs/TOOLCHAIN.md).
+# Override with TRNASCAN_SE_BIN when a run must be reproduced on another build.
+TRNASCAN_SE_BIN = os.environ.get('TRNASCAN_SE_BIN', 'tRNAscan-SE')
+
+_trnascan_build = None
+
+
+def trnascan_build_line():
+    """Record which tRNAscan-SE build produced the structures in this run."""
+    global _trnascan_build
+    if _trnascan_build is None:
+        try:
+            probe = subprocess.run(
+                [TRNASCAN_SE_BIN, '-h'], capture_output=True, text=True, timeout=20
+            )
+            _trnascan_build = next(
+                (
+                    line.strip()
+                    for line in (probe.stdout + probe.stderr).splitlines()
+                    if line.strip().startswith('tRNAscan-SE ')
+                ),
+                'unknown',
+            )
+        except Exception as exc:  # keep the pipeline running; only provenance is lost
+            _trnascan_build = f'unavailable: {exc}'
+    return _trnascan_build
+
+
 def predict_secondary_structure(sequence):
     print("Running tRNAscan-SE...")
+    print(f"tRNAscan-SE build: {trnascan_build_line()} (binary: {TRNASCAN_SE_BIN})")
 
     temp_dir = 'data/tmp'
     if not os.path.exists(temp_dir):
@@ -29,8 +58,8 @@ def predict_secondary_structure(sequence):
             print(f"Using output file: {output_file_path}")
 
         try:
-            print(f"Executing: tRNAscan-SE -E -f {output_file_path} {input_file_path}")
-            result = subprocess.run(['tRNAscan-SE', '-E', '-f', output_file_path, input_file_path], capture_output=True, text=True, check=True, timeout=30)
+            print(f"Executing: {TRNASCAN_SE_BIN} -E -f {output_file_path} {input_file_path}")
+            result = subprocess.run([TRNASCAN_SE_BIN, '-E', '-f', output_file_path, input_file_path], capture_output=True, text=True, check=True, timeout=30)
             
             print(f"tRNAscan-SE output: {result.stdout}")
             print(f"tRNAscan-SE error: {result.stderr}")
